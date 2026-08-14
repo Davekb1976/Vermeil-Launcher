@@ -441,11 +441,10 @@ const Settings: Component = () => {
               >
                 <div>
                   <div class="settings-key">App directory</div>
-                  <div class="settings-val" style="font-family:var(--font-mono);font-size:10px">{appDirectory() ?? "…"}</div>
+                  <div class="settings-val settings-val--mono">{appDirectory() ?? "…"}</div>
                 </div>
                 <button
-                  class="btn"
-                  style="font-size:11px;padding:4px 10px"
+                  class="btn btn--sm"
                   onClick={(e) => { e.stopPropagation(); openAppDirectory(); }}
                 >
                   <IconFolderOpen /> Open
@@ -690,13 +689,13 @@ const Settings: Component = () => {
         {/* ═══ INSTANCE OPTIONS ═══ */}
         <Show when={tab() === "instances"}>
           <div class="settings-section">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <div class="section-label" style="margin-bottom:0;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Video</div>
+            <div class="section-label section-label--sub section-label--row">
+              Video
               <button class="btn btn--sm" onClick={() => {
                 updateVideoSettings({ max_fps: 120, vsync: true, view_bobbing: true, gui_scale: 0, fov: 0.0, fov_effects: 1.0, master_volume: 1.0, music_volume: 1.0, window_width: null, window_height: null, start_maximized: null });
               }}>Reset All</button>
             </div>
-            <div style="font-size:10px;color:var(--muted);margin:-4px 0 8px;font-style:italic">
+            <div class="settings-hint">
               Max FPS is capped by VSync — set VSync to Off for true Unlimited. FOV Effects requires Minecraft 1.16+ (or 1.8.9 with the Vermeil companion mod).
             </div>
             <div class="vs-grid">
@@ -816,7 +815,7 @@ const Settings: Component = () => {
 
           {/* Sound section */}
           <div class="settings-section">
-            <div class="section-label" style="margin-bottom:10px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Sound</div>
+            <div class="section-label section-label--sub">Sound</div>
             <div class="vs-grid">
               {/* Master Volume */}
               <div class="vs-cell">
@@ -858,12 +857,12 @@ const Settings: Component = () => {
                 <div class="vs-val">{`${Math.round((vs().music_volume ?? 1) * 100)}%`}</div>
               </div>
             </div>
-            <div class="settings-val" style="margin-top:8px;font-size:9px">Applied to all instances on launch. "Default" keeps whatever is set in-game.</div>
+            <div class="settings-hint">Applied to all instances on launch. "Default" keeps whatever is set in-game.</div>
           </div>
 
           {/* Window section */}
           <div class="settings-section">
-            <div class="section-label" style="margin-bottom:10px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Window</div>
+            <div class="section-label section-label--sub">Window</div>
             <div class="vs-grid">
               {/* Resolution preset dropdown. Disabled when Maximized is on,
                   because the backend ignores the explicit resolution in that
@@ -899,7 +898,7 @@ const Settings: Component = () => {
               </div>
             </div>
             <Show when={vs().start_maximized}>
-              <div class="settings-val" style="margin-top:8px;font-size:9px">Resolution is ignored while Maximized is on — the game fills the screen on launch.</div>
+              <div class="settings-hint">Resolution is ignored while Maximized is on — the game fills the screen on launch.</div>
             </Show>
           </div>
 
@@ -907,7 +906,7 @@ const Settings: Component = () => {
               (services/memory.rs) from the pack's loader, mod count, and
               content; this single control caps how high that can go. */}
           <div class="settings-section">
-            <div class="section-label" style="margin-bottom:10px;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)">Memory</div>
+            <div class="section-label section-label--sub">Memory</div>
             <div class="settings-val" style="margin-bottom:10px;line-height:1.5">
               Memory is allocated <span style="color:var(--accent)">automatically</span> for each instance based on its pack, up to the maximum below.
             </div>
@@ -1031,7 +1030,7 @@ const Settings: Component = () => {
                 )}
               </For>
             </div>
-            <div style="font-size:11px;color:var(--muted);margin-top:10px;padding:0 4px">
+            <div class="settings-hint" style="padding:0 4px">
               Click a binding and press the new key combination. Escape cancels capture.
               The reset arrow restores the default.
             </div>

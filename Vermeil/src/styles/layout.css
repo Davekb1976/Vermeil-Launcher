@@ -170,6 +170,14 @@
   display: block;
 }
 
+/* Sub variant — a smaller, tighter-tracked label for grouping controls
+   *within* a screen that already has a top-level section label (e.g. the
+   Video / Sound / Window / Memory groups on Settings → Global Instance). */
+.section-label--sub {
+  font-size: var(--fs-xs);
+  letter-spacing: .05em;
+}
+
 /* Row variant — keeps the caps label on the left and lets a trailing badge
    (e.g. the "Official · Mojang" mark on the news header) sit at the right. */
 .section-label--row {
