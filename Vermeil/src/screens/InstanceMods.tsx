@@ -1505,7 +1505,7 @@ const InstanceMods: Component = () => {
                 not deleted, so re-enabling needs no re-download). The jar itself
                 is launcher-managed, so there's no delete affordance. */}
             <Show when={(instance() as any)?.ingame_cape_supported && (installedFilter() === "all" || installedFilter() === "mod")}>
-              <div class="mod-card" style={instance()?.companion_enabled === false ? "opacity:0.55" : ""} title="Managed by Vermeil — toggle for this instance.">
+              <div class="card card--mod" style={instance()?.companion_enabled === false ? "opacity:0.55" : ""} title="Managed by Vermeil — toggle for this instance.">
                 <div class="mod-card-header">
                   <div class="mod-card-icon" style="background:var(--accent-soft);display:flex;align-items:center;justify-content:center">
                     <img src="/logo.png" alt="" draggable={false} style="width:24px;height:24px;object-fit:contain" />
@@ -1548,7 +1548,7 @@ const InstanceMods: Component = () => {
             </Show>
             <For each={installedFiltered()}>
               {(mod) => (
-                <div class="mod-card" style={mod.enabled ? "" : "opacity:0.5"}>
+                <div class="card card--mod" style={mod.enabled ? "" : "opacity:0.5"}>
                   <div class="mod-card-header">
                     <div class="mod-card-icon" style={`background:${(mod as any).category === "resourcepack" ? "#1a2035" : (mod as any).category === "shader" ? "#251a35" : "#251a35"}`}>
                       <Show when={resolveIconUrl(mod as any)} fallback={
@@ -1670,7 +1670,7 @@ const InstanceMods: Component = () => {
               <div class="card-grid card-grid--compact browse-grid" ref={browsePageSize.setEl}>
               <For each={searchResults()}>
                 {(mod) => (
-                  <div class={`mod-card ${selectMode() && selectedItems().has(mod.project_id) ? "mod-item-selected" : ""}`}
+                  <div class={`card card--mod ${selectMode() && selectedItems().has(mod.project_id) ? "mod-item-selected" : ""}`}
                     onClick={() => selectMode() && !isModInstalled(mod.project_id) ? toggleSelectItem(mod) : undefined}
                     style={selectMode() ? "cursor:pointer" : ""}>
                     <div class="mod-card-header">
