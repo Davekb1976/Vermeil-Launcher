@@ -135,6 +135,12 @@ While in pre-1.0 development, anything goes — use MINOR for any meaningful cha
 verifies the published release manually. The pre-tag checks in the checklist above
 are the only validation expected on our side; post-push is the user's to confirm.
 
+**A pushed tag is immutable.** Never move or delete a published tag (`git tag -f`,
+`git push --force`, `git push --delete`) — the release workflow has already built
+artifacts against that SHA and the auto-updater serves them. If the wrong commit
+got tagged, cut the next patch version instead. Same rule as commits: see "Never
+rewrite pushed history" in `implementation-process.md`.
+
 ### Changelog Generation Rules
 
 When generating the changelog from conventional commits since the last tag:

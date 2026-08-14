@@ -116,13 +116,29 @@ const InstanceMods: Component = () => {
         .catch((err) => showToast({ title: "Failed to save memory", message: String(err), type: "error" }));
     }, 200);
   };
-  // Flip adaptive on/off for this instance. When turning manual ON for the
-  // first time, seed `memory_max_mb` from the current adaptive value so the
-  // slider starts at a sensible spot instead of a stale default.
+  // Flip adaptive on/off for this instance. Optimistic: the toggle moves
+  // immediately. The write lands in the background; on failure we refetch to
+  // revert the visual to the real state.
+  const [adaptiveOptimistic, setAdaptiveOptimistic] = createSignal<boolean | null>(null);
+  // Resolved adaptive state: optimistic override beats the instance resource.
+  const isAdaptive = (): boolean => {
+    const opt = adaptiveOptimistic();
+    if (opt !== null) return opt;
+    return !instance()?.java.adaptive_override;
+  };
+  // Clear the optimistic flag once the resource catches up.
+  createEffect(() => {
+    const inst = instance();
+    const opt = adaptiveOptimistic();
+    if (inst && opt !== null && (!inst.java.adaptive_override) === opt) setAdaptiveOptimistic(null);
+  });
+
   const toggleAdaptive = async () => {
     const inst = instance();
     if (!inst) return;
     const turningOff = !inst.java.adaptive_override; // currently adaptive → going manual
+    // Optimistic: flip the toggle instantly.
+    setAdaptiveOptimistic(!turningOff);
     try {
       const seed = turningOff ? (effectiveMemory()?.value_mb ?? inst.java.memory_max_mb) : undefined;
       await updateInstanceOptions(inst.id, { adaptiveOverride: turningOff, ...(seed ? { memoryMaxMb: seed } : {}) });
@@ -130,6 +146,9 @@ const InstanceMods: Component = () => {
       await refreshAdaptive();
     } catch (e) {
       showToast({ title: "Failed to change memory mode", message: String(e), type: "error" });
+      // Revert optimistic state and pull the real state back.
+      setAdaptiveOptimistic(null);
+      await refetchInstances();
     }
   };
 
@@ -1113,13 +1132,13 @@ const InstanceMods: Component = () => {
                 <div class="settings-val">Allocate RAM automatically based on this pack</div>
               </div>
               <div
-                class={`toggle ${!instance()?.java.adaptive_override ? "on" : ""}`}
+                class={`toggle ${isAdaptive() ? "on" : ""}`}
                 style="transform:scale(0.8)"
                 onClick={toggleAdaptive}
               />
             </div>
             <Show
-              when={instance()?.java.adaptive_override}
+              when={!isAdaptive()}
               fallback={
                 <>
                   <div class="settings-row" style="margin-top:10px">
