@@ -16,8 +16,6 @@ const ImportCurseForge: Component = () => {
       });
       if (!selected) return;
 
-      // Close the modal and navigate to library immediately. Backend emits
-      // install-progress events handled by <InstallProgress />.
       setActiveScreen("library");
       setImporting(true);
 
@@ -48,41 +46,34 @@ const ImportCurseForge: Component = () => {
   };
 
   return (
-    <div class="modal-overlay">
-      <div class="modal panel panel--bracketed">
-        <div class="modal-header">
-          <span class="modal-title">Import from CurseForge</span>
-          <button class="modal-close" onClick={() => setActiveScreen("library")}>✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="field">
-            <div class="field-label">Import .zip export</div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">
-              In the CurseForge app: select your profile → three dots → Share Profile → Export as .zip.
-              Then import that file here.
-            </div>
-            <button
-              class="btn btn--primary"
-              style="padding:10px 18px"
-              onClick={handleImportZip}
-              disabled={importing()}
-            >
-              {importing() ? "Importing..." : "Choose .zip file"}
-            </button>
-          </div>
+    <div class="screen-enter">
+      <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-4)">
+        <button class="btn btn--sm btn--ghost" onClick={() => setActiveScreen("create-choose")}>← Back</button>
+        <span class="section-label" style="margin-bottom:0;border-bottom:none;padding-bottom:0">Import from CurseForge</span>
+      </div>
 
-          <Show when={error()}>
-            <div style="color:var(--danger);font-size:11px;margin-top:12px;padding:8px 10px;background:var(--danger-soft);border:1px solid var(--danger)">
-              {error()}
-            </div>
-          </Show>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn--ghost" onClick={() => setActiveScreen("create-choose")}>
-            ← Back
+      <div class="settings-group" style="max-width:560px">
+        <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:var(--space-2)">
+          <div class="settings-key">Import .zip export</div>
+          <div class="settings-val" style="line-height:1.5">
+            In the CurseForge app: select your profile → three dots → Share Profile → Export as .zip.
+            Then import that file here.
+          </div>
+          <button
+            class="btn btn--primary"
+            onClick={handleImportZip}
+            disabled={importing()}
+          >
+            {importing() ? "Importing..." : "Choose .zip file"}
           </button>
         </div>
       </div>
+
+      <Show when={error()}>
+        <div style="color:var(--danger);font-size:var(--fs-xs);margin-top:var(--space-3);padding:8px 10px;background:var(--danger-soft);border:1px solid var(--danger);max-width:560px">
+          {error()}
+        </div>
+      </Show>
     </div>
   );
 };
