@@ -977,7 +977,7 @@ const InstanceMods: Component = () => {
   return (
     <div class="screen-enter">
       <Show when={instance()} fallback={
-        <div style="text-align:center;color:var(--muted);padding:40px;font-size:13px">
+        <div style="text-align:center;color:var(--muted);padding:40px;font-size:var(--fs-sm)">
           <div style="margin-bottom:8px">No instance selected.</div>
           <button class="btn" onClick={() => setActiveScreen("home")}>← Go to Home</button>
         </div>
@@ -987,7 +987,7 @@ const InstanceMods: Component = () => {
         <button class="btn btn--ghost btn--sm" onClick={() => setActiveScreen("library")}>
           <IconArrowLeft />
         </button>
-        <span style="font-size:13px;font-weight:600;color:var(--text)">{instance()?.name}</span>
+        <span style="font-size:var(--fs-sm);font-weight:600;color:var(--text)">{instance()?.name}</span>
         <Show when={instance() && instance()!.loader.type !== "vanilla"}>
           <span class={`badge badge--loader ${loaderBadgeClass(instance()!.loader.type)}`}>
             {loaderLabel(instance()!.loader.type)}
@@ -1054,7 +1054,7 @@ const InstanceMods: Component = () => {
               <div style="display:flex;gap:8px;flex-shrink:0">
                 <button
                   class="btn"
-                  style="font-size:11px"
+                  style="font-size:var(--fs-xs)"
                   onClick={async () => {
                     const inst = instance();
                     if (!inst) return;
@@ -1078,11 +1078,11 @@ const InstanceMods: Component = () => {
                 <Show when={instance() && instance()!.icon !== "cube"}>
                   <button
                     class="btn btn--ghost"
-                    style="font-size:11px"
-                    onClick={async () => {
-                      const inst = instance();
-                      if (!inst) return;
-                      try {
+                  style="font-size:var(--fs-xs)"
+                  onClick={async () => {
+                    const inst = instance();
+                    if (!inst) return;
+                    try {
                         await clearInstanceIcon(inst.id);
                         await refetchInstances();
                         showToast({ title: "Icon reset", message: "", type: "info", autoCloseMs: 2000 });
@@ -1215,7 +1215,7 @@ const InstanceMods: Component = () => {
                       flags below. When the user edits the flags into a
                       genuinely-custom set, an extra "custom" tag flips on
                       so the indicator doesn't lie about what's launching. */}
-                  <span style="margin-left:auto;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:500;font-size:10px;color:var(--muted)">
+                  <span style="margin-left:auto;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:500;font-size:var(--fs-2xs);color:var(--muted)">
                     <span>Active preset:</span>
                     <strong style="color:var(--text);font-weight:600">{presetLabel(globalPreset())}</strong>
                     <Show when={!isCurrentlyPreset()}>
@@ -1255,12 +1255,12 @@ const InstanceMods: Component = () => {
           <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
             <div class="section-label">Clone instance</div>
             <div style="display:flex;align-items:center;gap:10px">
-              <span style="font-size:12px;color:var(--muted);flex:1">
+              <span style="font-size:var(--fs-xs);color:var(--muted);flex:1">
                 Make a copy with the same loader, mods, configs, and worlds. Useful for testing changes without breaking your main setup.
               </span>
               <button
                 class="btn btn--primary"
-                style="font-size:11px;white-space:nowrap"
+                style="font-size:var(--fs-xs);white-space:nowrap"
                 disabled={cloning()}
                 onClick={async () => {
                   const inst = instance();
@@ -1297,7 +1297,7 @@ const InstanceMods: Component = () => {
             <div class="section-label" style="color:var(--danger)">Danger Zone</div>
             <Show when={!deleteConfirm()} fallback={
               <div style="display:flex;flex-direction:column;gap:8px">
-                <span style="font-size:12px;color:var(--danger)">Type <strong>Confirm</strong> to delete this instance permanently.</span>
+                <span style="font-size:var(--fs-xs);color:var(--danger)">Type <strong>Confirm</strong> to delete this instance permanently.</span>
                 <div style="display:flex;gap:8px;align-items:center">
                   <input class="field-control field-control--text" style="max-width:160px;border-color:var(--danger)" placeholder="Type Confirm"
                     onInput={(e) => setDeleteCountdown(e.currentTarget.value === "Confirm" ? 0 : 1)} />
@@ -1407,7 +1407,7 @@ const InstanceMods: Component = () => {
                 check; does nothing while one is already in flight. */}
             <button
               class="btn"
-              style="font-size:11px;padding:6px 10px;white-space:nowrap"
+              style="font-size:var(--fs-xs);padding:6px 10px;white-space:nowrap"
               disabled={checkingUpdates() || (instance()?.mods.length ?? 0) === 0}
               onClick={() => refreshUpdates(true)}
               title="Check Modrinth and CurseForge for newer versions of every installed item"
@@ -1451,11 +1451,11 @@ const InstanceMods: Component = () => {
 
         <Show when={contentTab() === "installed"}>
           <Show when={(instance()?.mods.length || 0) === 0}>
-            <div style="text-align:center;color:var(--muted);padding:30px;font-size:12px">No content installed. Switch to "Browse mods" to find some.</div>
+            <div style="text-align:center;color:var(--muted);padding:30px;font-size:var(--fs-xs)">No content installed. Switch to "Browse mods" to find some.</div>
           </Show>
           <Show when={showBulkDelete()}>
             <div class="bulk-delete-confirm">
-              <div style="font-size:12px;color:var(--danger);margin-bottom:8px">
+              <div style="font-size:var(--fs-xs);color:var(--danger);margin-bottom:8px">
                 {(() => {
                   const f = installedFilter();
                   const mods = instance()?.mods || [];
@@ -1502,7 +1502,7 @@ const InstanceMods: Component = () => {
             <Show when={(instance() as any)?.ingame_cape_supported && (installedFilter() === "all" || installedFilter() === "mod")}>
               <div class="mod-card" style={instance()?.companion_enabled === false ? "opacity:0.55" : ""} title="Managed by Vermeil — toggle for this instance.">
                 <div class="mod-card-header">
-                  <div class="mod-card-icon" style="background:#251a35;display:flex;align-items:center;justify-content:center">
+                  <div class="mod-card-icon" style="background:var(--accent-soft);display:flex;align-items:center;justify-content:center">
                     <img src="/logo.png" alt="" draggable={false} style="width:24px;height:24px;object-fit:contain" />
                   </div>
                   <div class="mod-card-name-wrap">
@@ -1637,7 +1637,7 @@ const InstanceMods: Component = () => {
                   <span class="search-count">{totalHits().toLocaleString()} results</span>
                 </Show>
               </div>
-              <button class={`btn tip-below ${selectMode() ? "btn-active" : ""}`} style="font-size:10px;padding:5px 10px;white-space:nowrap"
+              <button class={`btn tip-below ${selectMode() ? "btn-active" : ""}`} style="font-size:var(--fs-2xs);padding:5px 10px;white-space:nowrap"
                 data-tip="Bulk install"
                 onClick={() => { setSelectMode(!selectMode()); if (selectMode()) setSelectedItems(new Map()); }}>
                 {selectMode() ? `Cancel (${selectedItems().size})` : "Select"}
@@ -1651,7 +1651,7 @@ const InstanceMods: Component = () => {
                 <Show when={browseFilter() === "resourcepack" || browseFilter() === "shader"} fallback={
                   <>Showing for <strong style="color:var(--accent);margin:0 3px">{instance()?.loader.type}</strong> · <strong style="color:var(--text)">{instance()?.game_version}</strong></>
                 }>
-                  <>Version: <input class="field-control field-control--text" style="width:80px;padding:2px 6px;font-size:10px;height:auto;display:inline-block;margin:0 4px" placeholder={instance()?.game_version || "any"} value={browseVersion()} onInput={(e) => { setBrowseVersion(e.currentTarget.value); setCurrentPage(1); clearTimeout(searchTimeout); searchTimeout = window.setTimeout(() => doSearch(1), 400); }} /> <span style="color:var(--muted);font-size:10px">(any if empty)</span></>
+                  <>Version: <input class="field-control field-control--text" style="width:80px;padding:2px 6px;font-size:var(--fs-2xs);height:auto;display:inline-block;margin:0 4px" placeholder={instance()?.game_version || "any"} value={browseVersion()} onInput={(e) => { setBrowseVersion(e.currentTarget.value); setCurrentPage(1); clearTimeout(searchTimeout); searchTimeout = window.setTimeout(() => doSearch(1), 400); }} /> <span style="color:var(--muted);font-size:var(--fs-2xs)">(any if empty)</span></>
                 </Show>
               </div>
               <div class="browse-bar-controls">
@@ -1671,7 +1671,7 @@ const InstanceMods: Component = () => {
                     onClick={() => selectMode() && !isModInstalled(mod.project_id) ? toggleSelectItem(mod) : undefined}
                     style={selectMode() ? "cursor:pointer" : ""}>
                     <div class="mod-card-header">
-                      <div class="mod-card-icon" style="background:#251a35">
+                      <div class="mod-card-icon" style="background:var(--accent-soft)">
                         <Show when={mod.icon_url} fallback={<IconBolt />}>
                           <img src={mod.icon_url!} style="width:100%;height:100%;border-radius:0;object-fit:cover" />
                         </Show>
@@ -1742,7 +1742,7 @@ const InstanceMods: Component = () => {
             {/* Bulk install floating bar */}
             <Show when={selectMode() && selectedItems().size > 0 && !bulkInstalling()}>
               <div class="bulk-install-bar">
-                <span style="font-size:12px;color:var(--text)">{selectedItems().size} selected</span>
+                <span style="font-size:var(--fs-xs);color:var(--text)">{selectedItems().size} selected</span>
                 <button class="btn btn--primary" onClick={handleBulkInstall}>
                   Install {selectedItems().size} items
                 </button>
@@ -1760,7 +1760,7 @@ const InstanceMods: Component = () => {
             <Show when={filePath()}>
               <button class="btn btn--sm" onClick={navigateUp}>← Back</button>
             </Show>
-            <span style="font-size:11px;color:var(--muted);font-family:var(--font-mono)">
+            <span style="font-size:var(--fs-xs);color:var(--muted);font-family:var(--font-mono)">
               /{filePath() || ""}
             </span>
             <button class="btn btn--sm" style="margin-left:auto" onClick={() => openInstanceFolder(instance()!.id, filePath())}>
@@ -1771,7 +1771,7 @@ const InstanceMods: Component = () => {
             <For each={files()}>
               {(file) => (
                 <div class="mod-item" style="cursor:pointer" onClick={() => file.is_dir && navigateToFolder(file.path)}>
-                  <div class="mod-icon" style={file.is_dir ? "background:#1a2035" : "background:#1e2024"}>
+                  <div class="mod-icon" style={file.is_dir ? "background:var(--accent-soft)" : "background:var(--surface-sunken)"}>
                     <Show when={file.is_dir} fallback={
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     }>
@@ -1786,7 +1786,7 @@ const InstanceMods: Component = () => {
               )}
             </For>
             <Show when={files().length === 0}>
-              <div style="text-align:center;color:var(--muted);padding:30px;font-size:12px">Empty folder</div>
+              <div style="text-align:center;color:var(--muted);padding:30px;font-size:var(--fs-xs)">Empty folder</div>
             </Show>
           </div>
         </div>
@@ -1796,13 +1796,13 @@ const InstanceMods: Component = () => {
       <Show when={mainTab() === "worlds"}>
         <div>
           <Show when={worlds().length === 0}>
-            <div style="text-align:center;color:var(--muted);padding:30px;font-size:12px">No worlds yet. Play the game to create one.</div>
+            <div style="text-align:center;color:var(--muted);padding:30px;font-size:var(--fs-xs)">No worlds yet. Play the game to create one.</div>
           </Show>
           <div class="mod-list">
             <For each={worlds()}>
               {(world) => (
                 <div class="mod-item">
-                  <div class="mod-icon" style="background:#251a35">
+                  <div class="mod-icon" style="background:var(--accent-soft)">
                     <IconGlobe />
                   </div>
                   <div class="mod-details">
@@ -1840,7 +1840,7 @@ const InstanceMods: Component = () => {
           if (logsPoppedOut()) {
             return (
               <div class="logs-detached">
-                <div style="font-size:13px">Logs are open in a separate window.</div>
+                <div style="font-size:var(--fs-sm)">Logs are open in a separate window.</div>
                 <button class="btn" onClick={() => closeLogsWindow()}>Bring logs back</button>
               </div>
             );

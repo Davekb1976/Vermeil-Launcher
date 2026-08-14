@@ -221,13 +221,13 @@ const BrowseModpacks: Component = () => {
           {/* Confirmation dialog */}
           <Show when={confirmPack()}>
             <div style="background:var(--surface-panel);border:1px solid var(--border);padding:12px;margin-bottom:12px">
-              <div style="font-size:12px;color:var(--text);margin-bottom:8px">
+              <div style="font-size:var(--fs-xs);color:var(--text);margin-bottom:8px">
                 You already have <strong>{getInstallCount(confirmPack()!.project_id)}</strong> instance(s) of <strong>{confirmPack()!.title}</strong>:
               </div>
               <div style="max-height:80px;overflow-y:auto;margin-bottom:8px">
                 <For each={getInstalledInstances(confirmPack()!.project_id)}>
                   {(inst) => (
-                    <div style="font-size:11px;color:var(--muted);padding:2px 0">• {inst.name}</div>
+                    <div style="font-size:var(--fs-xs);color:var(--muted);padding:2px 0">• {inst.name}</div>
                   )}
                 </For>
               </div>
@@ -244,7 +244,7 @@ const BrowseModpacks: Component = () => {
                 const count = () => getInstallCount(pack.project_id);
                 return (
                   <div class="mod-item">
-                    <div class="mod-icon" style="background:#1a2035">
+                    <div class="mod-icon" style="background:var(--accent-soft)">
                       <Show when={pack.icon_url} fallback={<IconLayers />}>
                         <img src={pack.icon_url!} style="width:36px;height:36px;border-radius:0;object-fit:cover" />
                       </Show>
