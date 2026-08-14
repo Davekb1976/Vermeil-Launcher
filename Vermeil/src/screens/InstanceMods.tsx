@@ -5,6 +5,7 @@ import { reportDependencyIssues, DependencyIssue } from "../components/Dependenc
 import { contentVersion } from "../lib/contentVersion";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
+import Dropdown from "../components/Dropdown";
 import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled } from "../ipc/commands";
 import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconFolderOpen } from "../components/Icons";
 
@@ -1397,21 +1398,21 @@ const InstanceMods: Component = () => {
                 <span class="search-count">{installedActiveCount()} installed</span>
               </Show>
             </div>
-            <select
-              class="control-select"
+            <Dropdown
               value={installedSort()}
-              onChange={(e) => setInstalledSort(e.currentTarget.value as "newest" | "oldest")}
-            >
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-            </select>
+              options={[
+                { value: "newest", label: "Newest first" },
+                { value: "oldest", label: "Oldest first" },
+              ]}
+              onChange={(val) => setInstalledSort(val as "newest" | "oldest")}
+            />
             {/* Manual refresh — the auto-check runs on tab activation but the
                 user may want to re-check after publishing schedules they know
                 about (e.g. Sodium just dropped a release). Spinner during the
                 check; does nothing while one is already in flight. */}
             <button
               class="btn"
-              style="font-size:var(--fs-xs);padding:6px 10px;white-space:nowrap"
+              style="white-space:nowrap"
               disabled={checkingUpdates() || (instance()?.mods.length ?? 0) === 0}
               onClick={() => refreshUpdates(true)}
               title="Check Modrinth and CurseForge for newer versions of every installed item"
@@ -1641,7 +1642,7 @@ const InstanceMods: Component = () => {
                   <span class="search-count">{totalHits().toLocaleString()} results</span>
                 </Show>
               </div>
-              <button class={`btn tip-below ${selectMode() ? "btn-active" : ""}`} style="font-size:var(--fs-2xs);padding:5px 10px;white-space:nowrap"
+              <button class={`btn tip-below ${selectMode() ? "btn-active" : ""}`} style="white-space:nowrap"
                 data-tip="Bulk install"
                 onClick={() => { setSelectMode(!selectMode()); if (selectMode()) setSelectedItems(new Map()); }}>
                 {selectMode() ? `Cancel (${selectedItems().size})` : "Select"}
@@ -1661,9 +1662,7 @@ const InstanceMods: Component = () => {
               <div class="browse-bar-controls">
                 <div class="control-group">
                   <span class="control-label">Sort:</span>
-                  <select class="control-select" value={sortBy()} onChange={(e) => handleSortChange(e.currentTarget.value)}>
-                    <For each={SORT_OPTIONS}>{(opt) => <option value={opt.value}>{opt.label}</option>}</For>
-                  </select>
+                  <Dropdown value={sortBy()} options={SORT_OPTIONS} onChange={handleSortChange} />
                 </div>
               </div>
             </div>

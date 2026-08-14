@@ -328,13 +328,16 @@
 }
 
 
-/* Installed-tab search + sort row, sits below the category filter. */
+/* Installed-tab search + sort row, sits below the category filter. The sort
+   dropdown opts into the standard field height so it lines up with the search
+   input and the Check-updates button instead of sitting short. */
 .installed-search-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
 }
+.installed-search-row .custom-dropdown { --dropdown-height: var(--control-height-md); }
 
 
 /* Dependency-issues modal — surfaced after install when one or more required

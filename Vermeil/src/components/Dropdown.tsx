@@ -42,7 +42,6 @@ const Dropdown: Component<DropdownProps> = (props) => {
     >
       <div
         class="custom-dropdown-selected"
-        style="padding:4px 10px;font-size:11px;border-radius:0"
         onClick={() => { if (!props.disabled) setOpen(!open()); }}
       >
         <span>{selectedLabel()}</span>
