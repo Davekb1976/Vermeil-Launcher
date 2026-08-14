@@ -133,15 +133,28 @@ const InstanceMods: Component = () => {
     if (inst && opt !== null && (!inst.java.adaptive_override) === opt) setAdaptiveOptimistic(null);
   });
 
+  // A write is in flight. Clicks are ignored until it settles so two
+  // read-modify-write calls on the same instance.json can't land out of order
+  // and leave the stored value disagreeing with what the toggle shows.
+  // ponytail: ignoring the click is the cheap guard. Ceiling — a click inside
+  // the (short) write window is dropped rather than queued. Upgrade path if
+  // that ever annoys: remember the desired final state and re-issue one write
+  // when the in-flight one finishes (last-write-wins coalescing).
+  const [adaptiveBusy, setAdaptiveBusy] = createSignal(false);
+
   const toggleAdaptive = async () => {
     const inst = instance();
-    if (!inst) return;
-    const turningOff = !inst.java.adaptive_override; // currently adaptive → going manual
+    if (!inst || adaptiveBusy()) return;
+    // Derive the next state from the *resolved* value, not the raw resource.
+    // The resource lags the write, so reading it here made a second click
+    // recompute the same direction and re-apply the same value.
+    const turningOff = isAdaptive(); // automatic currently on → going manual
     const seed = turningOff ? (effectiveMemory()?.value_mb ?? inst.java.memory_max_mb) : undefined;
     // Optimistic: flip the toggle instantly. When going manual, seed the slider
     // draft in the same tick — the slider renders immediately, and without the
     // draft it would show the stale stored value and then jump once the write
     // lands (the seed exists precisely to avoid a stale starting point).
+    setAdaptiveBusy(true);
     setAdaptiveOptimistic(!turningOff);
     if (seed) setMemoryDraft(seed);
     try {
@@ -154,6 +167,8 @@ const InstanceMods: Component = () => {
       setAdaptiveOptimistic(null);
       setMemoryDraft(null);
       await refetchInstances();
+    } finally {
+      setAdaptiveBusy(false);
     }
   };
 
