@@ -686,6 +686,35 @@
 .settings-key { font-size: 13px; color: var(--text); font-weight: 500; }
 .settings-val { font-size: 12px; color: var(--muted); }
 
+/* Adaptive-memory breakdown — the "why this value?" contributions listed
+   under the read-only Allocated figure. A recessed well so it reads as
+   derived detail rather than another editable control. */
+.mem-breakdown {
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.mem-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  font-size: var(--fs-2xs);
+}
+.mem-label { color: var(--muted); }
+.mem-val {
+  font-family: var(--font-mono);
+  color: var(--text);
+  flex-shrink: 0;
+}
+.mem-row--total {
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  font-weight: 600;
+}
+.mem-row--total .mem-label { color: var(--text); }
+
 /* Global instance settings — responsive grid that auto-flows into 1 / 2 / 3
    columns based on available width. Each cell is a self-contained control
    (slider or dropdown) with label + value. */

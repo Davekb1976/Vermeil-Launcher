@@ -93,6 +93,11 @@ const InstanceMods: Component = () => {
     if (mb <= 12288) return { text: "High — only needed for heavy modpacks", color: "var(--warn)" };
     return { text: "Very high — may cause GC stuttering", color: "var(--danger)" };
   };
+  // Breakdown rows in GB. Two decimals (trailing zeros trimmed) so the rows
+  // visibly sum to the pack total — every contribution is 256 MB-aligned, so
+  // this is precise enough to verify the arithmetic at a glance.
+  const formatBreakdownGb = (mb: number): string =>
+    `${(mb / 1024).toFixed(2).replace(/\.?0+$/, "")} GB`;
   const [memoryDraft, setMemoryDraft] = createSignal<number | null>(null);
   const memoryValue = (): number => memoryDraft() ?? instance()?.java.memory_max_mb ?? 4096;
   createEffect(() => {
@@ -1111,23 +1116,55 @@ const InstanceMods: Component = () => {
             <Show
               when={instance()?.java.adaptive_override}
               fallback={
-                <div class="settings-row" style="margin-top:10px">
-                  <div class="settings-val">Allocated</div>
-                  <Show when={effectiveMemory()} fallback={<span class="settings-val">—</span>}>
-                    {(em) => (
-                      <div style="text-align:right">
-                        <div style="font-family:var(--font-mono);font-size:var(--fs-lg);color:var(--text)">
-                          {(em().value_mb / 1024).toFixed(1).replace('.0', '')} GB
-                        </div>
-                        <Show when={em().capped}>
-                          <div style="font-size:var(--fs-2xs);color:var(--warn);margin-top:2px">
-                            capped at your max · pack suggests {(em().target_mb / 1024).toFixed(1).replace('.0', '')} GB
+                <>
+                  <div class="settings-row" style="margin-top:10px">
+                    <div class="settings-val">Allocated</div>
+                    <Show when={effectiveMemory()} fallback={<span class="settings-val">—</span>}>
+                      {(em) => (
+                        <div style="text-align:right">
+                          <div style="font-family:var(--font-mono);font-size:var(--fs-lg);color:var(--text)">
+                            {(em().value_mb / 1024).toFixed(1).replace('.0', '')} GB
                           </div>
-                        </Show>
+                          <Show when={em().capped}>
+                            <div style="font-size:var(--fs-2xs);color:var(--warn);margin-top:2px">
+                              capped at your max · pack suggests {(em().target_mb / 1024).toFixed(1).replace('.0', '')} GB
+                            </div>
+                          </Show>
+                          {/* The floor can also push the value *above* the
+                              formula's target, which would otherwise make the
+                              breakdown below look like it doesn't add up. */}
+                          <Show when={em().value_mb > em().target_mb}>
+                            <div style="font-size:var(--fs-2xs);color:var(--muted);margin-top:2px">
+                              raised to your {(em().min_mb / 1024).toFixed(1).replace('.0', '')} GB minimum
+                            </div>
+                          </Show>
+                        </div>
+                      )}
+                    </Show>
+                  </div>
+
+                  {/* Why this value — the formula's per-component contributions.
+                      The total row is always present, so the well is never
+                      rendered empty. */}
+                  <Show when={effectiveMemory()}>
+                    {(em) => (
+                      <div class="mem-breakdown">
+                        <For each={em().breakdown}>
+                          {(row) => (
+                            <div class="mem-row">
+                              <span class="mem-label">{row.label}</span>
+                              <span class="mem-val">{formatBreakdownGb(row.value_mb)}</span>
+                            </div>
+                          )}
+                        </For>
+                        <div class="mem-row mem-row--total">
+                          <span class="mem-label">Pack total</span>
+                          <span class="mem-val">{formatBreakdownGb(em().target_mb)}</span>
+                        </div>
                       </div>
                     )}
                   </Show>
-                </div>
+                </>
               }
             >
               {/* Manual slider — shown only when this instance opted out. */}
