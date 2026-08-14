@@ -246,8 +246,8 @@ export const getArticleBody = (contentUrl: string) => invoke<string>("get_articl
 // Mod commands
 export const searchMods = (query: string, loader: string, gameVersion: string, offset?: number, limit?: number, sort?: string, projectType?: string) =>
   invoke<ModSearchResult>("search_mods", { query, loader, gameVersion, offset, limit, sort, projectType });
-export const searchModpacks = (query: string, offset?: number, sort?: string, loader?: string) =>
-  invoke<ModSearchResult>("search_modpacks", { query, offset, sort, loader });
+export const searchModpacks = (query: string, offset?: number, limit?: number, sort?: string, loader?: string) =>
+  invoke<ModSearchResult>("search_modpacks", { query, offset, limit, sort, loader });
 
 export const searchCurseforge = (query: string, loader: string, gameVersion: string, offset?: number, limit?: number, sort?: string, projectType?: string) =>
   invoke<ModSearchResult>("search_curseforge", { query, loader, gameVersion, offset, limit, sort, projectType });

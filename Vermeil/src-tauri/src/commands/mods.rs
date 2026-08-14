@@ -92,13 +92,14 @@ pub async fn search_mods(
 pub async fn search_modpacks(
     query: String,
     offset: Option<u32>,
+    limit: Option<u32>,
     sort: Option<String>,
     loader: Option<String>,
 ) -> Result<ModSearchResult, String> {
     let result = modrinth::search_modpacks(
         &query,
         offset.unwrap_or(0),
-        10,
+        limit.unwrap_or(10),
         &sort.unwrap_or_else(|| "relevance".to_string()),
         &loader.unwrap_or_default(),
     ).await?;

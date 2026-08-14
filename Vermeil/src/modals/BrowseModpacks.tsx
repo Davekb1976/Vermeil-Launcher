@@ -56,7 +56,7 @@ const BrowseModpacks: Component = () => {
       const source = modSource();
       const result = source === "curseforge"
         ? await searchCurseforge(q, loaderFilter(), "", offset, pageSize.size(), sortBy(), "modpack")
-        : await searchModpacks(q, offset, sortBy(), loaderFilter());
+        : await searchModpacks(q, offset, pageSize.size(), sortBy(), loaderFilter());
       if (token !== searchToken) return;
       setResults(result.hits);
       setTotalHits(result.total_hits);
