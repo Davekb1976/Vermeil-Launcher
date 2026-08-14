@@ -3,6 +3,7 @@ import { setActiveScreen, refetchInstances, refreshPinnedInstanceIds, instances,
 import { searchModpacks, searchCurseforge, installModpack, installCfModpack, ModHit } from "../ipc/commands";
 import Dropdown from "../components/Dropdown";
 import { IconModrinth, IconCurseForge, IconLayers } from "../components/Icons";
+import { createGridPageSize } from "../lib/gridPageSize";
 
 const LOADER_ORDER = ["fabric", "quilt", "forge", "neoforge"];
 function extractLoaders(hit: ModHit): string[] {
@@ -18,9 +19,12 @@ function extractVersionRange(hit: ModHit): string {
   return recent.join(", ");
 }
 
-const PAGE_SIZE = 8; // min 4-col grid, 2 rows = 8 cards per page
-
 const BrowseModpacks: Component = () => {
+  // Column-aware page size: measures the grid and fills rows evenly at any
+  // window size. track/gap/rowHeight match the .card-grid--compact + card--mod
+  // geometry. Re-searches when the computed size changes (resize/maximize).
+  const pageSize = createGridPageSize({ track: 240, gap: 12, rowHeight: 180, maxRows: 4 });
+
   const [query, setQuery] = createSignal("");
   const [results, setResults] = createSignal<ModHit[]>([]);
   const [, setSearching] = createSignal(false);
@@ -39,7 +43,7 @@ const BrowseModpacks: Component = () => {
     doSearch(query(), 1);
   };
 
-  const totalPages = () => Math.max(1, Math.ceil(totalHits() / PAGE_SIZE));
+  const totalPages = () => Math.max(1, Math.ceil(totalHits() / pageSize.size()));
 
   let searchTimeout: number | undefined;
   let searchToken = 0;
@@ -48,10 +52,10 @@ const BrowseModpacks: Component = () => {
     const token = ++searchToken;
     setSearching(true);
     try {
-      const offset = (p - 1) * PAGE_SIZE;
+      const offset = (p - 1) * pageSize.size();
       const source = modSource();
       const result = source === "curseforge"
-        ? await searchCurseforge(q, loaderFilter(), "", offset, PAGE_SIZE, sortBy(), "modpack")
+        ? await searchCurseforge(q, loaderFilter(), "", offset, pageSize.size(), sortBy(), "modpack")
         : await searchModpacks(q, offset, sortBy(), loaderFilter());
       if (token !== searchToken) return;
       setResults(result.hits);
@@ -73,6 +77,13 @@ const BrowseModpacks: Component = () => {
   const goPage = (p: number) => { if (p < 1 || p > totalPages()) return; setPage(p); doSearch(query(), p); };
   const handleFilterChange = () => { setPage(1); doSearch(query(), 1); };
 
+  // Re-search when grid size changes (window resize/maximize).
+  createEffect(() => {
+    pageSize.size(); // track
+    doSearch(query(), 1);
+    setPage(1);
+  });
+
   // Wire the dock's floating page slider for multi-page navigation.
   createEffect(() => {
     if (totalPages() > 1) {
@@ -83,7 +94,7 @@ const BrowseModpacks: Component = () => {
   });
   onCleanup(() => setDockPagination(null));
 
-  setTimeout(() => doSearch("", 1), 100);
+
 
   const getInstalledInstances = (projectId: string) => (instances() || []).filter(i => i.source_project_id === projectId);
   const getInstallCount = (projectId: string): number => getInstalledInstances(projectId).length;
@@ -160,7 +171,7 @@ const BrowseModpacks: Component = () => {
       </Show>
 
       {/* Results grid */}
-      <div class="card-grid card-grid--compact">
+      <div class="card-grid card-grid--compact" ref={pageSize.setEl}>
         <For each={results()}>
           {(pack) => {
             const count = () => getInstallCount(pack.project_id);
