@@ -609,11 +609,15 @@ const InstanceMods: Component = () => {
     const token = ++searchToken;
     setSearching(true);
     try {
-      // For resources/shaders, allow user to override version (empty = any version)
+      // Resource packs and shaders aren't hard-bound to a game version, so
+      // their version box is optional: an empty box means "any version" and we
+      // pass "" through, which both backends read as "no version facet".
+      // Previously an empty box fell back to the instance version, so "any"
+      // silently filtered to the instance's release. Mods and datapacks always
+      // filter to the instance version.
       const filter = browseFilter();
-      const version = (filter === "resourcepack" || filter === "shader") && browseVersion()
-        ? browseVersion()
-        : inst.game_version;
+      const versionOptional = filter === "resourcepack" || filter === "shader";
+      const version = versionOptional ? browseVersion().trim() : inst.game_version;
 
       const source = modSource();
       const result = source === "curseforge"
@@ -1651,7 +1655,7 @@ const InstanceMods: Component = () => {
                 <Show when={browseFilter() === "resourcepack" || browseFilter() === "shader"} fallback={
                   <>Showing for <strong style="color:var(--accent);margin:0 3px">{instance()?.loader.type}</strong> · <strong style="color:var(--text)">{instance()?.game_version}</strong></>
                 }>
-                  <>Version: <input class="field-control field-control--text" style="width:80px;padding:2px 6px;font-size:var(--fs-2xs);height:auto;display:inline-block;margin:0 4px" placeholder={instance()?.game_version || "any"} value={browseVersion()} onInput={(e) => { setBrowseVersion(e.currentTarget.value); setCurrentPage(1); clearTimeout(searchTimeout); searchTimeout = window.setTimeout(() => doSearch(1), 400); }} /> <span style="color:var(--muted);font-size:var(--fs-2xs)">(any if empty)</span></>
+                  <>Version: <input class="field-control field-control--text" style="width:80px;padding:2px 6px;font-size:var(--fs-2xs);height:auto;display:inline-block;margin:0 4px" placeholder="any" value={browseVersion()} onInput={(e) => { setBrowseVersion(e.currentTarget.value); setCurrentPage(1); clearTimeout(searchTimeout); searchTimeout = window.setTimeout(() => doSearch(1), 400); }} /> <span style="color:var(--muted);font-size:var(--fs-2xs)">(any if empty)</span></>
                 </Show>
               </div>
               <div class="browse-bar-controls">
