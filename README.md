@@ -1,37 +1,59 @@
-# Vermeil
+<p align="center">
+  <img src="Vermeil/src-tauri/icons/128x128.png" alt="Vermeil" width="80" />
+</p>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
-[![Release](https://img.shields.io/badge/Release-v0.6.1-blue?style=flat-square)](https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest)
-[![Build](https://img.shields.io/badge/Build-passing-brightgreen?style=flat-square)](https://github.com/Vermeil-Launcher/Vermeil-Launcher/actions)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-informational?style=flat-square)]()
-[![Status](https://img.shields.io/badge/Status-Alpha-orange?style=flat-square)]()
-[![Website](https://img.shields.io/badge/Website-vermeillauncher.app-8b5cf6?style=flat-square)](https://vermeillauncher.app/)
+<h1 align="center">Vermeil</h1>
 
-A lightweight Minecraft: Java Edition launcher for Windows and Linux.
+<p align="center">
+  <strong>A lightweight, open-source Minecraft: Java Edition launcher for Windows and Linux.</strong><br/>
+  Microsoft sign-in, every major mod loader, modpack imports, managed Java, and zero telemetry.
+</p>
 
-Website: [vermeillauncher.app](https://vermeillauncher.app/)
+<p align="center">
+  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest"><img src="https://img.shields.io/github/v/release/Vermeil-Launcher/Vermeil-Launcher?style=flat-square&label=release&color=8b5cf6" alt="Release" /></a>
+  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/actions"><img src="https://img.shields.io/github/actions/workflow/status/Vermeil-Launcher/Vermeil-Launcher/release.yml?style=flat-square&label=build" alt="Build" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License" /></a>
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational?style=flat-square" alt="Platform" />
+  <img src="https://img.shields.io/badge/status-alpha-orange?style=flat-square" alt="Status" />
+</p>
 
-Built with [Tauri 2](https://tauri.app/) (Rust backend) and [SolidJS](https://www.solidjs.com/) (TypeScript frontend).
+<p align="center">
+  <a href="https://vermeillauncher.app/">Website</a> · <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest">Download</a> · <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/issues">Issues</a>
+</p>
 
-> **Alpha software.** Vermeil is in early, active development. Features are still changing, things may break between versions, and not everything described here is final. Expect rough edges.
+---
 
-> **This is an AI-generated codebase.** It may contain bugs, incomplete features, or unexpected behavior. See [DISCLAIMER.md](DISCLAIMER.md) for details. Use at your own risk.
+> **Alpha software.** Vermeil is in early, active development. Features may change between versions. Expect rough edges.
 
-> **Antivirus warning:** Vermeil is not code-signed. Some antivirus software may flag the `.exe` as untrusted. This project has no funds for a code-signing certificate — it's up to you to use as-is or build from source.
+> **AI-generated codebase.** Built with Claude via Kiro IDE. May contain bugs or incomplete features. See [DISCLAIMER.md](DISCLAIMER.md).
+
+> **Not code-signed.** Some antivirus software may flag the installer. No funds for a signing certificate — use as-is or build from source.
+
+## Table of Contents
+
+- [Features](#features)
+- [Download](#download)
+- [Development](#development)
+- [Privacy](#privacy)
+- [AI Disclosure](#ai-disclosure)
+- [License](#license)
 
 ## Features
 
-- Microsoft account authentication
-- Multiple account support (including offline)
+- Microsoft account authentication (multiple accounts + offline)
 - Instance management with per-instance settings
 - Mod loader support: Fabric, Quilt, NeoForge, Forge
 - Mod browsing and installation from Modrinth and CurseForge
 - Modpack import (.mrpack and CurseForge zip)
-- Automatic Java detection and download
+- Automatic Java detection and download (Adoptium)
+- Adaptive RAM allocation per instance
 - Discord Rich Presence
 - 3D skin viewer with upload, cape, and elytra support
+- Companion mod for in-game custom capes
 - Auto-updater (Windows and Linux AppImage)
-- Global video settings (FPS, VSync, FOV, GUI Scale, View Bobbing, FOV Effects)
+- Global video settings (FPS, VSync, FOV, GUI Scale, FOV Effects)
+- Download history
+- Zero telemetry
 
 ## Download
 
@@ -39,54 +61,36 @@ Get the latest release from the [Releases page](https://github.com/Vermeil-Launc
 
 ### Windows
 
-Download and run the `.exe` installer from the Releases page. Uninstall from Settings > Apps.
+Download and run the `.exe` installer. Per-user install, no admin required. Uninstall from Settings > Apps.
 
-### Linux (one-liner install)
+### Linux (one-liner)
 
 ```bash
 curl -fsSL https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest/download/install.sh | bash
 ```
 
-This downloads the AppImage, installs it to `~/.local/bin`, and creates a desktop entry.
-
-### Linux (uninstall)
-
-```bash
-vermeil-uninstall
-```
-
-Removes the app and optionally deletes all app data (instances, mods, accounts).
+Downloads the AppImage to `~/.local/bin` and creates a desktop entry. Remove with `vermeil-uninstall`.
 
 ## Development
 
+Built with [Tauri 2](https://tauri.app/) (Rust) and [SolidJS](https://www.solidjs.com/) (TypeScript).
+
 See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for setup instructions and build commands.
-
-## License
-
-Source code is released under the [MIT License](LICENSE).
-
-The Vermeil logo and app icons are **All Rights Reserved** and may not be reused, modified, or redistributed. See [LICENSES.md](LICENSES.md) for the full breakdown.
-
-## Source Availability
-
-This repository is public for transparency and educational purposes. It is **not** a community project — external code contributions (pull requests, commits) are not accepted. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-Bug reports and feature suggestions via GitHub Issues are welcome.
 
 ## Privacy
 
-Vermeil does not collect, transmit, or store any user data on external servers. All account credentials, settings, and game data remain on your local machine. See [PRIVACY.md](PRIVACY.md) for details.
+No data is collected or sent anywhere. All credentials, settings, and game data stay on your machine. See [PRIVACY.md](PRIVACY.md).
 
 ## AI Disclosure
 
-This project was built entirely with AI assistance (Claude via Kiro IDE). The AI generated the code, documentation, and configuration. The project author directed the architecture, feature choices, and reviewed the output.
+This project was built entirely with AI assistance. The author directed architecture and feature choices; AI generated the code.
 
-**Models used:**
-- Claude Opus 4.6 (primary code generation and architecture)
-- Claude Opus 4.7 Experimental (code generation and architecture)
-- Claude Opus 4.8 Experimental (code generation and architecture)
-- Claude Sonnet 4.6 (code generation, debugging, and iteration)
+**Tools:** Claude (Opus 4.6–4.8, Sonnet 4.6) via Kiro IDE.
 
-**IDE:** Kiro (AWS AI-native IDE with agent workflows)
+See [DISCLAIMER.md](DISCLAIMER.md) for the full disclosure.
 
-This means the codebase has not been manually written line-by-line. Bugs, incomplete implementations, and unexpected behavior are possible. The software is provided as-is under the MIT License with no warranty. See [DISCLAIMER.md](DISCLAIMER.md).
+## License
+
+Source code: [MIT License](LICENSE). Logo and icons: All Rights Reserved. See [LICENSES.md](LICENSES.md).
+
+This repository is public for transparency. External contributions are not accepted. Bug reports and feature suggestions via [Issues](https://github.com/Vermeil-Launcher/Vermeil-Launcher/issues) are welcome.
