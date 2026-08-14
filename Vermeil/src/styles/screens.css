@@ -1316,9 +1316,10 @@
 .cat-btn:hover {
   box-shadow: none;        /* flatten the plate on hover */
   opacity: 0.9;
+  transform: translateY(-2px) scale(1.04);
 }
 .cat-btn:active {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.97);
   box-shadow: none;
 }
 .cat-btn.active {
@@ -1396,3 +1397,15 @@
 .create-grid-text { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
 .create-grid-title { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--text); }
 .create-grid-desc { font-size: var(--fs-xs); color: var(--muted); line-height: 1.45; }
+
+
+/* ── Per-tab coloring — gives each navigation tab its own identity while
+   inactive tabs stay neutral. Uses CSS custom properties so the .tab active
+   state picks up the right fill. Applied to any .tab-strip that sits inside
+   a screen-level context (not the category filters, which have their own
+   .cat-btn colours). */
+.tab-strip > .tab:nth-child(1) { --tab-bg: var(--accent); --tab-edge: var(--accent-strong); --tab-fg: var(--accent-contrast); }
+.tab-strip > .tab:nth-child(2) { --tab-bg: #2f6db0; --tab-edge: #4a8ad6; --tab-fg: #eaf3ff; }
+.tab-strip > .tab:nth-child(3) { --tab-bg: #2f8f57; --tab-edge: #44b06e; --tab-fg: #eafff1; }
+.tab-strip > .tab:nth-child(4) { --tab-bg: #9c3f8e; --tab-edge: #c651b0; --tab-fg: #ffeaf9; }
+.tab-strip > .tab:nth-child(5) { --tab-bg: #b0742f; --tab-edge: #d68f44; --tab-fg: #fff4ea; }

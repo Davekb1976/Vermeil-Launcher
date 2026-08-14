@@ -631,7 +631,7 @@ const CustomCapeEditor: Component<Props> = (props) => {
         <div class="modal-footer">
           <button class="btn btn--ghost" onClick={props.onClose}>Cancel</button>
           <button
-            class="install-btn"
+            class="btn btn--primary"
             onClick={handleSave}
             disabled={(!solid() && !hasImage()) || saving()}
           >

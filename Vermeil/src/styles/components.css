@@ -100,12 +100,20 @@
   border: var(--border-line);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background .15s, border-color .15s, color .15s;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+  transition: background .15s, border-color .15s, color .15s,
+              box-shadow .15s, transform .12s;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.btn:hover { background: var(--surface-panel); border-color: var(--border-hover); }
+.btn:hover {
+  background: var(--surface-panel);
+  border-color: var(--border-hover);
+  box-shadow: none;
+  transform: translateY(-2px) scale(1.03);
+}
+.btn:active { transform: translateY(1px) scale(0.97); box-shadow: none; }
 .btn svg { width: 13px; height: 13px; flex-shrink: 0; }
 
 /* Size variants — each fixes height (Requirement 7.2) */
@@ -116,12 +124,12 @@
 /* Intent variants */
 .btn--neutral { background: var(--surface-raised); color: var(--text); border: var(--border-line); }
 .btn--neutral:hover { background: var(--surface-panel); border-color: var(--border-hover); }
-.btn--primary { background: var(--accent); color: var(--accent-contrast); border: var(--bw-hairline) solid var(--accent); }
-.btn--primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
-.btn--ghost { background: transparent; color: var(--text-muted); border: var(--bw-hairline) solid transparent; }
-.btn--ghost:hover { background: var(--surface-raised); color: var(--text); }
-.btn--danger { background: var(--danger-soft); color: var(--danger); border: var(--bw-hairline) solid var(--danger); }
-.btn--danger:hover { background: var(--danger); color: var(--text); border-color: var(--danger); }
+.btn--primary { background: var(--accent); color: var(--accent-contrast); border: var(--bw-hairline) solid var(--accent); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.30); }
+.btn--primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); box-shadow: none; }
+.btn--ghost { background: transparent; color: var(--text-muted); border: var(--bw-hairline) solid transparent; box-shadow: none; }
+.btn--ghost:hover { background: var(--surface-raised); color: var(--text); box-shadow: none; }
+.btn--danger { background: var(--danger-soft); color: var(--danger); border: var(--bw-hairline) solid var(--danger); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
+.btn--danger:hover { background: var(--danger); color: var(--text); border-color: var(--danger); box-shadow: none; }
 
 /* Width control */
 .btn--fixed {
@@ -258,13 +266,13 @@
 /* Active — accent plate with an accent ring (Requirement 6.2). */
 .tab.active {
   opacity: 1;
-  background: var(--accent);
-  border-color: var(--accent-strong);
-  color: var(--accent-contrast);
-  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.30), 0 0 0 1px var(--accent-strong);
+  background: var(--tab-bg, var(--accent));
+  border-color: var(--tab-edge, var(--accent-strong));
+  color: var(--tab-fg, var(--accent-contrast));
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.30), 0 0 0 1px var(--tab-edge, var(--accent-strong));
 }
 .tab.active:hover {
-  box-shadow: 0 0 0 1px var(--accent-strong);
+  box-shadow: 0 0 0 1px var(--tab-edge, var(--accent-strong));
 }
 /* Disabled — single treatment, no hover/active applied. Declared after
    the active rules so an .active.disabled tab still resolves to the
@@ -831,15 +839,6 @@
 }
 .account-row:hover .account-row-remove { opacity: 1; }
 .account-row-remove:hover { color: var(--danger); background: rgba(224,82,82,0.1); }
-
-/* Install button */
-.install-btn {
-  background: var(--bg4); border: 1px solid var(--border); color: var(--text);
-  border-radius: var(--radius-sm); padding: var(--space-1) var(--space-3); font-size: 11px; font-weight: 500;
-  font-family: var(--font); cursor: pointer; white-space: nowrap; transition: all .12s;
-}
-.install-btn:hover { background: var(--accent); border-color: var(--accent); color: var(--text); }
-.install-btn.installed { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); cursor: default; }
 
 /* Bulk select */
 .mod-item-selected { border-color: var(--accent) !important; background: var(--accent-tint); }
