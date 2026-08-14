@@ -125,8 +125,8 @@
 .btn--neutral:hover { background: var(--surface-panel); border-color: var(--border-hover); }
 .btn--primary { background: var(--accent); color: var(--accent-contrast); border: var(--bw-hairline) solid var(--accent); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.30); }
 .btn--primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); box-shadow: none; }
-.btn--ghost { background: transparent; color: var(--text-muted); border: var(--bw-hairline) solid transparent; box-shadow: none; }
-.btn--ghost:hover { background: var(--surface-raised); color: var(--text); box-shadow: none; }
+.btn--ghost { background: transparent; color: var(--text-muted); border: var(--bw-hairline) solid var(--border); box-shadow: none; }
+.btn--ghost:hover { background: var(--surface-raised); color: var(--text); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
 .btn--danger { background: var(--danger-soft); color: var(--danger); border: var(--bw-hairline) solid var(--danger); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25); }
 .btn--danger:hover { background: var(--danger); color: var(--text); border-color: var(--danger); box-shadow: none; }
 

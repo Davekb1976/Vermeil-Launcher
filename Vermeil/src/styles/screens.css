@@ -100,16 +100,24 @@
   font-family: var(--font);
   font-size: 12px;
   font-weight: 500;
-  background: transparent;
-  border: 1px solid transparent;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+  transition: background 0.12s, color 0.12s, border-color 0.12s,
+              box-shadow 0.15s, transform 0.12s;
 }
 .skins-toolbar-btn:hover:not(:disabled) {
   background: var(--surface-raised);
   color: var(--text);
   border-color: var(--border-hover);
+  box-shadow: none;
+  transform: translateY(-2px) scale(1.03);
+}
+.skins-toolbar-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: none;
 }
 .skins-toolbar-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .skins-toolbar-btn.active {
@@ -121,11 +129,13 @@
   background: var(--accent);
   color: var(--accent-contrast);
   border-color: var(--accent-strong);
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.30);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.30);
 }
 .skins-toolbar-btn--primary:hover:not(:disabled) {
   background: var(--accent-strong);
   color: var(--accent-contrast);
+  box-shadow: none;
+  transform: translateY(-2px) scale(1.03);
 }
 .skins-toolbar-btn svg { width: 14px; height: 14px; }
 
