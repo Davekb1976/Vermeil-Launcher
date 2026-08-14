@@ -62,4 +62,4 @@ windows-dpapi = "0.2"
 # show-state via ShowWindow, and use the AttachThreadInput focus trick so the
 # maximized window doesn't land behind the user's active window. The Threading
 # feature also covers the PID-liveness probe (OpenProcess/GetExitCodeProcess).
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Dwm", "Win32_System_Threading"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Dwm", "Win32_System_Threading", "Win32_UI_Shell"] }
