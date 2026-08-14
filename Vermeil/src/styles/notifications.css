@@ -338,6 +338,8 @@
   margin-bottom: var(--space-3);
 }
 .installed-search-row .custom-dropdown { --dropdown-height: var(--control-height-md); }
+/* Modpack browse controls — dropdowns should match the search field height. */
+.screen-enter .custom-dropdown { --dropdown-height: var(--control-height-md); }
 
 
 /* Dependency-issues modal — surfaced after install when one or more required

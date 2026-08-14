@@ -104,7 +104,6 @@
   transition: background .15s, border-color .15s, color .15s,
               box-shadow .15s, transform .12s;
   white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
 }
 .btn:hover {
@@ -273,6 +272,7 @@
 }
 .tab.active:hover {
   box-shadow: 0 0 0 1px var(--tab-edge, var(--accent-strong));
+  transform: translateY(-2px) scale(1.04);
 }
 /* Disabled — single treatment, no hover/active applied. Declared after
    the active rules so an .active.disabled tab still resolves to the

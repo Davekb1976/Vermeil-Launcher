@@ -1,5 +1,5 @@
-import { Component, createSignal, For, Show } from "solid-js";
-import { setActiveScreen, refetchInstances, refreshPinnedInstanceIds, instances, trackDownload, completeDownload, failDownload, showToast } from "../App";
+import { Component, createSignal, createEffect, onCleanup, For, Show } from "solid-js";
+import { setActiveScreen, refetchInstances, refreshPinnedInstanceIds, instances, trackDownload, completeDownload, failDownload, showToast, setDockPagination } from "../App";
 import { searchModpacks, searchCurseforge, installModpack, installCfModpack, ModHit } from "../ipc/commands";
 import Dropdown from "../components/Dropdown";
 import { IconModrinth, IconCurseForge, IconLayers } from "../components/Icons";
@@ -18,7 +18,7 @@ function extractVersionRange(hit: ModHit): string {
   return recent.join(", ");
 }
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 8; // min 4-col grid, 2 rows = 8 cards per page
 
 const BrowseModpacks: Component = () => {
   const [query, setQuery] = createSignal("");
@@ -72,6 +72,16 @@ const BrowseModpacks: Component = () => {
   const handleSearch = (q: string) => { setQuery(q); setPage(1); clearTimeout(searchTimeout); searchTimeout = window.setTimeout(() => doSearch(q, 1), 300); };
   const goPage = (p: number) => { if (p < 1 || p > totalPages()) return; setPage(p); doSearch(query(), p); };
   const handleFilterChange = () => { setPage(1); doSearch(query(), 1); };
+
+  // Wire the dock's floating page slider for multi-page navigation.
+  createEffect(() => {
+    if (totalPages() > 1) {
+      setDockPagination({ current: page(), total: totalPages(), onPageChange: goPage });
+    } else {
+      setDockPagination(null);
+    }
+  });
+  onCleanup(() => setDockPagination(null));
 
   setTimeout(() => doSearch("", 1), 100);
 
@@ -149,51 +159,46 @@ const BrowseModpacks: Component = () => {
         </div>
       </Show>
 
-      {/* Results list */}
-      <div class="mod-list" style="flex:1;overflow-y:auto">
+      {/* Results grid */}
+      <div class="card-grid card-grid--compact">
         <For each={results()}>
           {(pack) => {
             const count = () => getInstallCount(pack.project_id);
             return (
-              <div class="mod-item">
-                <div class="mod-icon" style="background:var(--accent-soft)">
-                  <Show when={pack.icon_url} fallback={<IconLayers />}>
-                    <img src={pack.icon_url!} style="width:36px;height:36px;border-radius:0;object-fit:cover" />
-                  </Show>
-                </div>
-                <div class="mod-details">
-                  <div class="mod-name">{pack.title}</div>
-                  <Show when={pack.author}><div class="mod-author">by {pack.author}</div></Show>
-                  <div class="mod-desc">{pack.description}</div>
-                  <div class="mod-card-tags" style="margin-top:4px">
-                    <For each={extractLoaders(pack)}>{(l) => <span class={`badge badge--loader badge--${l}`}>{l}</span>}</For>
-                    <Show when={extractVersionRange(pack)}><span class="badge badge--version">{extractVersionRange(pack)}</span></Show>
-                    <Show when={pack.version_name}><span class="badge badge--vnum" title={pack.version_name!}>{pack.version_name}</span></Show>
+              <div class="card card--mod">
+                <div class="mod-card-header">
+                  <div class="mod-card-icon" style="background:var(--accent-soft)">
+                    <Show when={pack.icon_url} fallback={<IconLayers />}>
+                      <img src={pack.icon_url!} style="width:100%;height:100%;border-radius:0;object-fit:cover" />
+                    </Show>
                   </div>
-                  <div class="mod-stats">↓ {formatDownloads(pack.downloads)} · ♥ {formatDownloads(pack.follows)}</div>
+                  <div class="mod-card-name-wrap">
+                    <div class="mod-card-name">{pack.title}</div>
+                    <Show when={pack.author}><div class="mod-card-author">by {pack.author}</div></Show>
+                  </div>
                 </div>
-                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-                  <button class="btn btn--primary btn--sm" disabled={installing() === pack.project_id} onClick={() => handleInstallClick(pack)}>
-                    {installing() === pack.project_id ? "Installing..." : "Install"}
-                  </button>
-                  <Show when={count() > 0}>
-                    <span style="font-size:9px;color:var(--accent);white-space:nowrap">Installed{count() > 1 ? ` (${count()})` : ""}</span>
-                  </Show>
+                <div class="mod-card-desc">{pack.description}</div>
+                <div class="mod-card-tags">
+                  <For each={extractLoaders(pack)}>{(l) => <span class={`badge badge--loader badge--${l}`}>{l}</span>}</For>
+                  <Show when={extractVersionRange(pack)}><span class="badge badge--version">{extractVersionRange(pack)}</span></Show>
+                  <Show when={pack.version_name}><span class="badge badge--vnum" title={pack.version_name!}>{pack.version_name}</span></Show>
                 </div>
+                <div class="mod-card-footer">
+                  <div class="mod-card-meta">↓ {formatDownloads(pack.downloads)} · ♥ {formatDownloads(pack.follows)}</div>
+                  <div class="mod-card-actions">
+                    <button class="btn btn--primary btn--sm" disabled={installing() === pack.project_id} onClick={() => handleInstallClick(pack)}>
+                      {installing() === pack.project_id ? "Installing..." : "Install"}
+                    </button>
+                  </div>
+                </div>
+                <Show when={count() > 0}>
+                  <span style="font-size:9px;color:var(--accent);position:absolute;top:var(--space-2);right:var(--space-2)">Installed{count() > 1 ? ` (${count()})` : ""}</span>
+                </Show>
               </div>
             );
           }}
         </For>
       </div>
-
-      {/* Pagination */}
-      <Show when={totalPages() > 1}>
-        <div class="modpack-page-indicator" style="margin-top:var(--space-3)">
-          <button class="modpack-page-btn" disabled={page() <= 1} onClick={() => goPage(page() - 1)}>‹</button>
-          <span class="modpack-page-label">Page {page()}/{totalPages()}</span>
-          <button class="modpack-page-btn" disabled={page() >= totalPages()} onClick={() => goPage(page() + 1)}>›</button>
-        </div>
-      </Show>
     </div>
   );
 };
