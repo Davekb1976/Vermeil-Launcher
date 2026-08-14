@@ -43,6 +43,9 @@ Guidelines for safely restructuring code without breaking existing functionality
 - **Never refactor and change behavior simultaneously.**
 - **Don't refactor code you don't understand.**
 - **Preserve public interface** unless that's the purpose.
+- **Never amend or force-push a pushed commit** to tidy a multi-step refactor —
+  add follow-up commits instead. See "Never rewrite pushed history" in
+  `implementation-process.md`.
 
 ## Verification
 

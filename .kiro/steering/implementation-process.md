@@ -140,6 +140,37 @@ Every completed change gets committed and pushed before the task is reported don
 - Don't combine multiple unrelated changes into one commit. If a single task produced two distinct logical changes, make two commits.
 - Conversely, don't *over-split* one logical change into a stream of tiny commits — that floods the history. A change and the docs that describe it are the **same** logical change: commit a feature together with its own research/`progress.md`/doc update, not as a separate `docs:` commit. Batch related doc edits (e.g. reconciling several files for the same drift) into one commit too. One logical change → one commit.
 
+### Never rewrite pushed history
+
+Once a commit is on `origin/main` it is **immutable**. Add a new commit; never
+rewrite.
+
+- **No `git commit --amend` on anything already pushed.** Amend is only for a
+  commit that exists solely on this machine, and even then prefer a fresh commit.
+- **No `git push --force` / `--force-with-lease` unless the user explicitly asks
+  for it in that message.** `--force-with-lease` is not "the safe force" here: it
+  guards against clobbering *someone else's* push, not against diverging the
+  user's own other clones.
+- This repo is checked out on **more than one machine** (Windows dev box + a Linux
+  box used to test the launcher). Rewriting `main` silently diverges the other
+  clone and forces a `reset --hard` there, putting any local work at risk.
+- Rewriting also breaks things wired to commit SHAs: the Discord commits webhook
+  delivers against SHAs that no longer exist, and CI runs orphan.
+- A couple of extra commits in the log is **always** cheaper than rewritten
+  published history. If a pushed commit's message is now wrong, leave it and say
+  so in the chat reply — do not force-push to fix a message.
+
+### Don't commit unsettled iterative work
+
+When the user is iterating on something subjective — visual styling, wording,
+layout feel — **don't commit after each attempt.** Make the edit, build, and let
+them look. Commit once when they say it's right.
+
+Committing every attempt is what creates the pressure to amend-and-force-push,
+and it produces commit messages that describe the first attempt rather than the
+shipped result. If iteration has already been committed and then changes again,
+add a normal follow-up commit.
+
 What this step does NOT cover — these belong to the `release-process` skill and only happen when the user explicitly says "release":
 
 - Bumping `package.json` / `Cargo.toml` versions.
