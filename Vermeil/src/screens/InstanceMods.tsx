@@ -137,17 +137,22 @@ const InstanceMods: Component = () => {
     const inst = instance();
     if (!inst) return;
     const turningOff = !inst.java.adaptive_override; // currently adaptive → going manual
-    // Optimistic: flip the toggle instantly.
+    const seed = turningOff ? (effectiveMemory()?.value_mb ?? inst.java.memory_max_mb) : undefined;
+    // Optimistic: flip the toggle instantly. When going manual, seed the slider
+    // draft in the same tick — the slider renders immediately, and without the
+    // draft it would show the stale stored value and then jump once the write
+    // lands (the seed exists precisely to avoid a stale starting point).
     setAdaptiveOptimistic(!turningOff);
+    if (seed) setMemoryDraft(seed);
     try {
-      const seed = turningOff ? (effectiveMemory()?.value_mb ?? inst.java.memory_max_mb) : undefined;
       await updateInstanceOptions(inst.id, { adaptiveOverride: turningOff, ...(seed ? { memoryMaxMb: seed } : {}) });
       await refetchInstances();
       await refreshAdaptive();
     } catch (e) {
       showToast({ title: "Failed to change memory mode", message: String(e), type: "error" });
-      // Revert optimistic state and pull the real state back.
+      // Revert both optimistic values and pull the real state back.
       setAdaptiveOptimistic(null);
+      setMemoryDraft(null);
       await refetchInstances();
     }
   };
