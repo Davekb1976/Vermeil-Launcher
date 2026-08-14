@@ -69,9 +69,13 @@ Token groups (see `base.css` for values): surfaces (`--surface-*`), borders (`--
 | Panel | `.panel` | `--sunken`. (`--bracketed` is a no-op) |
 | Toggle | `.toggle` (+ `.on`) | two-half plate + thumb |
 
-> Legacy classes still in markup: `.mod-card` (+ its `.mod-card-*` children), `.inst-card-*`, `.install-btn`, `.choice-btn`, `.page-nav-btn`, `.field-input`. Mostly in InstanceMods, Library, CreateCustom, and BrowseModpacks. **New code uses the canonical classes above**; migrate legacy markup when you touch it.
+> Mod and instance cards are now `.card .card--mod` / `.card .card--inst`. Their `.mod-card-*` and `.inst-card-*` sub-elements are **not** legacy — they're layout helpers that compose inside the canonical card, the same way `.card-body`/`.card-title` do. Keep using them.
 >
-> Already removed: `.ctx-badge`, `.src-tab`/`.ctx-tab`/`.content-cat`/`.content-mode`, `.btn-accent`, `.btn-ghost`, `.control-select`, `.search-input`.
+> Legacy containers still in markup: `.dl-item` (Downloads), `.account-card` (Account), `.add-card` (Library), plus `.install-btn`, `.choice-btn`, `.page-nav-btn`, `.field-input`. **New code uses the canonical classes above**; migrate legacy markup when you touch it.
+>
+> Already removed: `.inst-card`, `.mod-card`, `.mp-card`, `.inst-name`, `.inst-meta`, `.ctx-badge`, `.src-tab`/`.ctx-tab`/`.content-cat`/`.content-mode`, `.btn-accent`, `.btn-ghost`, `.control-select`, `.search-input`.
+>
+> Known duplicate: `.account-card` is defined in both `components.css` and `screens.css`; the `screens.css` copy wins on import order. Consolidate when Account is next touched.
 
 ## Responsive contract
 
