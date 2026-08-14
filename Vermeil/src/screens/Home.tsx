@@ -276,8 +276,8 @@ const Home: Component = () => {
                       </Show>
                     </div>
                     <div class="inst-card-content">
-                      <div class="card-title inst-name">{world.worldName}</div>
-                      <div class="card-sub inst-meta world-card-sub">
+                      <div class="card-title">{world.worldName}</div>
+                      <div class="card-sub world-card-sub">
                         {/* Modpack/instance icon + name so it's clear which
                             instance the world belongs to. */}
                         <Show when={world.instanceIcon && world.instanceIcon !== 'cube'}>

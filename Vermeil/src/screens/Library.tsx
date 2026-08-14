@@ -243,7 +243,7 @@ const Library: Component = () => {
                   </div>
                   <div class="inst-card-content">
                     <Show when={renamingId() === inst.id} fallback={
-                      <div class="card-title inst-name" onClick={(e: MouseEvent) => { if (!selectMode()) e.stopImmediatePropagation(); }} onDblClick={(e) => { if (!selectMode()) { e.stopImmediatePropagation(); setRenamingId(inst.id); setRenameValue(inst.name); } }}>{inst.name}</div>
+                      <div class="card-title" onClick={(e: MouseEvent) => { if (!selectMode()) e.stopImmediatePropagation(); }} onDblClick={(e) => { if (!selectMode()) { e.stopImmediatePropagation(); setRenamingId(inst.id); setRenameValue(inst.name); } }}>{inst.name}</div>
                     }>
                       <input class="field-control field-control--text" style="font-size:var(--fs-xs);font-weight:600;height:auto;padding:2px 6px" value={renameValue()}
                         onInput={(e) => setRenameValue(e.currentTarget.value)}
@@ -253,7 +253,7 @@ const Library: Component = () => {
                         onClick={(e: MouseEvent) => { if (!selectMode()) e.stopImmediatePropagation(); }}
                       />
                     </Show>
-                    <div class="card-sub inst-meta">
+                    <div class="card-sub">
                       {inst.mods.length} mods · {timeAgo(inst.last_played)}
                     </div>
                     <div class="inst-card-badges">

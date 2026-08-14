@@ -36,8 +36,7 @@
   flex-direction: column;
   gap: var(--space-1);
 }
-.inst-name { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.inst-meta { font-size: 10px; color: var(--muted); }
+
 .inst-card-badges {
   display: flex;
   flex-wrap: wrap;

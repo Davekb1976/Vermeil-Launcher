@@ -969,8 +969,8 @@ const Settings: Component = () => {
                           </Show>
                         </div>
                         <div class="inst-card-content">
-                          <div class="card-title inst-name">{inst.name}</div>
-                          <div class="card-sub inst-meta">
+                          <div class="card-title">{inst.name}</div>
+                          <div class="card-sub">
                             {inst.game_version} · {inst.mods.length} mods · {inst.window.width}x{inst.window.height}
                           </div>
                           <div class="inst-card-badges">
