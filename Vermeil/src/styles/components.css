@@ -243,14 +243,16 @@
   transition: box-shadow .18s ease, transform .12s ease, opacity .15s ease,
               background .15s ease, color .15s ease, border-color .15s ease;
 }
-/* Hover — inactive, enabled tabs ONLY (Requirement 6.4). Flattens the plate. */
+/* Hover — inactive, enabled tabs ONLY (Requirement 6.4). Flattens the plate
+   and lifts slightly for a physical "raised" feel. */
 .tab:hover:not(.active):not(:disabled):not(.disabled) {
   color: var(--text);
   opacity: 0.9;
   box-shadow: none;
+  transform: translateY(-2px) scale(1.04);
 }
 .tab:active:not(:disabled):not(.disabled) {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.97);
   box-shadow: none;
 }
 /* Active — accent plate with an accent ring (Requirement 6.2). */

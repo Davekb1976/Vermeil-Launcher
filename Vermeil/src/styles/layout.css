@@ -50,27 +50,6 @@
 .win-maximize { background: var(--win-maximize); }
 .win-maximize:hover { background: var(--win-maximize-hover); color: var(--text); }
 
-/* Logo in the titlebar — replaces the old sidebar logo now that the
-   sidebar is gone. Sits to the right of the window controls so it
-   doesn't cover the macOS-style traffic lights. */
-.titlebar-logo {
-  width: 22px;
-  height: 22px;
-  margin-left: var(--space-2);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  user-select: none;
-  pointer-events: none;
-}
-.titlebar-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  -webkit-user-drag: none;
-}
-
 .titlebar-title { font-size: 13px; font-weight: 500; color: var(--text); flex: 1; text-align: center; }
 .account-pill { display: flex; align-items: center; gap: var(--space-2); font-size: 12px; color: var(--muted); }
 .dot-green {

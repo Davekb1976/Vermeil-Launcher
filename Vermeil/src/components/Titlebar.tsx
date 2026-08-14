@@ -50,9 +50,6 @@ const Titlebar: Component<{ title: string }> = (props) => {
           </svg>
         </button>
       </div>
-      <div class="titlebar-logo" title="Vermeil">
-        <img src="/logo.png" alt="Vermeil" draggable={false} />
-      </div>
       <div class="titlebar-title">{props.title}</div>
       <div class="account-pill">
         <PlayerHead
