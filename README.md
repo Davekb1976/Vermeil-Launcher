@@ -25,7 +25,7 @@
 
 > **Alpha software.** Vermeil is in early, active development. Features may change between versions. Expect rough edges.
 
-> **AI-generated codebase.** Built with Claude via Kiro IDE. May contain bugs or incomplete features. See [DISCLAIMER.md](DISCLAIMER.md).
+> **AI-generated codebase.** Built with AI assistance (Claude and GPT models) via Kiro IDE. May contain bugs or incomplete features. See [DISCLAIMER.md](DISCLAIMER.md).
 
 > **Not code-signed.** Some antivirus software may flag the installer. No funds for a signing certificate — use as-is or build from source.
 
@@ -85,7 +85,13 @@ No data is collected or sent anywhere. All credentials, settings, and game data 
 
 This project was built entirely with AI assistance. The author directed architecture and feature choices; AI generated the code.
 
-**Tools:** Claude (Opus 4.6–4.8, Sonnet 4.6) via Kiro IDE.
+**Models:**
+
+- Claude Opus 5 / Claude Sonnet 5 — primary code generation and architecture
+- GPT 5.6 (Terra / Luna) — miscellaneous tasks
+- Earlier development used Claude Opus 4.6–4.8 and Sonnet 4.6
+
+**IDE:** Kiro
 
 See [DISCLAIMER.md](DISCLAIMER.md) for the full disclosure.
 
