@@ -1353,3 +1353,46 @@
 .cat-btn--resource { --cat-bg: #2f8f57; --cat-edge: #44b06e; --cat-fg: #eafff1; }
 .cat-btn--shader   { --cat-bg: #9c3f8e; --cat-edge: #c651b0; --cat-fg: #ffeaf9; }
 .cat-btn--datapack { --cat-bg: #b0742f; --cat-edge: #d68f44; --cat-fg: #fff4ea; }
+
+
+/* ── Create instance — full-content-area chooser + form ─────────────────────
+   Replaces the modal-overlay approach. Three horizontal cards as the entry
+   point, filling the content area like any other screen. */
+.create-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.create-grid-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.25);
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+}
+.create-grid-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+.create-grid-card:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
+}
+.create-grid-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.create-grid-icon svg { width: 28px; height: 28px; }
+.create-grid-text { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.create-grid-title { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--text); }
+.create-grid-desc { font-size: var(--fs-xs); color: var(--muted); line-height: 1.45; }

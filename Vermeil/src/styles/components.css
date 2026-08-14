@@ -782,11 +782,8 @@
 .dl-bar-fill { height: 100%; border-radius: var(--radius-xs); background: var(--accent); transition: width .3s; }
 .dl-meta { font-size: 10px; color: var(--muted); margin-top: var(--space-1); font-family: var(--font-mono); }
 
-/* Account */
-.account-card {
-  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-5);
-  display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-4);
-}
+/* Account — full definition lives in screens.css; this is just the avatar
+   helper which both the account card and the sign-in button use. */
 .avatar {
   width: 52px; height: 52px; border-radius: var(--radius-lg);
   background: var(--grad-avatar);
