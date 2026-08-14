@@ -222,61 +222,68 @@
   align-items: center;
   gap: var(--space-1);
 }
+/* Segmented plates, matching the chunky geometry of the category filter
+   buttons (.cat-btn in screens.css): same padding, weight, sharp edges, and
+   inset bevel that flattens on hover. Deliberately NOT reusing the category
+   colours — those encode content type (blue = mods, green = resources), so
+   borrowing them for navigation would imply meaning that isn't there. Tabs
+   stay on the neutral surface ramp and the active one takes the accent fill,
+   mirroring the accent-filled "All" pill. */
 .tab {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
-  height: var(--control-height-sm);
-  padding: 0 var(--space-3);
-  background: transparent;
-  border: none;
+  padding: 6px var(--space-3);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 0;
   font-family: var(--font);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
   line-height: 1;
   color: var(--text-muted);          /* inactive label color (Req 6.3) */
   cursor: pointer;
   white-space: nowrap;
-  transition: color .12s;
+  opacity: 0.6;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.30);
+  transition: box-shadow .18s ease, transform .12s ease, opacity .15s ease,
+              background .15s ease, color .15s ease, border-color .15s ease;
 }
-/* Active indicator — identical geometry for every tab; only color /
-   visibility changes between states (Requirement 6.2). */
-.tab::after {
-  content: "";
-  position: absolute;
-  left: var(--space-2);
-  right: var(--space-2);
-  bottom: 0;
-  height: var(--bw-frame);
-  border-radius: var(--radius-pill);
-  background: transparent;           /* inactive: no indicator (Req 6.3) */
-  transition: background .12s;
-}
-/* Hover — inactive, enabled tabs ONLY (Requirement 6.4) */
+/* Hover — inactive, enabled tabs ONLY (Requirement 6.4). Flattens the plate. */
 .tab:hover:not(.active):not(:disabled):not(.disabled) {
   color: var(--text);
+  opacity: 0.9;
+  box-shadow: none;
 }
-/* Active — accent label + accent underline (Requirement 6.2) */
+.tab:active:not(:disabled):not(.disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+/* Active — accent plate with an accent ring (Requirement 6.2). */
 .tab.active {
-  color: var(--accent);
-}
-.tab.active::after {
+  opacity: 1;
   background: var(--accent);
+  border-color: var(--accent-strong);
+  color: var(--accent-contrast);
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.30), 0 0 0 1px var(--accent-strong);
+}
+.tab.active:hover {
+  box-shadow: 0 0 0 1px var(--accent-strong);
 }
 /* Disabled — single treatment, no hover/active applied. Declared after
    the active rules so an .active.disabled tab still resolves to the
    disabled (non-active) treatment (Requirement 6.5). */
 .tab:disabled,
 .tab.disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+  background: var(--bg3);
+  border-color: var(--border);
   color: var(--text-muted);
-}
-.tab:disabled::after,
-.tab.disabled::after {
-  background: transparent;
+  box-shadow: none;
+  transform: none;
 }
 
 /* ============================================================
@@ -520,8 +527,16 @@
 .badge--source svg { width: 12px; height: 12px; flex-shrink: 0; }
 
 /* Variant — Vermeil companion mod supported (in-game capes). Accent tint with
-   the app logo, so it reads as a first-party "this works here" mark. */
-.badge--companion { background: var(--accent-soft); color: var(--accent); padding: var(--space-1); }
+   the app logo, so it reads as a first-party "this works here" mark. The tint
+   alone is within a couple of points of the page background, so the accent
+   border is what actually makes the chip legible — same accent-soft-plus-accent
+   -border pairing used elsewhere for accent chips. */
+.badge--companion {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: var(--space-1);
+}
 .badge--companion img { width: 13px; height: 13px; flex-shrink: 0; display: block; }
 
 /* ============================================================
