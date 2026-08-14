@@ -176,7 +176,7 @@ const BrowseModpacks: Component = () => {
           {(pack) => {
             const count = () => getInstallCount(pack.project_id);
             return (
-              <div class="card card--mod">
+              <div class="card card--mod" style="position:relative">
                 <div class="mod-card-header">
                   <div class="mod-card-icon" style="background:var(--accent-soft)">
                     <Show when={pack.icon_url} fallback={<IconLayers />}>
@@ -187,6 +187,9 @@ const BrowseModpacks: Component = () => {
                     <div class="mod-card-name">{pack.title}</div>
                     <Show when={pack.author}><div class="mod-card-author">by {pack.author}</div></Show>
                   </div>
+                  <Show when={count() > 0}>
+                    <span class="badge badge--version" style="font-size:9px;margin-left:auto">Installed{count() > 1 ? ` (${count()})` : ""}</span>
+                  </Show>
                 </div>
                 <div class="mod-card-desc">{pack.description}</div>
                 <div class="mod-card-tags">
@@ -202,9 +205,6 @@ const BrowseModpacks: Component = () => {
                     </button>
                   </div>
                 </div>
-                <Show when={count() > 0}>
-                  <span style="font-size:9px;color:var(--accent);position:absolute;top:var(--space-2);right:var(--space-2)">Installed{count() > 1 ? ` (${count()})` : ""}</span>
-                </Show>
               </div>
             );
           }}
