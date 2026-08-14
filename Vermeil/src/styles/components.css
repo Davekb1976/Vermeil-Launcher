@@ -77,8 +77,8 @@
                     truncate an over-long label instead of growing
                     (Requirements 7.1, 7.3).
    Every radius/padding/border/background/font-size references a token.
-   Legacy button classes (.btn-accent, .btn-ghost, .install-btn,
-   .play-btn, .choice-btn, .page-nav-btn) remain until task 12.4.
+   Legacy button classes still referenced by markup: .install-btn,
+   .play-btn, .choice-btn, .page-nav-btn.
    ============================================================ */
 .btn {
   display: inline-flex;
@@ -139,11 +139,7 @@
 /* Disabled */
 .btn:disabled, .btn.disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* --- Legacy intent classes (still referenced by markup; removed in 12.4) --- */
-.btn-accent { background: var(--accent); border-color: var(--accent); color: var(--text); }
-.btn-accent:hover { background: var(--accent2); border-color: var(--accent2); }
-.btn-ghost { background: transparent; border-color: transparent; color: var(--muted); }
-.btn-ghost:hover { background: var(--bg4); color: var(--text); }
+
 
 /* Context bar */
 .inst-context-bar {
@@ -214,8 +210,8 @@
    matches the canonical .btn:disabled precedent; opacity is not a
    tokenized category).
 
-   Legacy tab classes (.src-tab, .ctx-tab, .content-cat, .content-mode)
-   remain in place until task 12.4 removes them.
+   The legacy tab classes (.src-tab, .ctx-tab, .content-cat,
+   .content-mode) have been removed; .tab is the only tab vocabulary.
    ============================================================ */
 .tab-strip {
   display: flex;
@@ -591,10 +587,9 @@
    trigger box adopts the field-control surface/border/radius/height.
 
    Every radius/padding/border/background/font-size/color references a
-   token — no literals. Legacy field classes (.field-input,
-   .search-input, .control-select, .custom-dropdown-selected,
-   .concurrency-number, .java-slot-input) remain in place until task
-   12.4 removes them.
+   token — no literals. .search-input and .control-select are gone;
+   the legacy field classes still referenced by markup are .field-input,
+   .custom-dropdown-selected, .concurrency-number, and .java-slot-input.
    ============================================================ */
 .field-control {
   display: block;
@@ -679,13 +674,7 @@
 
 /* Search */
 .search-bar { display: flex; gap: var(--space-2); margin-bottom: var(--space-4); }
-.search-input {
-  flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-3); color: var(--text); font-size: 12px; font-family: var(--font); outline: none;
-  transition: border-color .15s;
-}
-.search-input:focus { border-color: var(--accent); }
-.search-input::placeholder { color: var(--text-faint); }
+
 
 /* Settings */
 .settings-section { margin-bottom: var(--space-6); }
@@ -1160,11 +1149,6 @@ select.field-input[size] { appearance: none; }
 .create-choice-text { display: flex; flex-direction: column; gap: var(--space-1); }
 .create-choice-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 0; }
 .create-choice-desc { font-size: 11px; color: var(--muted); line-height: 1.5; }
-
-/* Disabled legacy accent button (canonical .btn:disabled handled above) */
-.btn-accent:disabled {
-  opacity: 0.5; cursor: not-allowed;
-}
 
 /* Browse controls (sort, view) */
 .browse-wrapper {

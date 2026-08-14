@@ -69,7 +69,9 @@ Token groups (see `base.css` for values): surfaces (`--surface-*`), borders (`--
 | Panel | `.panel` | `--sunken`. (`--bracketed` is a no-op) |
 | Toggle | `.toggle` (+ `.on`) | two-half plate + thumb |
 
-> Legacy classes (`.inst-card`, `.mod-card`, `.ctx-badge`, `.src-tab`, `.btn-accent`, `.control-select`) still exist in InstanceMods, Account, and BrowseModpacks. **New code uses the canonical classes above**; migrate legacy markup when you touch it.
+> Legacy classes still in markup: `.mod-card` (+ its `.mod-card-*` children), `.inst-card-*`, `.install-btn`, `.choice-btn`, `.page-nav-btn`, `.field-input`. Mostly in InstanceMods, Library, CreateCustom, and BrowseModpacks. **New code uses the canonical classes above**; migrate legacy markup when you touch it.
+>
+> Already removed: `.ctx-badge`, `.src-tab`/`.ctx-tab`/`.content-cat`/`.content-mode`, `.btn-accent`, `.btn-ghost`, `.control-select`, `.search-input`.
 
 ## Responsive contract
 
