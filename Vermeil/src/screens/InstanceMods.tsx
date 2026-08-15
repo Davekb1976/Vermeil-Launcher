@@ -1433,9 +1433,7 @@ const InstanceMods: Component = () => {
                 value={installedSearch()}
                 onInput={(e) => setInstalledSearch(e.currentTarget.value)}
               />
-              <Show when={installedActiveCount() > 0}>
-                <span class="search-count">{installedActiveCount()} installed</span>
-              </Show>
+              <span class="search-count" style="min-width:80px;text-align:right">{installedActiveCount() || "—"} installed</span>
             </div>
             <Dropdown
               value={installedSort()}
@@ -1451,7 +1449,7 @@ const InstanceMods: Component = () => {
                 check; does nothing while one is already in flight. */}
             <button
               class="btn"
-              style="white-space:nowrap"
+              style="white-space:nowrap;min-width:110px"
               disabled={checkingUpdates() || (instance()?.mods.length ?? 0) === 0}
               onClick={() => refreshUpdates(true)}
               title="Check Modrinth and CurseForge for newer versions of every installed item"
