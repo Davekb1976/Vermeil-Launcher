@@ -1,4 +1,4 @@
-import { Component, createSignal, createEffect, createResource, For, Show, onMount, onCleanup } from "solid-js";
+import { Component, createSignal, createEffect, createMemo, createResource, untrack, For, Show, onMount, onCleanup } from "solid-js";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { setActiveScreen, instances, activeInstanceId, refetchInstances, refreshPinnedInstanceIds, initialInstanceTab, gameRunning, trackDownload, completeDownload, failDownload, startBulkBatch, endBulkBatch, showToast, gameLogsFor, setDockHidden, setDockPagination, logsPoppedOut } from "../App";
 import { reportDependencyIssues, DependencyIssue } from "../components/DependencyIssuesModal";
@@ -190,20 +190,33 @@ const InstanceMods: Component = () => {
   });
 
   // Refresh the update map whenever the Installed tab is opened or the
-  // instance's mod list changes. We only run while the tab is visible to
-  // avoid surprise network calls in the background.
+  // instance's mod list actually changes. We only run while the tab is visible
+  // to avoid surprise network calls in the background.
+  //
+  // The dependency is a primitive key, NOT `instance()`. Reading the instance
+  // object directly made this effect re-run on every `refetchInstances()` —
+  // including an enabled/disabled flip, which doesn't change the mod list at
+  // all. That fired a full Modrinth + CurseForge probe for every installed mod
+  // on each toggle click (rate-limit abuse), and the resulting
+  // `checkingUpdates` flip resized the "Check updates" label, which shifted
+  // the whole search row. A memo over `id:count` only notifies when the value
+  // actually differs, so a toggle is now a no-op here.
+  // Count first so the "no mods" test is a leading-integer check that can't be
+  // confused by an id containing a colon.
+  const updateCheckKey = createMemo(() => {
+    const inst = instance();
+    return inst ? `${inst.mods.length}:${inst.id}` : "";
+  });
   createEffect(() => {
-    if (mainTab() === "content" && contentTab() === "installed") {
-      const inst = instance();
-      if (inst && inst.mods.length > 0) {
-        // Re-run on mod list size change so newly installed mods get checked
-        // and removed mods drop out of the map.
-        inst.mods.length;
-        refreshUpdates();
-      } else {
-        setModUpdates(new Map());
-      }
+    const key = updateCheckKey();
+    if (mainTab() !== "content" || contentTab() !== "installed") return;
+    if (!key || key.startsWith("0:")) {
+      setModUpdates(new Map());
+      return;
     }
+    // untrack: refreshUpdates reads `instance()` internally, which would
+    // otherwise re-widen this effect's dependency back to the whole resource.
+    untrack(() => refreshUpdates());
   });
   const [contentTab, setContentTab] = createSignal<"installed" | "browse">("installed");
   const [installedFilter, setInstalledFilter] = createSignal<"all" | "mod" | "resourcepack" | "shader" | "datapack">("all");
@@ -1447,9 +1460,12 @@ const InstanceMods: Component = () => {
                 user may want to re-check after publishing schedules they know
                 about (e.g. Sodium just dropped a release). Spinner during the
                 check; does nothing while one is already in flight. */}
+            {/* Fixed width so the "Checking..." label can't shrink the button.
+                The row's .search-field is flex:1, so any width change here
+                would drag the count badge and sort dropdown sideways. */}
             <button
-              class="btn"
-              style="white-space:nowrap;min-width:110px"
+              class="btn btn--fixed"
+              style="white-space:nowrap;--btn-fixed-width:120px"
               disabled={checkingUpdates() || (instance()?.mods.length ?? 0) === 0}
               onClick={() => refreshUpdates(true)}
               title="Check Modrinth and CurseForge for newer versions of every installed item"
