@@ -20,7 +20,11 @@
   border: 1px solid var(--danger);
   box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
   z-index: 150;
-  animation: fadeIn 0.15s ease;
+  animation: slideUpIn 0.2s ease-out;
+}
+@keyframes slideUpIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 /* Download toast */
