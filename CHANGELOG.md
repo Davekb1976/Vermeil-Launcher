@@ -1,13 +1,7 @@
-## 0.8.2
-
-### Changed
-
-- Escape key now backs one step in the navigation hierarchy instead of jumping straight to Library
-- Multi-select Delete action moved to a floating bottom bar — no more header layout shift
-- Companion badge (Vermeil logo) appears last in the badge row on all screens
+## 0.8.3
 
 ### Fixed
 
-- Splash screen pixel font now works in production builds (bundled locally instead of Google Fonts CDN)
-- Multi-select and Delete buttons match the dropdown height (no more mismatched controls)
-- Floating delete bar slides up smoothly instead of shifting in from the right
+- Mod toggle no longer fires a full update check across Modrinth and CurseForge for all installed mods — only triggers when the mod count actually changes (install/remove)
+- Search row (count badge, sort dropdown, Check updates button) no longer flickers left/right on mod toggle or page entry
+- Instance page loads correctly after the reactivity fix (memo declaration order)
