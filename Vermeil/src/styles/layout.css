@@ -69,6 +69,7 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-gutter: stable; /* always reserve scrollbar width so content doesn't shift */
   padding: var(--space-5) var(--space-5) calc(var(--space-5) + var(--dock-clearance));
   scroll-padding-bottom: var(--dock-clearance);
   scroll-behavior: smooth;
