@@ -6,6 +6,16 @@
    (min on-screen time, then fade). Classes are `splash-` prefixed
    so they never collide with in-app `.loader-*` styles.
    ========================================================= */
+
+/* Bundled pixel font — self-hosted so the splash works offline and the
+   production CSP doesn't need to allow fonts.googleapis.com. OFL license. */
+@font-face {
+  font-family: 'Press Start 2P';
+  font-weight: 400;
+  font-style: normal;
+  font-display: block; /* avoid FOUT on the splash — it's better to wait briefly */
+  src: url('/fonts/PressStart2P.woff2') format('woff2');
+}
 .splash {
   position: fixed;
   inset: 0;
