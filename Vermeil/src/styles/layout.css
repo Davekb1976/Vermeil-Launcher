@@ -67,9 +67,8 @@
    the dock too. */
 .content {
   flex: 1;
-  overflow-y: scroll; /* always show scrollbar — prevents content shift on refetch */
+  overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-gutter: stable;
   padding: var(--space-5) var(--space-5) calc(var(--space-5) + var(--dock-clearance));
   scroll-padding-bottom: var(--dock-clearance);
   scroll-behavior: smooth;

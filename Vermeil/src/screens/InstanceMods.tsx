@@ -189,35 +189,6 @@ const InstanceMods: Component = () => {
     setLocalInstalled(ids);
   });
 
-  // Refresh the update map whenever the Installed tab is opened or the
-  // instance's mod list actually changes. We only run while the tab is visible
-  // to avoid surprise network calls in the background.
-  //
-  // The dependency is a primitive key, NOT `instance()`. Reading the instance
-  // object directly made this effect re-run on every `refetchInstances()` —
-  // including an enabled/disabled flip, which doesn't change the mod list at
-  // all. That fired a full Modrinth + CurseForge probe for every installed mod
-  // on each toggle click (rate-limit abuse), and the resulting
-  // `checkingUpdates` flip resized the "Check updates" label, which shifted
-  // the whole search row. A memo over `id:count` only notifies when the value
-  // actually differs, so a toggle is now a no-op here.
-  // Count first so the "no mods" test is a leading-integer check that can't be
-  // confused by an id containing a colon.
-  const updateCheckKey = createMemo(() => {
-    const inst = instance();
-    return inst ? `${inst.mods.length}:${inst.id}` : "";
-  });
-  createEffect(() => {
-    const key = updateCheckKey();
-    if (mainTab() !== "content" || contentTab() !== "installed") return;
-    if (!key || key.startsWith("0:")) {
-      setModUpdates(new Map());
-      return;
-    }
-    // untrack: refreshUpdates reads `instance()` internally, which would
-    // otherwise re-widen this effect's dependency back to the whole resource.
-    untrack(() => refreshUpdates());
-  });
   const [contentTab, setContentTab] = createSignal<"installed" | "browse">("installed");
   const [installedFilter, setInstalledFilter] = createSignal<"all" | "mod" | "resourcepack" | "shader" | "datapack">("all");
   // Installed tab: search + sort. Sort defaults to newest-first because users
@@ -359,6 +330,39 @@ const InstanceMods: Component = () => {
     if (!list || !id) return list?.[0] || null;
     return list.find(i => i.id === id) || list[0] || null;
   };
+
+  // Refresh the update map whenever the Installed tab is opened or the
+  // instance's mod list actually changes. We only run while the tab is visible
+  // to avoid surprise network calls in the background.
+  //
+  // The dependency is a primitive key, NOT `instance()`. Reading the instance
+  // object directly made this effect re-run on every `refetchInstances()` —
+  // including an enabled/disabled flip, which doesn't change the mod list at
+  // all. That fired a full Modrinth + CurseForge probe for every installed mod
+  // on each toggle click (rate-limit abuse), and the resulting `checkingUpdates`
+  // flip resized the "Check updates" label, which shifted the whole search row.
+  // A memo only notifies when its value actually differs, so a toggle is now a
+  // no-op here. Count goes first so the "no mods" test is a leading-integer
+  // check that can't be confused by an id containing a colon.
+  //
+  // MUST stay below `const instance` — createMemo evaluates its body eagerly on
+  // creation (unlike createEffect, which is deferred), so declaring it earlier
+  // hits the temporal dead zone on `instance` and throws during setup.
+  const updateCheckKey = createMemo(() => {
+    const inst = instance();
+    return inst ? `${inst.mods.length}:${inst.id}` : "";
+  });
+  createEffect(() => {
+    const key = updateCheckKey();
+    if (mainTab() !== "content" || contentTab() !== "installed") return;
+    if (!key || key.startsWith("0:")) {
+      setModUpdates(new Map());
+      return;
+    }
+    // untrack: refreshUpdates reads `instance()` internally, which would
+    // otherwise re-widen this effect's dependency back to the whole resource.
+    untrack(() => refreshUpdates());
+  });
 
   // Reconcile mods the user dropped into the instance's mods/ folder by hand
   // into the tracked list so they show up in the Installed tab. Runs whenever
