@@ -527,7 +527,14 @@ const App: Component = () => {
           return;
         }
         const screen = activeScreen();
-        if (screen === "create-choose" || screen === "create-custom" || screen === "create-modpack" || screen === "create-import") {
+        // Step back one level in the navigation hierarchy, not all
+        // the way to library. Create sub-screens back to the chooser;
+        // the chooser backs to library; instance page backs to library.
+        if (screen === "create-custom" || screen === "create-modpack" || screen === "create-import") {
+          setActiveScreen("create-choose");
+          return;
+        }
+        if (screen === "create-choose" || screen === "mods") {
           setActiveScreen("library");
           return;
         }
