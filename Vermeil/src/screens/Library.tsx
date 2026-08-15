@@ -265,16 +265,16 @@ const Library: Component = () => {
                         {loaderLabel(inst.loader.type)}
                       </span>
                       <span class="badge">{inst.java.memory_max_mb} MB</span>
-                      <Show when={inst.ingame_cape_supported}>
-                        <span class="badge badge--companion" title="Vermeil companion mod supported">
-                          <img src="/logo.png" alt="Vermeil" draggable={false} />
-                        </span>
-                      </Show>
                       <Show when={(inst.source_platforms || []).includes("modrinth")}>
                         <span class="badge badge--source badge--modrinth" title="Available on Modrinth"><IconModrinth /></span>
                       </Show>
                       <Show when={(inst.source_platforms || []).includes("curseforge")}>
                         <span class="badge badge--source badge--curseforge" title="Available on CurseForge"><IconCurseForge /></span>
+                      </Show>
+                      <Show when={inst.ingame_cape_supported}>
+                        <span class="badge badge--companion" title="Vermeil companion mod supported">
+                          <img src="/logo.png" alt="Vermeil" draggable={false} />
+                        </span>
                       </Show>
                     </div>
                   </div>

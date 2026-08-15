@@ -975,16 +975,16 @@ const Settings: Component = () => {
                           </div>
                           <div class="inst-card-badges">
                             <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>{loaderLabel(inst.loader.type)}</span>
-                            <Show when={inst.ingame_cape_supported}>
-                              <span class="badge badge--companion" title="Vermeil companion mod supported">
-                                <img src="/logo.png" alt="Vermeil" draggable={false} />
-                              </span>
-                            </Show>
                             <Show when={(inst.source_platforms || []).includes("modrinth")}>
                               <span class="badge badge--source badge--modrinth"><IconModrinth /></span>
                             </Show>
                             <Show when={(inst.source_platforms || []).includes("curseforge")}>
                               <span class="badge badge--source badge--curseforge"><IconCurseForge /></span>
+                            </Show>
+                            <Show when={inst.ingame_cape_supported}>
+                              <span class="badge badge--companion" title="Vermeil companion mod supported">
+                                <img src="/logo.png" alt="Vermeil" draggable={false} />
+                              </span>
                             </Show>
                           </div>
                         </div>

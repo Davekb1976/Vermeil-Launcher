@@ -1038,16 +1038,16 @@ const InstanceMods: Component = () => {
           </span>
         </Show>
         <span class="badge badge--version">{instance()?.game_version}</span>
-        <Show when={instance()?.ingame_cape_supported}>
-          <span class="badge badge--companion" title="Vermeil companion mod supported">
-            <img src="/logo.png" alt="Vermeil" draggable={false} />
-          </span>
-        </Show>
         <Show when={(instance()?.source_platforms || []).includes("modrinth")}>
           <span class="badge badge--source badge--modrinth" title="Available on Modrinth"><IconModrinth /></span>
         </Show>
         <Show when={(instance()?.source_platforms || []).includes("curseforge")}>
           <span class="badge badge--source badge--curseforge" title="Available on CurseForge"><IconCurseForge /></span>
+        </Show>
+        <Show when={instance()?.ingame_cape_supported}>
+          <span class="badge badge--companion" title="Vermeil companion mod supported">
+            <img src="/logo.png" alt="Vermeil" draggable={false} />
+          </span>
         </Show>
 
         <div class="ctx-action-group">
