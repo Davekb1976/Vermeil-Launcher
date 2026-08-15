@@ -163,7 +163,7 @@ const Library: Component = () => {
             width="150px"
           />
           <Show when={selectMode()}>
-            <button class="btn btn--danger btn--sm" disabled={selected().size === 0} onClick={async () => {
+            <button class="btn btn--danger" disabled={selected().size === 0} onClick={async () => {
               const settings = await getSettings();
               if (settings.force_delete) {
                 await deleteSelected();
@@ -174,21 +174,19 @@ const Library: Component = () => {
               Delete ({selected().size})
             </button>
           </Show>
-          <button class="btn btn--sm tip-below" data-tip="Multi-select" onClick={() => { setSelectMode(!selectMode()); setSelected(new Set<string>()); }}>
+          <button class="btn tip-below" data-tip="Multi-select" onClick={() => { setSelectMode(!selectMode()); setSelected(new Set<string>()); }}>
             {selectMode() ? <IconX /> : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>}
           </button>
         </div>
       </div>
 
-      {/* Delete confirmation */}
+      {/* Delete confirmation — floats above the dock nav */}
       <Show when={showDeleteConfirm()}>
-        <div style="background:var(--surface-panel);border:1px solid var(--danger);padding:12px;margin-bottom:12px">
-          <div style="font-size:var(--fs-xs);color:var(--danger);margin-bottom:8px">Delete {selected().size} instance(s)? Type <strong>Confirm</strong> to proceed.</div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input class="field-control field-control--text" style="max-width:140px;border-color:var(--danger)" placeholder="Type Confirm" value={deleteInput()} onInput={(e) => setDeleteInput(e.currentTarget.value)} />
-            <button class="btn btn--danger" disabled={deleteInput() !== "Confirm"} onClick={deleteSelected}>Delete All</button>
-            <button class="btn btn--ghost" onClick={() => { setShowDeleteConfirm(false); setDeleteInput(""); }}>Cancel</button>
-          </div>
+        <div class="library-delete-bar">
+          <span style="font-size:var(--fs-xs);color:var(--danger)">Delete {selected().size} instance(s)? Type <strong>Confirm</strong> to proceed.</span>
+          <input class="field-control field-control--text" style="max-width:140px;border-color:var(--danger)" placeholder="Type Confirm" value={deleteInput()} onInput={(e) => setDeleteInput(e.currentTarget.value)} />
+          <button class="btn btn--danger" disabled={deleteInput() !== "Confirm"} onClick={deleteSelected}>Delete All</button>
+          <button class="btn btn--ghost" onClick={() => { setShowDeleteConfirm(false); setDeleteInput(""); }}>Cancel</button>
         </div>
       </Show>
 
