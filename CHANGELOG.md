@@ -1,15 +1,13 @@
-## 0.8.1
-
-### Added
-
-- Pixel font wordmark on the boot splash screen, matching the website loader (Press Start 2P)
+## 0.8.2
 
 ### Changed
 
-- Ghost buttons (back arrows, cancel) now have a visible border at rest instead of appearing invisible
-- Skins toolbar buttons (Upload, Reset, variant toggles) have the chunky bevel and hover expand like all other buttons
+- Escape key now backs one step in the navigation hierarchy instead of jumping straight to Library
+- Multi-select Delete action moved to a floating bottom bar — no more header layout shift
+- Companion badge (Vermeil logo) appears last in the badge row on all screens
 
 ### Fixed
 
-- Ghost buttons no longer look like floating orphaned icons — border defines their shape before hover
-- Skins Upload button now has the same physical interaction feel as the rest of the UI
+- Splash screen pixel font now works in production builds (bundled locally instead of Google Fonts CDN)
+- Multi-select and Delete buttons match the dropdown height (no more mismatched controls)
+- Floating delete bar slides up smoothly instead of shifting in from the right
