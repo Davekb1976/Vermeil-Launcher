@@ -323,6 +323,8 @@ pub async fn apply_update(
             &category,
             &api_key,
             Some(update.latest_version_id),
+            // No window on this path; the error message still explains itself.
+            None,
         )
         .await
     } else {

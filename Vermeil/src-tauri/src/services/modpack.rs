@@ -994,9 +994,36 @@ pub async fn install_from_curseforge(
         _ => None,
     };
 
-    // Get the download URL for the modpack file
-    let (download_url, _file_name) =
+    // Get the download URL for the modpack file. `None` means the author
+    // disabled third-party downloads — hand the user the project page instead of
+    // failing with an opaque message.
+    let (download_url, pack_file_name) =
         crate::services::curseforge::get_modpack_file_url(&api_key, project_id, file_id).await?;
+    let download_url = match download_url {
+        Some(u) => u,
+        None => {
+            let (name, website) =
+                crate::services::curseforge::fetch_project_brief(&api_key, project_id).await;
+            let title = name.unwrap_or_else(|| project_id.to_string());
+            crate::services::manual_download::notify(
+                window.as_ref(),
+                crate::services::manual_download::ManualDownload {
+                    kind: "modpack".to_string(),
+                    title: title.clone(),
+                    file_name: Some(pack_file_name),
+                    url: website,
+                    // No instance exists yet — nothing to open a folder for.
+                    instance_id: None,
+                },
+            );
+            return Err(format!(
+                "{} can't be downloaded automatically — its author disabled \
+                 third-party downloads. Download the pack from CurseForge and use \
+                 Import instead.",
+                title
+            ));
+        }
+    };
 
     // Download the modpack zip to a temp location
     if let Some(ref w) = window {

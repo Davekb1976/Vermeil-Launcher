@@ -218,6 +218,12 @@ pub struct ContentVersion {
     pub date_published: Option<String>,
     /// Whether this version can run on the requesting instance.
     pub compatible: bool,
+    /// False when the launcher isn't permitted to fetch the file — a CurseForge
+    /// author who disabled third-party distribution. Installing it still works,
+    /// but goes through the manual-download dialog, so the picker warns first
+    /// instead of letting the user find out after clicking Install. Always true
+    /// on Modrinth, where every listed version is downloadable.
+    pub downloadable: bool,
     /// Marks the version the Install button would pick on its own, so the
     /// picker can label it and the automatic choice isn't a mystery.
     pub recommended: bool,
@@ -288,6 +294,8 @@ pub async fn get_mod_versions(
             ContentVersion {
                 recommended: recommended_id.as_deref() == Some(v.id.as_str()),
                 compatible,
+                // Modrinth serves every version it lists.
+                downloadable: true,
                 channel: v.version_type.clone().unwrap_or_else(|| "unknown".to_string()),
                 filename: primary.map(|f| f.filename.clone()).unwrap_or_default(),
                 size: primary.map(|f| f.size).unwrap_or(0),
@@ -336,6 +344,7 @@ pub async fn get_cf_mod_files(
         .map(|f| ContentVersion {
             recommended: recommended_id == Some(f.file_id),
             compatible: is_file_compatible(&f, &game_version, &loader),
+            downloadable: f.download_url.is_some(),
             channel: match f.release_type {
                 1 => "release",
                 2 => "beta",
@@ -395,6 +404,7 @@ mod tests {
             size: 0,
             date_published: None,
             compatible,
+            downloadable: true,
             recommended: false,
         }
     }

@@ -411,3 +411,61 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ============================================================
+   Manual-download dialog
+   ============================================================
+
+   Raised when CurseForge won't serve a file because its author disabled
+   third-party distribution. The launcher used to reconstruct a CDN URL and
+   download it anyway; now it hands over the project page instead, so this dialog
+   is the only path to that content.
+
+   Wider than the 440px default because each row carries a jar filename, which is
+   long and must stay readable — it's the string the user searches for on the
+   project page. */
+.manual-dl-modal { width: 560px; }
+.manual-dl-body { display: flex; flex-direction: column; gap: var(--space-4); }
+.manual-dl-intro {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+.manual-dl-list { display: flex; flex-direction: column; gap: var(--space-2); }
+.manual-dl-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  background: var(--surface-sunken);
+}
+.manual-dl-item-text { display: flex; flex-direction: column; gap: var(--space-0); min-width: 0; }
+.manual-dl-item-title {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Monospace and wrapping: this is the exact filename to look for, so it has to
+   be readable in full rather than truncated. */
+.manual-dl-item-file {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
+  overflow-wrap: anywhere;
+}
+.manual-dl-item-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+.manual-dl-item-nolink { font-size: var(--fs-2xs); color: var(--text-faint); }
+/* Footer holds two actions here, so it can't rely on the shell's flex-end
+   single-button assumption. */
+.manual-dl-modal .modal-footer { justify-content: space-between; }

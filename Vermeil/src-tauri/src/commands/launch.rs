@@ -166,6 +166,7 @@ pub async fn install_cf_mod_to_instance(
     game_version: String,
     category: Option<String>,
     file_id: Option<String>,
+    window: tauri::WebviewWindow,
 ) -> Result<String, String> {
     let cat = category.unwrap_or_else(|| "mod".to_string());
     let api_key = crate::commands::mods::resolve_cf_api_key().await?;
@@ -177,6 +178,9 @@ pub async fn install_cf_mod_to_instance(
         &cat,
         &api_key,
         file_id,
+        // Lets the installer raise the manual-download dialog when CurseForge
+        // won't serve a file.
+        Some(&window),
     )
     .await?;
 

@@ -195,6 +195,12 @@ const ModVersionPicker: Component<Props> = (props) => {
                 can stop the instance from launching.
               </div>
             </Show>
+            <Show when={effectiveSelected() && !effectiveSelected()!.downloadable}>
+              <div class="version-picker-warn">
+                This file's author disabled third-party downloads. Install will point you at
+                CurseForge to fetch it by hand.
+              </div>
+            </Show>
 
             <Show when={open()}>
               <div class="version-list">
@@ -233,6 +239,12 @@ const ModVersionPicker: Component<Props> = (props) => {
                           </Show>
                           <Show when={!v.compatible}>
                             <span class="version-tag version-tag--warn">incompatible</span>
+                          </Show>
+                          {/* The author blocked third-party downloads, so picking
+                              this opens the manual-download dialog rather than
+                              installing. Better known before the click. */}
+                          <Show when={!v.downloadable}>
+                            <span class="version-tag version-tag--warn">manual</span>
                           </Show>
                         </span>
                         <span class="version-option-meta">

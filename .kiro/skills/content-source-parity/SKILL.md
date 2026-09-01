@@ -95,8 +95,10 @@ This list is non-exhaustive. Update it whenever you discover a new mismatch.
 
 ### File availability / distribution
 
-- **Modrinth**: no equivalent; every listed version is downloadable.
-- **CurseForge**: `isAvailable` per file (false = not currently served) and `allowModDistribution` per project (false = author opted out of third-party downloads, and `downloadUrl` comes back null). We reconstruct a CDN URL when `downloadUrl` is null; note that this bypasses the opt-out the flag expresses.
+- **Modrinth**: no equivalent; every listed version is downloadable. `ContentVersion.downloadable` is therefore always `true` on this source.
+- **CurseForge**: `isAvailable` per file (false = not currently served) and `allowModDistribution` per project (false = author opted out of third-party downloads, and `downloadUrl` comes back **null**).
+- **A null `downloadUrl` is honored, not worked around.** It used to be replaced with a CDN URL reconstructed from the numeric file id, which downloaded the file regardless of the author's choice. That's gone. Callers now raise the manual-download dialog via `services::manual_download` (event `manual-download-required`) carrying the project's `links.websiteUrl`, and the version picker marks such entries `manual` up front.
+- Consequence to keep in mind when touching install paths: **any new CurseForge download path must handle `download_url: None`**. Silently skipping it loses a mod; fabricating a URL reintroduces the bypass. Modpack imports skip the file, install the rest, and report it — `mod_install::sync_manual_mods` then picks the jar up once the user drops it in.
 
 ### Dependency vocabulary
 

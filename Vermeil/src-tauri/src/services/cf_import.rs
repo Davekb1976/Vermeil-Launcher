@@ -125,7 +125,11 @@ pub async fn import_zip(
 
     // Resolve and prepare mod download tasks (no actual downloading yet — that
     // happens inside `prepare_with_extras` so the progress bar is unified).
-    let (mod_tasks, mod_entries) = build_mod_tasks(&manifest.files, &mods_dir, api_key).await?;
+    // `blocked` are files whose authors opted out of third-party distribution.
+    // The pack installs without them and they're reported afterwards, so the
+    // install isn't lost to one un-fetchable mod.
+    let (mod_tasks, mod_entries, blocked) =
+        build_mod_tasks(&manifest.files, &mods_dir, api_key).await?;
 
     // Build instance metadata
     let instance = Instance {
@@ -183,11 +187,17 @@ pub async fn import_zip(
     // instance shows up in the library.
     let window_for_revalidate = window.clone();
     let window_for_enrichment = window.clone();
+    let window_for_blocked = window.clone();
     if let Err(e) = prepare_with_extras(&instance, mod_tasks, Some(post), window).await {
         tracing::error!("CurseForge import prepare failed, cleaning up instance {}: {}", instance_id, e);
         let _ = fs::remove_dir_all(&instance_dir);
         return Err(e);
     }
+
+    // Reported after the install lands, so the dialog doesn't fight the progress
+    // popup for attention and the "open mods folder" action points somewhere
+    // that exists.
+    report_blocked_files(&blocked, api_key, &instance_id, window_for_blocked.as_ref()).await;
 
     // Loader-version validation — bump the loader if any mod needs a newer
     // one than the manifest declared, then re-prepare loader libs.
@@ -297,7 +307,8 @@ pub async fn import_profile_code(
             let mods_dir = minecraft_dir.join("mods");
             fs::create_dir_all(&mods_dir).map_err(|e| e.to_string())?;
 
-            let (mod_tasks, mod_entries) = build_mod_tasks(&files, &mods_dir, api_key).await?;
+            let (mod_tasks, mod_entries, blocked) =
+                build_mod_tasks(&files, &mods_dir, api_key).await?;
 
             let instance = Instance {
                 format_version: 1,
@@ -326,6 +337,7 @@ pub async fn import_profile_code(
             // Same cleanup guard as `import_zip`: instance.json is already on
             // disk at this point, so a failure (or a cancel) without this would
             // leave a broken instance listed in the library.
+            let window_for_blocked = window.clone();
             if let Err(e) = prepare_with_extras(&instance, mod_tasks, None, window).await {
                 tracing::error!(
                     "CurseForge profile import prepare failed, cleaning up instance {}: {}",
@@ -335,6 +347,9 @@ pub async fn import_profile_code(
                 let _ = fs::remove_dir_all(&instance_dir);
                 return Err(e);
             }
+
+            report_blocked_files(&blocked, api_key, &instance_id, window_for_blocked.as_ref())
+                .await;
 
             return Ok(instance);
         }
@@ -380,15 +395,25 @@ fn parse_loader(loaders: &[CfModLoader]) -> (LoaderType, Option<String>) {
 /// Build mod download tasks + ModEntry list using the CurseForge API to resolve URLs.
 /// Returns (tasks, entries) — tasks are deferred to `prepare_with_extras` so the
 /// progress bar covers game files + mods together.
+/// One pack file CurseForge won't serve to us: `(project_id, file_name)`.
+type BlockedFile = (String, String);
+
 async fn build_mod_tasks(
     files: &[CfFile],
     mods_dir: &PathBuf,
     api_key: &str,
-) -> Result<(Vec<DownloadTask>, Vec<crate::models::instance::ModEntry>), String> {
+) -> Result<
+    (
+        Vec<DownloadTask>,
+        Vec<crate::models::instance::ModEntry>,
+        Vec<BlockedFile>,
+    ),
+    String,
+> {
     use crate::models::instance::ModEntry;
 
     if files.is_empty() {
-        return Ok((Vec::new(), Vec::new()));
+        return Ok((Vec::new(), Vec::new(), Vec::new()));
     }
 
     // Batch resolve file info from CurseForge API
@@ -396,17 +421,28 @@ async fn build_mod_tasks(
 
     let mut tasks: Vec<DownloadTask> = Vec::new();
     let mut mod_entries: Vec<ModEntry> = Vec::new();
+    let mut blocked: Vec<BlockedFile> = Vec::new();
 
     for info in &file_infos {
-        // CurseForge returns `download_url: null` when a mod author opts out of
-        // third-party API distribution. The file still exists on CurseForge's
-        // CDN, though — we reconstruct the direct URL from the file ID using
-        // the well-known forgecdn path scheme. This is the standard workaround
-        // every third-party launcher uses; without it those mods silently
-        // vanish from the install and the modpack crashes with NoClassDefFound.
+        let project_id_of = |id: u64| {
+            files
+                .iter()
+                .find(|f| f.file_id == id)
+                .map(|f| f.project_id.to_string())
+                .unwrap_or_default()
+        };
+
+        // `download_url: null` means the author opted out of third-party
+        // distribution. This used to reconstruct a CDN URL from the file id and
+        // download it anyway; now the file is skipped and reported so the user
+        // can fetch it themselves. The rest of the pack still installs, and
+        // `mod_install::sync_manual_mods` picks the jar up once it's dropped in.
         let url = match &info.download_url {
             Some(u) => u.clone(),
-            None => forgecdn_fallback_url(info.id, &info.file_name),
+            None => {
+                blocked.push((project_id_of(info.id), info.file_name.clone()));
+                continue;
+            }
         };
 
         let dest = mods_dir.join(&info.file_name);
@@ -423,12 +459,7 @@ async fn build_mod_tasks(
             expected_size: Some(info.file_length),
         });
 
-        // Find the corresponding project ID
-        let project_id = files
-            .iter()
-            .find(|f| f.file_id == info.id)
-            .map(|f| f.project_id.to_string())
-            .unwrap_or_default();
+        let project_id = project_id_of(info.id);
 
         mod_entries.push(ModEntry {
             id: uuid::Uuid::new_v4().to_string(),
@@ -448,30 +479,40 @@ async fn build_mod_tasks(
         });
     }
 
-    Ok((tasks, mod_entries))
+    Ok((tasks, mod_entries, blocked))
 }
 
-/// Construct a CurseForge CDN download URL from a file ID + filename.
-///
-/// CurseForge's CDN lays files out at:
-///   `https://edge.forgecdn.net/files/{id/1000}/{id%1000}/{filename}`
-///
-/// This works even when the API returns `downloadUrl: null` (author disabled
-/// third-party distribution) because the CDN path is derived purely from the
-/// numeric file ID. Spaces in the filename become `%20`; other characters in
-/// CurseForge filenames are CDN-safe.
-fn forgecdn_fallback_url(file_id: u64, file_name: &str) -> String {
-    let a = file_id / 1000;
-    let b = file_id % 1000;
-    let encoded = file_name.replace(' ', "%20");
-    format!("https://edge.forgecdn.net/files/{}/{}/{}", a, b, encoded)
+/// Raise the manual-download dialog for every pack file CurseForge wouldn't
+/// serve, resolving their names and project pages in one batched request.
+async fn report_blocked_files(
+    blocked: &[BlockedFile],
+    api_key: &str,
+    instance_id: &str,
+    window: Option<&tauri::WebviewWindow>,
+) {
+    if blocked.is_empty() {
+        return;
+    }
+    let ids: Vec<String> = blocked.iter().map(|(id, _)| id.clone()).collect();
+    let briefs = crate::services::curseforge::fetch_projects_brief(api_key, &ids).await;
+    for (project_id, file_name) in blocked {
+        let (name, website) = briefs.get(project_id).cloned().unwrap_or((None, None));
+        crate::services::manual_download::notify(
+            window,
+            crate::services::manual_download::ManualDownload {
+                kind: "mod".to_string(),
+                title: name.unwrap_or_else(|| format!("CurseForge project {}", project_id)),
+                file_name: Some(file_name.clone()),
+                url: website,
+                instance_id: Some(instance_id.to_string()),
+            },
+        );
+    }
 }
 
 /// Resolve file download URLs from CurseForge API (batch endpoint).
 async fn resolve_files(files: &[CfFile], api_key: &str) -> Result<Vec<CfFileInfo>, String> {
     if api_key.is_empty() {
-        // Without API key, try to construct URLs from the file IDs (edge.forgecdn.net pattern)
-        // This works for most mods that allow third-party distribution
         return resolve_files_without_api(files).await;
     }
 
@@ -500,11 +541,10 @@ async fn resolve_files(files: &[CfFile], api_key: &str) -> Result<Vec<CfFileInfo
     Ok(body.data)
 }
 
-/// Fallback: construct download URLs without API key using the forgecdn pattern.
-/// This only works for mods that allow third-party distribution.
+/// Without an API key there's no way to resolve a file id to its name or URL, so
+/// there's nothing to fall back to. Kept as a named function so the reason is
+/// stated once rather than inlined as a bare error.
 async fn resolve_files_without_api(_files: &[CfFile]) -> Result<Vec<CfFileInfo>, String> {
-    // We can't resolve filenames without the API, so we'll use a placeholder approach
-    // The user should set their API key for full functionality
     Err("CurseForge API key is required to download mods. Set it in Settings.".to_string())
 }
 

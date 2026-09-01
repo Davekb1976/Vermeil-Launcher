@@ -368,18 +368,16 @@ pub async fn get_project_files(
         .map_err(|e| format!("CurseForge files parse: {}", e))?;
 
     Ok(wrapper.data.into_iter().map(|f| {
-        // Reconstruct the CDN URL when CurseForge withholds it (author opted
-        // out of third-party API distribution). The file still lives on the
-        // CDN at a path derived from its numeric ID. Same workaround used by
-        // every third-party launcher; prevents mods silently failing to install.
-        let download_url = f.download_url.clone().or_else(|| {
-            Some(format!(
-                "https://edge.forgecdn.net/files/{}/{}/{}",
-                f.id / 1000,
-                f.id % 1000,
-                f.file_name.replace(' ', "%20")
-            ))
-        });
+        // `downloadUrl` stays exactly as CurseForge gave it. A null means the
+        // author opted out of third-party distribution
+        // (`allowModDistribution: false`), and callers turn that into a manual
+        // download prompt — see services::manual_download.
+        //
+        // This used to reconstruct a CDN URL from the numeric file id and fetch
+        // it regardless. That circumvented the author's choice, and when
+        // CurseForge blocked it the user got a generic retry failure instead of
+        // a link they could act on.
+        let download_url = f.download_url.clone();
         let (mc_versions, loaders) = classify_game_versions(f.game_versions);
         let mut required = Vec::new();
         let mut incompatible = Vec::new();
@@ -534,13 +532,101 @@ pub struct CfFileInfo {
 
 // ─── Modpack install from project ID ────────────────────────────────────
 
+/// Brief project info for one CurseForge id: `(name, website_url)`.
+///
+/// Used to build a manual-download prompt, so both halves are optional — a
+/// failed lookup should still let the caller name the file it couldn't fetch.
+pub async fn fetch_project_brief(
+    api_key: &str,
+    mod_id: &str,
+) -> (Option<String>, Option<String>) {
+    let url = format!("{}/mods/{}", CF_BASE, mod_id);
+    let resp = match HTTP.get(&url).header("x-api-key", api_key).send().await {
+        Ok(r) if r.status().is_success() => r,
+        _ => return (None, None),
+    };
+    let body: serde_json::Value = match resp.json().await {
+        Ok(v) => v,
+        Err(_) => return (None, None),
+    };
+    let data = body.get("data").unwrap_or(&body);
+    let name = data.get("name").and_then(|n| n.as_str()).map(str::to_string);
+    let website = data
+        .get("links")
+        .and_then(|l| l.get("websiteUrl"))
+        .and_then(|u| u.as_str())
+        .filter(|u| !u.is_empty())
+        .map(str::to_string);
+    (name, website)
+}
+
+/// Same as `fetch_project_brief` for many ids in one request.
+///
+/// Uses the batch `POST /v1/mods` endpoint (up to 50 ids) rather than one GET
+/// per project: a modpack can block several files at once, and the per-key rate
+/// limit is the binding constraint on this API. Returns id → (name, website).
+pub async fn fetch_projects_brief(
+    api_key: &str,
+    mod_ids: &[String],
+) -> std::collections::HashMap<String, (Option<String>, Option<String>)> {
+    use std::collections::HashMap;
+    let mut out: HashMap<String, (Option<String>, Option<String>)> = HashMap::new();
+    if api_key.is_empty() || mod_ids.is_empty() {
+        return out;
+    }
+
+    // The endpoint caps a request at 50 ids.
+    for chunk in mod_ids.chunks(50) {
+        let ids: Vec<u64> = chunk.iter().filter_map(|s| s.parse::<u64>().ok()).collect();
+        if ids.is_empty() {
+            continue;
+        }
+        let resp = HTTP
+            .post(&format!("{}/mods", CF_BASE))
+            .header("x-api-key", api_key)
+            .header("Content-Type", "application/json")
+            .json(&serde_json::json!({ "modIds": ids }))
+            .send()
+            .await;
+        let resp = match resp {
+            Ok(r) if r.status().is_success() => r,
+            _ => continue,
+        };
+        let body: serde_json::Value = match resp.json().await {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        let Some(list) = body.get("data").and_then(|d| d.as_array()) else {
+            continue;
+        };
+        for item in list {
+            let Some(id) = item.get("id").and_then(|i| i.as_u64()) else {
+                continue;
+            };
+            let name = item.get("name").and_then(|n| n.as_str()).map(str::to_string);
+            let website = item
+                .get("links")
+                .and_then(|l| l.get("websiteUrl"))
+                .and_then(|u| u.as_str())
+                .filter(|u| !u.is_empty())
+                .map(str::to_string);
+            out.insert(id.to_string(), (name, website));
+        }
+    }
+    out
+}
+
 /// Fetch the download URL for the latest (or specified) file of a CurseForge
 /// modpack project. Returns `(download_url, file_name)`.
+///
+/// `download_url` is `None` when the author opted out of third-party
+/// distribution. That's not an error here — the caller turns it into a manual
+/// download prompt, which needs the file name to tell the user what to look for.
 pub async fn get_modpack_file_url(
     api_key: &str,
     project_id: &str,
     file_id: Option<&str>,
-) -> Result<(String, String), String> {
+) -> Result<(Option<String>, String), String> {
     if api_key.is_empty() {
         return Err("CurseForge API key not configured. Add it in Settings.".to_string());
     }
@@ -587,11 +673,12 @@ pub async fn get_modpack_file_url(
 
     let file_data = file_data.ok_or("No file data returned from CurseForge")?;
 
+    // Absent (or JSON null) means the author disabled third-party downloads.
     let download_url = file_data
         .get("downloadUrl")
         .and_then(|u| u.as_str())
-        .ok_or("CurseForge file has no download URL (mod author may have disabled third-party downloads)")?
-        .to_string();
+        .filter(|u| !u.is_empty())
+        .map(str::to_string);
 
     let file_name = file_data
         .get("fileName")

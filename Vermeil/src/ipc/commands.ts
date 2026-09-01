@@ -282,6 +282,12 @@ export interface ContentVersion {
   date_published: string | null;
   /** Whether this version runs on the instance that was asked about. */
   compatible: boolean;
+  /**
+   * False when the launcher isn't allowed to fetch the file — a CurseForge author
+   * who disabled third-party distribution. Installing still works but routes
+   * through the manual-download dialog. Always true on Modrinth.
+   */
+  downloadable: boolean;
   /** The version the plain Install button would choose on its own. */
   recommended: boolean;
 }

@@ -21,6 +21,7 @@ import InstallProgress from "./components/InstallProgress";
 import BulkInstallToast from "./components/BulkInstallToast";
 import Splash from "./components/Splash";
 import DependencyIssuesModal from "./components/DependencyIssuesModal";
+import ManualDownloadModal from "./components/ManualDownloadModal";
 import UpdateBanner from "./components/UpdateBanner";
 import CrashReportModal, { showCrashReport } from "./components/CrashReportModal";
 import OnboardingWizard, { openOnboarding } from "./modals/OnboardingWizard";
@@ -599,6 +600,7 @@ const App: Component = () => {
       <InstallProgress />
       <BulkInstallToast />
       <DependencyIssuesModal />
+      <ManualDownloadModal />
       <UpdateBanner />
       <CrashReportModal />
       <OnboardingWizard />

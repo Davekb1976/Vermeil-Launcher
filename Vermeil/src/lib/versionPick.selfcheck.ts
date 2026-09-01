@@ -17,6 +17,7 @@ const v = (
   size: 0,
   date_published: null,
   compatible: true,
+  downloadable: true,
   recommended: false,
   ...opts,
 });

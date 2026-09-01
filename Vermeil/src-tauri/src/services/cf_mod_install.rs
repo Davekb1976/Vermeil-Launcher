@@ -114,6 +114,9 @@ fn target_folder(category: &str) -> &'static str {
 ///
 /// `file_id` pins an exact file; `None` resolves the newest compatible one,
 /// which is what the Browse card's Install button does.
+/// `window` is only used to raise the manual-download dialog when CurseForge
+/// won't serve a file. `None` for headless callers (e.g. an update check), which
+/// still get the error — they just can't show the prompt.
 pub async fn install_cf_mod(
     instance_id: &str,
     mod_id: &str,
@@ -122,6 +125,7 @@ pub async fn install_cf_mod(
     category: &str,
     api_key: &str,
     file_id: Option<String>,
+    window: Option<&tauri::WebviewWindow>,
 ) -> Result<InstallResult, String> {
     let mut visited_projects: HashSet<String> = HashSet::new();
     let mut deps_installed: Vec<String> = Vec::new();
@@ -142,6 +146,7 @@ pub async fn install_cf_mod(
         &mut dep_titles,
         &mut issues,
         true,
+        window,
     )
     .await?;
 
@@ -172,6 +177,7 @@ async fn install_cf_one(
     dep_titles: &mut Vec<String>,
     issues: &mut Vec<DependencyIssue>,
     is_root: bool,
+    window: Option<&tauri::WebviewWindow>,
 ) -> Result<ModEntry, String> {
     if !visited_projects.insert(mod_id.to_string()) {
         return Err(format!("Cycle detected on CurseForge project {}", mod_id));
@@ -295,10 +301,33 @@ async fn install_cf_one(
     }
 
     // === Download ===
-    let download_url = file.download_url.as_ref().ok_or_else(|| {
-        "This mod doesn't allow third-party downloads. Visit CurseForge to download it manually."
-            .to_string()
-    })?;
+    // No URL means the author opted out of third-party distribution. Hand the
+    // user the project page rather than reconstructing a CDN link behind their
+    // back, then fail — for a dependency the caller turns this error into a
+    // `failed` issue, so it's visible in both places.
+    let download_url = match file.download_url.as_ref() {
+        Some(u) => u,
+        None => {
+            let (name, website) = curseforge::fetch_project_brief(api_key, mod_id).await;
+            let title = name.unwrap_or_else(|| mod_id.to_string());
+            crate::services::manual_download::notify(
+                window,
+                crate::services::manual_download::ManualDownload {
+                    kind: "mod".to_string(),
+                    title: title.clone(),
+                    file_name: Some(file.file_name.clone()),
+                    url: website,
+                    instance_id: Some(instance_id.to_string()),
+                },
+            );
+            return Err(format!(
+                "{} can't be downloaded automatically — its author disabled \
+                 third-party downloads. Get {} from CurseForge and drop it into the \
+                 instance's mods folder.",
+                title, file.file_name
+            ));
+        }
+    };
 
     let folder = target_folder(category);
     let target_dir = instance_dir.join(".minecraft").join(folder);
@@ -460,6 +489,7 @@ async fn install_cf_one(
             dep_titles,
             issues,
             false,
+            window,
         ))
         .await
         {
