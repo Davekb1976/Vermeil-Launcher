@@ -574,15 +574,34 @@ const InstanceMods: Component = () => {
   // (scroll listener + MutationObserver gated on autoScrollLogs). No separate
   // effect here — a second mechanism would fight the user's scroll intent.
 
+  /**
+   * Reset to page 1 and re-search when the *shape* of the browse query changes.
+   *
+   * The dependency list is deliberate and exhaustive: category, the column-aware
+   * page size, and which instance is open. Everything else that affects the query
+   * — source, sort, search text, page — is driven by its own handler that calls
+   * `doSearch` directly.
+   *
+   * `doSearch` runs inside `untrack` because calling it synchronously from an
+   * effect body makes every signal it reads a dependency of this effect. That had
+   * two visible consequences: installing a mod refetched `instances`, which
+   * `doSearch` reads, which threw the user back to page 1 mid-browse; and every
+   * keystroke re-ran this effect immediately, firing a search alongside the
+   * debounced one and doubling the request rate against a rate-limited API. Same
+   * root cause as the `refreshUpdates` effect above — depending on the whole
+   * `instances` resource when only one field is needed.
+   */
   createEffect(() => {
-    if (mainTab() === "content" && contentTab() === "browse") {
-      browseFilter(); // track category changes
-      browsePageSize.size(); // re-search when the column-aware page size changes (resize)
+    if (mainTab() !== "content" || contentTab() !== "browse") return;
+    browseFilter();
+    browsePageSize.size();
+    activeInstanceId();
+    untrack(() => {
       if (instance()) {
         setCurrentPage(1);
         doSearch(1);
       }
-    }
+    });
   });
 
   /**
