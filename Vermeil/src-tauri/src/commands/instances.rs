@@ -295,6 +295,10 @@ pub async fn clone_instance(
 /// On failure, deletes the instance directory so no broken instance lingers.
 #[tauri::command]
 pub async fn prepare_instance(id: String, window: tauri::WebviewWindow) -> Result<(), String> {
+    // This emits `install-progress`, which is what enables the popup's Cancel
+    // button — so it needs a scope like the modpack paths, or that button would
+    // raise a cancel flag with no install to consume or clear it.
+    let _install = crate::services::download::InstallScope::begin();
     let instance = instance_service::get_by_id(&id).await.map_err(|e| e.to_string())?;
     if let Err(e) = crate::services::prepare::prepare(&instance, Some(window)).await {
         // Clean up the broken instance so the library doesn't show a non-launchable entry.

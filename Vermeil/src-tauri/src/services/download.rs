@@ -37,15 +37,34 @@ pub const CANCELLED: &str = "Install cancelled";
 ///
 /// ponytail: one global flag, matching the `USER_STOPPED` precedent in
 /// `commands/launch.rs` and the UI, which shows a single install-progress popup
-/// with a single Cancel button. Ceiling: two installs running at once share the
-/// flag, so cancelling one aborts both. Upgrade path is a per-install token in
-/// Tauri managed state, threaded through `prepare_with_extras` — worth doing only
-/// if concurrent installs become a real workflow.
+/// with a single Cancel button. Ceiling: the flag isn't scoped to one job, so
+/// cancelling an install also aborts anything else downloading at that moment —
+/// a second install, or a launch-time library/asset repair for another instance.
+/// Upgrade path is a per-install token in Tauri managed state, threaded through
+/// `prepare_with_extras` — worth doing only if those overlaps become common.
 static CANCEL_REQUESTED: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
 
+/// How many `InstallScope`s are alive. Guards `request_cancel` so the flag can
+/// only ever be raised while something is actually installing.
+///
+/// Without this guard, a cancel arriving when no install is running — clicking
+/// Cancel as an install completes, or from a code path that emits
+/// `install-progress` without holding a scope — sets a flag nothing will clear.
+/// Every download in the process then fails, because `download_one` is the
+/// choke point for game libraries, assets, Java, loader installs and the
+/// companion mod as well as for mod installs. The symptom would be the game
+/// refusing to launch until restart, with "Install cancelled" as the reason.
+static ACTIVE_INSTALLS: AtomicU32 = AtomicU32::new(0);
+
 /// Ask the running install to stop at its next checkpoint.
+///
+/// No-op when nothing is installing, so a stray cancel can't strand the flag.
 pub fn request_cancel() {
+    if ACTIVE_INSTALLS.load(Ordering::SeqCst) == 0 {
+        tracing::debug!("Cancel requested with no install running; ignoring");
+        return;
+    }
     CANCEL_REQUESTED.store(true, Ordering::SeqCst);
     tracing::info!("Install cancellation requested");
 }
@@ -74,12 +93,17 @@ pub fn cancel_check() -> Result<(), String> {
 ///
 /// Clears any stale cancel on creation and again on drop, so a request can never
 /// leak into a later install or into a launch-time repair — including when the
-/// install bails out early through `?`. Hold one for the lifetime of an install
-/// command: `let _install = InstallScope::begin();`.
+/// install bails out early through `?`. While at least one scope is alive,
+/// cancellation is accepted; outside any scope it's ignored.
+///
+/// **Every command that can emit `install-progress` must hold one**, because the
+/// progress popup's Cancel button is enabled purely by that event. A command that
+/// emits progress without a scope shows a Cancel button that does nothing.
 pub struct InstallScope;
 
 impl InstallScope {
     pub fn begin() -> Self {
+        ACTIVE_INSTALLS.fetch_add(1, Ordering::SeqCst);
         clear_cancel();
         InstallScope
     }
@@ -87,7 +111,11 @@ impl InstallScope {
 
 impl Drop for InstallScope {
     fn drop(&mut self) {
-        clear_cancel();
+        // Only the last scope out clears the flag; a nested or concurrent install
+        // finishing shouldn't un-cancel one still winding down.
+        if ACTIVE_INSTALLS.fetch_sub(1, Ordering::SeqCst) <= 1 {
+            clear_cancel();
+        }
     }
 }
 
@@ -447,5 +475,26 @@ mod tests {
             assert!(cancel_check().is_ok(), "stale cancel leaked into a new install");
         }
         assert!(!is_cancelled());
+
+        // With nothing installing, a cancel must not raise the flag at all.
+        // Otherwise it strands there and every later download fails — game
+        // libraries and assets included, so the game stops launching.
+        request_cancel();
+        assert!(
+            cancel_check().is_ok(),
+            "cancel outside any install scope stranded the flag"
+        );
+
+        // Nested scopes: the inner one ending must not un-cancel the outer.
+        {
+            let _outer = InstallScope::begin();
+            {
+                let _inner = InstallScope::begin();
+                request_cancel();
+                assert!(is_cancelled());
+            }
+            assert!(is_cancelled(), "inner scope cleared a cancel the outer still needs");
+        }
+        assert!(!is_cancelled(), "last scope out should have cleared the flag");
     }
 }
