@@ -43,7 +43,7 @@
 - Microsoft account authentication (multiple accounts + offline)
 - Instance management with per-instance settings
 - Mod loader support: Fabric, Quilt, NeoForge, Forge
-- Mod browsing and installation from Modrinth and CurseForge
+- Mod browsing and installation from Modrinth and CurseForge — click any result card to open its details and pick a specific version, or hit Install to get the newest compatible one
 - Modpack import (.mrpack and CurseForge zip)
 - Automatic Java detection and download (Adoptium)
 - Adaptive RAM allocation per instance
