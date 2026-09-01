@@ -1,6 +1,6 @@
 import { Component, For, Show, createEffect, createSignal, onCleanup } from "solid-js";
-import { Portal } from "solid-js/web";
 import { ContentVersion, getCfModFiles, getModVersions } from "../ipc/commands";
+import { formatSize } from "../lib/format";
 import { filterVersions, resolveSelection } from "../lib/versionPick";
 import { IconChevronDown, IconCheck, IconDownload } from "./Icons";
 
@@ -21,20 +21,16 @@ interface Props {
 }
 
 /**
- * Session cache of fetched version lists, so collapsing and re-expanding a card
+ * Session cache of fetched version lists, so reopening a mod's detail view
  * doesn't re-hit a rate-limited API.
  *
- * Bounded because it would otherwise grow for every project a user ever
- * expands. Insertion-ordered eviction (Map preserves insertion order), which is
- * FIFO rather than LRU — good enough for a cache whose whole job is "the card I
- * just closed".
+ * Bounded because it would otherwise grow for every project a user ever opens.
+ * Insertion-ordered eviction (Map preserves insertion order), which is FIFO
+ * rather than LRU — good enough for a cache whose whole job is "the mod I just
+ * closed".
  */
 const CACHE_LIMIT = 50;
 const cache = new Map<string, ContentVersion[]>();
-
-function cacheGet(key: string): ContentVersion[] | undefined {
-  return cache.get(key);
-}
 
 function cacheSet(key: string, value: ContentVersion[]) {
   cache.set(key, value);
@@ -54,12 +50,8 @@ const channelLabel = (c: string): string => {
   }
 };
 
-const formatSize = (bytes: number): string => {
-  if (bytes <= 0) return "";
-  if (bytes >= 1_000_000) return (bytes / 1_000_000).toFixed(1) + " MB";
-  if (bytes >= 1_000) return (bytes / 1_000).toFixed(1) + " KB";
-  return bytes + " B";
-};
+/** Blank for an unreported size, so the meta line doesn't show "0 B". */
+const sizeLabel = (bytes: number): string => (bytes > 0 ? formatSize(bytes) : "");
 
 /** Date only — the time of day is noise at this size. */
 const formatDate = (iso: string | null): string => {
@@ -70,12 +62,16 @@ const formatDate = (iso: string | null): string => {
 };
 
 /**
- * Version list for one project, as a dropdown.
+ * Version list for one project: a trigger showing the current choice, and a list
+ * that opens beneath it.
  *
- * The panel renders through a `<Portal>` with fixed positioning because the
- * `.card` it sits inside is `overflow: hidden` — an absolutely-positioned panel
- * gets clipped. Same reason and same rect math as the game-version picker in
- * `CreateCustom.tsx`.
+ * The list renders **inline**, not in a floating `<Portal>` panel. A portal was
+ * needed when this lived inside a Browse card, because `.card` is
+ * `overflow: hidden` and would clip an absolutely-positioned panel. Inside the
+ * detail modal there's nothing to escape: the modal body already scrolls. Going
+ * inline drops the trigger-rect measurement, the viewport-edge flipping, and the
+ * outside-click and scroll listeners — all of which were failure surfaces. It
+ * also stops competing with the modal for the Escape key.
  *
  * Compatibility is never computed here: the backend labels each entry using the
  * same functions the installer uses, so this component only renders `compatible`.
@@ -88,19 +84,15 @@ const ModVersionPicker: Component<Props> = (props) => {
   const [query, setQuery] = createSignal("");
   const [showAll, setShowAll] = createSignal(false);
   const [selectedId, setSelectedId] = createSignal<string | null>(null);
-  const [triggerRect, setTriggerRect] = createSignal<DOMRect | null>(null);
-
-  let triggerEl: HTMLDivElement | undefined;
-  let panelEl: HTMLDivElement | undefined;
 
   const cacheKey = () =>
     `${props.source}:${props.projectId}:${props.loader}:${props.gameVersion}:${props.category}`;
 
-  // Fetched once when the card expands — an explicit user action, so this isn't
+  // Fetched when the detail view opens — an explicit user action, so this isn't
   // speculative traffic. Never prefetched on hover.
   createEffect(() => {
     const key = cacheKey();
-    const cached = cacheGet(key);
+    const cached = cache.get(key);
     if (cached) {
       setVersions(cached);
       setLoading(false);
@@ -129,66 +121,30 @@ const ModVersionPicker: Component<Props> = (props) => {
   /** Defaults to whatever the plain Install button would pick. */
   const effectiveSelected = () => resolveSelection(versions(), selectedId());
   const visible = () => filterVersions(versions(), { showAll: showAll(), query: query() });
-
   const incompatibleCount = () => versions().filter((v) => !v.compatible).length;
+  const alreadyInstalled = () => props.installedVersionId === effectiveSelected()?.id;
 
-  const updateRect = () => {
-    if (triggerEl) setTriggerRect(triggerEl.getBoundingClientRect());
-  };
-
-  const toggle = () => {
-    if (open()) { setOpen(false); return; }
+  const choose = (v: ContentVersion) => {
+    setSelectedId(v.id);
+    setOpen(false);
     setQuery("");
-    updateRect();
-    setOpen(true);
   };
-
-  /** Fixed-position panel geometry, flipping above the trigger when tight. */
-  const panelStyle = () => {
-    const r = triggerRect();
-    if (!r) return "";
-    const margin = 4;
-    const spaceBelow = window.innerHeight - r.bottom;
-    const spaceAbove = r.top;
-    const openAbove = spaceBelow < 240 && spaceAbove > spaceBelow;
-    const maxH = Math.max(180, Math.min(340, (openAbove ? spaceAbove : spaceBelow) - 12));
-    const vert = openAbove
-      ? `bottom:${Math.round(window.innerHeight - r.top + margin)}px`
-      : `top:${Math.round(r.bottom + margin)}px`;
-    return `position:fixed;left:${Math.round(r.left)}px;width:${Math.round(r.width)}px;${vert};max-height:${maxH}px`;
-  };
-
-  createEffect(() => {
-    if (!open()) return;
-    const onDown = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (panelEl?.contains(t) || triggerEl?.contains(t)) return;
-      setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    window.addEventListener("resize", updateRect);
-    window.addEventListener("scroll", updateRect, true);
-    onCleanup(() => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-      window.removeEventListener("resize", updateRect);
-      window.removeEventListener("scroll", updateRect, true);
-    });
-  });
 
   return (
     <div class="version-picker">
       <div class="version-picker-head">
-        <span class="control-label">Version</span>
+        <span class="mod-detail-stat-label">Version</span>
         <Show when={incompatibleCount() > 0}>
+          {/* Fixed width: the two labels differ in length, and a resizing button
+              shifts the row it sits in. The count goes in the tooltip rather than
+              the label, where it read as a total and was really the fetch cap. */}
           <button
-            class={`btn btn--sm btn--ghost ${showAll() ? "btn-active" : ""}`}
+            class={`btn btn--sm btn--ghost btn--fixed ${showAll() ? "btn-active" : ""}`}
+            style="--btn-fixed-width:112px"
             onClick={() => setShowAll(!showAll())}
-            title={`${incompatibleCount()} version(s) don't match ${props.loader} ${props.gameVersion}`}
+            title={`${incompatibleCount()} of ${versions().length} listed versions don't match ${props.loader} ${props.gameVersion}`}
           >
-            {showAll() ? "Compatible only" : `Show all (${versions().length})`}
+            {showAll() ? "Compatible only" : "Show all"}
           </button>
         </Show>
       </div>
@@ -200,110 +156,33 @@ const ModVersionPicker: Component<Props> = (props) => {
             fallback={<div class="version-picker-status">No versions published.</div>}
           >
             <div class="version-picker-row">
-              <div class="custom-dropdown" style="--dropdown-height:var(--control-height-md)">
-                <div class="custom-dropdown-selected" ref={triggerEl} onClick={toggle}>
-                  <span class="version-picker-selected-label">
-                    {effectiveSelected()?.name ?? "Select version"}
-                  </span>
-                  <Show when={effectiveSelected()?.recommended}>
-                    <span class="version-tag version-tag--rec">auto</span>
-                  </Show>
-                  <span class="custom-dropdown-arrow" classList={{ open: open() }}>
-                    <IconChevronDown />
-                  </span>
-                </div>
-                <Show when={open()}>
-                  <Portal>
-                    <div
-                      class="custom-dropdown-options custom-dropdown-options--floating version-picker-panel"
-                      ref={panelEl}
-                      style={panelStyle()}
-                    >
-                      <input
-                        class="custom-dropdown-search"
-                        placeholder="Search versions..."
-                        value={query()}
-                        onInput={(e) => setQuery(e.currentTarget.value)}
-                        ref={(el) => setTimeout(() => el.focus(), 0)}
-                      />
-                      <div class="custom-dropdown-scroll">
-                        <For each={visible()}>
-                          {(v) => (
-                            <div
-                              class="custom-dropdown-option version-option"
-                              classList={{
-                                selected: effectiveSelected()?.id === v.id,
-                                "is-incompatible": !v.compatible,
-                              }}
-                              onClick={() => { setSelectedId(v.id); setOpen(false); }}
-                            >
-                              <div class="version-option-main">
-                                <span class="version-option-name">{v.name}</span>
-                                <div class="version-option-tags">
-                                  <Show when={channelLabel(v.channel)}>
-                                    <span class={`version-tag version-tag--${v.channel}`}>
-                                      {channelLabel(v.channel)}
-                                    </span>
-                                  </Show>
-                                  <Show when={v.recommended}>
-                                    <span class="version-tag version-tag--rec">auto</span>
-                                  </Show>
-                                  <Show when={props.installedVersionId === v.id}>
-                                    <span class="version-tag version-tag--installed">installed</span>
-                                  </Show>
-                                  <Show when={!v.compatible}>
-                                    <span class="version-tag version-tag--warn">incompatible</span>
-                                  </Show>
-                                </div>
-                              </div>
-                              <div class="version-option-meta">
-                                <Show when={v.game_versions.length > 0}>
-                                  <span>{v.game_versions.slice(0, 4).join(", ")}{v.game_versions.length > 4 ? " +" : ""}</span>
-                                </Show>
-                                <Show when={v.loaders.length > 0}>
-                                  <span>· {v.loaders.join(", ")}</span>
-                                </Show>
-                                <Show when={formatDate(v.date_published)}>
-                                  <span>· {formatDate(v.date_published)}</span>
-                                </Show>
-                                <Show when={formatSize(v.size)}>
-                                  <span>· {formatSize(v.size)}</span>
-                                </Show>
-                              </div>
-                            </div>
-                          )}
-                        </For>
-                        <Show when={visible().length === 0}>
-                          <div class="custom-dropdown-empty">
-                            {query() ? `No versions match "${query()}"` : "No compatible versions."}
-                          </div>
-                        </Show>
-                      </div>
-                    </div>
-                  </Portal>
-                </Show>
-              </div>
-
-              {/* Fixed width across all three labels ("Install" / "Installed" /
-                  "...") so the row can't shift as the state changes. */}
               <button
-                class="btn btn--sm btn--primary btn--fixed"
-                style="--btn-fixed-width:92px"
-                disabled={
-                  props.busy
-                  || !effectiveSelected()
-                  || props.installedVersionId === effectiveSelected()?.id
-                }
+                class="version-picker-trigger"
+                classList={{ open: open() }}
+                onClick={() => setOpen(!open())}
+              >
+                <span class="version-picker-trigger-label">
+                  {effectiveSelected()?.name ?? "Select version"}
+                </span>
+                <Show when={effectiveSelected()?.recommended}>
+                  <span class="version-tag version-tag--rec">auto</span>
+                </Show>
+                <span class="version-picker-caret" classList={{ open: open() }}>
+                  <IconChevronDown />
+                </span>
+              </button>
+
+              <button
+                class="btn btn--primary btn--fixed version-picker-install"
+                style="--btn-fixed-width:104px"
+                disabled={props.busy || !effectiveSelected() || alreadyInstalled()}
                 onClick={() => {
                   const v = effectiveSelected();
                   if (v) props.onInstall(v);
                 }}
               >
                 <Show when={!props.busy} fallback={"..."}>
-                  <Show
-                    when={props.installedVersionId === effectiveSelected()?.id}
-                    fallback={<><IconDownload /> Install</>}
-                  >
+                  <Show when={alreadyInstalled()} fallback={<><IconDownload /> Install</>}>
                     <IconCheck /> Installed
                   </Show>
                 </Show>
@@ -314,6 +193,65 @@ const ModVersionPicker: Component<Props> = (props) => {
               <div class="version-picker-warn">
                 This version doesn't list {props.loader} {props.gameVersion}. Installing it anyway
                 can stop the instance from launching.
+              </div>
+            </Show>
+
+            <Show when={open()}>
+              <div class="version-list">
+                <Show when={versions().length > 8}>
+                  <input
+                    class="version-list-search"
+                    placeholder="Search versions..."
+                    value={query()}
+                    onInput={(e) => setQuery(e.currentTarget.value)}
+                    ref={(el) => setTimeout(() => el.focus(), 0)}
+                  />
+                </Show>
+                <div class="version-list-scroll">
+                  <For each={visible()}>
+                    {(v) => (
+                      <button
+                        class="version-option"
+                        classList={{
+                          selected: effectiveSelected()?.id === v.id,
+                          "is-incompatible": !v.compatible,
+                        }}
+                        onClick={() => choose(v)}
+                      >
+                        <span class="version-option-name">{v.name}</span>
+                        <span class="version-option-tags">
+                          <Show when={channelLabel(v.channel)}>
+                            <span class={`version-tag version-tag--${v.channel}`}>
+                              {channelLabel(v.channel)}
+                            </span>
+                          </Show>
+                          <Show when={v.recommended}>
+                            <span class="version-tag version-tag--rec">auto</span>
+                          </Show>
+                          <Show when={props.installedVersionId === v.id}>
+                            <span class="version-tag version-tag--installed">installed</span>
+                          </Show>
+                          <Show when={!v.compatible}>
+                            <span class="version-tag version-tag--warn">incompatible</span>
+                          </Show>
+                        </span>
+                        <span class="version-option-meta">
+                          <Show when={formatDate(v.date_published)}>
+                            <span>{formatDate(v.date_published)}</span>
+                          </Show>
+                          <Show when={sizeLabel(v.size)}>
+                            <span>{sizeLabel(v.size)}</span>
+                          </Show>
+                        </span>
+                      </button>
+                    )}
+                  </For>
+                  <Show when={visible().length === 0}>
+                    <div class="version-list-empty">
+                      {query() ? `No versions match "${query()}"` : "No compatible versions."}
+                    </div>
+                  </Show>
+                </div>
               </div>
             </Show>
           </Show>

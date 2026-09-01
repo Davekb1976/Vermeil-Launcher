@@ -114,11 +114,15 @@ Mounted at App level, controlled by signal. `OnboardingWizard`, `PinInstancesMod
 
 `FloatingDock` (bottom nav: nav pills + state-aware center play/stop/create + pin row — **this is the nav, there is no Sidebar**), `Titlebar` (window controls, logo, title, account pill), `Dropdown` (styled select), `ModVersionPicker` (version list for one project, Portal-based panel), `Icons` (all SVGs), `PlayerHead`/`SkinAvatar`/`CapeChipThumb` (skin/cape renders), `PageSlider`, `JavaPathInput`, `KeybindCapture`, `ResizeHandles`, `Splash`, plus the modal/toast components listed above.
 
-### Expanding cards (Browse)
+### Mod detail overlay (Browse)
 
-Clicking a Browse mod card adds `.card--expanded`, which sets `grid-column: 1 / -1` so the card opens **inside** the grid. That placement is load-bearing, not cosmetic: `lib/gridPageSize.ts` derives columns from the grid's width and rows from `.content`'s height minus the grid's top offset, none of which a taller grid *child* changes — so the page size holds and the search isn't refetched. A detail panel rendered above the grid would move the grid's top edge and reset the page.
+**Clicking anywhere on a Browse mod card opens its detail overlay** (`modals/ModDetailModal.tsx`) — summary, a stat grid, loader pills, and the version picker. The card's own `+ Install` button and the multi-select checkbox `stopPropagation`, so they act without opening the overlay; while multi-select is active, clicking a card toggles selection instead. Dismiss with the X, the Close button, clicking the backdrop, or Escape.
 
-The card is `overflow: hidden`, so any popup inside it must render through a `<Portal>` with fixed positioning (`.custom-dropdown-options--floating`) — same approach as the game-version dropdown in `CreateCustom.tsx`.
+Escape is handled in the overlay on the **capture** phase with `stopImmediatePropagation()`. The global handler in `App.tsx` treats Escape on the instance screen as "back to Library" and listens on `document` in the bubble phase, so without capture the overlay would close *and* navigate away.
+
+It's an overlay rather than an in-place card expansion because expanding meant spanning the grid row (`grid-column: 1 / -1`) and reflowing every result after it, shoving the surrounding cards around the thing being read.
+
+The version list inside it renders **inline**, not in a floating `<Portal>` panel. A portal is only needed to escape a clipping ancestor (`.card` is `overflow: hidden`); the modal body already scrolls, so inline avoids trigger-rect measurement, viewport-edge flipping, and outside-click listeners — each of which was a way for the panel to end up positioned off-screen.
 
 ## Conventions
 

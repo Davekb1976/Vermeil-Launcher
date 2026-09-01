@@ -6,7 +6,8 @@ import { contentVersion } from "../lib/contentVersion";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
 import Dropdown from "../components/Dropdown";
-import ModVersionPicker from "../components/ModVersionPicker";
+import ModDetailModal from "../modals/ModDetailModal";
+import { formatDownloads, formatSize, formatVersionRange } from "../lib/format";
 import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled } from "../ipc/commands";
 import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconFolderOpen } from "../components/Icons";
 
@@ -266,8 +267,8 @@ const InstanceMods: Component = () => {
   const browsePageSize = createGridPageSize({ track: 240, gap: 12, rowHeight: 210, maxRows: 5 });
   const [modSource, setModSource] = createSignal<"modrinth" | "curseforge">("modrinth");
   const [installing, setInstalling] = createSignal<string | null>(null);
-  /** project_id of the Browse card expanded into its detail view, if any. */
-  const [expandedId, setExpandedId] = createSignal<string | null>(null);
+  /** Browse result shown in the detail overlay, if any. */
+  const [detailMod, setDetailMod] = createSignal<ModHit | null>(null);
   const [localInstalled, setLocalInstalled] = createSignal<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = createSignal(false);
   const [deleteCountdown, setDeleteCountdown] = createSignal(5);
@@ -577,14 +578,6 @@ const InstanceMods: Component = () => {
     if (mainTab() === "content" && contentTab() === "browse") {
       browseFilter(); // track category changes
       browsePageSize.size(); // re-search when the column-aware page size changes (resize)
-      // Expanding a card makes the grid taller, which can introduce a scrollbar
-      // on `.content`; that narrows the grid by the scrollbar's width, which can
-      // cross a column threshold and change the page size. Re-searching then
-      // would replace the results and collapse the card the user just opened, so
-      // a size change is swallowed while one is expanded. Read untracked so
-      // collapsing doesn't itself re-run this and reset to page 1 — the size
-      // settles on the next resize or page change.
-      if (untrack(expandedId) !== null) return;
       if (instance()) {
         setCurrentPage(1);
         doSearch(1);
@@ -711,28 +704,28 @@ const InstanceMods: Component = () => {
     }
   };
 
-  // Collapse any expanded card when the underlying list changes. Reading the
+  // Close the detail overlay when the underlying list changes. Reading the
   // signals here rather than clearing at each call site means a new way of
-  // changing the results can't forget to do it, and it keeps a detail panel from
-  // lingering over a project that's no longer on screen.
+  // changing the results can't forget to do it, and it stops the overlay from
+  // describing a project that's no longer in the results.
   createEffect(() => {
     searchResults();
     modSource();
     browseFilter();
     currentPage();
-    setExpandedId(null);
+    setDetailMod(null);
   });
 
   /**
    * Card click. Multi-select owns the gesture while it's active; otherwise the
-   * card toggles its detail view.
+   * card opens its detail overlay.
    */
   const handleCardClick = (mod: ModHit) => {
     if (selectMode()) {
       if (!isModInstalled(mod.project_id)) toggleSelectItem(mod);
       return;
     }
-    setExpandedId(expandedId() === mod.project_id ? null : mod.project_id);
+    setDetailMod(mod);
   };
 
   const handleSourceToggle = () => {
@@ -968,40 +961,6 @@ const InstanceMods: Component = () => {
   // the instance context bar has been removed.
 
   const isModInstalled = (projectId: string): boolean => localInstalled().has(projectId) || (instance()?.mods.some(m => m.project_id === projectId) || false);
-  const formatDownloads = (n: number): string => {
-    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
-    if (n >= 1_000) return (n / 1_000).toFixed(1) + "k";
-    return n.toString();
-  };
-  const formatSize = (bytes: number): string => {
-    if (bytes >= 1_000_000) return (bytes / 1_000_000).toFixed(1) + " MB";
-    if (bytes >= 1_000) return (bytes / 1_000).toFixed(1) + " KB";
-    return bytes + " B";
-  };
-
-  /// Format a project's supported MC versions as a card badge. The list can
-  /// arrive unsorted or string-sorted (CurseForge), so we sort numerically —
-  /// otherwise "1.10" lands before "1.9.4" and a range reads as "1.10–1.9.4".
-  /// Pre-release / snapshot strings are filtered out, then we show the first
-  /// and last of the numeric set as a range.
-  const formatVersionRange = (versions: string[] | undefined): string => {
-    if (!versions || versions.length === 0) return "";
-    const releases = versions.filter(v => /^\d+(\.\d+)*$/.test(v));
-    const list = (releases.length > 0 ? releases : versions).slice();
-    // Numeric, component-wise compare so 1.8.9 < 1.10 < 1.12.2 (not lexical).
-    const cmp = (a: string, b: string): number => {
-      const pa = a.split(".").map(Number);
-      const pb = b.split(".").map(Number);
-      for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-        const d = (pa[i] ?? 0) - (pb[i] ?? 0);
-        if (d !== 0) return d;
-      }
-      return 0;
-    };
-    if (releases.length > 0) list.sort(cmp);
-    if (list.length === 1) return list[0];
-    return `${list[0]}–${list[list.length - 1]}`;
-  };
 
   /// Per-category modifier suffix for the colored `.cat-btn` filter buttons.
   const catMod = (cat: string): string =>
@@ -1769,9 +1728,9 @@ const InstanceMods: Component = () => {
               <div class="card-grid card-grid--compact browse-grid" ref={browsePageSize.setEl}>
               <For each={searchResults()}>
                 {(mod) => (
-                  <div class={`card card--mod ${selectMode() && selectedItems().has(mod.project_id) ? "mod-item-selected" : ""} ${expandedId() === mod.project_id ? "card--expanded" : ""}`}
+                  <div class={`card card--mod ${selectMode() && selectedItems().has(mod.project_id) ? "mod-item-selected" : ""}`}
                     onClick={() => handleCardClick(mod)}
-                    style={selectMode() || expandedId() !== mod.project_id ? "cursor:pointer" : ""}>
+                    style="cursor:pointer">
                     <div class="mod-card-header">
                       <div class="mod-card-icon" style="background:var(--accent-soft)">
                         <Show when={mod.icon_url} fallback={<IconBolt />}>
@@ -1840,63 +1799,27 @@ const InstanceMods: Component = () => {
                       </Show>
                     </div>
 
-                    {/* Detail view. Rendered inside the card, which spans the
-                        full grid row while expanded — see `.card--expanded`.
-                        Keeping it in the grid is deliberate: a panel above the
-                        grid would move the grid's top edge, and `gridPageSize`
-                        recomputes rows from that offset, which would reset the
-                        page and refetch. Clicks are trapped here so interacting
-                        with the picker doesn't collapse the card. */}
-                    <Show when={expandedId() === mod.project_id}>
-                      <div class="mod-detail" onClick={(e) => e.stopPropagation()}>
-                        <div class="mod-detail-desc">{mod.description}</div>
-
-                        <div class="mod-detail-facts">
-                          <Show when={mod.versions && mod.versions.length > 0}>
-                            <div class="mod-detail-fact">
-                              <span class="mod-detail-fact-label">Game versions</span>
-                              <span class="mod-detail-fact-value">{mod.versions!.join(", ")}</span>
-                            </div>
-                          </Show>
-                          <Show when={extractLoaders(mod.categories).length > 0}>
-                            <div class="mod-detail-fact">
-                              <span class="mod-detail-fact-label">Loaders</span>
-                              <span class="mod-detail-fact-value">{extractLoaders(mod.categories).join(", ")}</span>
-                            </div>
-                          </Show>
-                          <Show when={mod.client_side || mod.server_side}>
-                            <div class="mod-detail-fact">
-                              <span class="mod-detail-fact-label">Environment</span>
-                              <span class="mod-detail-fact-value">
-                                client {mod.client_side ?? "unknown"} · server {mod.server_side ?? "unknown"}
-                              </span>
-                            </div>
-                          </Show>
-                          <div class="mod-detail-fact">
-                            <span class="mod-detail-fact-label">Downloads</span>
-                            <span class="mod-detail-fact-value">{mod.downloads.toLocaleString()}</span>
-                          </div>
-                        </div>
-
-                        <ModVersionPicker
-                          source={modSource()}
-                          projectId={mod.project_id}
-                          loader={instance()!.loader.type}
-                          gameVersion={browseFilter() === "resourcepack" || browseFilter() === "shader"
-                            ? browseVersion().trim()
-                            : instance()!.game_version}
-                          category={browseFilter()}
-                          installedVersionId={instance()?.mods.find(m => m.project_id === mod.project_id)?.version_id}
-                          busy={installing() === mod.project_id}
-                          onInstall={(v) => handleInstallMod(mod, v.id)}
-                        />
-                      </div>
-                    </Show>
                   </div>
                 )}
               </For>
               </div>
             </div>
+            {/* Detail overlay. Outside the grid, so opening it can't reflow the
+                results behind it. */}
+            <ModDetailModal
+              mod={detailMod()}
+              source={modSource()}
+              loader={instance()?.loader.type ?? ""}
+              gameVersion={browseFilter() === "resourcepack" || browseFilter() === "shader"
+                ? browseVersion().trim()
+                : (instance()?.game_version ?? "")}
+              category={browseFilter()}
+              loaders={detailMod() ? extractLoaders(detailMod()!.categories) : []}
+              installedVersionId={instance()?.mods.find(m => m.project_id === detailMod()?.project_id)?.version_id}
+              busy={installing() === detailMod()?.project_id}
+              onClose={() => setDetailMod(null)}
+              onInstall={(v) => { const m = detailMod(); if (m) handleInstallMod(m, v.id); }}
+            />
             {/* Bulk install floating bar */}
             <Show when={selectMode() && selectedItems().size > 0 && !bulkInstalling()}>
               <div class="bulk-install-bar">
