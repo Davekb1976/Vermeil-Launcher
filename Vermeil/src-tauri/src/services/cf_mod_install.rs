@@ -54,38 +54,41 @@ pub fn find_preferred_file<'a>(
     game_version: &str,
     loader: &str,
 ) -> Option<&'a CfFileInfo> {
-    let compatible = |f: &CfFileInfo| -> bool {
-        if !f.is_available {
-            return false;
-        }
-        if !game_version.is_empty()
-            && !f.game_versions.is_empty()
-            && !f
-                .game_versions
-                .iter()
-                .any(|g| compatible_game_version(g, game_version))
-        {
-            return false;
-        }
-        if !loader.is_empty()
-            && !f.loaders.is_empty()
-            && !f.loaders.iter().any(|l| l == loader)
-        {
-            return false;
-        }
-        true
-    };
-
     files
         .iter()
-        .filter(|f| f.release_type == 1 && compatible(f))
+        .filter(|f| f.release_type == 1 && is_file_compatible(f, game_version, loader))
         .max_by_key(|f| f.file_id)
         .or_else(|| {
             files
                 .iter()
-                .filter(|f| compatible(f))
+                .filter(|f| is_file_compatible(f, game_version, loader))
                 .max_by_key(|f| f.file_id)
         })
+}
+
+/// Whether this file can be installed on the given instance.
+///
+/// Shared by selection and by the version picker's per-entry labelling, so both
+/// answer the compatibility question the same way. A file declaring no Minecraft
+/// versions or no loaders is unconstrained on that axis rather than rejected; an
+/// empty `game_version` or `loader` argument means "don't check that axis".
+pub fn is_file_compatible(f: &CfFileInfo, game_version: &str, loader: &str) -> bool {
+    if !f.is_available {
+        return false;
+    }
+    if !game_version.is_empty()
+        && !f.game_versions.is_empty()
+        && !f
+            .game_versions
+            .iter()
+            .any(|g| compatible_game_version(g, game_version))
+    {
+        return false;
+    }
+    if !loader.is_empty() && !f.loaders.is_empty() && !f.loaders.iter().any(|l| l == loader) {
+        return false;
+    }
+    true
 }
 
 /// CurseForge doesn't tag loader-agnostic content with a loader, so passing a

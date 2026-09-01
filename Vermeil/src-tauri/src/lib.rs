@@ -262,6 +262,8 @@ pub fn run() {
             mods::search_mods,
             mods::search_modpacks,
             mods::search_curseforge,
+            mods::get_mod_versions,
+            mods::get_cf_mod_files,
             // Settings
             settings::get_settings,
             settings::save_settings,

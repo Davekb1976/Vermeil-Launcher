@@ -656,6 +656,35 @@ impl ProjectType {
     }
 }
 
+/// Whether this version can run on the given instance.
+///
+/// Accepts what the picker's passes accept: base-release game-version matching,
+/// the loader rule for mods only, and the datapack-as-mod allowance. Exists so
+/// the version picker can label entries without the frontend re-implementing
+/// compatibility — one definition, used for both selecting and labeling.
+///
+/// An empty `game_version` means "any", matching the optional version box on
+/// resource packs and shaders.
+pub(crate) fn is_version_compatible(
+    v: &ModrinthVersion,
+    project_type: ProjectType,
+    loader: &str,
+    game_version: &str,
+) -> bool {
+    if !game_version.is_empty()
+        && !v
+            .game_versions
+            .iter()
+            .any(|g| compatible_game_version(g, game_version))
+    {
+        return false;
+    }
+    if !project_type.checks_loader() {
+        return true;
+    }
+    v.loaders.iter().any(|l| l == loader || l == "datapack")
+}
+
 /// Is this version on the stable release channel? Modrinth's `version_type` is
 /// `"release"` / `"beta"` / `"alpha"`. An absent value is treated as stable so
 /// a project that somehow omits the field stays installable.

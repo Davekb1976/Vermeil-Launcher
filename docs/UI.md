@@ -18,7 +18,7 @@ Vermeil/src/
 ├── components/      # Reusable building blocks
 ├── modals/          # Modal dialogs + create/import pseudo-screens
 ├── screens/         # Top-level views
-├── lib/             # Pure helpers (cape, keybinds, contentVersion)
+├── lib/             # Pure helpers (cape, keybinds, contentVersion, versionPick)
 ├── services/        # Frontend-only logic (updater)
 ├── ipc/commands.ts  # Typed Tauri invoke() wrappers — single source of truth
 └── styles/          # 9 CSS modules (below)
@@ -61,7 +61,7 @@ Token groups (see `base.css` for values): surfaces (`--surface-*`), borders (`--
 | Role | Class | Key variants |
 |------|-------|--------------|
 | Button | `.btn` | `--sm/--md/--lg`, `--primary/--neutral/--ghost/--danger`, `--block` |
-| Card | `.card` | `--inst`, `--mod`, `--media`, `--compact` |
+| Card | `.card` | `--inst`, `--mod`, `--media`, `--compact`, `--expanded` |
 | Card grid | `.card-grid` | `--compact`. `auto-fit minmax(track,1fr)` — reflows, fills rows evenly |
 | Badge | `.badge` | `--loader` (+ per-loader), `--version`, `--vnum` (content version), `--source` |
 | Field | `.field-control` | `--text`, `--select`, `--search` |
@@ -110,7 +110,13 @@ Mounted at App level, controlled by signal. `OnboardingWizard`, `PinInstancesMod
 
 ## Components (`components/`)
 
-`FloatingDock` (bottom nav: nav pills + state-aware center play/stop/create + pin row — **this is the nav, there is no Sidebar**), `Titlebar` (window controls, logo, title, account pill), `Dropdown` (styled select), `Icons` (all SVGs), `PlayerHead`/`SkinAvatar`/`CapeChipThumb` (skin/cape renders), `PageSlider`, `JavaPathInput`, `KeybindCapture`, `ResizeHandles`, `Splash`, plus the modal/toast components listed above.
+`FloatingDock` (bottom nav: nav pills + state-aware center play/stop/create + pin row — **this is the nav, there is no Sidebar**), `Titlebar` (window controls, logo, title, account pill), `Dropdown` (styled select), `ModVersionPicker` (version list for one project, Portal-based panel), `Icons` (all SVGs), `PlayerHead`/`SkinAvatar`/`CapeChipThumb` (skin/cape renders), `PageSlider`, `JavaPathInput`, `KeybindCapture`, `ResizeHandles`, `Splash`, plus the modal/toast components listed above.
+
+### Expanding cards (Browse)
+
+Clicking a Browse mod card adds `.card--expanded`, which sets `grid-column: 1 / -1` so the card opens **inside** the grid. That placement is load-bearing, not cosmetic: `lib/gridPageSize.ts` derives columns from the grid's width and rows from `.content`'s height minus the grid's top offset, none of which a taller grid *child* changes — so the page size holds and the search isn't refetched. A detail panel rendered above the grid would move the grid's top edge and reset the page.
+
+The card is `overflow: hidden`, so any popup inside it must render through a `<Portal>` with fixed positioning (`.custom-dropdown-options--floating`) — same approach as the game-version dropdown in `CreateCustom.tsx`.
 
 ## Conventions
 
@@ -119,7 +125,7 @@ Mounted at App level, controlled by signal. `OnboardingWizard`, `PinInstancesMod
 - **External links:** `openUrl()` from `@tauri-apps/plugin-opener` — never `window.open()`/`<a href>`. (A global click interceptor in `index.tsx` handles rendered HTML.)
 - **Naming:** components/screens/modals `PascalCase`; helpers/services `camelCase`; CSS classes `kebab-case`.
 - **Inline `style=`** is fine for true one-offs; promote to a class once reused. Don't hardcode colors/sizes — use tokens.
-- **Animations:** reuse `fadeIn 0.15s ease`. **Empty states:** a helper card explaining the emptiness. **Errors:** toasts (`type:"error"`). **Loading:** `<Show>` with a muted "Loading…" fallback, no skeletons.
+- **Animations:** reuse `fadeIn 0.15s ease`. Anything longer or more elaborate (e.g. the `mod-detail-pop` expand) needs a `@media (prefers-reduced-motion: reduce)` opt-out. **Empty states:** a helper card explaining the emptiness. **Errors:** toasts (`type:"error"`). **Loading:** `<Show>` with a muted "Loading…" fallback, no skeletons.
 
 ## Keybinds
 

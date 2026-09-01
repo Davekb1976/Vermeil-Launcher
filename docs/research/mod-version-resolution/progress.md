@@ -36,3 +36,44 @@
 - Not verified on hardware: no launcher run from this shell. Needs a real install
   of a pinned-dependency pair (e.g. Iris + Sodium) to confirm the conflict modal
   copy reads correctly.
+
+## 2026-08-31 · expandable card + version picker (done)
+
+- New IPC: `get_mod_versions` / `get_cf_mod_files` both return one normalized
+  `ContentVersion[]` (id, name, channel, game_versions, loaders, filename, size,
+  date_published, compatible, recommended). Neither existed before — the two
+  version-list services were only reachable from other services.
+- Key decision: `compatible` and `recommended` are computed in Rust by the same
+  functions the installer uses (`is_version_compatible` / `is_file_compatible`,
+  extracted from the two pickers). The frontend never re-implements
+  compatibility, so the list can't disagree with what an install accepts.
+- Version lists are fetched **unfiltered** so the picker can offer "show all" and
+  mark incompatible entries, rather than hiding them with no explanation. Capped
+  at 100 entries to bound the DOM.
+- Both install commands gained an optional exact version (`versionId` / `fileId`).
+  Plain Install button = automatic resolution, unchanged; the picker = explicit
+  override, which is also the documented escape hatch for a version conflict.
+- Card expands via `.card--expanded { grid-column: 1 / -1 }` — inside the grid on
+  purpose. Verified against `lib/gridPageSize.ts`: columns come from grid width,
+  rows from `.content` height minus the grid's top offset, so a taller grid child
+  changes neither and the page size holds. A panel above the grid would move the
+  grid's top edge and refetch.
+- One real hazard found and closed: expanding can introduce a scrollbar, which
+  narrows the grid enough to cross a column threshold. The re-search effect now
+  swallows a page-size change while a card is expanded, reading `expandedId`
+  untracked so collapsing doesn't itself reset to page 1.
+- Picker panel renders through a `<Portal>` (fixed position from the trigger
+  rect) because `.card` is `overflow: hidden`; reuses `CreateCustom.tsx`'s rect
+  math and the existing `.custom-dropdown-options--floating` styling.
+- Pop-open animation: `grid-column` and intrinsic height can't be transitioned,
+  so the motion is a scale-with-overshoot on the detail panel plus a staggered
+  rise of its rows. Disabled under `prefers-reduced-motion`.
+- List logic extracted to `lib/versionPick.ts` (filter / default / resolve
+  selection) with `versionPick.selfcheck.ts` — all cases pass, `npx tsx`, same
+  pattern as `contentVersion.selfcheck.ts`.
+- Verified: self-checks pass, `cargo check` and `pnpm run build` clean, zero
+  warnings.
+- Not verified on hardware: the expand animation, the Portal panel's placement
+  near the viewport edge, and the scrollbar-threshold case all need a real
+  launcher run. Linux (WebKitGTK) needs its own look — overlay scrollbars there
+  make the scrollbar case behave differently than on WebView2.

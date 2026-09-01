@@ -401,6 +401,155 @@
   gap: var(--space-2);
 }
 
+/* ============================================================
+   Expanded card — the Browse detail view
+   ============================================================
+
+   A card opens in place by spanning the whole grid row. Column count is derived
+   from the grid's WIDTH and available rows from `.content`'s height, so a taller
+   grid child changes neither — which is what keeps `lib/gridPageSize.ts` from
+   recomputing a new page size and refetching the search out from under the open
+   card. Any detail panel rendered outside the grid would move the grid's top
+   edge and break that.
+
+   `overflow: visible` is required because the base `.card` clips: the version
+   picker's own panel escapes via a Portal, but the inline detail content still
+   needs room to grow. */
+.card--expanded {
+  grid-column: 1 / -1;
+  overflow: visible;
+  border-color: var(--accent);
+}
+/* The description clamp exists to keep collapsed cards uniform; an expanded card
+   has the room to show all of it. */
+.card--expanded .mod-card-desc {
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  display: block;
+  flex: 0 0 auto;
+}
+.card--expanded .mod-card-name { white-space: normal; }
+
+/* Pop-open. The grid reflow itself is instantaneous — CSS can't transition
+   `grid-column` or intrinsic height — so the motion lives on the panel: it
+   scales up from the card's top-left with a slight overshoot, then the rows
+   inside stagger in behind it. That reads as the card expanding rather than the
+   content simply appearing. */
+@keyframes mod-detail-pop {
+  0%   { opacity: 0; transform: scale(0.94); }
+  60%  { opacity: 1; transform: scale(1.012); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes mod-detail-rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.mod-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  transform-origin: top left;
+  animation: mod-detail-pop 0.22s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+.mod-detail > * { animation: mod-detail-rise 0.26s ease both; }
+.mod-detail > *:nth-child(1) { animation-delay: 0.05s; }
+.mod-detail > *:nth-child(2) { animation-delay: 0.09s; }
+.mod-detail > *:nth-child(3) { animation-delay: 0.13s; }
+
+/* Motion is decoration here; the layout change alone conveys the state. */
+@media (prefers-reduced-motion: reduce) {
+  .mod-detail,
+  .mod-detail > * { animation: none; }
+}
+
+.mod-detail-desc {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.mod-detail-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-2) var(--space-4);
+}
+.mod-detail-fact { display: flex; flex-direction: column; gap: var(--space-0); min-width: 0; }
+.mod-detail-fact-label {
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
+  font-weight: var(--fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.mod-detail-fact-value {
+  font-size: var(--fs-2xs);
+  color: var(--text);
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+/* ── Version picker ───────────────────────────────────────── */
+.version-picker { display: flex; flex-direction: column; gap: var(--space-2); }
+.version-picker-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.version-picker-row { display: flex; align-items: center; gap: var(--space-2); }
+/* The dropdown takes the remaining width; the Install button holds a fixed one. */
+.version-picker-row .custom-dropdown { flex: 1; min-width: 0; }
+.version-picker-selected-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+}
+.version-picker-status { font-size: var(--fs-2xs); color: var(--text-muted); }
+.version-picker-status.is-error { color: var(--danger); }
+.version-picker-warn {
+  font-size: var(--fs-2xs);
+  color: var(--warn);
+  line-height: 1.45;
+}
+
+/* Two-line rows, so the option panel needs more height than the shared default
+   and can't rely on the single-line vertical centering. */
+.version-picker-panel .custom-dropdown-option { align-items: stretch; flex-direction: column; gap: var(--space-1); }
+.version-option-main { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); width: 100%; min-width: 0; }
+.version-option-name {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.version-option-tags { display: flex; align-items: center; gap: var(--space-1); flex-shrink: 0; }
+.version-option-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  font-size: var(--fs-2xs);
+  color: var(--text-faint);
+}
+/* Still selectable — a user may deliberately want an off-version build — but
+   visibly marked so it can't be picked by accident. */
+.version-option.is-incompatible .version-option-name { color: var(--text-muted); }
+
+.version-tag {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  line-height: 1;
+  padding: 2px var(--space-1);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.version-tag--release { border-color: var(--success); color: var(--success); }
+.version-tag--beta { border-color: var(--warn); color: var(--warn); }
+.version-tag--alpha { border-color: var(--danger); color: var(--danger); }
+.version-tag--rec { border-color: var(--accent); color: var(--accent); }
+.version-tag--installed { border-color: var(--info); color: var(--info); }
+.version-tag--warn { border-color: var(--warn); color: var(--warn); }
+
 /* Variant — media card: media region sits flush at the top edge, body below.
    Base .card is already a column, so this variant needs no declarations of its
    own — it's a semantic marker in markup that composes with .card-media +

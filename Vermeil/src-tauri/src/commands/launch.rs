@@ -122,12 +122,15 @@ pub async fn launch_instance(instance_id: String, window: tauri::WebviewWindow) 
 }
 
 #[tauri::command]
+/// `version_id` installs one specific version. Omitted (the Browse card's
+/// Install button) resolves the newest compatible version instead.
 pub async fn install_mod_to_instance(
     instance_id: String,
     project_id: String,
     loader: String,
     game_version: String,
     category: Option<String>,
+    version_id: Option<String>,
 ) -> Result<String, String> {
     let cat = category.unwrap_or_else(|| "mod".to_string());
     let result = crate::services::mod_install::install_mod(
@@ -136,9 +139,7 @@ pub async fn install_mod_to_instance(
         &loader,
         &game_version,
         &cat,
-        // Browse's Install button always resolves the newest compatible version.
-        // Installing one specific version goes through the version picker.
-        None,
+        version_id,
     )
     .await?;
 
@@ -156,23 +157,18 @@ pub async fn install_mod_to_instance(
 /// Install a mod from CurseForge into an instance. Same return shape as
 /// `install_mod_to_instance` so the frontend reuses the same toast/modal.
 #[tauri::command]
+/// `file_id` installs one specific file. Omitted (the Browse card's Install
+/// button) resolves the newest compatible file instead.
 pub async fn install_cf_mod_to_instance(
     instance_id: String,
     mod_id: String,
     loader: String,
     game_version: String,
     category: Option<String>,
+    file_id: Option<String>,
 ) -> Result<String, String> {
-    let settings = crate::services::settings_service::load()
-        .await
-        .map_err(|e| format!("Load settings: {}", e))?;
-
     let cat = category.unwrap_or_else(|| "mod".to_string());
-    let api_key = if settings.curseforge_api_key.is_empty() {
-        "$2a$10$Vqhx8J1qatEwez9lhg6cjeh1W6RC6H8AtXeLdu7o8H45smb66wCgu".to_string()
-    } else {
-        settings.curseforge_api_key.clone()
-    };
+    let api_key = crate::commands::mods::resolve_cf_api_key().await?;
     let result = crate::services::cf_mod_install::install_cf_mod(
         &instance_id,
         &mod_id,
@@ -180,9 +176,7 @@ pub async fn install_cf_mod_to_instance(
         &game_version,
         &cat,
         &api_key,
-        // Browse's Install button always resolves the newest compatible file.
-        // Installing one specific file goes through the version picker.
-        None,
+        file_id,
     )
     .await?;
 

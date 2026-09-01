@@ -252,6 +252,42 @@ export const searchModpacks = (query: string, offset?: number, limit?: number, s
 export const searchCurseforge = (query: string, loader: string, gameVersion: string, offset?: number, limit?: number, sort?: string, projectType?: string) =>
   invoke<ModSearchResult>("search_curseforge", { query, loader, gameVersion, offset, limit, sort, projectType });
 
+/**
+ * One selectable version of a piece of content, normalized across Modrinth and
+ * CurseForge so the version picker renders both from one shape.
+ *
+ * `compatible` and `recommended` are decided by the backend using the same
+ * functions the installer uses, so the picker can't disagree with what an
+ * install would accept. Don't recompute compatibility here.
+ */
+export interface ContentVersion {
+  /** Pass back as `versionId` / `fileId` to install this exact version. */
+  id: string;
+  /** Modrinth `version_number`, or CurseForge's file display name. */
+  name: string;
+  /** "release" | "beta" | "alpha" | "unknown" */
+  channel: string;
+  game_versions: string[];
+  /** Empty for loader-agnostic content and untagged CurseForge uploads. */
+  loaders: string[];
+  filename: string;
+  /** Bytes. 0 when the source didn't report a size. */
+  size: number;
+  date_published: string | null;
+  /** Whether this version runs on the instance that was asked about. */
+  compatible: boolean;
+  /** The version the plain Install button would choose on its own. */
+  recommended: boolean;
+}
+
+/** Every version of a Modrinth project, newest first, capped at 100. */
+export const getModVersions = (projectId: string, loader: string, gameVersion: string, category?: string) =>
+  invoke<ContentVersion[]>("get_mod_versions", { projectId, loader, gameVersion, category });
+
+/** CurseForge equivalent. Only the API's first page of 50 files is available. */
+export const getCfModFiles = (modId: string, loader: string, gameVersion: string) =>
+  invoke<ContentVersion[]>("get_cf_mod_files", { modId, loader, gameVersion });
+
 // Auth commands
 export const startMsLogin = () => invoke<string>("start_ms_login");
 export const getActiveAccount = () => invoke<MinecraftProfile | null>("get_active_account");
@@ -264,10 +300,12 @@ export const logout = () => invoke<void>("logout");
 
 // Launch commands
 export const launchInstance = (instanceId: string) => invoke<number>("launch_instance", { instanceId });
-export const installModToInstance = (instanceId: string, projectId: string, loader: string, gameVersion: string, category?: string) =>
-  invoke<string>("install_mod_to_instance", { instanceId, projectId, loader, gameVersion, category });
-export const installCfModToInstance = (instanceId: string, modId: string, loader: string, gameVersion: string, category?: string) =>
-  invoke<string>("install_cf_mod_to_instance", { instanceId, modId, loader, gameVersion, category });
+/** `versionId` installs that exact version; omit it to get the newest compatible one. */
+export const installModToInstance = (instanceId: string, projectId: string, loader: string, gameVersion: string, category?: string, versionId?: string) =>
+  invoke<string>("install_mod_to_instance", { instanceId, projectId, loader, gameVersion, category, versionId });
+/** `fileId` installs that exact file; omit it to get the newest compatible one. */
+export const installCfModToInstance = (instanceId: string, modId: string, loader: string, gameVersion: string, category?: string, fileId?: string) =>
+  invoke<string>("install_cf_mod_to_instance", { instanceId, modId, loader, gameVersion, category, fileId });
 export const removeModFromInstance = (instanceId: string, entryId: string) =>
   invoke<void>("remove_mod_from_instance", { instanceId, entryId });
 /** Reconcile manually-added mod jars in the instance's mods/ folder into the
