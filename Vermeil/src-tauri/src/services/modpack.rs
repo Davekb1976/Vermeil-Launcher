@@ -157,14 +157,21 @@ pub async fn install_from_modrinth(
             },
         );
     }
-    let temp_path = paths::data_dir().join("temp_modpack.mrpack");
+    // Unique per install: a fixed name meant two concurrent modpack installs
+    // wrote the same file and each extracted whatever the other had just landed.
+    let temp_path = paths::data_dir().join(format!("temp_modpack_{}.mrpack", Uuid::new_v4()));
     let task = DownloadTask {
         url: mrpack_url.to_string(),
         dest: temp_path.clone(),
         expected_sha1: None,
         expected_size: None,
     };
-    download_file(&crate::util::http::HTTP, &task).await?;
+    // Clean up on failure too. The temp name is unique per install, so unlike the
+    // old fixed name a leftover here would never be overwritten by a later run.
+    if let Err(e) = download_file(&crate::util::http::HTTP, &task).await {
+        let _ = fs::remove_file(&temp_path);
+        return Err(e);
+    }
 
     // 3. Install from the downloaded file
     let result = install_from_mrpack_file(
@@ -1005,14 +1012,19 @@ pub async fn install_from_curseforge(
         );
     }
 
-    let temp_path = paths::data_dir().join("temp_cf_modpack.zip");
+    // Unique per install — see the Modrinth path for why a fixed name collided.
+    let temp_path = paths::data_dir().join(format!("temp_cf_modpack_{}.zip", Uuid::new_v4()));
     let task = DownloadTask {
         url: download_url,
         dest: temp_path.clone(),
         expected_sha1: None,
         expected_size: None,
     };
-    download_file(&crate::util::http::HTTP, &task).await?;
+    // Clean up on failure too — see the Modrinth path.
+    if let Err(e) = download_file(&crate::util::http::HTTP, &task).await {
+        let _ = fs::remove_file(&temp_path);
+        return Err(e);
+    }
 
     // Import via the existing CF import logic. Pass the CurseForge project ID
     // through so the resulting instance is tied back to its source — this is

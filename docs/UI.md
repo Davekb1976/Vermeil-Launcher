@@ -108,6 +108,8 @@ Routing is `<Show when={activeScreen() === "name"}>` in `App.tsx`; switch via `s
 
 Mounted at App level, controlled by signal. `OnboardingWizard`, `PinInstancesModal`, `JavaChooserModal`, `CustomCapeEditor` (modals/); `NoAccountModal`, `InstallProgress`, `BulkInstallToast`, `DependencyIssuesModal`, `UpdateBanner`, `CrashReportModal`, `Toasts` (components/).
 
+`InstallProgress` has two distinct header controls, and the difference is a behavioral contract: **Cancel** stops the install (`cancelInstall()`; the backend aborts at its next checkpoint and its failure path removes the partial instance), while the **X** only hides the popup and leaves the install running. Don't collapse them into one — the X used to be the only control and read as a cancel while doing nothing of the sort.
+
 ## Components (`components/`)
 
 `FloatingDock` (bottom nav: nav pills + state-aware center play/stop/create + pin row — **this is the nav, there is no Sidebar**), `Titlebar` (window controls, logo, title, account pill), `Dropdown` (styled select), `ModVersionPicker` (version list for one project, Portal-based panel), `Icons` (all SVGs), `PlayerHead`/`SkinAvatar`/`CapeChipThumb` (skin/cape renders), `PageSlider`, `JavaPathInput`, `KeybindCapture`, `ResizeHandles`, `Splash`, plus the modal/toast components listed above.

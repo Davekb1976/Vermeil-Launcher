@@ -1,6 +1,7 @@
 import { Component, createSignal, Show, onMount, onCleanup } from "solid-js";
 import { listen } from "@tauri-apps/api/event";
 import { IconDownload, IconX } from "./Icons";
+import { cancelInstall } from "../ipc/commands";
 
 interface ProgressEvent {
   section: string;
@@ -40,9 +41,19 @@ const InstallProgress: Component = () => {
   const [message, setMessage] = createSignal("");
   const [fraction, setFraction] = createSignal(0);
   const [done, setDone] = createSignal(false);
+  /** True between clicking Cancel and the popup closing. */
+  const [cancelling, setCancelling] = createSignal(false);
 
   let hideTimeout: number | undefined;
   let activityTimeout: number | undefined;
+  /**
+   * Events landing before this timestamp are dropped. Set when a cancel is
+   * acknowledged: the install stops at its next checkpoint, not instantly, so an
+   * emit already on its way would otherwise re-show a popup the user just
+   * dismissed.
+   */
+  let suppressUntil = 0;
+  const SUPPRESS_AFTER_CANCEL_MS = 4000;
   /**
    * Latch state for the message-source race. While `phaseLatchUntil` is
    * in the future, `download-progress` won't touch the message text.
@@ -97,6 +108,26 @@ const InstallProgress: Component = () => {
 
       // Clear any pending hide
       if (hideTimeout) { clearTimeout(hideTimeout); hideTimeout = undefined; }
+
+      // "cancelled" — the user asked to stop. The abort isn't instant, and an
+      // emit already in flight would otherwise re-show the popup a moment later,
+      // so suppress further events for a short window.
+      if (payload.section === "cancelled") {
+        installerActive = false;
+        setCancelling(true);
+        suppressUntil = Date.now() + SUPPRESS_AFTER_CANCEL_MS;
+        setMessageThrottled("Install cancelled", true);
+        hideTimeout = window.setTimeout(() => {
+          setVisible(false);
+          setCancelling(false);
+          setDone(false);
+          setFraction(0);
+          setMessage("");
+          setTitle("");
+        }, 1500);
+        return;
+      }
+      if (Date.now() < suppressUntil) return;
 
       // "done" signal — hide popup after a short delay
       if (payload.section === "done") {
@@ -178,7 +209,25 @@ const InstallProgress: Component = () => {
         <div class="install-progress-header">
           <IconDownload />
           <span class="install-progress-title">{title()}</span>
-          <button class="install-progress-close" onClick={() => { setVisible(false); setDone(false); setFraction(0); }}><IconX /></button>
+          {/* Cancel actually stops the install; the X only hides this popup and
+              leaves it running. Keeping them separate matters — an X that looks
+              like a cancel but isn't one is worse than either alone. */}
+          <Show when={!done() && !cancelling()}>
+            <button
+              class="install-progress-cancel"
+              title="Stop this install and remove what was downloaded"
+              onClick={() => { cancelInstall().catch(() => {}); }}
+            >
+              Cancel
+            </button>
+          </Show>
+          <button
+            class="install-progress-close"
+            title="Hide — the install keeps running"
+            onClick={() => { setVisible(false); setDone(false); setFraction(0); }}
+          >
+            <IconX />
+          </button>
         </div>
         <div class="install-progress-body">
           <div class="install-progress-section">

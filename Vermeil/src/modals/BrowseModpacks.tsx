@@ -121,7 +121,23 @@ const BrowseModpacks: Component = () => {
 
     installPromise
       .then(() => { refetchInstances(); refreshPinnedInstanceIds().catch(() => {}); completeDownload(dlId); })
-      .catch((e) => { console.error("Modpack install failed:", e); failDownload(dlId); alert(typeof e === "string" ? e : "Install failed"); })
+      .catch((e) => {
+        failDownload(dlId);
+        // A cancel rejects this promise too, but it's the outcome the user asked
+        // for — the progress popup already said so, and reporting it as a failure
+        // would be wrong.
+        if (typeof e === "string" && e === "Install cancelled") {
+          showToast({ title: "Install cancelled", message: pack.title, type: "info", autoCloseMs: 3000 });
+          return;
+        }
+        console.error("Modpack install failed:", e);
+        showToast({
+          title: "Install failed",
+          message: typeof e === "string" ? e : "Unknown error",
+          type: "error",
+          autoCloseMs: 5000,
+        });
+      })
       .finally(() => setInstalling(null));
   };
 

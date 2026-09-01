@@ -213,6 +213,7 @@ pub fn run() {
             instances::set_instance_icon,
             instances::clear_instance_icon,
             instances::clone_instance,
+            instances::cancel_install,
             instances::install_modpack,
             instances::install_cf_modpack,
             instances::prepare_instance,

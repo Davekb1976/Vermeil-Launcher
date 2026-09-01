@@ -8,6 +8,7 @@ pub async fn import_cf_zip(
     zip_path: String,
     window: tauri::WebviewWindow,
 ) -> Result<Instance, String> {
+    let _install = crate::services::download::InstallScope::begin();
     let settings = settings_service::load().await.map_err(|e| e.to_string())?;
     let instance = cf_import::import_zip(&zip_path, &settings.curseforge_api_key, None, Some(window)).await?;
     settings_service::auto_pin_instance(&instance.id).await;
@@ -20,6 +21,7 @@ pub async fn import_cf_code(
     code: String,
     window: tauri::WebviewWindow,
 ) -> Result<Instance, String> {
+    let _install = crate::services::download::InstallScope::begin();
     let settings = settings_service::load().await.map_err(|e| e.to_string())?;
     if settings.curseforge_api_key.is_empty() {
         return Err(

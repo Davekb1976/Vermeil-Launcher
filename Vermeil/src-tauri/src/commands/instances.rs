@@ -83,12 +83,41 @@ pub async fn update_instance_memory(id: String, memory_max_mb: u32) -> Result<()
     Ok(())
 }
 
+/// Ask the running install to stop.
+///
+/// The install aborts at its next checkpoint (between download tasks, or between
+/// post-download stages) and returns an error, which routes into the install
+/// flow's existing failure path — the one that already deletes the
+/// partially-created instance directory. There's no separate teardown to keep in
+/// sync as a result.
+#[tauri::command]
+pub async fn cancel_install(window: tauri::WebviewWindow) -> Result<(), String> {
+    crate::services::download::request_cancel();
+    // Acknowledge immediately. The abort itself isn't instant — in-flight
+    // requests finish first — and the aborting install returns an error rather
+    // than emitting a terminal event, so without this the popup would sit at its
+    // last phase until the 30s inactivity auto-hide.
+    use tauri::Emitter;
+    let _ = window.emit(
+        "install-progress",
+        crate::services::prepare::InstallProgressPayload {
+            section: "cancelled".to_string(),
+            title: "Install".to_string(),
+            message: "Cancelling install...".to_string(),
+            fraction: 0.0,
+            skipped: false,
+        },
+    );
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn install_modpack(
     project_id: String,
     version_id: Option<String>,
     window: tauri::WebviewWindow,
 ) -> Result<crate::models::instance::Instance, String> {
+    let _install = crate::services::download::InstallScope::begin();
     let instance = crate::services::modpack::install_from_modrinth(
         &project_id,
         version_id.as_deref(),
@@ -105,6 +134,7 @@ pub async fn install_cf_modpack(
     file_id: Option<String>,
     window: tauri::WebviewWindow,
 ) -> Result<crate::models::instance::Instance, String> {
+    let _install = crate::services::download::InstallScope::begin();
     let instance = crate::services::modpack::install_from_curseforge(
         &project_id,
         file_id.as_deref(),

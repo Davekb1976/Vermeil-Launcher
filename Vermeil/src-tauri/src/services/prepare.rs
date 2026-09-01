@@ -241,6 +241,10 @@ pub async fn prepare_with_extras(
     }
 
     // === Post-download processing ===
+    // Each stage past this point is a long, uninterruptible unit (archive
+    // extraction, a Forge installer subprocess), so cancellation is checked at
+    // the boundaries between them rather than inside.
+    crate::services::download::cancel_check()?;
 
     // Extract Java archive if we just downloaded it
     if !java_cached && java_archive_path.exists() {
@@ -255,9 +259,14 @@ pub async fn prepare_with_extras(
 
     // Run any post action (e.g. extract modpack overrides)
     if let Some(action) = post_action {
+        crate::services::download::cancel_check()?;
         emit("game", &instance_name, "Extracting content", 0.985, false);
         action().await?;
     }
+
+    // Last checkpoint: the loader installers below spawn subprocesses that can
+    // run for tens of seconds and can't be interrupted once started.
+    crate::services::download::cancel_check()?;
 
     // Loader post-processing
     match &instance.loader.loader_type {

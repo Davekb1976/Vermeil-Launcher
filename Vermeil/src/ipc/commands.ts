@@ -212,6 +212,12 @@ export const setInstanceIcon = (id: string, sourcePath: string) =>
 export const clearInstanceIcon = (id: string) => invoke<void>("clear_instance_icon", { id });
 export const cloneInstance = (id: string, newName?: string) =>
   invoke<Instance>("clone_instance", { id, newName });
+/**
+ * Stop the running install. It aborts at its next checkpoint and its normal
+ * failure path removes the partially-created instance, so the rejected install
+ * promise is the expected outcome — not an error to report as a failure.
+ */
+export const cancelInstall = () => invoke<void>("cancel_install");
 export const installModpack = (projectId: string, versionId?: string) => invoke<Instance>("install_modpack", { projectId, versionId });
 export const installCfModpack = (projectId: string, fileId?: string) => invoke<Instance>("install_cf_modpack", { projectId, fileId });
 export const importCfZip = (zipPath: string) => invoke<Instance>("import_cf_zip", { zipPath });

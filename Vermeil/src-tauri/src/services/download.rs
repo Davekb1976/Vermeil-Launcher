@@ -27,6 +27,70 @@ const MAX_WRITE: usize = 50;
 const MAX_RETRIES: u8 = 3;
 const RETRY_DELAY_MS: u64 = 500;
 
+/// Error text a cancelled install returns. The install flows already delete a
+/// partially-created instance directory on *any* error, so cancellation just has
+/// to produce one — no separate teardown path.
+pub const CANCELLED: &str = "Install cancelled";
+
+/// Set when the user asks to cancel the running install. Checked before each
+/// task in a batch and between the stages of `prepare_with_extras`.
+///
+/// ponytail: one global flag, matching the `USER_STOPPED` precedent in
+/// `commands/launch.rs` and the UI, which shows a single install-progress popup
+/// with a single Cancel button. Ceiling: two installs running at once share the
+/// flag, so cancelling one aborts both. Upgrade path is a per-install token in
+/// Tauri managed state, threaded through `prepare_with_extras` — worth doing only
+/// if concurrent installs become a real workflow.
+static CANCEL_REQUESTED: std::sync::atomic::AtomicBool =
+    std::sync::atomic::AtomicBool::new(false);
+
+/// Ask the running install to stop at its next checkpoint.
+pub fn request_cancel() {
+    CANCEL_REQUESTED.store(true, Ordering::SeqCst);
+    tracing::info!("Install cancellation requested");
+}
+
+/// Clear the flag. Called when an install begins, and by whichever install
+/// actually aborts — so a cancel can never leak into a later install or into a
+/// launch-time repair.
+pub fn clear_cancel() {
+    CANCEL_REQUESTED.store(false, Ordering::SeqCst);
+}
+
+pub fn is_cancelled() -> bool {
+    CANCEL_REQUESTED.load(Ordering::SeqCst)
+}
+
+/// `Err(CANCELLED)` when a cancel is pending, so call sites read as `check()?`.
+pub fn cancel_check() -> Result<(), String> {
+    if is_cancelled() {
+        Err(CANCELLED.to_string())
+    } else {
+        Ok(())
+    }
+}
+
+/// Scopes one user-initiated install.
+///
+/// Clears any stale cancel on creation and again on drop, so a request can never
+/// leak into a later install or into a launch-time repair — including when the
+/// install bails out early through `?`. Hold one for the lifetime of an install
+/// command: `let _install = InstallScope::begin();`.
+pub struct InstallScope;
+
+impl InstallScope {
+    pub fn begin() -> Self {
+        clear_cancel();
+        InstallScope
+    }
+}
+
+impl Drop for InstallScope {
+    fn drop(&mut self) {
+        clear_cancel();
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct DownloadTask {
     pub url: String,
@@ -185,6 +249,11 @@ async fn download_one(
         return Ok(());
     }
 
+    // Checked per task rather than mid-stream: a single file is small enough that
+    // finishing it costs little, and this is what makes a queue of thousands stop
+    // promptly instead of running to completion.
+    cancel_check()?;
+
     let mut last_err = String::new();
     for attempt in 0..=MAX_RETRIES {
         match fetch_bytes(client, &task.url, fetch_sem).await {
@@ -198,6 +267,8 @@ async fn download_one(
         }
 
         if attempt < MAX_RETRIES {
+            // Don't burn the remaining retries on a cancelled install.
+            cancel_check()?;
             tokio::time::sleep(Duration::from_millis(RETRY_DELAY_MS)).await;
         }
     }
@@ -282,9 +353,14 @@ pub async fn download_all(
                 bytes_done.fetch_add(task_size, Ordering::Relaxed);
 
                 if let Err(e) = result {
-                    tracing::error!("Failed to download {}: {}", task.url, e);
-                    if let Ok(mut errs) = errors.lock() {
-                        errs.push(e);
+                    // A cancelled batch would otherwise log and aggregate one
+                    // error per remaining task. It's reported once after the
+                    // stream instead.
+                    if e != CANCELLED {
+                        tracing::error!("Failed to download {}: {}", task.url, e);
+                        if let Ok(mut errs) = errors.lock() {
+                            errs.push(e);
+                        }
                     }
                 }
 
@@ -322,6 +398,9 @@ pub async fn download_all(
         })
         .await;
 
+    // Cancellation outranks whatever else failed on the way down.
+    cancel_check()?;
+
     let errs = errors.lock().map_err(|e| format!("Lock poisoned: {}", e))?;
     if errs.is_empty() {
         Ok(())
@@ -332,5 +411,41 @@ pub async fn download_all(
             total,
             errs[0]
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// One test, not several, because the flag is process-global — parallel tests
+    /// touching it would race each other.
+    ///
+    /// The invariant that matters: a cancel must never outlive the install it was
+    /// meant for. A leaked flag wouldn't just misfire on the next install, it
+    /// would abort a launch-time repair, which looks like the game refusing to
+    /// start for no reason.
+    #[test]
+    fn a_cancel_never_outlives_its_install() {
+        clear_cancel();
+        assert!(cancel_check().is_ok(), "should start clean");
+
+        {
+            let _install = InstallScope::begin();
+            assert!(cancel_check().is_ok());
+            request_cancel();
+            assert!(is_cancelled());
+            assert_eq!(cancel_check().unwrap_err(), CANCELLED);
+        }
+        // Scope dropped — even though the install ended by being cancelled.
+        assert!(!is_cancelled(), "cancel leaked past the install scope");
+
+        // A stale request from before an install begins must not abort it.
+        request_cancel();
+        {
+            let _install = InstallScope::begin();
+            assert!(cancel_check().is_ok(), "stale cancel leaked into a new install");
+        }
+        assert!(!is_cancelled());
     }
 }

@@ -140,6 +140,21 @@
   color: var(--text);
   flex: 1;
 }
+/* Cancel stops the install; the X beside it only hides the popup. Cancel reads
+   as the destructive action of the two so the distinction is visible, not just
+   described in a tooltip. */
+.install-progress-cancel {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  padding: var(--space-1) var(--space-2);
+  transition: border-color .12s, color .12s;
+}
+.install-progress-cancel:hover { border-color: var(--danger); color: var(--danger); }
 .install-progress-close {
   background: none;
   border: none;

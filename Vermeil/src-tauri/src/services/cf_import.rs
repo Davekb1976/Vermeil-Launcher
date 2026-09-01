@@ -323,7 +323,18 @@ pub async fn import_profile_code(
             fs::write(instance_dir.join("instance.json"), json).map_err(|e| e.to_string())?;
 
             // No overrides to extract from a profile-code import (no zip on disk).
-            prepare_with_extras(&instance, mod_tasks, None, window).await?;
+            // Same cleanup guard as `import_zip`: instance.json is already on
+            // disk at this point, so a failure (or a cancel) without this would
+            // leave a broken instance listed in the library.
+            if let Err(e) = prepare_with_extras(&instance, mod_tasks, None, window).await {
+                tracing::error!(
+                    "CurseForge profile import prepare failed, cleaning up instance {}: {}",
+                    instance_id,
+                    e
+                );
+                let _ = fs::remove_dir_all(&instance_dir);
+                return Err(e);
+            }
 
             return Ok(instance);
         }
