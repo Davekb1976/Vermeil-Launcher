@@ -226,11 +226,35 @@ pub struct ContentVersion {
 /// Hard cap on returned entries. A long-lived project can have hundreds of
 /// versions, and every one becomes a DOM row in the picker.
 ///
-/// ponytail: a flat truncation of the newest N, not paging. Ceiling: a version
-/// older than the 100 most recent can't be selected from the UI. Upgrade path
-/// is an offset parameter, which only matters if someone actually needs to pin
-/// something ancient.
+/// ponytail: a cap, not paging. Ceiling: with more than this many *compatible*
+/// versions the oldest compatible ones are unreachable from the UI. Upgrade path
+/// is an offset parameter, which only matters if someone needs to pin something
+/// ancient.
 const MAX_VERSIONS: usize = 100;
+
+/// Apply `MAX_VERSIONS` without ever dropping a compatible entry.
+///
+/// A flat `take(N)` over a newest-first list can discard every compatible
+/// version: a long-lived project's hundred most recent releases may all target
+/// current Minecraft, so an instance on an older version would see "no
+/// compatible versions" in the picker for a mod the Install button installs
+/// without complaint. Compatible entries are kept in full and incompatible ones
+/// fill whatever room is left.
+///
+/// Order within each group is preserved, so the compatible list — the default
+/// view — stays newest-first. Grouping only becomes visible once the cap is hit
+/// and "show all" is on, where incompatible entries then trail the compatible
+/// ones instead of interleaving by date.
+fn cap_keeping_compatible(list: Vec<ContentVersion>) -> Vec<ContentVersion> {
+    if list.len() <= MAX_VERSIONS {
+        return list;
+    }
+    let (compatible, rest): (Vec<_>, Vec<_>) = list.into_iter().partition(|v| v.compatible);
+    let room = MAX_VERSIONS.saturating_sub(compatible.len());
+    let mut out = compatible;
+    out.extend(rest.into_iter().take(room));
+    out
+}
 
 /// Every version of a Modrinth project, newest first, each labelled with
 /// whether it fits the given loader + game version.
@@ -252,9 +276,8 @@ pub async fn get_mod_versions(
     let recommended_id = find_preferred_version(&versions, project_type, &loader, &game_version)
         .map(|v| v.id.clone());
 
-    Ok(versions
+    let labelled: Vec<ContentVersion> = versions
         .into_iter()
-        .take(MAX_VERSIONS)
         .map(|v| {
             let compatible = is_version_compatible(&v, project_type, &loader, &game_version);
             let primary = v
@@ -275,7 +298,9 @@ pub async fn get_mod_versions(
                 id: v.id,
             }
         })
-        .collect())
+        .collect();
+
+    Ok(cap_keeping_compatible(labelled))
 }
 
 /// CurseForge equivalent of `get_mod_versions`. Same return shape.
@@ -293,9 +318,17 @@ pub async fn get_cf_mod_files(
     use crate::services::cf_mod_install::{find_preferred_file, is_file_compatible};
 
     let api_key = resolve_cf_api_key().await?;
-    // Unfiltered for the same reason as the Modrinth path — the picker needs to
-    // be able to show incompatible entries when the user asks for all versions.
-    let files = crate::services::curseforge::get_project_files(&api_key, &mod_id, "", "").await?;
+    // Filtered by game version server-side, unlike the Modrinth path.
+    //
+    // Modrinth's endpoint returns a project's complete version list, so it can be
+    // fetched unfiltered and labelled locally. CurseForge serves a single page of
+    // 50 files, so an unfiltered fetch of a prolific project can come back with
+    // nothing compatible for an older instance — while the Install button, which
+    // does filter, installs fine. The loader is deliberately left unfiltered so
+    // other loaders' files still appear and get marked incompatible, which is
+    // what makes "show all" worth having here.
+    let files =
+        crate::services::curseforge::get_project_files(&api_key, &mod_id, &game_version, "").await?;
     let recommended_id = find_preferred_file(&files, &game_version, &loader).map(|f| f.file_id);
 
     let mut out: Vec<ContentVersion> = files
@@ -331,8 +364,7 @@ pub async fn get_cf_mod_files(
             .unwrap_or(0)
             .cmp(&a.id.parse::<u64>().unwrap_or(0))
     });
-    out.truncate(MAX_VERSIONS);
-    Ok(out)
+    Ok(cap_keeping_compatible(out))
 }
 
 /// The user's CurseForge key if set, else the built-in fallback for configs that
@@ -346,4 +378,65 @@ pub(crate) async fn resolve_cf_api_key() -> Result<String, String> {
     } else {
         settings.curseforge_api_key.clone()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn version(id: usize, compatible: bool) -> ContentVersion {
+        ContentVersion {
+            id: id.to_string(),
+            name: id.to_string(),
+            channel: "release".to_string(),
+            game_versions: Vec::new(),
+            loaders: Vec::new(),
+            filename: format!("{}.jar", id),
+            size: 0,
+            date_published: None,
+            compatible,
+            recommended: false,
+        }
+    }
+
+    /// The regression this guards: a plain `take(MAX_VERSIONS)` over a
+    /// newest-first list can throw away every compatible version, because a
+    /// long-lived project's most recent hundred releases may all target current
+    /// Minecraft. The picker would show "no compatible versions" for a mod the
+    /// Install button installs without complaint.
+    #[test]
+    fn capping_never_discards_a_compatible_version() {
+        // Newest-first: incompatible newer releases, one ancient compatible one.
+        let mut list: Vec<ContentVersion> = (0..MAX_VERSIONS + 50).map(|i| version(i, false)).collect();
+        list.push(version(9999, true));
+
+        let capped = cap_keeping_compatible(list);
+        assert_eq!(capped.len(), MAX_VERSIONS);
+        assert!(
+            capped.iter().any(|v| v.id == "9999"),
+            "the only compatible version was truncated away"
+        );
+    }
+
+    /// Every compatible entry survives even when they alone exceed the cap, so
+    /// the count can exceed MAX_VERSIONS rather than silently hiding options.
+    #[test]
+    fn all_compatible_versions_survive_even_past_the_cap() {
+        let list: Vec<ContentVersion> = (0..MAX_VERSIONS + 20).map(|i| version(i, true)).collect();
+        let capped = cap_keeping_compatible(list);
+        assert_eq!(capped.len(), MAX_VERSIONS + 20);
+        assert!(capped.iter().all(|v| v.compatible));
+    }
+
+    /// Under the cap nothing is reordered — the list stays newest-first, which is
+    /// the order both APIs return and the order the picker displays.
+    #[test]
+    fn a_short_list_is_returned_untouched() {
+        let list = vec![version(1, false), version(2, true), version(3, false)];
+        let capped = cap_keeping_compatible(list);
+        assert_eq!(
+            capped.iter().map(|v| v.id.as_str()).collect::<Vec<_>>(),
+            vec!["1", "2", "3"]
+        );
+    }
 }

@@ -77,3 +77,32 @@
   near the viewport edge, and the scrollbar-threshold case all need a real
   launcher run. Linux (WebKitGTK) needs its own look — overlay scrollbars there
   make the scrollbar case behave differently than on WebView2.
+
+## 2026-08-31 · pre-release audit fixes (done)
+
+- Version-list cap was wrong in a way that contradicted the install button: a
+  flat `take(100)` over a newest-first list can discard every *compatible*
+  version, because a long-lived project's hundred most recent releases may all
+  target current Minecraft. The picker would say "no compatible versions" for a
+  mod Install handles fine. `cap_keeping_compatible` now keeps all compatible
+  entries and fills the remainder with incompatible ones.
+- Same defect from the other direction on CurseForge: its files endpoint serves
+  one page of 50, so the unfiltered fetch could return nothing compatible.
+  `get_cf_mod_files` now passes the game version server-side while leaving the
+  loader unfiltered, so other loaders' files still show up marked incompatible.
+  Modrinth stays unfiltered — its endpoint returns the complete version list.
+- `ModEntry.pinned` had no UI. A pinned entry is skipped by the update checker,
+  so its update pill never renders — which looked like a mod that simply never
+  updates. Installed cards now carry a "held" pill whose tooltip explains the
+  reason and how to override it.
+- The detail overlay now closes when an install starts from it. The
+  install-progress popup (z-index 9998) and toasts (9999) sit far above the modal
+  overlay (50), so leaving it open let them cover its controls on narrower
+  windows.
+- Checked and ruled out: nothing reads a Modrinth changelog (safe to keep
+  `include_changelog=false`); the update-check effect tracks `contentTab`, so
+  replace-in-place keeping `mods.length` constant does not strand a stale update
+  map; `sync_manual_mods` only touches `source == "manual"` entries; the floating
+  dock (z-index 30) correctly paints below the overlay.
+- Verified: `cargo test --lib` 27 passed (3 new on the cap), self-checks pass,
+  `cargo check` and `pnpm run build` clean.

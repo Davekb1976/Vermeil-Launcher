@@ -1659,6 +1659,18 @@ const InstanceMods: Component = () => {
                       <Show when={contentVersion((mod as any).version_number, mod.filename, instance()!.game_version)}>
                         {(v) => <span class="mod-tag mod-tag-vnum" title={v()}>{v()}</span>}
                       </Show>
+                      {/* A pinned entry is skipped by the update checker, so its
+                          update pill never appears. Without this tag that looks
+                          like the mod simply never updates, with no reason
+                          given. */}
+                      <Show when={(mod as any).pinned}>
+                        <span
+                          class="mod-tag mod-tag-held"
+                          title="Held at this version because another installed mod requires it exactly. Pick a version from the Browse tab to change it anyway."
+                        >
+                          held
+                        </span>
+                      </Show>
                       <Show when={modUpdates().has(mod.project_id)}>
                         <button
                           class="mod-tag mod-tag-update"
@@ -1837,7 +1849,16 @@ const InstanceMods: Component = () => {
               installedVersionId={instance()?.mods.find(m => m.project_id === detailMod()?.project_id)?.version_id}
               busy={installing() === detailMod()?.project_id}
               onClose={() => setDetailMod(null)}
-              onInstall={(v) => { const m = detailMod(); if (m) handleInstallMod(m, v.id); }}
+              /* Close on install. The install-progress popup and toasts sit at
+                 z-index 9998/9999, well above the modal overlay's 50, so leaving
+                 the overlay open would let them land on top of its controls.
+                 Closing also matches the intent — the choice has been made. */
+              onInstall={(v) => {
+                const m = detailMod();
+                if (!m) return;
+                setDetailMod(null);
+                handleInstallMod(m, v.id);
+              }}
             />
             {/* Bulk install floating bar */}
             <Show when={selectMode() && selectedItems().size > 0 && !bulkInstalling()}>

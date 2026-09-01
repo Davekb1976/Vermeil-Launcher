@@ -88,6 +88,15 @@ pub struct ModEntry {
     #[serde(default)]
     pub version_number: Option<String>,
     pub enabled: bool,
+    /// Held at this exact version because another installed mod requires it.
+    /// The update checker skips pinned entries and `apply_update` refuses them,
+    /// so automatic resolution can't move a version its parent depends on.
+    ///
+    /// Defaulted rather than required: this field now changes behavior, and a
+    /// hand-edited or externally-produced instance.json missing the key would
+    /// otherwise fail to deserialize the whole instance rather than just this
+    /// flag.
+    #[serde(default)]
     pub pinned: bool,
     #[serde(default)]
     pub title: Option<String>,

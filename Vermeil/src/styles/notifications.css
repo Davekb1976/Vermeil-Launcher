@@ -552,6 +552,19 @@
   opacity: 0.6;
 }
 
+/* Held pill — this entry is kept at an exact version another installed mod
+   requires, so the update checker skips it and no update pill can appear.
+   Informational, not interactive: the tooltip explains how to override. Uses the
+   info palette because nothing is wrong — a pin is working as intended. */
+.mod-tag-held {
+  background: var(--info-soft);
+  color: var(--blue);
+  border-color: rgba(91, 138, 240, 0.35);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: help;
+}
+
 
 /* Auto-updater banner — top-right corner overlay. State machine:
      available → downloading → downloaded → installing.
