@@ -336,8 +336,17 @@ pub async fn get_project_files(
     if !game_version.is_empty() {
         url.push_str(&format!("&gameVersion={}", urlencoding::encode(game_version)));
     }
-    if let Some(loader_id) = loader_type_id(loader) {
-        url.push_str(&format!("&modLoaderType={}", loader_id));
+    match loader_type_id(loader) {
+        Some(loader_id) => url.push_str(&format!("&modLoaderType={}", loader_id)),
+        // An empty loader is intentional (loader-agnostic content). A non-empty
+        // one we can't map means the server-side filter silently doesn't apply,
+        // so every loader's files come back — the caller MUST validate the
+        // chosen file's own loader list rather than trusting this response.
+        None if !loader.is_empty() => tracing::warn!(
+            "No CurseForge modLoaderType for loader '{}'; file list is unfiltered by loader",
+            loader
+        ),
+        None => {}
     }
 
     let resp = HTTP
@@ -371,6 +380,17 @@ pub async fn get_project_files(
                 f.file_name.replace(' ', "%20")
             ))
         });
+        let (mc_versions, loaders) = classify_game_versions(f.game_versions);
+        let mut required = Vec::new();
+        let mut incompatible = Vec::new();
+        for d in f.dependencies {
+            match d.relation_type {
+                3 => required.push(d.mod_id.to_string()),
+                5 => incompatible.push(d.mod_id.to_string()),
+                // Embedded / Optional / Tool / Include impose no obligation.
+                _ => {}
+            }
+        }
         CfFileInfo {
             file_id: f.id,
             file_name: f.file_name,
@@ -381,10 +401,13 @@ pub async fn get_project_files(
                 .filter(|h| h.algo == 1) // SHA-1
                 .map(|h| h.value)
                 .collect(),
-            dependencies: f.dependencies.into_iter()
-            .filter(|d| d.relation_type == 3) // RequiredDependency
-            .map(|d| d.mod_id.to_string())
-            .collect(),
+            dependencies: required,
+            incompatible,
+            release_type: f.release_type,
+            file_date: f.file_date,
+            game_versions: mc_versions,
+            loaders,
+            is_available: f.is_available,
         }
     }).collect())
 }
@@ -409,6 +432,29 @@ struct CfFile {
     file_length: u64,
     hashes: Vec<CfHash>,
     dependencies: Vec<CfDependency>,
+    /// 1 = Release, 2 = Beta, 3 = Alpha. Drives the stable-first preference
+    /// when choosing a file; without it an alpha upload wins purely by being
+    /// newest.
+    #[serde(rename = "releaseType", default)]
+    release_type: u32,
+    /// ISO-8601 upload timestamp. CurseForge does publish this per file — the
+    /// launcher previously didn't read it, which is why update detection fell
+    /// back to comparing numeric file ids.
+    #[serde(rename = "fileDate", default)]
+    file_date: Option<String>,
+    /// Mixed bag: Minecraft version strings AND loader names (and sometimes
+    /// "Client"/"Server") share this one array. `classify_game_versions` splits
+    /// them so a file can actually be validated client-side.
+    #[serde(rename = "gameVersions", default)]
+    game_versions: Vec<String>,
+    /// False when CurseForge is not currently serving the file. Picking one of
+    /// these yields a download that can't succeed.
+    #[serde(rename = "isAvailable", default = "default_true")]
+    is_available: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Deserialize)]
@@ -421,8 +467,43 @@ struct CfHash {
 struct CfDependency {
     #[serde(rename = "modId")]
     mod_id: u64,
+    /// 1 = EmbeddedLibrary, 2 = Optional, 3 = Required, 4 = Tool,
+    /// 5 = Incompatible, 6 = Include. Only 3 and 5 carry obligations for us.
     #[serde(rename = "relationType")]
-    relation_type: u32, // 3 = RequiredDependency
+    relation_type: u32,
+}
+
+/// Loader names CurseForge mixes into a file's `gameVersions` array. Compared
+/// case-insensitively because the casing there ("Fabric", "NeoForge") differs
+/// from the launcher's internal lowercase loader ids.
+const CF_LOADER_NAMES: [&str; 5] = ["forge", "fabric", "quilt", "neoforge", "liteloader"];
+
+/// Split a file's `gameVersions` into `(minecraft_versions, loaders)`.
+///
+/// CurseForge has no separate loader field on a file — MC versions, loader
+/// names, and occasionally environment tags all share one string array. An
+/// entry starting with a digit is a Minecraft version; one matching a known
+/// loader name is a loader; anything else is ignored. This deliberately avoids
+/// `sortableGameVersions[].gameVersionTypeId`, whose numeric values aren't
+/// documented per game and would be a guess.
+fn classify_game_versions(raw: Vec<String>) -> (Vec<String>, Vec<String>) {
+    let mut mc = Vec::new();
+    let mut loaders = Vec::new();
+    for entry in raw {
+        let trimmed = entry.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed.starts_with(|c: char| c.is_ascii_digit()) {
+            mc.push(trimmed.to_string());
+        } else {
+            let lower = trimmed.to_ascii_lowercase();
+            if CF_LOADER_NAMES.contains(&lower.as_str()) {
+                loaders.push(lower);
+            }
+        }
+    }
+    (mc, loaders)
 }
 
 /// Processed file info ready for the install flow.
@@ -436,6 +517,19 @@ pub struct CfFileInfo {
     pub file_length: u64,
     pub hashes: Vec<String>, // SHA-1 only
     pub dependencies: Vec<String>, // mod IDs of required deps
+    /// mod IDs this file declares it cannot run alongside (relationType 5).
+    pub incompatible: Vec<String>,
+    /// 1 = Release, 2 = Beta, 3 = Alpha.
+    pub release_type: u32,
+    /// ISO-8601 upload timestamp, when CurseForge supplied one.
+    pub file_date: Option<String>,
+    /// Minecraft versions this file declares, split out of `gameVersions`.
+    pub game_versions: Vec<String>,
+    /// Loaders this file declares, lowercased. Empty for loader-agnostic
+    /// content and for older uploads that never tagged one.
+    pub loaders: Vec<String>,
+    /// Whether CurseForge is currently serving this file.
+    pub is_available: bool,
 }
 
 // ─── Modpack install from project ID ────────────────────────────────────
@@ -506,4 +600,43 @@ pub async fn get_modpack_file_url(
         .to_string();
 
     Ok((download_url, file_name))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::classify_game_versions;
+
+    /// CurseForge puts Minecraft versions, loader names, and environment tags in
+    /// one array. Everything downstream that validates a file depends on this
+    /// split being right — mistaking "Fabric" for a game version, or "1.21.1"
+    /// for a loader, breaks compatibility checking in opposite directions.
+    #[test]
+    fn splits_minecraft_versions_from_loader_names() {
+        let (mc, loaders) = classify_game_versions(vec![
+            "1.21.1".to_string(),
+            "Fabric".to_string(),
+            "1.21".to_string(),
+            "NeoForge".to_string(),
+            // Environment tags belong to neither and must be dropped.
+            "Client".to_string(),
+            "Server".to_string(),
+        ]);
+        assert_eq!(mc, vec!["1.21.1", "1.21"]);
+        assert_eq!(loaders, vec!["fabric", "neoforge"]);
+    }
+
+    /// Loader names are lowercased so they compare against the launcher's
+    /// internal loader ids without per-call case handling.
+    #[test]
+    fn loader_names_are_normalized_to_lowercase() {
+        let (_, loaders) = classify_game_versions(vec!["FORGE".to_string(), "Quilt".to_string()]);
+        assert_eq!(loaders, vec!["forge", "quilt"]);
+    }
+
+    #[test]
+    fn blank_entries_are_ignored() {
+        let (mc, loaders) = classify_game_versions(vec!["".to_string(), "   ".to_string()]);
+        assert!(mc.is_empty());
+        assert!(loaders.is_empty());
+    }
 }

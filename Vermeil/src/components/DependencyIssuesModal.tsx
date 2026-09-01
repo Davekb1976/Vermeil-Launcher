@@ -9,7 +9,18 @@ export interface DependencyIssue {
   required_loaders: string[];
   instance_game_version: string;
   instance_loader: string;
-  /** "missing" | "incompatible" | "failed" */
+  /**
+   * "missing"          — the source has no versions of this project at all
+   * "incompatible"     — versions exist but none match the loader / MC version
+   * "failed"           — download or resolution error during install
+   * "version_conflict" — a specific version is required but a different one is
+   *                      installed, or an installed version is held by another
+   *                      mod. `reason` names both versions; the required/
+   *                      loaders arrays are empty for this kind.
+   * "conflict"         — the mod declares it cannot run alongside an installed
+   *                      one (Modrinth `incompatible` dep / CurseForge
+   *                      relationType 5)
+   */
   kind: string;
   reason: string;
 }
@@ -42,6 +53,10 @@ const kindLabel = (k: string): string => {
       return "May not work";
     case "failed":
       return "Install failed";
+    case "version_conflict":
+      return "Version mismatch";
+    case "conflict":
+      return "Conflict";
     default:
       return k;
   }
@@ -49,10 +64,14 @@ const kindLabel = (k: string): string => {
 
 const kindClass = (k: string): string => {
   switch (k) {
+    // Hard failures: nothing was installed, or two mods can't coexist.
     case "missing":
     case "failed":
+    case "conflict":
       return "dep-issue-error";
+    // Installed, but the combination may misbehave.
     case "incompatible":
+    case "version_conflict":
       return "dep-issue-warn";
     default:
       return "";

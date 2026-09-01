@@ -136,6 +136,9 @@ pub async fn install_mod_to_instance(
         &loader,
         &game_version,
         &cat,
+        // Browse's Install button always resolves the newest compatible version.
+        // Installing one specific version goes through the version picker.
+        None,
     )
     .await?;
 
@@ -177,6 +180,9 @@ pub async fn install_cf_mod_to_instance(
         &game_version,
         &cat,
         &api_key,
+        // Browse's Install button always resolves the newest compatible file.
+        // Installing one specific file goes through the version picker.
+        None,
     )
     .await?;
 

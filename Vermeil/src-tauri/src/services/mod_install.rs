@@ -11,12 +11,27 @@
 //!    - **Pass 3** (mods only): accept versions whose loader includes
 //!      `"datapack"` (a common Modrinth pattern when the same content type
 //!      lives under multiple project_type values).
+//!
+//!    Every pass prefers a `release`-channel version and only falls back to
+//!    beta/alpha when no stable version satisfies that pass. Without this, an
+//!    alpha published after the newest stable always won, because the list is
+//!    ordered by publish date.
 //! 3. If still no match → record an `incompatible` issue and bail. Same as
 //!    most launchers, dependencies are NOT installed for incompatible
 //!    primaries.
-//! 4. Walk dependencies recursively. Only `Required` deps install; `Optional`,
-//!    `Embedded`, and `Incompatible` are skipped. Quilt instances skip Fabric
-//!    API (project `P7dR8mSH`) because Quilt provides it natively.
+//! 4. Walk dependencies recursively. Only `Required` deps install; `Optional`
+//!    and `Embedded` are skipped. Quilt instances skip Fabric API (project
+//!    `P7dR8mSH`) because Quilt provides it natively.
+//! 5. Dependency satisfaction is checked by *version*, not merely presence.
+//!    When the parent pins an exact `version_id` and a different version of
+//!    that project is already installed, we record a `version_conflict` issue
+//!    instead of silently accepting the mismatch — the old presence-only check
+//!    is what produced "Iris needs Sodium 0.8.x but 0.9.x is installed" with no
+//!    warning. Deps installed at an exact pin are marked `pinned` so the update
+//!    checker won't later upgrade them out from under their parent.
+//! 6. A `dependency_type: "incompatible"` dep that IS installed is surfaced as
+//!    a `conflict` issue. Previously it was dropped, so a declared conflict was
+//!    invisible.
 
 use crate::models::instance::{Instance, ModEntry};
 use crate::services::download::{DownloadTask, download_file};
@@ -58,12 +73,23 @@ pub struct InstallResult {
 
 /// Public entry point. Resolves and installs the project plus its required
 /// dependency tree.
+///
+/// `version_id` pins the root project to an exact version. `None` means
+/// "resolve the newest compatible version", which is what the Browse card's
+/// Install button does. `Some(..)` comes from the version picker (an explicit
+/// user choice) and from `mod_updates::apply_update`, which passes the exact
+/// version its check reported so detection and application can't disagree.
+///
+/// Note this does NOT mark the root entry `pinned` — that flag means "held at a
+/// version a parent mod requires". A user picking an older version by hand is
+/// free to be offered an update later; a dependency pin is not.
 pub async fn install_mod(
     instance_id: &str,
     project_id: &str,
     loader: &str,
     game_version: &str,
     category: &str,
+    version_id: Option<String>,
 ) -> Result<InstallResult, String> {
     let mut visited_projects: HashSet<String> = HashSet::new();
     let mut visited_versions: HashSet<String> = HashSet::new();
@@ -78,8 +104,7 @@ pub async fn install_mod(
         game_version,
         category,
         None,
-        // The user-clicked mod is resolved by compatibility, not pinned.
-        None,
+        version_id,
         &mut visited_projects,
         &mut visited_versions,
         &mut deps_installed,
@@ -106,10 +131,10 @@ async fn install_one(
     game_version: &str,
     category: &str,
     parent_title: Option<&str>,
-    // When a parent declares a required dependency with an exact `version_id`
-    // (e.g. Iris pins the precise Sodium build it's ABI-compatible with), we
-    // must install *that* version, not the newest compatible one. `None` for
-    // the user-clicked mod and for project-level deps with no pin.
+    // Exact version to install, from one of two sources: a parent declaring a
+    // required dependency with an exact `version_id` (e.g. Iris pins the precise
+    // Sodium build it's ABI-compatible with), or an explicit user choice from the
+    // version picker on a root install. `None` = resolve by compatibility.
     pinned_version_id: Option<String>,
     visited_projects: &mut HashSet<String>,
     visited_versions: &mut HashSet<String>,
@@ -121,6 +146,17 @@ async fn install_one(
     if !visited_projects.insert(project_id.to_string()) {
         return Err(format!("Cycle detected on project {}", project_id));
     }
+
+    // Whether this install is a dependency held at an exact version its parent
+    // requires. Captured before `pinned_version_id` is consumed below; it lands
+    // in `ModEntry.pinned` so the update checker leaves the entry alone instead
+    // of upgrading it past what the parent can accept.
+    let is_dependency_pin = pinned_version_id.is_some() && !is_root;
+
+    // Whether the caller asked for one specific version rather than "resolve the
+    // newest compatible". An explicit request is allowed to move a version that
+    // another mod pins; automatic resolution is not.
+    let had_explicit_version = pinned_version_id.is_some();
 
     // Fetch the project's full version list once. Modrinth returns them sorted
     // newest first by `date_published`, which is the order their frontend
@@ -229,6 +265,62 @@ async fn install_one(
         return Err("Version already handled in this run".to_string());
     }
 
+    // === Reconcile against what's already installed ===
+    // Deliberately before the download: a redundant install then costs no
+    // bandwidth, and a version another mod pins can be respected without first
+    // fetching a file we'd only have to delete again.
+    let instance_dir = paths::instances_dir().join(instance_id);
+    let meta_path = instance_dir.join("instance.json");
+    let installed_before: Option<ModEntry> = fs::read_to_string(&meta_path)
+        .ok()
+        .and_then(|raw| serde_json::from_str::<Instance>(&raw).ok())
+        .and_then(|inst| inst.mods.into_iter().find(|m| m.project_id == project_id));
+
+    if let Some(ref prev) = installed_before {
+        // Already on exactly this version — nothing to download or rewrite.
+        if prev.version_id == version.id {
+            return Ok(prev.clone());
+        }
+
+        // The installed version is held there because a parent mod requires it
+        // exactly. Automatic resolution must not move it; only an explicit user
+        // choice may.
+        //
+        // ponytail: we can't name the mod holding the pin without re-fetching
+        // every installed mod's dependency list — one API call each on a
+        // rate-limited API — so the message says "another installed mod".
+        // Upgrade path: persist the requiring project id on ModEntry at the
+        // moment the pin is applied, then name it here for free.
+        if prev.pinned && !had_explicit_version {
+            let dep_title = match prev.title.clone() {
+                Some(t) => t,
+                None => lookup_project_title(project_id)
+                    .await
+                    .unwrap_or_else(|| project_id.to_string()),
+            };
+            let held_at = prev
+                .version_number
+                .clone()
+                .unwrap_or_else(|| prev.version_id.clone());
+            issues.push(DependencyIssue {
+                parent_title: parent_title.unwrap_or("(unknown)").to_string(),
+                dep_title: dep_title.clone(),
+                dep_project_id: project_id.to_string(),
+                required_game_versions: Vec::new(),
+                required_loaders: Vec::new(),
+                instance_game_version: game_version.to_string(),
+                instance_loader: loader.to_string(),
+                kind: "version_conflict".to_string(),
+                reason: format!(
+                    "Kept {} at {} because another installed mod requires that exact \
+                     version. Choose a version from this mod's version list to override.",
+                    dep_title, held_at
+                ),
+            });
+            return Ok(prev.clone());
+        }
+    }
+
     // === Pick a file ===
     let file = version
         .files
@@ -250,7 +342,6 @@ async fn install_one(
     };
 
     // === Download into the right folder for the category ===
-    let instance_dir = paths::instances_dir().join(instance_id);
     let target_folder = match category {
         "resourcepack" => "resourcepacks",
         "shader" => "shaderpacks",
@@ -278,7 +369,7 @@ async fn install_one(
         filename: file.filename.clone(),
         version_number: Some(version.version_number.clone()),
         enabled: true,
-        pinned: false,
+        pinned: is_dependency_pin,
         title: title.clone(),
         icon_url,
         local_icon_path,
@@ -287,30 +378,83 @@ async fn install_one(
         author,
     };
 
-    // === Persist instance.json (idempotent — skip if project already present) ===
-    let meta_path = instance_dir.join("instance.json");
+    // === Persist instance.json ===
+    // Idempotent *with replacement*: an existing entry for this project is
+    // updated in place, not skipped. The old skip-if-present behavior left the
+    // freshly-downloaded jar on disk while instance.json still described the
+    // previous version — two jars of the same project in `mods/` (which loaders
+    // reject) and metadata pointing at the wrong one. Replacing here is also
+    // what makes an explicit version choice work, and it means
+    // `mod_updates::apply_update` no longer has to strip the entry first.
     let content = fs::read_to_string(&meta_path)
         .map_err(|e| format!("Read instance.json: {}", e))?;
     let mut instance: Instance = serde_json::from_str(&content)
         .map_err(|e| format!("Parse instance.json: {}", e))?;
 
-    let already_present = instance.mods.iter().any(|m| m.project_id == project_id);
-    if !already_present {
-        instance.mods.push(mod_entry.clone());
-        let json = serde_json::to_string_pretty(&instance)
-            .map_err(|e| format!("Serialize instance.json: {}", e))?;
-        fs::write(&meta_path, json).map_err(|e| format!("Write instance.json: {}", e))?;
+    let mut mod_entry = mod_entry;
+    match instance.mods.iter().position(|m| m.project_id == project_id) {
+        // Reaching here with an existing entry means the version genuinely
+        // differs — the reconcile step above already returned early for an
+        // identical version and for a pin we must not move.
+        Some(pos) => {
+            let previous = instance.mods[pos].clone();
+            // Carry the user's enable/disable choice across the swap, honoring
+            // the `.disabled` filename convention.
+            if !previous.enabled {
+                let active = target_dir.join(&mod_entry.filename);
+                let disabled_name = format!("{}.disabled", mod_entry.filename);
+                if active.exists() {
+                    match fs::rename(&active, target_dir.join(&disabled_name)) {
+                        Ok(()) => {
+                            mod_entry.filename = disabled_name;
+                            mod_entry.enabled = false;
+                        }
+                        Err(e) => tracing::warn!(
+                            "Couldn't re-disable {} after version change: {}",
+                            active.display(),
+                            e
+                        ),
+                    }
+                }
+            }
+            // Drop the superseded file so the folder never holds two versions of
+            // the same project.
+            if previous.filename != mod_entry.filename {
+                let stale = target_dir.join(&previous.filename);
+                if stale.exists() {
+                    if let Err(e) = fs::remove_file(&stale) {
+                        tracing::warn!(
+                            "Couldn't remove superseded file {}: {}",
+                            stale.display(),
+                            e
+                        );
+                    }
+                }
+            }
+            instance.mods[pos] = mod_entry.clone();
+            let json = serde_json::to_string_pretty(&instance)
+                .map_err(|e| format!("Serialize instance.json: {}", e))?;
+            fs::write(&meta_path, json).map_err(|e| format!("Write instance.json: {}", e))?;
+        }
+        None => {
+            instance.mods.push(mod_entry.clone());
+            let json = serde_json::to_string_pretty(&instance)
+                .map_err(|e| format!("Serialize instance.json: {}", e))?;
+            fs::write(&meta_path, json).map_err(|e| format!("Write instance.json: {}", e))?;
 
-        if !is_root {
-            deps_installed.push(project_id.to_string());
-            dep_titles.push(title.clone().unwrap_or_else(|| project_id.to_string()));
+            if !is_root {
+                deps_installed.push(project_id.to_string());
+                dep_titles.push(title.clone().unwrap_or_else(|| project_id.to_string()));
+            }
         }
     }
 
-    // === Walk required dependencies ===
+    // === Walk dependencies ===
     for dep in &version.dependencies {
-        if dep.dependency_type != "required" {
-            continue; // Optional / Embedded / Incompatible — skip per Modrinth.
+        // `optional` and `embedded` impose no requirement. `required` installs;
+        // `incompatible` is checked against what's installed and reported.
+        if dep.dependency_type != "required" && dep.dependency_type != "incompatible" {
+            continue;
         }
 
         // Resolve a project_id for the dep. Modrinth deps usually carry
@@ -319,13 +463,51 @@ async fn install_one(
         let dep_project_id = if let Some(ref pid) = dep.project_id {
             pid.clone()
         } else if let Some(ref vid) = dep.version_id {
-            match resolve_project_from_version(vid).await {
-                Some(pid) => pid,
+            match fetch_version_meta(vid).await {
+                Some((pid, _)) => pid,
                 None => continue,
             }
         } else {
             continue;
         };
+
+        let parent = title.clone().unwrap_or_else(|| project_id.to_string());
+
+        // What, if anything, the instance already has for this dep.
+        let dep_installed: Option<ModEntry> = serde_json::from_str::<Instance>(
+            &fs::read_to_string(&meta_path).unwrap_or_default(),
+        )
+        .ok()
+        .and_then(|inst| {
+            inst.mods
+                .into_iter()
+                .find(|m| m.project_id == dep_project_id)
+        });
+
+        // A declared conflict: this version says it cannot run alongside the
+        // named project. Previously dropped outright, so the clash stayed
+        // invisible until the game failed to start.
+        if dep.dependency_type == "incompatible" {
+            if let Some(ref clash) = dep_installed {
+                let dep_title = resolve_title(clash.title.clone(), &dep_project_id).await;
+                issues.push(DependencyIssue {
+                    parent_title: parent.clone(),
+                    dep_title: dep_title.clone(),
+                    dep_project_id: dep_project_id.clone(),
+                    required_game_versions: Vec::new(),
+                    required_loaders: Vec::new(),
+                    instance_game_version: game_version.to_string(),
+                    instance_loader: loader.to_string(),
+                    kind: "conflict".to_string(),
+                    reason: format!(
+                        "{} declares it cannot run alongside {}, which is installed. \
+                         Remove one of them.",
+                        parent, dep_title
+                    ),
+                });
+            }
+            continue;
+        }
 
         // Carry the dep's exact-version pin (if any) into the recursive install.
         // CurseForge has no equivalent: its required-dependency relations carry
@@ -341,17 +523,44 @@ async fn install_one(
         if visited_projects.contains(&dep_project_id) {
             continue;
         }
-        let already_in_instance = serde_json::from_str::<Instance>(
-            &fs::read_to_string(&meta_path).unwrap_or_default(),
-        )
-        .map(|inst| inst.mods.iter().any(|m| m.project_id == dep_project_id))
-        .unwrap_or(false);
-        if already_in_instance {
-            visited_projects.insert(dep_project_id);
+
+        if let Some(ref present) = dep_installed {
+            visited_projects.insert(dep_project_id.clone());
+
+            // Presence is not satisfaction. When the parent names an exact
+            // version and a different one is installed, that mismatch is the
+            // "installed the wrong version" bug — the pin used to be discarded
+            // right here with nothing reported.
+            if let Some(ref pin) = dep_pin {
+                if &present.version_id != pin {
+                    let dep_title = resolve_title(present.title.clone(), &dep_project_id).await;
+                    let required = fetch_version_meta(pin)
+                        .await
+                        .map(|(_, number)| number)
+                        .unwrap_or_else(|| pin.clone());
+                    let installed = present
+                        .version_number
+                        .clone()
+                        .unwrap_or_else(|| present.version_id.clone());
+                    issues.push(DependencyIssue {
+                        parent_title: parent.clone(),
+                        dep_title: dep_title.clone(),
+                        dep_project_id: dep_project_id.clone(),
+                        required_game_versions: Vec::new(),
+                        required_loaders: Vec::new(),
+                        instance_game_version: game_version.to_string(),
+                        instance_loader: loader.to_string(),
+                        kind: "version_conflict".to_string(),
+                        reason: format!(
+                            "{} requires {} {}, but {} is installed. Open {}'s version list \
+                             and install {} to resolve it.",
+                            parent, dep_title, required, installed, dep_title, required
+                        ),
+                    });
+                }
+            }
             continue;
         }
-
-        let parent = title.clone().unwrap_or_else(|| project_id.to_string());
 
         // Determine the dep's actual project type before recursing. Modrinth's
         // `dependency` struct doesn't carry it, so we look it up. Datapack deps
@@ -447,6 +656,35 @@ impl ProjectType {
     }
 }
 
+/// Is this version on the stable release channel? Modrinth's `version_type` is
+/// `"release"` / `"beta"` / `"alpha"`. An absent value is treated as stable so
+/// a project that somehow omits the field stays installable.
+fn is_stable_channel(v: &ModrinthVersion) -> bool {
+    match v.version_type.as_deref() {
+        Some("beta") | Some("alpha") => false,
+        _ => true,
+    }
+}
+
+/// First version satisfying `matches`, preferring the stable release channel.
+///
+/// The list is ordered newest-first by publish date, so a plain `find` hands
+/// back an alpha whenever one was published after the newest stable. Two passes
+/// over an already-fetched slice is cheap, and it means "Install" doesn't
+/// silently hand someone a pre-release build.
+fn pick_preferring_stable<'a, F>(
+    versions: &'a [ModrinthVersion],
+    matches: F,
+) -> Option<&'a ModrinthVersion>
+where
+    F: Fn(&ModrinthVersion) -> bool,
+{
+    versions
+        .iter()
+        .find(|v| is_stable_channel(v) && matches(v))
+        .or_else(|| versions.iter().find(|v| matches(v)))
+}
+
 /// Given a project's full version list (newest first), pick the best match.
 /// Used by both the install flow and the update checker — keeping the picker
 /// in one place ensures updates only surface versions we'd actually install.
@@ -456,10 +694,13 @@ pub(crate) fn find_preferred_version<'a>(
     loader: &str,
     game_version: &str,
 ) -> Option<&'a ModrinthVersion> {
+    let loader_ok = |v: &ModrinthVersion| {
+        !project_type.checks_loader() || v.loaders.iter().any(|l| l == loader)
+    };
+
     // Pass 1 — strict: exact game_version + exact loader.
-    let strict = versions.iter().find(|v| {
-        v.game_versions.iter().any(|g| g == game_version)
-            && (!project_type.checks_loader() || v.loaders.iter().any(|l| l == loader))
+    let strict = pick_preferring_stable(versions, |v| {
+        v.game_versions.iter().any(|g| g == game_version) && loader_ok(v)
     });
     if strict.is_some() {
         return strict;
@@ -468,11 +709,11 @@ pub(crate) fn find_preferred_version<'a>(
     // Pass 2 — lenient game version: accept versions whose game_versions list
     // contains a string with the same base release as the instance's MC
     // version (e.g., `26.1-pre7` matches `26.1`). Loader rule still strict.
-    let lenient = versions.iter().find(|v| {
+    let lenient = pick_preferring_stable(versions, |v| {
         v.game_versions
             .iter()
             .any(|g| compatible_game_version(g, game_version))
-            && (!project_type.checks_loader() || v.loaders.iter().any(|l| l == loader))
+            && loader_ok(v)
     });
     if lenient.is_some() {
         return lenient;
@@ -481,7 +722,7 @@ pub(crate) fn find_preferred_version<'a>(
     // Pass 3 — datapack-as-mod (Modrinth's `isVersionCompatible` accepts a mod
     // that ships as a datapack on any loader instance).
     if project_type == ProjectType::Mod {
-        let datapack = versions.iter().find(|v| {
+        let datapack = pick_preferring_stable(versions, |v| {
             v.game_versions
                 .iter()
                 .any(|g| compatible_game_version(g, game_version))
@@ -503,7 +744,7 @@ pub(crate) fn find_preferred_version<'a>(
 /// lenient than Modrinth's `Array.includes`, which is intentional — a mod
 /// declaring support for `1.21-pre7` should still install on `1.21` because
 /// the pre-release was the precursor to that exact final.
-fn compatible_game_version(a: &str, b: &str) -> bool {
+pub(crate) fn compatible_game_version(a: &str, b: &str) -> bool {
     if a == b {
         return true;
     }
@@ -615,16 +856,40 @@ async fn lookup_project_type(project_id: &str) -> Option<String> {
     lookup_project_meta(project_id).await.3
 }
 
-async fn resolve_project_from_version(version_id: &str) -> Option<String> {
+/// Fetch a version by id and return `(project_id, version_number)`.
+///
+/// Two callers need one of the halves each: the dep walk resolves the parent
+/// project of a `version_id`-only dependency, and the version-conflict message
+/// needs the human-readable number of the pinned version. Both come from the
+/// same response, so this is one function rather than two calls.
+async fn fetch_version_meta(version_id: &str) -> Option<(String, String)> {
     let url = format!("https://api.modrinth.com/v2/version/{}", version_id);
     let resp = crate::util::http::HTTP.get(&url).send().await.ok()?;
     if !resp.status().is_success() {
         return None;
     }
     let json: serde_json::Value = resp.json().await.ok()?;
-    json.get("project_id")
+    let project_id = json.get("project_id")?.as_str()?.to_string();
+    // A version always has a number, but fall back to the id rather than
+    // failing the whole lookup if the field is somehow absent.
+    let number = json
+        .get("version_number")
         .and_then(|v| v.as_str())
-        .map(|s| s.to_string())
+        .unwrap_or(version_id)
+        .to_string();
+    Some((project_id, number))
+}
+
+/// Prefer a title we already have cached on the installed entry; only hit the
+/// API when there isn't one. Keeps the conflict paths from costing a request in
+/// the common case.
+async fn resolve_title(cached: Option<String>, project_id: &str) -> String {
+    match cached {
+        Some(t) => t,
+        None => lookup_project_title(project_id)
+            .await
+            .unwrap_or_else(|| project_id.to_string()),
+    }
 }
 
 // ============================================================================
@@ -837,4 +1102,102 @@ pub async fn sync_manual_mods(instance_id: &str) -> Result<(), String> {
         fs::write(&meta_path, json).map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::services::modrinth::{ModrinthFile, ModrinthHashes, ModrinthVersion};
+
+    /// Minimal version fixture. `channel` is Modrinth's `version_type`.
+    fn version(
+        id: &str,
+        channel: &str,
+        game_versions: &[&str],
+        loaders: &[&str],
+    ) -> ModrinthVersion {
+        ModrinthVersion {
+            id: id.to_string(),
+            project_id: "proj".to_string(),
+            name: id.to_string(),
+            version_number: id.to_string(),
+            game_versions: game_versions.iter().map(|s| s.to_string()).collect(),
+            loaders: loaders.iter().map(|s| s.to_string()).collect(),
+            files: vec![ModrinthFile {
+                url: "https://example.invalid/f.jar".to_string(),
+                filename: "f.jar".to_string(),
+                hashes: ModrinthHashes { sha1: None, sha512: None },
+                size: 1,
+                primary: true,
+            }],
+            dependencies: Vec::new(),
+            date_published: None,
+            version_type: Some(channel.to_string()),
+        }
+    }
+
+    /// The regression this guards: the list is newest-first, so a plain `find`
+    /// hands back a prerelease whenever one was published after the newest
+    /// stable. Install must not silently deliver an alpha.
+    #[test]
+    fn stable_wins_over_a_newer_prerelease() {
+        let versions = vec![
+            version("alpha-new", "alpha", &["1.21.1"], &["fabric"]),
+            version("beta-mid", "beta", &["1.21.1"], &["fabric"]),
+            version("release-old", "release", &["1.21.1"], &["fabric"]),
+        ];
+        let picked =
+            find_preferred_version(&versions, ProjectType::Mod, "fabric", "1.21.1").unwrap();
+        assert_eq!(picked.id, "release-old");
+    }
+
+    /// ...but a prerelease is better than nothing when no stable build supports
+    /// the instance at all.
+    #[test]
+    fn prerelease_used_when_no_stable_is_compatible() {
+        let versions = vec![
+            version("beta-compatible", "beta", &["1.21.1"], &["fabric"]),
+            version("release-other-mc", "release", &["1.20.1"], &["fabric"]),
+        ];
+        let picked =
+            find_preferred_version(&versions, ProjectType::Mod, "fabric", "1.21.1").unwrap();
+        assert_eq!(picked.id, "beta-compatible");
+    }
+
+    /// A Forge jar must never be chosen for a Fabric instance. This is the
+    /// "silent corruption" case the picker exists to prevent.
+    #[test]
+    fn wrong_loader_is_never_chosen_for_a_mod() {
+        let versions = vec![version("forge-only", "release", &["1.21.1"], &["forge"])];
+        assert!(find_preferred_version(&versions, ProjectType::Mod, "fabric", "1.21.1").is_none());
+    }
+
+    /// Resource packs are loader-agnostic, so the loader rule must not apply or
+    /// every pack would be rejected.
+    #[test]
+    fn loader_rule_is_skipped_for_loader_agnostic_content() {
+        let versions = vec![version("pack", "release", &["1.21.1"], &["minecraft"])];
+        let picked =
+            find_preferred_version(&versions, ProjectType::ResourcePack, "fabric", "1.21.1")
+                .unwrap();
+        assert_eq!(picked.id, "pack");
+    }
+
+    /// A mod declaring support for `1.21-pre7` still installs on `1.21`; the
+    /// prerelease was the precursor to that exact final.
+    #[test]
+    fn base_release_matching_accepts_prerelease_game_versions() {
+        let versions = vec![version("v", "release", &["1.21-pre7"], &["fabric"])];
+        assert!(find_preferred_version(&versions, ProjectType::Mod, "fabric", "1.21").is_some());
+        // Different base release must still be rejected.
+        assert!(find_preferred_version(&versions, ProjectType::Mod, "fabric", "1.20").is_none());
+    }
+
+    /// A missing `version_type` must not make a version unselectable.
+    #[test]
+    fn absent_channel_is_treated_as_stable() {
+        let mut v = version("v", "release", &["1.21.1"], &["fabric"]);
+        v.version_type = None;
+        assert!(is_stable_channel(&v));
+    }
 }

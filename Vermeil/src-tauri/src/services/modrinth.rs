@@ -53,6 +53,13 @@ pub struct ModrinthVersion {
     /// "newer than installed" for the update detector.
     #[serde(default)]
     pub date_published: Option<String>,
+    /// Release channel: `"release"`, `"beta"`, or `"alpha"`. Drives the
+    /// stable-first preference in `find_preferred_version` — without it an
+    /// alpha build published after the latest stable would always win.
+    /// Optional so a malformed/absent value degrades to "unknown channel"
+    /// rather than failing the whole version list parse.
+    #[serde(default)]
+    pub version_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -233,23 +240,25 @@ pub async fn get_project_versions(
     // Build query params lazily so empty filters drop out — Modrinth treats
     // `game_versions=[""]` as a literal empty-string filter and returns nothing,
     // which broke fallback fetches that wanted the project's full version list.
-    let mut params: Vec<String> = Vec::new();
+    //
+    // `include_changelog=false` is always sent: the endpoint defaults it to
+    // true, so every call was pulling the full changelog text of every version.
+    // We never read the changelog, and this endpoint runs once per mod on every
+    // install and every update check — on a rate-limited API that payload is
+    // pure waste.
+    let mut params: Vec<String> = vec!["include_changelog=false".to_string()];
     if !loader.is_empty() {
         params.push(format!("loaders=[\"{}\"]", loader));
     }
     if !game_version.is_empty() {
         params.push(format!("game_versions=[\"{}\"]", game_version));
     }
-    let url = if params.is_empty() {
-        format!("{}/project/{}/version", MODRINTH_API, project_id)
-    } else {
-        format!(
-            "{}/project/{}/version?{}",
-            MODRINTH_API,
-            project_id,
-            params.join("&")
-        )
-    };
+    let url = format!(
+        "{}/project/{}/version?{}",
+        MODRINTH_API,
+        project_id,
+        params.join("&")
+    );
 
     let resp = crate::util::http::HTTP
         .get(&url)

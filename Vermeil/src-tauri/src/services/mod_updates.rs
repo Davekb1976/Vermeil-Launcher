@@ -8,18 +8,22 @@
 //!     loader + game version), run the same compatibility picker we use at
 //!     install time (`find_preferred_version`), and compare the chosen
 //!     `version_id`. A mismatch with a newer `date_published` means an update.
-//!   - **CurseForge**: fetch the project's files (already filtered by
-//!     `gameVersion` + `modLoaderType` and sorted newest-first by the API) and
-//!     compare the newest file's id. CF file IDs are globally monotonic, so a
-//!     strictly-greater id means a genuinely newer file — we never flag a
-//!     downgrade. CF's `CfFileInfo` carries no publish date, hence the id
-//!     comparison instead of a date comparison.
+//!   - **CurseForge**: fetch the project's files and run the same picker the
+//!     install flow uses (`cf_mod_install::find_preferred_file`), then compare
+//!     file ids. CF ids are globally monotonic, so a strictly-greater id means a
+//!     genuinely newer file and we never flag a downgrade. Sharing the picker is
+//!     what stops "an update is available" from naming a different file than the
+//!     one an install would actually fetch.
+//!
+//! Entries marked `pinned` are skipped entirely: they're held at a version some
+//! other installed mod requires exactly, so offering to move them would break
+//! the mod that pinned them.
 //!
 //! Update application reuses the matching install flow (`mod_install::install_mod`
-//! for Modrinth, `cf_mod_install::install_cf_mod` for CurseForge) so dep
-//! walking, compatibility gates, and folder routing all behave identically to a
-//! fresh install — the only extra step is removing the old file before
-//! downloading the new one and preserving `enabled` state across the swap.
+//! for Modrinth, `cf_mod_install::install_cf_mod` for CurseForge), passing the
+//! exact version the check reported so detection and application can't diverge.
+//! The install flow replaces the entry in place — deleting the superseded file
+//! and carrying `enabled` across the swap — so there's nothing to clean up here.
 
 use crate::models::instance::Instance;
 use crate::services::mod_install::{
@@ -91,6 +95,11 @@ pub async fn check_updates(instance: &Instance) -> Result<HashMap<String, ModUpd
 
     for entry in &instance.mods {
         if entry.project_id.is_empty() || entry.version_id.is_empty() {
+            continue;
+        }
+        // Held at an exact version another installed mod requires. Updating it
+        // would break that mod, so don't even offer it.
+        if entry.pinned {
             continue;
         }
         if !seen.insert(entry.project_id.clone()) {
@@ -223,10 +232,10 @@ async fn check_curseforge_entry(
         }
     };
 
-    // Newest compatible file = the one with the highest id (CF ids are
-    // monotonic). Using max rather than blindly trusting head order guards
-    // against any future API reordering.
-    let latest = files.iter().max_by_key(|f| f.file_id)?;
+    // Same picker the install flow uses, so what we report is exactly what an
+    // install would fetch: locally validated, stable channel preferred, highest
+    // file id within that channel.
+    let latest = cf_mod_install::find_preferred_file(&files, &instance.game_version, loader)?;
 
     if latest.file_id <= current_id {
         // Already on the newest (or local id is somehow ahead — never downgrade).
@@ -247,21 +256,32 @@ async fn check_curseforge_entry(
         latest_version_id: latest.file_id.to_string(),
         latest_version_number: version_label,
         latest_filename: latest.file_name.clone(),
-        latest_published: None,
+        // CurseForge does publish a per-file timestamp; we now read it, so the
+        // update pill can show a date on both sources.
+        latest_published: latest.file_date.clone(),
     })
 }
 
-/// Apply a previously-detected update for a single project. Removes the old
-/// file from disk, then runs the install flow (which downloads the new file,
-/// rewrites `instance.json`, and walks required dependencies).
+/// Apply an available update for a single project.
+///
+/// Re-runs detection server-side to learn the exact target version, then hands
+/// that version to the install flow. Passing the version explicitly is what
+/// guarantees the file installed is the one the check reported — the old code
+/// re-resolved "newest compatible" from scratch, which could pick something
+/// else and, worse, moved a dependency past the version its parent pinned.
+///
+/// Everything the old implementation did by hand — deleting the superseded file,
+/// stripping the entry so the installer wouldn't dedupe, restoring `enabled` —
+/// now happens inside the install flow's replace-in-place path.
 pub async fn apply_update(
     instance_id: &str,
     project_id: &str,
 ) -> Result<InstallResult, String> {
-    // Re-read the instance to get the current ModEntry — important if the
-    // user toggled `enabled` between detection and application.
-    let instance_dir = paths::instances_dir().join(instance_id);
-    let meta_path = instance_dir.join("instance.json");
+    // Re-read the instance so we act on current state, not what the frontend
+    // last saw.
+    let meta_path = paths::instances_dir()
+        .join(instance_id)
+        .join("instance.json");
     let raw = fs::read_to_string(&meta_path)
         .map_err(|e| format!("Read instance.json: {}", e))?;
     let instance: Instance = serde_json::from_str(&raw)
@@ -274,102 +294,52 @@ pub async fn apply_update(
         .ok_or_else(|| format!("Mod {} not in instance", project_id))?
         .clone();
 
-    let was_enabled = entry.enabled;
+    if entry.pinned {
+        return Err(format!(
+            "{} is held at its current version because another installed mod requires it. \
+             Choose a version from its version list to change it anyway.",
+            entry.title.as_deref().unwrap_or(project_id)
+        ));
+    }
+
     let category = entry.category.clone();
+    let loader = instance.loader.loader_type.as_str();
 
-    // Remove the old file so the new download replaces it cleanly. We do NOT
-    // edit instance.json yet — `install_mod` rewrites it as part of its flow,
-    // overwriting our stale entry with the new version data.
-    let folder = match category.as_str() {
-        "resourcepack" => "resourcepacks",
-        "shader" => "shaderpacks",
-        "datapack" => "datapacks",
-        _ => "mods",
-    };
-    let old_path = instance_dir
-        .join(".minecraft")
-        .join(folder)
-        .join(&entry.filename);
-    if old_path.exists() {
-        if let Err(e) = fs::remove_file(&old_path) {
-            // Not fatal — the new file will land in the same folder. Log it
-            // so we can chase down stale entries if someone reports issues.
-            tracing::warn!(
-                "Couldn't remove old file {} during update: {}",
-                old_path.display(),
-                e
-            );
-        }
-    }
-
-    // The install flow expects the project to NOT already be in the mod list
-    // (it dedups otherwise). Strip the old entry from instance.json so the
-    // install path can append the fresh one with new version_id + filename.
-    {
-        let mut mutated = instance.clone();
-        mutated.mods.retain(|m| m.project_id != project_id);
-        let json = serde_json::to_string_pretty(&mutated)
-            .map_err(|e| format!("Serialize instance.json: {}", e))?;
-        fs::write(&meta_path, json)
-            .map_err(|e| format!("Write instance.json: {}", e))?;
-    }
-
-    // Route to the matching install flow. Both reinstall the newest compatible
-    // file for the instance's loader + game version — the same target the
-    // detection step reported — and return the shared `InstallResult` shape.
-    let mut result = if entry.source == "curseforge" {
+    if entry.source == "curseforge" {
         let api_key = resolve_cf_key().await;
+        let update = check_curseforge_entry(&instance, &entry, &api_key)
+            .await
+            .ok_or_else(|| {
+                format!(
+                    "No newer CurseForge file available for {}",
+                    entry.title.as_deref().unwrap_or(project_id)
+                )
+            })?;
         cf_mod_install::install_cf_mod(
             instance_id,
             project_id,
-            instance.loader.loader_type.as_str(),
+            loader,
             &instance.game_version,
             &category,
             &api_key,
+            Some(update.latest_version_id),
         )
-        .await?
+        .await
     } else {
+        let update = check_modrinth_entry(&instance, &entry).await.ok_or_else(|| {
+            format!(
+                "No newer version available for {}",
+                entry.title.as_deref().unwrap_or(project_id)
+            )
+        })?;
         mod_install::install_mod(
             instance_id,
             project_id,
-            instance.loader.loader_type.as_str(),
+            loader,
             &instance.game_version,
             &category,
+            Some(update.latest_version_id),
         )
-        .await?
-    };
-
-    // Preserve the old `enabled` state: install always writes `enabled: true`,
-    // but if the user had the old version disabled they probably want the new
-    // version disabled too.
-    if !was_enabled {
-        let raw = fs::read_to_string(&meta_path)
-            .map_err(|e| format!("Read instance.json: {}", e))?;
-        let mut inst: Instance = serde_json::from_str(&raw)
-            .map_err(|e| format!("Parse instance.json: {}", e))?;
-        if let Some(m) = inst.mods.iter_mut().find(|m| m.project_id == project_id) {
-            m.enabled = false;
-            // Also rename the new file on disk to match.
-            let new_path = instance_dir.join(".minecraft").join(folder).join(&m.filename);
-            let disabled_path = new_path.with_file_name(format!("{}.disabled", m.filename));
-            if new_path.exists() {
-                if let Err(e) = fs::rename(&new_path, &disabled_path) {
-                    tracing::warn!(
-                        "Couldn't re-disable {} after update: {}",
-                        new_path.display(),
-                        e
-                    );
-                } else {
-                    m.filename = format!("{}.disabled", m.filename);
-                }
-            }
-        }
-        let json = serde_json::to_string_pretty(&inst)
-            .map_err(|e| format!("Serialize instance.json: {}", e))?;
-        fs::write(&meta_path, json)
-            .map_err(|e| format!("Write instance.json: {}", e))?;
-        result.mod_entry.enabled = false;
+        .await
     }
-
-    Ok(result)
 }
