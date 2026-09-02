@@ -5,7 +5,7 @@
 <h1 align="center">Vermeil</h1>
 
 <p align="center">
-  <strong>A lightweight, open-source Minecraft: Java Edition launcher for Windows and Linux.</strong><br/>
+  <strong>A full-featured, open-source Minecraft: Java Edition launcher for Windows and Linux.</strong><br/>
   Microsoft sign-in, every major mod loader, modpack imports, managed Java, and zero telemetry.
 </p>
 
@@ -23,7 +23,9 @@
 
 ---
 
-> **Alpha software.** Vermeil is in early, active development. Features may change between versions. Expect rough edges.
+> **Approaching 1.0.0.** The core feature set is largely in place. From here, new features are added only where they bring clear, practical value — the bulk of maintainer effort goes to bug hunting, testing, and stability in the run-up to the 1.0.0 release.
+
+> **Alpha software.** Vermeil is in active development. Features may change between versions. Expect rough edges.
 
 > **AI-generated codebase.** Built with AI assistance (Claude and GPT models) via Kiro IDE. May contain bugs or incomplete features. See [DISCLAIMER.md](DISCLAIMER.md).
 

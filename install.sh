@@ -121,7 +121,7 @@ echo ""
 echo "  ╔═══════════════════════════════════════╗"
 echo "  ║     Vermeil Launcher — Installer      ║"
 echo "  ╠═══════════════════════════════════════╣"
-echo "  ║  A lightweight Minecraft launcher     ║"
+echo "  ║  A full-featured Minecraft launcher   ║"
 echo "  ║  for Windows and Linux                ║"
 echo "  ╚═══════════════════════════════════════╝"
 echo ""
@@ -175,7 +175,7 @@ mkdir -p "$APPS_DIR"
 cat > "$APPS_DIR/$APP_ID.desktop" << EOF
 [Desktop Entry]
 Name=Vermeil
-Comment=A lightweight Minecraft launcher
+Comment=A full-featured Minecraft launcher
 Exec=env WEBKIT_DISABLE_DMABUF_RENDERER=1 $BIN_DIR/Vermeil.AppImage
 Icon=vermeil
 Type=Application

@@ -2,7 +2,7 @@
   "name": "vermeil",
   "version": "0.8.4",
   "packageManager": "pnpm@11.5.1",
-  "description": "A lightweight Minecraft launcher for Windows and Linux",
+  "description": "A full-featured Minecraft launcher for Windows and Linux",
   "type": "module",
   "scripts": {
     "start": "vite",
