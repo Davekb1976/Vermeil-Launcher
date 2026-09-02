@@ -153,7 +153,13 @@ const ModVersionPicker: Component<Props> = (props) => {
         <Show when={!error()} fallback={<div class="version-picker-status is-error">{error()}</div>}>
           <Show
             when={versions().length > 0}
-            fallback={<div class="version-picker-status">No versions published.</div>}
+            /* Not "no versions published": CurseForge filters by game version
+               server-side, so an empty list means none for this instance. */
+            fallback={
+              <div class="version-picker-status">
+                No versions available for {props.loader} {props.gameVersion}.
+              </div>
+            }
           >
             <div class="version-picker-row">
               <button

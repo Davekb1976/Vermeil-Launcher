@@ -1666,7 +1666,7 @@ const InstanceMods: Component = () => {
                       <Show when={(mod as any).pinned}>
                         <span
                           class="mod-tag mod-tag-held"
-                          title="Held at this version because another installed mod requires it exactly. Pick a version from the Browse tab to change it anyway."
+                          title="Held at this version because a mod that needs this exact build pulled it in, so update checks skip it. Pick a version from the Browse tab to change it anyway."
                         >
                           held
                         </span>
@@ -1841,9 +1841,13 @@ const InstanceMods: Component = () => {
               mod={detailMod()}
               source={modSource()}
               loader={instance()?.loader.type ?? ""}
-              gameVersion={browseFilter() === "resourcepack" || browseFilter() === "shader"
-                ? browseVersion().trim()
-                : (instance()?.game_version ?? "")}
+              /* The instance's version, deliberately NOT the free-text version
+                 box. That box scopes the *search*; compatibility has to be judged
+                 against the instance we'd install into, which is the version
+                 `handleInstallMod` passes. Using the box here let the picker
+                 label a version compatible that the installer then resolved
+                 differently — or, on CurseForge, silently substituted. */
+              gameVersion={instance()?.game_version ?? ""}
               category={browseFilter()}
               loaders={detailMod() ? extractLoaders(detailMod()!.categories) : []}
               installedVersionId={instance()?.mods.find(m => m.project_id === detailMod()?.project_id)?.version_id}

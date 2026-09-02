@@ -49,16 +49,6 @@ async fn resolve_cf_key() -> String {
     }
 }
 
-/// CurseForge files aren't tagged with a loader for loader-agnostic content,
-/// so passing a `modLoaderType` filter returns zero results. Mirror the
-/// install path: only filter by loader for actual mods.
-fn cf_effective_loader<'a>(category: &str, loader: &'a str) -> &'a str {
-    match category {
-        "resourcepack" | "shader" | "datapack" => "",
-        _ => loader,
-    }
-}
-
 /// One available update for an installed Modrinth mod. Surfaced per project
 /// id so the frontend can decorate each installed-tab card with an "Update"
 /// pill when a match exists.
@@ -75,8 +65,13 @@ pub struct ModUpdate {
 /// Check every Modrinth- or CurseForge-sourced mod in an instance for updates.
 ///
 /// Returns a map keyed by project_id so the frontend can render a badge by
-/// looking up `mod.project_id` directly. Modpack-bundled and manually-added
-/// files are skipped — there's no source of truth to compare against.
+/// looking up `mod.project_id` directly.
+///
+/// Skipped: manually-added jars and `.mrpack`-installed mods, which are written
+/// with `source: "modpack"` and carry no project id, so there's nothing to
+/// compare against. Note the asymmetry — CurseForge pack imports write
+/// `source: "curseforge"` with real project ids (`cf_import.rs`), so those mods
+/// *are* update-checked individually.
 ///
 /// Network calls are issued sequentially to be polite to both APIs (Modrinth
 /// is rate-limited; CurseForge per-key limits can revoke abusive keys). This
@@ -210,7 +205,10 @@ async fn check_curseforge_entry(
     api_key: &str,
 ) -> Option<ModUpdate> {
     let current_id: u64 = entry.version_id.parse().ok()?;
-    let loader = cf_effective_loader(&entry.category, instance.loader.loader_type.as_str());
+    let loader = cf_mod_install::effective_loader(
+        &entry.category,
+        instance.loader.loader_type.as_str(),
+    );
 
     let files = match curseforge::get_project_files(
         api_key,

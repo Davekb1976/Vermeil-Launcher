@@ -93,7 +93,11 @@ pub fn is_file_compatible(f: &CfFileInfo, game_version: &str, loader: &str) -> b
 
 /// CurseForge doesn't tag loader-agnostic content with a loader, so passing a
 /// `modLoaderType` filter for those categories returns nothing.
-fn effective_loader<'a>(category: &str, loader: &'a str) -> &'a str {
+///
+/// Shared with the update checker deliberately: it was a byte-identical copy
+/// there, and the two drifting apart would silently break the update pin round
+/// trip — detection would filter one way and the install another.
+pub fn effective_loader<'a>(category: &str, loader: &'a str) -> &'a str {
     match category {
         "resourcepack" | "shader" | "datapack" => "",
         _ => loader,
@@ -186,22 +190,44 @@ async fn install_cf_one(
     let had_explicit_file = pinned_file_id.is_some();
     let loader_filter = effective_loader(category, loader);
 
-    let files = curseforge::get_project_files(api_key, mod_id, game_version, loader_filter).await?;
-
     // === Resolve which file to install ===
-    let chosen = match pinned_file_id.as_deref() {
-        Some(pin) => match files.iter().find(|f| f.file_id.to_string() == pin) {
-            Some(f) => Some(f),
-            None => {
+    //
+    // A pinned file is fetched **by id**, not searched for in a list query. The
+    // files endpoint filters server-side and pages at 50, so the set it returns
+    // depends on the filters passed — and the version picker doesn't pass the
+    // same ones the installer would. Searching a list for the pin therefore
+    // missed legitimately-chosen files (notably older uploads with no loader tag,
+    // which the picker marks compatible but `modLoaderType` excludes) and fell
+    // back to a *different* version while reporting success.
+    //
+    // `listed` stays empty on the pinned path; it's only needed to describe what
+    // the project does offer when nothing matches.
+    let mut listed: Vec<CfFileInfo> = Vec::new();
+    let chosen: Option<CfFileInfo> = match pinned_file_id.as_deref() {
+        Some(pin) => match curseforge::get_file(api_key, mod_id, pin).await {
+            Ok(f) => Some(f),
+            Err(e) => {
+                // The file was deleted, or the id is stale from a cached picker
+                // list. Fall back to resolving normally rather than failing, but
+                // say so — the installed version won't be the one requested.
                 tracing::warn!(
-                    "Pinned CurseForge file {} not found for project {}; falling back to newest compatible",
+                    "Pinned CurseForge file {} for project {} couldn't be fetched ({}); \
+                     resolving newest compatible instead",
                     pin,
-                    mod_id
+                    mod_id,
+                    e
                 );
-                find_preferred_file(&files, game_version, loader_filter)
+                listed =
+                    curseforge::get_project_files(api_key, mod_id, game_version, loader_filter)
+                        .await?;
+                find_preferred_file(&listed, game_version, loader_filter).cloned()
             }
         },
-        None => find_preferred_file(&files, game_version, loader_filter),
+        None => {
+            listed =
+                curseforge::get_project_files(api_key, mod_id, game_version, loader_filter).await?;
+            find_preferred_file(&listed, game_version, loader_filter).cloned()
+        }
     };
 
     let file = match chosen {
@@ -214,7 +240,7 @@ async fn install_cf_one(
             let dep_title = title.unwrap_or_else(|| mod_id.to_string());
             let mut all_loaders: Vec<String> = Vec::new();
             let mut all_versions: Vec<String> = Vec::new();
-            for f in &files {
+            for f in &listed {
                 for l in &f.loaders {
                     if !all_loaders.contains(l) {
                         all_loaders.push(l.clone());
@@ -226,9 +252,14 @@ async fn install_cf_one(
                     }
                 }
             }
-            let kind = if files.is_empty() { "missing" } else { "incompatible" };
-            let reason = if files.is_empty() {
-                "CurseForge has no files for this project on the instance's version.".to_string()
+            let kind = if listed.is_empty() { "missing" } else { "incompatible" };
+            let reason = if listed.is_empty() {
+                // The list query filters by game version server-side, so an empty
+                // page means "nothing for this MC version", not "no files exist".
+                format!(
+                    "CurseForge lists no files for this project on MC {}.",
+                    game_version
+                )
             } else {
                 format!(
                     "No available file matches {} on MC {}.",

@@ -106,3 +106,57 @@
   dock (z-index 30) correctly paints below the overlay.
 - Verified: `cargo test --lib` 27 passed (3 new on the cap), self-checks pass,
   `cargo check` and `pnpm run build` clean.
+
+## 2026-08-31 · pre-release audit of the install/update matrix (done)
+
+Traced install + update for both sources across all four content categories
+before tagging 0.8.4. Modrinth's path was internally consistent; CurseForge had a
+real hole.
+
+- **Fixed: a pinned CurseForge file could silently install a different version.**
+  The version picker built its list with `loader=""` while the installer
+  re-queried with the real loader — different server-side filters, therefore
+  different 50-item pages. A pin absent from the installer's page fell through to
+  `find_preferred_file` with only a `tracing::warn!`, and the command returned
+  success. Worst case was the leniency working against itself: a legacy upload with
+  no loader tag is marked *compatible* by `is_file_compatible` (empty `loaders` =
+  unconstrained) but excluded by `modLoaderType`, so exactly the files the
+  leniency exists for were the ones substituted. Pins now resolve through the new
+  `curseforge::get_file` (`GET /mods/{modId}/files/{fileId}`), which is immune to
+  filters and paging. The list query is only fetched on the unpinned path, and to
+  describe what a project does offer when nothing matches.
+- **Fixed: the picker judged compatibility against a different game version than
+  the installer used.** `ModDetailModal` was passed the free-text version box
+  (empty by default for resourcepacks/shaders) while `handleInstallMod` always
+  passed the instance's version. The box scopes *search*; compatibility must be
+  judged against the instance being installed into, so the picker now gets
+  `instance().game_version`. Fixing it the other way round wasn't possible — an
+  empty game version makes `find_preferred_version` match nothing.
+- Fixed: `cf_effective_loader` in `mod_updates.rs` was a byte-identical copy of
+  `effective_loader`. Collapsed to one `pub` function; the two drifting would have
+  silently broken the update pin round trip.
+- Fixed: an empty-string `downloadUrl` now normalizes to `None` in `to_file_info`,
+  so it reaches the manual-download dialog instead of the downloader.
+- Fixed wording: the picker's empty state said "No versions published", which is
+  wrong when CurseForge filtered them out server-side. The `held` tooltip no
+  longer asserts a requirement that may no longer exist.
+- Corrected a false doc claim in `mod_updates.rs`: modpack-bundled mods are only
+  skipped for `.mrpack` installs (`source: "modpack"`). CurseForge pack imports
+  write `source: "curseforge"` with real project ids, so those mods *are*
+  update-checked individually.
+
+### Known gaps, accepted for this release
+
+- **CurseForge loses base-release leniency.** `compatible_game_version` is applied
+  locally, but CF's `gameVersion` filter has already run server-side and matches
+  exactly. So a mod tagged `1.21` installs from Modrinth on a `1.21.1` instance and
+  fails from CurseForge. Fixing it means fetching unfiltered, which reintroduces
+  the 50-item page problem. Pre-existing; not changed under release pressure.
+- **A CurseForge mod pinned outside the compatible set stops being offered
+  updates**, because detection only flags a strictly-greater file id and won't
+  downgrade. Defensible as the consequence of a deliberate "show all" pick, but
+  silent.
+- **`ModEntry.pinned` is never cleared when the mod that pinned it is removed.**
+  Nothing stores who pins whom, so this can't be computed cheaply. Not a dead end
+  — installing any version from the picker is a root install and rewrites the
+  entry with `pinned: false` — and the `held` tooltip names that escape hatch.

@@ -367,47 +367,98 @@ pub async fn get_project_files(
         .await
         .map_err(|e| format!("CurseForge files parse: {}", e))?;
 
-    Ok(wrapper.data.into_iter().map(|f| {
-        // `downloadUrl` stays exactly as CurseForge gave it. A null means the
-        // author opted out of third-party distribution
-        // (`allowModDistribution: false`), and callers turn that into a manual
-        // download prompt — see services::manual_download.
-        //
-        // This used to reconstruct a CDN URL from the numeric file id and fetch
-        // it regardless. That circumvented the author's choice, and when
-        // CurseForge blocked it the user got a generic retry failure instead of
-        // a link they could act on.
-        let download_url = f.download_url.clone();
-        let (mc_versions, loaders) = classify_game_versions(f.game_versions);
-        let mut required = Vec::new();
-        let mut incompatible = Vec::new();
-        for d in f.dependencies {
-            match d.relation_type {
-                3 => required.push(d.mod_id.to_string()),
-                5 => incompatible.push(d.mod_id.to_string()),
-                // Embedded / Optional / Tool / Include impose no obligation.
-                _ => {}
-            }
+    Ok(wrapper.data.into_iter().map(to_file_info).collect())
+}
+
+/// Fetch one file by id: `GET /mods/{modId}/files/{fileId}`.
+///
+/// Exists because a list query is the wrong tool for resolving a *pinned* file.
+/// `get_project_files` applies `gameVersion` / `modLoaderType` server-side and
+/// returns a single page of 50, so the set it returns depends on the filters the
+/// caller happened to pass. The version picker and the installer don't pass the
+/// same ones, which meant a pinned id could be absent from the installer's page
+/// and get silently substituted. Addressing the file directly is immune to both
+/// the filters and the paging.
+pub async fn get_file(
+    api_key: &str,
+    mod_id: &str,
+    file_id: &str,
+) -> Result<CfFileInfo, String> {
+    if api_key.is_empty() {
+        return Err("CurseForge API key not configured.".to_string());
+    }
+    let url = format!("{}/mods/{}/files/{}", CF_BASE, mod_id, file_id);
+    let resp = HTTP
+        .get(&url)
+        .header("x-api-key", api_key)
+        .send()
+        .await
+        .map_err(|e| format!("CurseForge file fetch failed: {}", e))?;
+
+    if !resp.status().is_success() {
+        return Err(format!(
+            "CurseForge HTTP {} when fetching file {}",
+            resp.status(),
+            file_id
+        ));
+    }
+
+    #[derive(Deserialize)]
+    struct Wrapper {
+        data: CfFile,
+    }
+    let wrapper: Wrapper = resp
+        .json()
+        .await
+        .map_err(|e| format!("CurseForge file parse: {}", e))?;
+    Ok(to_file_info(wrapper.data))
+}
+
+/// Map CurseForge's file JSON onto the launcher's shape.
+///
+/// `downloadUrl` is passed through as given. A null (or empty) value means the
+/// author opted out of third-party distribution (`allowModDistribution: false`),
+/// and callers turn that into a manual download prompt — see
+/// `services::manual_download`.
+///
+/// This used to reconstruct a CDN URL from the numeric file id and fetch it
+/// regardless. That circumvented the author's choice, and when CurseForge blocked
+/// it the user got a generic retry failure instead of a link they could act on.
+fn to_file_info(f: CfFile) -> CfFileInfo {
+    // Treat "" the same as null: an empty URL would otherwise reach the
+    // downloader and surface as a retry failure rather than the prompt.
+    let download_url = f.download_url.clone().filter(|u| !u.trim().is_empty());
+    let (mc_versions, loaders) = classify_game_versions(f.game_versions);
+    let mut required = Vec::new();
+    let mut incompatible = Vec::new();
+    for d in f.dependencies {
+        match d.relation_type {
+            3 => required.push(d.mod_id.to_string()),
+            5 => incompatible.push(d.mod_id.to_string()),
+            // Embedded / Optional / Tool / Include impose no obligation.
+            _ => {}
         }
-        CfFileInfo {
-            file_id: f.id,
-            file_name: f.file_name,
-            display_name: f.display_name,
-            download_url,
-            file_length: f.file_length,
-            hashes: f.hashes.into_iter()
-                .filter(|h| h.algo == 1) // SHA-1
-                .map(|h| h.value)
-                .collect(),
-            dependencies: required,
-            incompatible,
-            release_type: f.release_type,
-            file_date: f.file_date,
-            game_versions: mc_versions,
-            loaders,
-            is_available: f.is_available,
-        }
-    }).collect())
+    }
+    CfFileInfo {
+        file_id: f.id,
+        file_name: f.file_name,
+        display_name: f.display_name,
+        download_url,
+        file_length: f.file_length,
+        hashes: f
+            .hashes
+            .into_iter()
+            .filter(|h| h.algo == 1) // SHA-1
+            .map(|h| h.value)
+            .collect(),
+        dependencies: required,
+        incompatible,
+        release_type: f.release_type,
+        file_date: f.file_date,
+        game_versions: mc_versions,
+        loaders,
+        is_available: f.is_available,
+    }
 }
 
 // ─── File response types ────────────────────────────────────────────────
@@ -505,6 +556,7 @@ fn classify_game_versions(raw: Vec<String>) -> (Vec<String>, Vec<String>) {
 }
 
 /// Processed file info ready for the install flow.
+#[derive(Debug, Clone)]
 pub struct CfFileInfo {
     pub file_id: u64,
     pub file_name: String,
