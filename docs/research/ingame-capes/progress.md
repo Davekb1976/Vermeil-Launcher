@@ -200,24 +200,39 @@ User reported in-game far lower-res than the launcher model for the same cape. R
   aspect guard, both clamps, and the rotation geometry via a recording ctx stub
   (pivot, degrees→radians, save/restore balance). All pass; `pnpm run build` clean.
 
-## 2026-09-02 · solid-cape colour picker replaced (native one never opened)
-- Symptom: clicking the "Color" swatch in the cape editor did nothing on Windows.
-- Ruled out our own code first: no global input/appearance rules in `base.css`
-  (it has none at all), the only document-level click listener (`index.tsx`)
-  `preventDefault()`s solely for `<a href="http…">` and bails otherwise, and the
-  main window is **not** always-on-top (only the auth window is) — so no native
-  dialog hiding behind it.
-- Root cause: `<input type="color">`'s picker is host **browser UI**, not renderer
-  content. WebView2 supplies no colour chooser, so the click has no default action
-  to run. Buttons kept working because they fire our own `onClick`; only
-  default-action controls broke — that asymmetry is what pointed at the webview.
-- Also a parity problem: WebKitGTK's support depends on its GTK build, so fixing
-  only Windows wasn't an option — hence replace, not patch.
-- Fix: `components/ColorPicker.tsx` — swatch button opens a popover with one range
-  input per RGB channel plus a hex field. Plain DOM, so identical on WebView2 and
-  WebKitGTK, keyboard-accessible, and styled with the app's own slider/field CSS.
-  Each channel track carries a gradient of that channel's range over the current
-  colour, which is what makes RGB sliders usable for picking, not just entering.
+## 2026-09-02 · solid-cape colour picker is ours now, with a screen eyedropper
+- Reported symptom was "the colour picker does nothing". **First diagnosis was
+  wrong** — recorded because the wrong answer is the instructive part: the native
+  `<input type="color">` popup *did* open in WebView2. The dead control was the
+  **eyedropper button inside it**, which is host browser UI WebView2 doesn't
+  drive. Lesson: "nothing happens on click" was reported about a nested control,
+  not the one named; confirm *which* element before reasoning about why.
+- Ruled out our own code either way: `base.css` has no input/appearance rules at
+  all, the only document-level click listener (`index.tsx`) `preventDefault()`s
+  solely for `<a href="http…">`, and the main window is not always-on-top (only
+  the auth window is).
+- Why replace rather than patch: a native `<input type="color">` exposes no hook
+  into its popup, so the eyedropper could not be restored without owning the
+  control. Owning it also drops the dependency on whatever popup each host
+  supplies, so Windows and Linux now render the same picker.
+- `components/ColorPicker.tsx` — swatch opens a popover with a screen eyedropper,
+  one range input per RGB channel, and a hex field. Plain DOM, keyboard-
+  accessible, styled with the app's own slider/field CSS. Each channel track
+  carries a gradient of that channel's range over the current colour, which is
+  what makes RGB sliders usable for picking, not just entering.
+- Eyedropper = the **EyeDropper API** (`new EyeDropper().open()`), Chromium's
+  magnifier-grid screen picker. `open()` is called directly in the click handler
+  with nothing awaited first — the API needs transient user activation and an
+  earlier `await` spends it. AbortError (Escape) is silent; other failures toast.
+- **Known platform gap, deliberate:** the EyeDropper API is Chromium-only, so the
+  button is feature-detected and hidden on WebKitGTK rather than shown dead —
+  Linux keeps sliders + hex. Closing it for real needs Rust-side screen capture
+  (X11 straightforward, Wayland needs the portal); not built, since the web API
+  may cover the Windows case entirely.
+- WebView2 runtime on the dev box is 152.0.4191.53 (Chromium 152), far past the
+  95 that shipped the API — so availability is expected, but **needs one click to
+  confirm** the host actually drives it. If the button is absent the API isn't
+  exposed; if it errors the host doesn't drive it. Either way → the Rust route.
 - `lib/color.ts`: `parseHex` / `toHex` / `normalizeHex`. `parseHex` returns null
   for partial input so per-keystroke parsing can't flash a wrong colour;
   `normalizeHex` now guards `bg` from the stored transform at the editor and both

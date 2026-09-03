@@ -1,22 +1,21 @@
 /**
  * Hex ↔ RGB helpers for the app's own colour picker.
  *
- * ## Why we don't use `<input type="color">`
+ * ## Why we render our own picker
  *
- * That element's picker is *browser UI*, not renderer content — Chromium and
- * WebKit each hand the click to a host-provided colour chooser. The two
- * webviews this app ships on don't both supply one: on WebView2 (Windows)
- * clicking the swatch does nothing at all, and WebKitGTK's support depends on
- * the GTK build it was compiled against. That makes the native control a
- * user-facing behaviour that works on neither-to-one platform, which the
- * cross-platform parity rule doesn't allow. So {@link ../components/ColorPicker}
- * renders a picker out of ordinary DOM (buttons, range inputs, a text field),
- * which behaves identically on both, and these helpers are its parse/format
- * layer.
+ * `<input type="color">` worked here — WebView2 opened Chromium's colour popup
+ * fine. What was dead was the **eyedropper button inside it**: that control is
+ * host browser UI, and WebView2 doesn't drive it, so clicking it did nothing.
+ * Since screen-picking is the part that matters for choosing a cape colour off
+ * a reference image, and a native `<input type="color">` exposes no hook to add
+ * anything to its popup, the picker had to become ours before an eyedropper
+ * could be wired in at all. {@link ../components/ColorPicker} builds it from
+ * ordinary DOM, which also means it looks and behaves the same on WebView2 and
+ * WebKitGTK instead of being whatever popup each host happens to supply.
  *
- * Both directions treat their input as untrusted: a hex string arrives either
- * from the user typing into the field or from a stored cape transform, which
- * the backend keeps as an opaque JSON blob it never validates.
+ * Both directions treat their input as untrusted: a hex string arrives from the
+ * user typing into the field, from the EyeDropper API, or from a stored cape
+ * transform, which the backend keeps as an opaque JSON blob it never validates.
  */
 
 export interface Rgb {

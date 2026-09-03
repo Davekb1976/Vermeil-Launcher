@@ -1,19 +1,31 @@
 import { Component, createSignal, createEffect, onCleanup, Show } from "solid-js";
 import { parseHex, toHex, normalizeHex, Rgb } from "../lib/color";
+import { showToast } from "../App";
+import { IconCrosshair } from "./Icons";
 
 /**
- * In-app colour picker: a swatch button that opens a small popover with one
- * range input per RGB channel plus a hex field.
+ * In-app colour picker: a swatch button that opens a popover with a screen
+ * eyedropper, one range input per RGB channel, and a hex field.
  *
- * Replaces `<input type="color">`, whose picker is host browser UI that neither
- * of our webviews reliably provides — see the note in `lib/color.ts`. Built from
- * ordinary DOM so it renders and behaves the same on WebView2 and WebKitGTK,
- * and so it inherits the app's own slider/field styling instead of an OS dialog.
+ * Replaces `<input type="color">`. That element's own popup worked, but the
+ * eyedropper button inside it is host browser UI that WebView2 doesn't drive, so
+ * screen-picking was dead and a native input offers no way to add it back — see
+ * the note in `lib/color.ts`. Owning the control is what makes the eyedropper
+ * below possible.
  *
  * Each channel track is painted with a gradient showing what moving that slider
  * does to the current colour, which is what makes plain RGB sliders workable for
  * picking rather than just for entering known values.
  */
+
+/** Minimal structural type for the EyeDropper API, so we don't need the DOM lib
+ *  to declare it. Chromium-only (WebView2 on Windows); absent on WebKitGTK. */
+type EyeDropperCtor = new () => { open: () => Promise<{ sRGBHex: string }> };
+
+/** Feature-detected once. The button is hidden entirely when unsupported rather
+ *  than shown and failing — on WebKitGTK (Linux) there is no such API, so Linux
+ *  users get the sliders and hex field with no dead affordance. */
+const EyeDropperImpl = (globalThis as { EyeDropper?: EyeDropperCtor }).EyeDropper;
 
 interface Props {
   /** Current colour, `#rrggbb`. Anything invalid falls back to black. */
@@ -60,6 +72,33 @@ const ColorPicker: Component<Props> = (props) => {
     if (parsed) props.onInput(toHex(parsed));
   };
 
+  /**
+   * Sample a colour from anywhere on screen via the EyeDropper API — the
+   * magnifier-grid picker Chromium provides.
+   *
+   * `open()` must be called inside the click handler with no `await` before it:
+   * the API requires transient user activation, and awaiting anything first
+   * spends it and makes the call fail. It rejects with AbortError when the user
+   * presses Escape, which is a normal outcome and stays silent; anything else is
+   * a real failure worth surfacing.
+   */
+  const pickFromScreen = () => {
+    if (!EyeDropperImpl) return;
+    new EyeDropperImpl()
+      .open()
+      .then(({ sRGBHex }) => {
+        const parsed = parseHex(sRGBHex);
+        if (parsed) {
+          props.onInput(toHex(parsed));
+          setDraft(null); // resync the hex field to the sampled colour
+        }
+      })
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === "AbortError") return; // dismissed
+        showToast({ title: "Couldn't pick a colour", message: String(err), type: "error" });
+      });
+  };
+
   // Close on outside mousedown / Escape — same convention as the app's other
   // popovers. Escape also returns focus to the trigger so keyboard users aren't
   // dropped at the top of the document.
@@ -102,6 +141,13 @@ const ColorPicker: Component<Props> = (props) => {
 
       <Show when={open()}>
         <div ref={panelEl} class="color-pop" role="dialog" aria-label={props.label}>
+          <Show when={EyeDropperImpl}>
+            <button type="button" class="btn btn--sm color-eyedrop" onClick={pickFromScreen}>
+              <IconCrosshair />
+              <span>Pick from screen</span>
+            </button>
+          </Show>
+
           {CHANNELS.map((ch) => (
             <label class="color-chan">
               <span class="color-chan-name">{ch.name}</span>

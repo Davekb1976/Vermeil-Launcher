@@ -1329,6 +1329,14 @@
   border-radius: var(--radius-md);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
+/* Screen eyedropper. Full width so it reads as the primary action in the popup —
+   sampling a colour off a reference image is the common case, the sliders are
+   for adjusting afterwards. Hidden entirely where the EyeDropper API is absent
+   (WebKitGTK), so there's never a dead button. */
+.color-eyedrop {
+  width: 100%;
+  justify-content: center;
+}
 .color-chan,
 .color-hex {
   display: flex;
