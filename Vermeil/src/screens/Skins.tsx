@@ -36,6 +36,7 @@ import {
   clampRot,
   ANIMATED_MAX_RES,
 } from "../lib/cape";
+import { normalizeHex } from "../lib/color";
 
 /**
  * Idle animation with a subtle elytra breath.
@@ -228,7 +229,7 @@ const Skins: Component = () => {
           dy: t?.dy ?? 0,
           scale: clampScale(t?.scale),
           rot: clampRot(t?.rot),
-          bg: t?.bg ?? "#2b2740",
+          bg: normalizeHex(t?.bg, "#2b2740"),
           res: clampRes(t?.res),
           solid: t?.solid ?? false,
           elytra: showElytra(),
@@ -734,7 +735,7 @@ const Skins: Component = () => {
         dy: t.dy,
         scale: clampScale(t.scale),
         rot: clampRot(t.rot),
-        bg: t.bg,
+        bg: normalizeHex(t.bg, "#2b2740"),
         res,
         solid: t.solid ?? false,
       });

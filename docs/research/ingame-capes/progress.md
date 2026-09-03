@@ -193,3 +193,33 @@ User reported in-game far lower-res than the launcher model for the same cape. R
   round-trips + monotonicity + equal-ratio property, the SCALE_MAX-vs-extreme-
   aspect guard, both clamps, and the rotation geometry via a recording ctx stub
   (pivot, degrees→radians, save/restore balance). All pass; `pnpm run build` clean.
+
+## 2026-09-02 · solid-cape colour picker replaced (native one never opened)
+- Symptom: clicking the "Color" swatch in the cape editor did nothing on Windows.
+- Ruled out our own code first: no global input/appearance rules in `base.css`
+  (it has none at all), the only document-level click listener (`index.tsx`)
+  `preventDefault()`s solely for `<a href="http…">` and bails otherwise, and the
+  main window is **not** always-on-top (only the auth window is) — so no native
+  dialog hiding behind it.
+- Root cause: `<input type="color">`'s picker is host **browser UI**, not renderer
+  content. WebView2 supplies no colour chooser, so the click has no default action
+  to run. Buttons kept working because they fire our own `onClick`; only
+  default-action controls broke — that asymmetry is what pointed at the webview.
+- Also a parity problem: WebKitGTK's support depends on its GTK build, so fixing
+  only Windows wasn't an option — hence replace, not patch.
+- Fix: `components/ColorPicker.tsx` — swatch button opens a popover with one range
+  input per RGB channel plus a hex field. Plain DOM, so identical on WebView2 and
+  WebKitGTK, keyboard-accessible, and styled with the app's own slider/field CSS.
+  Each channel track carries a gradient of that channel's range over the current
+  colour, which is what makes RGB sliders usable for picking, not just entering.
+- `lib/color.ts`: `parseHex` / `toHex` / `normalizeHex`. `parseHex` returns null
+  for partial input so per-keystroke parsing can't flash a wrong colour;
+  `normalizeHex` now guards `bg` from the stored transform at the editor and both
+  Skins bake sites (canvas `fillStyle` silently ignores an invalid colour, which
+  would have been near-untraceable).
+- Deleted the now-dead `.cape-control--bg` rule and its class use.
+- Check: `src/lib/color.selfcheck.ts` (`npx tsx …`) — accepted/rejected hex forms
+  incl. every partial length, clamping, NaN/Infinity not leaking "NaN" into a CSS
+  string, and the normalize fallback/idempotence. Passes; `pnpm run build` clean.
+- **Needs a Linux smoke-test**: confirm the popover renders and the sliders track
+  on WebKitGTK (no native dialog involved now, so this is a styling/layout check).

@@ -3,6 +3,8 @@ import { SkinViewer } from "skinview3d";
 import { saveCustomCape, readCustomCapeSource, CustomCape, CapeTransform } from "../ipc/commands";
 import { showToast } from "../App";
 import Dropdown from "../components/Dropdown";
+import ColorPicker from "../components/ColorPicker";
+import { normalizeHex } from "../lib/color";
 import { IconImage, IconRotate, IconX } from "../components/Icons";
 import {
   PANEL,
@@ -103,7 +105,10 @@ function makeSolidSourcePng(color: string): Uint8Array {
 
 const CustomCapeEditor: Component<Props> = (props) => {
   const [name, setName] = createSignal(props.editing?.name ?? "Custom Cape");
-  const [bg, setBg] = createSignal<string>(props.editing?.transform.bg ?? DEFAULT_BG);
+  // Normalized on load: a stored transform is an opaque blob to the backend, and
+  // canvas `fillStyle` silently ignores an invalid colour (keeping whatever was
+  // set before) rather than erroring, so a bad value would be hard to trace.
+  const [bg, setBg] = createSignal<string>(normalizeHex(props.editing?.transform.bg, DEFAULT_BG));
   // Cape type: a solid colour fill, or an uploaded image/animation. Solid capes
   // are just `bg` with no image (the editor hides the image controls).
   const [solid, setSolid] = createSignal<boolean>(props.editing?.transform.solid ?? false);
@@ -607,14 +612,10 @@ const CustomCapeEditor: Component<Props> = (props) => {
             </div>
 
             <Show when={solid()}>
-              <label class="cape-control cape-control--bg">
+              <div class="cape-control">
                 <span class="cape-control-label">Color</span>
-                <input
-                  type="color"
-                  value={bg()}
-                  onInput={(e) => handleBg(e.currentTarget.value)}
-                />
-              </label>
+                <ColorPicker value={bg()} onInput={handleBg} label="Cape colour" />
+              </div>
             </Show>
 
             <Show when={!solid()}>

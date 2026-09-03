@@ -1292,13 +1292,75 @@
   background: var(--accent);
   cursor: pointer;
 }
-.cape-control--bg input[type="color"] {
+/* In-app colour picker (components/ColorPicker.tsx). Replaces
+   <input type="color"> — its picker is host browser UI that WebView2 doesn't
+   provide at all and WebKitGTK provides inconsistently, so the swatch just did
+   nothing on Windows. This one is plain DOM, identical on both platforms. */
+.color-picker {
+  position: relative;
+  display: flex;
+}
+.color-swatch {
   width: 40px;
   height: 28px;
   padding: 0;
   border: 1px solid var(--border);
-  background: none;
   cursor: pointer;
+}
+.color-swatch:hover,
+.color-swatch:focus-visible {
+  border-color: var(--accent);
+}
+/* Opens upward: the picker lives in the editor's bottom control row, so there's
+   no room below it inside the modal. */
+.color-pop {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  width: 210px;
+  /* Same floating-surface treatment as .custom-dropdown-options. */
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.color-chan,
+.color-hex {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.color-chan-name {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  width: 34px;
+  flex-shrink: 0;
+}
+/* Each channel track carries its own gradient (set inline by the component), so
+   override the shared .cape-control range fill rather than inherit it. */
+.color-chan input[type="range"] {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+}
+.color-chan-value {
+  font-size: 11px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  width: 26px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.color-hex input {
+  flex: 1;
+  min-width: 0;
 }
 .cape-editor-control-btns {
   display: flex;
