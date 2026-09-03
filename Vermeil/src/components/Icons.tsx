@@ -320,6 +320,16 @@ export const IconRotateCcw: Component = () => (
   </svg>
 );
 
+// Rotate-cw — Feather Icons (MIT). https://github.com/feathericons/feather
+// The cape editor's quarter-turn button; clockwise to match the direction the
+// rotation slider runs.
+export const IconRotate: Component = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="23 4 23 10 17 10"/>
+    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+  </svg>
+);
+
 // Shield-check — based on Feather Icons' shield (MIT). https://github.com/feathericons/feather
 // Used for the "Official" badge on the Java Edition News header to signal the
 // patch notes come straight from Mojang's official feed.

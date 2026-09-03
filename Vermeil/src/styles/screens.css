@@ -1247,6 +1247,14 @@
   letter-spacing: 0.06em;
   color: var(--muted);
 }
+/* Live numeric readout beside a slider's label (scale multiplier, rotation
+   degrees). Needed because those sliders aren't linear/obvious from the thumb
+   position alone. Tabular figures so the label doesn't jitter as digits change. */
+.cape-control-value {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
 /* Cape "Scale" slider — square accent thumb to match the memory/concurrency
    sliders (the rest of the app's sharp-edge language). Native by default, so
    it needs the full custom treatment, not just the base.css override block. */

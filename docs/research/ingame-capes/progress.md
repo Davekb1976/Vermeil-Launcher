@@ -168,3 +168,28 @@ User reported in-game far lower-res than the launcher model for the same cape. R
   solid-mode "Color"; image mode keeps a default dark backing (not user-set).
 - Verified: `pnpm run build` clean. In-game solid/animated capes bake through the
   same path (solid → bakeCape early-returns on the colour fill).
+
+## 2026-09-02 · cape editor — image rotation + logarithmic scale to 64×
+- **Rotation** added to the placed image. `rot` (degrees, clockwise) on
+  `CapeBakeParams` + `CapeTransform` (TS only — Rust transform stays opaque
+  `serde_json::Value`, so no backend/IPC change). Editor gets a 0–359 slider
+  plus a `+90°` quarter-turn button (`IconRotate`, Feather rotate-cw).
+- New shared `drawPlacedImage()` in `lib/cape.ts` does the positioned+rotated
+  draw; `bakeCape`'s front and bottom-face draws and the editor's 2D workspace
+  all call it, so layout preview and baked texture can't drift. Pivot is the
+  draw rect's own centre → position and rotation stay independent, so "Center"
+  needed no change. Back face inherits rotation free (it mirror-blits the
+  already-drawn front panel).
+- **Scale ceiling 4× → 64×**, and the slider is now **logarithmic**: the range
+  input carries a 0–1000 position, `posToScale`/`scaleToPos` map it. Linear
+  travel to 64 would have made the common 0.5–4× range unsettable. Ceiling is
+  sized to the motivating case — an extreme-aspect source (4000×100) contain-fits
+  to ~0.25 panel texels tall and needs ~64× to fill the 16-texel panel.
+- Sliders gained numeric readouts (`.cape-control-value`) since neither is
+  linear/obvious from thumb position.
+- `clampScale`/`clampRot` guard the stored transform (opaque blob = untrusted);
+  applied at both Skins bake sites as well as the editor.
+- Check: `src/lib/capeTransform.selfcheck.ts` (`npx tsx …`) — log mapping
+  round-trips + monotonicity + equal-ratio property, the SCALE_MAX-vs-extreme-
+  aspect guard, both clamps, and the rotation geometry via a recording ctx stub
+  (pivot, degrees→radians, save/restore balance). All pass; `pnpm run build` clean.

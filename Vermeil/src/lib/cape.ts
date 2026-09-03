@@ -49,12 +49,42 @@ export const DEFAULT_RES = 16;
  *  what the game gets. */
 export const ANIMATED_MAX_RES = 8;
 
+/** Scale-slider bounds (multiplier on the contain-fit baseline).
+ *  The ceiling is deliberately far above "fills the panel": an extreme-aspect
+ *  source (say 4000×100) contain-fits to ~0.25 panel texels tall, so filling
+ *  the 16-texel panel height needs ~64×. The editor's slider is logarithmic so
+ *  the common 0.5–4 range still gets most of the travel. */
+export const SCALE_MIN = 0.1;
+export const SCALE_MAX = 64;
+
+/** Slider positions across the scale range. The editor's range input carries a
+ *  position in `0…SCALE_STEPS`, not the multiplier itself. */
+export const SCALE_STEPS = 1000;
+const SCALE_RATIO = SCALE_MAX / SCALE_MIN;
+
+/** Slider position → scale multiplier (logarithmic).
+ *  A linear track across SCALE_MIN…SCALE_MAX would spend nearly all its travel
+ *  above 10×, making the common 0.5–4× range impossible to set precisely. On a
+ *  log track every doubling costs the same slider distance, so a high ceiling
+ *  stays usable. Inverse of {@link scaleToPos}. */
+export function posToScale(pos: number): number {
+  return SCALE_MIN * Math.pow(SCALE_RATIO, pos / SCALE_STEPS);
+}
+
+/** Scale multiplier → slider position. Inverse of {@link posToScale}. */
+export function scaleToPos(scale: number): number {
+  return (Math.log(clampScale(scale) / SCALE_MIN) / Math.log(SCALE_RATIO)) * SCALE_STEPS;
+}
+
 export interface CapeBakeParams {
   /** Image offset within the panel, in panel-texel units. */
   dx: number;
   dy: number;
   /** Multiplier on the contain-fit baseline size. */
   scale: number;
+  /** Clockwise rotation of the placed image in degrees, about the centre of its
+   *  own draw rect. Absent/0 skips the transform entirely. */
+  rot?: number;
   /** CSS colour filling the cape behind/around the image (and the whole cape in
    *  solid mode). */
   bg: string;
@@ -68,6 +98,50 @@ export interface CapeBakeParams {
  *  would size the bake canvas to 64·res and blow up memory). */
 export function clampRes(r: number | undefined): number {
   return r !== undefined && ALLOWED_RES.includes(r) ? r : DEFAULT_RES;
+}
+
+/** Clamp a scale from a stored transform. The transform blob is opaque to the
+ *  backend, so a corrupt or hand-edited cape file can carry anything, and an
+ *  absurd value would make the per-frame drawImage crawl. */
+export function clampScale(s: number | undefined): number {
+  if (s === undefined || !Number.isFinite(s)) return 1;
+  return Math.min(SCALE_MAX, Math.max(SCALE_MIN, s));
+}
+
+/** Normalize a stored rotation (degrees) into [0, 360). Same untrusted-input
+ *  reasoning as {@link clampScale}. */
+export function clampRot(r: number | undefined): number {
+  if (r === undefined || !Number.isFinite(r)) return 0;
+  return ((r % 360) + 360) % 360;
+}
+
+/** Draw `source` filling the rect `(ox, oy, dw, dh)`, rotated `rot` degrees
+ *  clockwise about that rect's centre.
+ *
+ *  Shared by {@link bakeCape} and the editor's 2D workspace so the layout
+ *  preview and the baked texture place the image identically — the workspace
+ *  passes display pixels, the bake passes atlas texels, and the maths is the
+ *  same either way. Rotating about the rect's own centre means position and
+ *  rotation stay independent: centring an image keeps it centred at any angle.
+ */
+export function drawPlacedImage(
+  ctx: CanvasRenderingContext2D,
+  source: CanvasImageSource,
+  ox: number,
+  oy: number,
+  dw: number,
+  dh: number,
+  rot = 0,
+): void {
+  if (!rot) {
+    ctx.drawImage(source, ox, oy, dw, dh);
+    return;
+  }
+  ctx.save();
+  ctx.translate(ox + dw / 2, oy + dh / 2);
+  ctx.rotate((rot * Math.PI) / 180);
+  ctx.drawImage(source, -dw / 2, -dh / 2, dw, dh);
+  ctx.restore();
 }
 
 /** Contain-fit baseline draw size (in panel texels) for an image of the given
@@ -123,15 +197,25 @@ export function bakeCape(
   ctx.rect(0, PANEL.y * S, (PANEL.w + 2) * S, PANEL.h * S);
   ctx.rect(PANEL.x * S, 0, PANEL.w * S, PANEL.y * S);
   ctx.clip();
-  ctx.drawImage(source, ix, iy, dw, dh);
+  drawPlacedImage(ctx, source, ix, iy, dw, dh, t.rot);
   ctx.restore();
 
   // Bottom face (atlas x[11,21], y[0,1]) — continuation just below the front.
+  // A pure translation of the front draw, so rotating each about its own centre
+  // keeps the two consistent and the wrap seamless.
   ctx.save();
   ctx.beginPath();
   ctx.rect((PANEL.x + PANEL.w) * S, 0, PANEL.w * S, PANEL.y * S);
   ctx.clip();
-  ctx.drawImage(source, (PANEL.x + PANEL.w + t.dx) * S, (t.dy - PANEL.h) * S, dw, dh);
+  drawPlacedImage(
+    ctx,
+    source,
+    (PANEL.x + PANEL.w + t.dx) * S,
+    (t.dy - PANEL.h) * S,
+    dw,
+    dh,
+    t.rot,
+  );
   ctx.restore();
 
   // Back (inner) face — a horizontal mirror of the freshly-drawn front panel,

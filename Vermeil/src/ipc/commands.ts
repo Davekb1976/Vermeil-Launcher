@@ -520,6 +520,9 @@ export interface LocalSkin {
  * - `dx` / `dy`: image top-left offset within the panel, in panel-texel units
  *   (the panel is 10×16). May be negative when the image overhangs.
  * - `scale`: multiplier on the contain-fit baseline size (1 = fit whole image).
+ * - `rot`: clockwise rotation of the image in degrees, about the centre of its
+ *   own draw rect. Optional for capes saved before rotation existed (absent =
+ *   no rotation).
  * - `bg`: CSS colour filling the cape behind/around the image so the cape has
  *   no transparent edges.
  * - `res`: HD bake multiplier of the 64×32 atlas (1 = standard 64×32, up to 32
@@ -534,6 +537,7 @@ export interface CapeTransform {
   dx: number;
   dy: number;
   scale: number;
+  rot?: number;
   bg: string;
   res?: number;
   animated?: boolean;

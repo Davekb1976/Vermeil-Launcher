@@ -27,7 +27,15 @@ import { IconUpload, IconReload, IconTrash2, IconPlus, IconMinus, IconEdit } fro
 import CapeChipThumb from "../components/CapeChipThumb";
 import SkinAvatar from "../components/SkinAvatar";
 import CustomCapeEditor from "../modals/CustomCapeEditor";
-import { CapeAnimator, FrameSource, bakeModCapeStrip, clampRes, ANIMATED_MAX_RES } from "../lib/cape";
+import {
+  CapeAnimator,
+  FrameSource,
+  bakeModCapeStrip,
+  clampRes,
+  clampScale,
+  clampRot,
+  ANIMATED_MAX_RES,
+} from "../lib/cape";
 
 /**
  * Idle animation with a subtle elytra breath.
@@ -218,7 +226,8 @@ const Skins: Component = () => {
         return {
           dx: t?.dx ?? 0,
           dy: t?.dy ?? 0,
-          scale: t?.scale ?? 1,
+          scale: clampScale(t?.scale),
+          rot: clampRot(t?.rot),
           bg: t?.bg ?? "#2b2740",
           res: clampRes(t?.res),
           solid: t?.solid ?? false,
@@ -720,7 +729,15 @@ const Skins: Component = () => {
       // Cap animated strips so a high-res, many-frame GIF doesn't decode to a
       // huge texture (OOM risk). Matches the editor's animated res ceiling.
       const res = src.frameCount > 1 ? Math.min(clampRes(t.res), ANIMATED_MAX_RES) : clampRes(t.res);
-      const bake = bakeModCapeStrip(src, { dx: t.dx, dy: t.dy, scale: t.scale, bg: t.bg, res, solid: t.solid ?? false });
+      const bake = bakeModCapeStrip(src, {
+        dx: t.dx,
+        dy: t.dy,
+        scale: clampScale(t.scale),
+        rot: clampRot(t.rot),
+        bg: t.bg,
+        res,
+        solid: t.solid ?? false,
+      });
       return { png: Array.from(bake.png), frameTimeMs: bake.frames > 1 ? bake.frameTimeMs : null };
     } finally {
       src.dispose();

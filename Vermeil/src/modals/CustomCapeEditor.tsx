@@ -3,14 +3,20 @@ import { SkinViewer } from "skinview3d";
 import { saveCustomCape, readCustomCapeSource, CustomCape, CapeTransform } from "../ipc/commands";
 import { showToast } from "../App";
 import Dropdown from "../components/Dropdown";
-import { IconImage, IconX } from "../components/Icons";
+import { IconImage, IconRotate, IconX } from "../components/Icons";
 import {
   PANEL,
   clampRes,
+  clampScale,
+  clampRot,
   computeBaseFit,
   bakeCape,
+  drawPlacedImage,
   FrameSource,
   ANIMATED_MAX_RES,
+  SCALE_STEPS,
+  posToScale,
+  scaleToPos,
 } from "../lib/cape";
 
 /**
@@ -59,6 +65,10 @@ const RES_OPTIONS = [
 ];
 const DEFAULT_BG = "#2b2740";
 
+/** Readout for the scale slider: 0.85×, 2.4×, 12× — no trailing zeros. */
+const fmtScale = (s: number) =>
+  s < 10 ? s.toFixed(2).replace(/\.?0+$/, "") : String(Math.round(s));
+
 interface Props {
   /** Existing cape to re-edit, or null/undefined to create a new one. */
   editing?: CustomCape | null;
@@ -97,7 +107,9 @@ const CustomCapeEditor: Component<Props> = (props) => {
   // Cape type: a solid colour fill, or an uploaded image/animation. Solid capes
   // are just `bg` with no image (the editor hides the image controls).
   const [solid, setSolid] = createSignal<boolean>(props.editing?.transform.solid ?? false);
-  const [scale, setScale] = createSignal<number>(props.editing?.transform.scale ?? 1);
+  const [scale, setScale] = createSignal<number>(clampScale(props.editing?.transform.scale));
+  // Clockwise rotation of the placed image, in degrees.
+  const [rot, setRot] = createSignal<number>(clampRot(props.editing?.transform.rot));
   const [res, setRes] = createSignal<number>(clampRes(props.editing?.transform.res));
   const [hasImage, setHasImage] = createSignal(false);
   const [saving, setSaving] = createSignal(false);
@@ -149,6 +161,7 @@ const CustomCapeEditor: Component<Props> = (props) => {
       dx,
       dy,
       scale: scale(),
+      rot: rot(),
       bg: bg(),
       res: res(),
       solid: solid(),
@@ -217,7 +230,15 @@ const CustomCapeEditor: Component<Props> = (props) => {
     if (frameSrc) {
       const dw = baseDw * scale() * DISP;
       const dh = baseDh * scale() * DISP;
-      ctx.drawImage(frameSrc.current(), (FX + dx) * DISP, (FY + dy) * DISP, dw, dh);
+      drawPlacedImage(
+        ctx,
+        frameSrc.current(),
+        (FX + dx) * DISP,
+        (FY + dy) * DISP,
+        dw,
+        dh,
+        rot(),
+      );
     }
     ctx.restore();
 
@@ -319,6 +340,7 @@ const CustomCapeEditor: Component<Props> = (props) => {
       dx = (PANEL.w - baseDw) / 2;
       dy = (PANEL.h - baseDh) / 2;
       setScale(1);
+      setRot(0);
       setHasImage(true);
       // Drive a live frame loop for animated sources; a static one bakes once.
       const animated = frameSrc?.animated ?? false;
@@ -370,6 +392,15 @@ const CustomCapeEditor: Component<Props> = (props) => {
     refresh();
   };
 
+  const handleRot = (v: number) => {
+    setRot(clampRot(v));
+    refresh();
+  };
+
+  /** Quarter-turn step — the common case (uprighting a portrait/landscape
+   *  source) is fiddly to hit by dragging a 0–359 slider. */
+  const rotateQuarter = () => handleRot(rot() + 90);
+
   const handleBg = (v: string) => {
     setBg(v);
     refresh();
@@ -420,6 +451,7 @@ const CustomCapeEditor: Component<Props> = (props) => {
         dx,
         dy,
         scale: scale(),
+        rot: rot(),
         bg: bg(),
         res: res(),
         animated: !solid() && isAnimated(),
@@ -586,20 +618,45 @@ const CustomCapeEditor: Component<Props> = (props) => {
             </Show>
 
             <Show when={!solid()}>
+              {/* Scale — the range input carries a log position, not the
+                  multiplier itself, so the ceiling can be high without losing
+                  precision near 1×. The readout shows the real value. */}
               <label class="cape-control">
-                <span class="cape-control-label">Scale</span>
+                <span class="cape-control-label">
+                  Scale <span class="cape-control-value">{fmtScale(scale())}×</span>
+                </span>
                 <input
                   type="range"
-                  min="0.2"
-                  max="4"
-                  step="0.01"
-                  value={scale()}
+                  min="0"
+                  max={SCALE_STEPS}
+                  step="1"
+                  value={scaleToPos(scale())}
                   disabled={!hasImage()}
-                  style={`--slider-pct:${((scale() - 0.2) / 3.8) * 100}%`}
+                  style={`--slider-pct:${(scaleToPos(scale()) / SCALE_STEPS) * 100}%`}
+                  onInput={(e) => {
+                    const pos = parseFloat(e.currentTarget.value);
+                    e.currentTarget.style.setProperty("--slider-pct", `${(pos / SCALE_STEPS) * 100}%`);
+                    handleScale(posToScale(pos));
+                  }}
+                />
+              </label>
+
+              <label class="cape-control">
+                <span class="cape-control-label">
+                  Rotation <span class="cape-control-value">{Math.round(rot())}°</span>
+                </span>
+                <input
+                  type="range"
+                  min="0"
+                  max="359"
+                  step="1"
+                  value={rot()}
+                  disabled={!hasImage()}
+                  style={`--slider-pct:${(rot() / 359) * 100}%`}
                   onInput={(e) => {
                     const val = parseFloat(e.currentTarget.value);
-                    e.currentTarget.style.setProperty('--slider-pct', `${((val - 0.2) / 3.8) * 100}%`);
-                    handleScale(val);
+                    e.currentTarget.style.setProperty("--slider-pct", `${(val / 359) * 100}%`);
+                    handleRot(val);
                   }}
                 />
               </label>
@@ -619,6 +676,10 @@ const CustomCapeEditor: Component<Props> = (props) => {
                 <button class="btn" onClick={handleUploadClick}>
                   <IconImage />
                   <span>{hasImage() ? "Replace" : "Upload"}</span>
+                </button>
+                <button class="btn" onClick={rotateQuarter} disabled={!hasImage()} title="Rotate 90°">
+                  <IconRotate />
+                  <span>90°</span>
                 </button>
                 <button class="btn" onClick={handleCenter} disabled={!hasImage()}>
                   Center
