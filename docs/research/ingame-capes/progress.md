@@ -174,17 +174,23 @@ User reported in-game far lower-res than the launcher model for the same cape. R
   `CapeBakeParams` + `CapeTransform` (TS only — Rust transform stays opaque
   `serde_json::Value`, so no backend/IPC change). Editor gets a 0–359 slider
   plus a `+90°` quarter-turn button (`IconRotate`, Feather rotate-cw).
+- The slider **snaps** to eighth-turns (`snapAngle`, ±4° window around multiples
+  of 45). Without it the track is ~2°/pixel, so dragging toward 90 lands on 89 or
+  91 and exact quarter turns are unreachable. Angles outside the window stay
+  free, so the track isn't quantized; 359 snaps to 0 (same rotation).
 - New shared `drawPlacedImage()` in `lib/cape.ts` does the positioned+rotated
   draw; `bakeCape`'s front and bottom-face draws and the editor's 2D workspace
   all call it, so layout preview and baked texture can't drift. Pivot is the
   draw rect's own centre → position and rotation stay independent, so "Center"
   needed no change. Back face inherits rotation free (it mirror-blits the
   already-drawn front panel).
-- **Scale ceiling 4× → 64×**, and the slider is now **logarithmic**: the range
-  input carries a 0–1000 position, `posToScale`/`scaleToPos` map it. Linear
-  travel to 64 would have made the common 0.5–4× range unsettable. Ceiling is
-  sized to the motivating case — an extreme-aspect source (4000×100) contain-fits
-  to ~0.25 panel texels tall and needs ~64× to fill the 16-texel panel.
+- **Scale ceiling 4× → 8×**, and the slider is now **logarithmic**: the range
+  input carries a 0–1000 position, `posToScale`/`scaleToPos` map it, so the
+  0.5–4× range people work in gets even travel instead of a sliver. (Shipped 64×
+  first — too coarse in practice; 8× still overflows the panel several times over,
+  which is all cropping into a detail needs. Extreme-aspect sources therefore
+  can't be scaled to fill the panel's long axis — a deliberate limit, asserted in
+  the self-check so it reads as a choice.)
 - Sliders gained numeric readouts (`.cape-control-value`) since neither is
   linear/obvious from thumb position.
 - `clampScale`/`clampRot` guard the stored transform (opaque blob = untrusted);

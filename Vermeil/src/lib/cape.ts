@@ -50,12 +50,13 @@ export const DEFAULT_RES = 16;
 export const ANIMATED_MAX_RES = 8;
 
 /** Scale-slider bounds (multiplier on the contain-fit baseline).
- *  The ceiling is deliberately far above "fills the panel": an extreme-aspect
- *  source (say 4000×100) contain-fits to ~0.25 panel texels tall, so filling
- *  the 16-texel panel height needs ~64×. The editor's slider is logarithmic so
- *  the common 0.5–4 range still gets most of the travel. */
+ *  8× lets a contain-fit image overflow the panel several times over, which
+ *  covers cropping into a detail of the source. Deliberately not higher: past
+ *  this the panel shows so few source pixels that it reads as a flat colour,
+ *  and every extra decade costs precision in the 0.5–4× range people actually
+ *  work in. The slider is logarithmic so that range still gets even travel. */
 export const SCALE_MIN = 0.1;
-export const SCALE_MAX = 64;
+export const SCALE_MAX = 8;
 
 /** Slider positions across the scale range. The editor's range input carries a
  *  position in `0…SCALE_STEPS`, not the multiplier itself. */
@@ -113,6 +114,26 @@ export function clampScale(s: number | undefined): number {
 export function clampRot(r: number | undefined): number {
   if (r === undefined || !Number.isFinite(r)) return 0;
   return ((r % 360) + 360) % 360;
+}
+
+/** Angles the rotation slider snaps to, and how close you must drag to catch one. */
+export const SNAP_STEP = 45;
+const SNAP_TOLERANCE = 4;
+
+/**
+ * Pull a dragged angle onto the nearest eighth-turn when it's within
+ * {@link SNAP_TOLERANCE} degrees, otherwise pass it through.
+ *
+ * The rotation track spans 360° in ~160px, so one pixel of drag is over two
+ * degrees and an exact quarter turn is pure luck — dragging toward 90 lands on
+ * 89 or 91. Snapping makes the angles people aim for reachable while leaving
+ * every other angle settable, since the window is only a few degrees wide.
+ * 359 snaps to 0 because 360 and 0 are the same rotation.
+ */
+export function snapAngle(deg: number): number {
+  if (!Number.isFinite(deg)) return 0;
+  const nearest = Math.round(deg / SNAP_STEP) * SNAP_STEP;
+  return clampRot(Math.abs(deg - nearest) <= SNAP_TOLERANCE ? nearest : deg);
 }
 
 /** Draw `source` filling the rect `(ox, oy, dw, dh)`, rotated `rot` degrees

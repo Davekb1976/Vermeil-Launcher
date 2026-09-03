@@ -19,6 +19,7 @@ import {
   SCALE_STEPS,
   posToScale,
   scaleToPos,
+  snapAngle,
 } from "../lib/cape";
 
 /**
@@ -634,11 +635,7 @@ const CustomCapeEditor: Component<Props> = (props) => {
                   value={scaleToPos(scale())}
                   disabled={!hasImage()}
                   style={`--slider-pct:${(scaleToPos(scale()) / SCALE_STEPS) * 100}%`}
-                  onInput={(e) => {
-                    const pos = parseFloat(e.currentTarget.value);
-                    e.currentTarget.style.setProperty("--slider-pct", `${(pos / SCALE_STEPS) * 100}%`);
-                    handleScale(posToScale(pos));
-                  }}
+                  onInput={(e) => handleScale(posToScale(parseFloat(e.currentTarget.value)))}
                 />
               </label>
 
@@ -654,11 +651,9 @@ const CustomCapeEditor: Component<Props> = (props) => {
                   value={rot()}
                   disabled={!hasImage()}
                   style={`--slider-pct:${(rot() / 359) * 100}%`}
-                  onInput={(e) => {
-                    const val = parseFloat(e.currentTarget.value);
-                    e.currentTarget.style.setProperty("--slider-pct", `${(val / 359) * 100}%`);
-                    handleRot(val);
-                  }}
+                  // Snapped, not raw: the track is ~2°/pixel, so exact quarter
+                  // turns are otherwise unhittable by dragging.
+                  onInput={(e) => handleRot(snapAngle(parseFloat(e.currentTarget.value)))}
                 />
               </label>
 
