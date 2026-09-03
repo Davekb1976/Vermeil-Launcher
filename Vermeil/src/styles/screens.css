@@ -1329,13 +1329,29 @@
   border-radius: var(--radius-md);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
-/* Screen eyedropper. Full width so it reads as the primary action in the popup —
-   sampling a colour off a reference image is the common case, the sliders are
-   for adjusting afterwards. Hidden off Windows, where the native pick behind it
-   isn't implemented yet, so there's never a dead button. */
-.color-eyedrop {
-  width: 100%;
-  justify-content: center;
+/* Preset palette — two rows of eight, sized so the grid matches the popover's
+   content width exactly. One click is the fast path for a solid cape; the
+   sliders below are for adjusting from there. */
+.color-presets {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+.color-preset {
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.color-preset:hover,
+.color-preset:focus-visible {
+  border-color: var(--border-hover);
+}
+/* The accent ring has to sit outside the swatch, not replace its border — a
+   light preset on a light border would otherwise lose its selected state. */
+.color-preset.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 .color-chan,
 .color-hex {

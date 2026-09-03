@@ -1,7 +1,6 @@
 pub mod app_updater;
 pub mod auth;
 pub mod cf_import;
-pub mod eyedropper;
 pub mod files;
 pub mod instances;
 pub mod java;

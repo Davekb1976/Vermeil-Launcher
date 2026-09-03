@@ -3,22 +3,23 @@
  *
  * ## Why we render our own picker
  *
- * `<input type="color">` worked here — WebView2 opened Chromium's colour popup
- * fine. What was dead was the **eyedropper button inside it**: that control is
- * host browser UI, and WebView2 doesn't drive it, so clicking it did nothing.
- * The `EyeDropper` JS API is no better — WebView2 defines the constructor but
- * never settles the promise `open()` returns, so it fails feature detection's
- * whole purpose. Screen-picking therefore has to happen natively, in
- * `services::eyedropper`, and a native `<input type="color">` exposes no hook to
- * put a button next to. Owning the control is what made the eyedropper possible.
- * {@link ../components/ColorPicker} builds it from ordinary DOM, which also means
- * it looks and behaves the same on WebView2 and WebKitGTK instead of being
- * whatever popup each host happens to supply.
+ * `<input type="color">` itself works — WebView2 opens Chromium's colour popup
+ * fine. The problem is what's *inside* that popup: an eyedropper button which is
+ * host browser UI that WebView2 doesn't drive, so it silently does nothing, and
+ * a native control gives no way to remove it. A dead button in a shipped UI is
+ * worse than a smaller feature set, so {@link ../components/ColorPicker} renders
+ * the picker from ordinary DOM — presets, RGB sliders, hex field — which also
+ * means Windows and Linux get the same control instead of whatever popup each
+ * host happens to supply.
+ *
+ * (The `EyeDropper` JS API is not a way out: WebView2 defines the constructor,
+ * so feature detection passes, but the promise `open()` returns never settles.
+ * A native screen pick was built and worked, then dropped as more code than the
+ * feature was worth — history is in the research note.)
  *
  * Both directions treat their input as untrusted: a hex string arrives from the
- * user typing into the field, from the native screen pick over IPC, or from a
- * stored cape transform, which the backend keeps as an opaque JSON blob it never
- * validates.
+ * user typing into the field, from a preset, or from a stored cape transform,
+ * which the backend keeps as an opaque JSON blob it never validates.
  */
 
 export interface Rgb {

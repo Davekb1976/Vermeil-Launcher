@@ -200,61 +200,56 @@ User reported in-game far lower-res than the launcher model for the same cape. R
   aspect guard, both clamps, and the rotation geometry via a recording ctx stub
   (pivot, degrees→radians, save/restore balance). All pass; `pnpm run build` clean.
 
-## 2026-09-02 · solid-cape colour picker is ours now, with a screen eyedropper
-- Reported symptom was "the colour picker does nothing". **First diagnosis was
-  wrong** — recorded because the wrong answer is the instructive part: the native
-  `<input type="color">` popup *did* open in WebView2. The dead control was the
-  **eyedropper button inside it**, which is host browser UI WebView2 doesn't
-  drive. Lesson: "nothing happens on click" was reported about a nested control,
-  not the one named; confirm *which* element before reasoning about why.
-- Ruled out our own code either way: `base.css` has no input/appearance rules at
-  all, the only document-level click listener (`index.tsx`) `preventDefault()`s
-  solely for `<a href="http…">`, and the main window is not always-on-top (only
-  the auth window is).
-- Why replace rather than patch: a native `<input type="color">` exposes no hook
-  into its popup, so the eyedropper could not be restored without owning the
-  control. Owning it also drops the dependency on whatever popup each host
-  supplies, so Windows and Linux now render the same picker.
-- `components/ColorPicker.tsx` — swatch opens a popover with a screen eyedropper,
-  one range input per RGB channel, and a hex field. Plain DOM, keyboard-
-  accessible, styled with the app's own slider/field CSS. Each channel track
-  carries a gradient of that channel's range over the current colour, which is
-  what makes RGB sliders usable for picking, not just entering.
-- **EyeDropper JS API tried and rejected.** WebView2 (152.0.4191.53 / Chromium
-  152) *defines* the constructor, so feature detection passes and the button
-  renders — but `open()` returns a promise that never settles, neither resolving
-  nor rejecting. Present-but-inert is worse than absent: it defeats the only
-  detection mechanism available. Don't reach for this API in WebView2.
-- **Eyedropper is native**, `services::eyedropper` (Windows): poll ~60Hz, read the
-  pixel under the cursor off the screen DC (`GetDC(NULL)` + `GetPixel`), emit
-  `eyedropper-preview` on change so the swatch and cape preview update live —
-  that live feedback stands in for Chromium's magnifier. Primary button commits,
-  Escape/secondary cancels, 60s timeout. Arms only after the primary button is
-  seen *up*, or the click that opened the picker would instantly commit.
-  `SM_SWAPBUTTON` honoured. No new crate — two more `windows-sys` features
-  (`Win32_Graphics_Gdi`, `Win32_UI_Input_KeyboardAndMouse`).
-- Frontend restores the pre-pick colour when the pick returns null, since live
-  preview mutates the real value; listener is attached *before* invoking, or the
-  first preview events land with nothing bound. Popover suppresses its
-  outside-click and Escape handlers while picking (the commit click is outside it
-  and Escape is the pick's cancel key).
-- Win32 approach verified on the dev box before shipping: `GetDC(NULL)`+`GetPixel`
-  returns live varying colours, the `0x00bbggrr` decode agrees with an
-  independent ARGB `CopyFromScreen` path, and a read at **negative** virtual-
-  desktop coordinates (monitor left of primary) works — so the whole virtual
-  desktop is samplable.
-- **Known platform gap, deliberate:** button hidden off Windows
-  (`navigator.userAgent`, the convention already used in Settings/onboarding);
-  Linux keeps sliders + hex. Closing it needs the XDG portal's
-  `Screenshot.PickColor` on Wayland plus an X11 root-window read — not built.
+## 2026-09-02 · solid-cape colour picker is ours: presets + RGB sliders + hex
+**Shipped:** `components/ColorPicker.tsx` — swatch opens a popover with a 16-swatch
+preset palette (neutral ramp + muted hue wheel, first entry is the app accent),
+one range input per RGB channel, and a hex field. Plain DOM, keyboard-accessible,
+app slider/field styling. Each channel track carries a gradient of that channel's
+range over the current colour, so the sliders show what they'll do rather than
+being abstract 0–255 bars. Presets are the one-click path; sliders adjust; hex is
+for exact values. **No eyedropper** — see the dead end below.
 - `lib/color.ts`: `parseHex` / `toHex` / `normalizeHex`. `parseHex` returns null
   for partial input so per-keystroke parsing can't flash a wrong colour;
-  `normalizeHex` now guards `bg` from the stored transform at the editor and both
+  `normalizeHex` guards `bg` from the stored transform at the editor and both
   Skins bake sites (canvas `fillStyle` silently ignores an invalid colour, which
   would have been near-untraceable).
 - Deleted the now-dead `.cape-control--bg` rule and its class use.
 - Check: `src/lib/color.selfcheck.ts` (`npx tsx …`) — accepted/rejected hex forms
   incl. every partial length, clamping, NaN/Infinity not leaking "NaN" into a CSS
-  string, and the normalize fallback/idempotence. Passes; `pnpm run build` clean.
-- **Needs a Linux smoke-test**: confirm the popover renders and the sliders track
-  on WebKitGTK (no native dialog involved now, so this is a styling/layout check).
+  string, normalize fallback/idempotence. Passes; `pnpm run build` clean.
+- **Needs a Linux smoke-test**: popover renders, presets and sliders track on
+  WebKitGTK. No host dialog involved, so it's a styling/layout check.
+
+### Why not `<input type="color">`
+Its popup *works* in WebView2. The problem is the **eyedropper button inside it**:
+host browser UI WebView2 doesn't drive, so it silently does nothing, and a native
+control offers no hook to remove it. A dead button in shipped UI is worse than a
+smaller feature set — that's the whole reason the picker is ours.
+
+### Dead end: screen eyedropper (built, verified, then removed)
+Kept as a record so nobody spends the day again.
+- **First diagnosis was wrong.** "The colour picker does nothing" was reported
+  about the eyedropper *nested inside* the native popup, not the swatch that opens
+  it. Lesson: confirm *which* element is dead before reasoning about why.
+- Ruled out our own code either way: `base.css` has no input/appearance rules at
+  all, the only document-level click listener (`index.tsx`) `preventDefault()`s
+  solely for `<a href="http…">`, and the main window is not always-on-top (only
+  the auth window is).
+- **The `EyeDropper` JS API is a trap in WebView2** (tested at 152.0.4191.53 /
+  Chromium 152): the constructor *exists*, so feature detection passes and your
+  button renders — but `open()` returns a promise that never settles, neither
+  resolving nor rejecting. Present-but-inert defeats the only detection mechanism
+  available. Don't reach for it here.
+- A native replacement was then built and **worked**: poll ~60Hz, read the pixel
+  under the cursor off the screen DC (`GetDC(NULL)` + `GetPixel`), stream it to
+  the UI for live preview, primary button commits, Escape/secondary cancels, arm
+  only after the opening click is seen released. Verified on the dev box — live
+  varying colours, the `0x00bbggrr` decode agreeing with an independent ARGB
+  `CopyFromScreen` path, and a successful read at **negative** virtual-desktop
+  coordinates (monitor left of primary), so the whole virtual desktop was
+  samplable. Needed no new crate, just two more `windows-sys` features.
+- **Removed anyway**, by call: a Rust service + command + IPC + event wiring +
+  two Win32 features, all for one convenience button, and Windows-only (Linux
+  would have needed the XDG portal's `Screenshot.PickColor` plus an X11
+  root-window read). Presets cover the actual need — a decent solid colour in one
+  click. The route is proven if it's ever wanted back.
