@@ -7,6 +7,7 @@ pub mod companion_settings;
 pub mod curseforge;
 pub mod discord;
 pub mod download;
+pub mod eyedropper;
 pub mod fabric;
 pub mod icon_cache;
 pub mod instance_cape;

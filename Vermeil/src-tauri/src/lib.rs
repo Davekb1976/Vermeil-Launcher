@@ -6,7 +6,7 @@ mod util;
 
 pub use error::AppError;
 
-use commands::{app_updater, auth, cf_import, files, instances, java, launch, meta, mods, settings, skins};
+use commands::{app_updater, auth, cf_import, eyedropper, files, instances, java, launch, meta, mods, settings, skins};
 use services::app_updater::PendingUpdate;
 use tauri::Manager;
 
@@ -301,6 +301,8 @@ pub fn run() {
             files::list_instance_files,
             files::list_instance_worlds,
             files::open_instance_folder,
+            // Screen colour picker (cape editor eyedropper)
+            eyedropper::pick_screen_color,
             // Auto-updater
             app_updater::start_update_download,
             app_updater::apply_pending_update,

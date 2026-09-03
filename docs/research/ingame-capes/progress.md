@@ -220,19 +220,33 @@ User reported in-game far lower-res than the launcher model for the same cape. R
   accessible, styled with the app's own slider/field CSS. Each channel track
   carries a gradient of that channel's range over the current colour, which is
   what makes RGB sliders usable for picking, not just entering.
-- Eyedropper = the **EyeDropper API** (`new EyeDropper().open()`), Chromium's
-  magnifier-grid screen picker. `open()` is called directly in the click handler
-  with nothing awaited first — the API needs transient user activation and an
-  earlier `await` spends it. AbortError (Escape) is silent; other failures toast.
-- **Known platform gap, deliberate:** the EyeDropper API is Chromium-only, so the
-  button is feature-detected and hidden on WebKitGTK rather than shown dead —
-  Linux keeps sliders + hex. Closing it for real needs Rust-side screen capture
-  (X11 straightforward, Wayland needs the portal); not built, since the web API
-  may cover the Windows case entirely.
-- WebView2 runtime on the dev box is 152.0.4191.53 (Chromium 152), far past the
-  95 that shipped the API — so availability is expected, but **needs one click to
-  confirm** the host actually drives it. If the button is absent the API isn't
-  exposed; if it errors the host doesn't drive it. Either way → the Rust route.
+- **EyeDropper JS API tried and rejected.** WebView2 (152.0.4191.53 / Chromium
+  152) *defines* the constructor, so feature detection passes and the button
+  renders — but `open()` returns a promise that never settles, neither resolving
+  nor rejecting. Present-but-inert is worse than absent: it defeats the only
+  detection mechanism available. Don't reach for this API in WebView2.
+- **Eyedropper is native**, `services::eyedropper` (Windows): poll ~60Hz, read the
+  pixel under the cursor off the screen DC (`GetDC(NULL)` + `GetPixel`), emit
+  `eyedropper-preview` on change so the swatch and cape preview update live —
+  that live feedback stands in for Chromium's magnifier. Primary button commits,
+  Escape/secondary cancels, 60s timeout. Arms only after the primary button is
+  seen *up*, or the click that opened the picker would instantly commit.
+  `SM_SWAPBUTTON` honoured. No new crate — two more `windows-sys` features
+  (`Win32_Graphics_Gdi`, `Win32_UI_Input_KeyboardAndMouse`).
+- Frontend restores the pre-pick colour when the pick returns null, since live
+  preview mutates the real value; listener is attached *before* invoking, or the
+  first preview events land with nothing bound. Popover suppresses its
+  outside-click and Escape handlers while picking (the commit click is outside it
+  and Escape is the pick's cancel key).
+- Win32 approach verified on the dev box before shipping: `GetDC(NULL)`+`GetPixel`
+  returns live varying colours, the `0x00bbggrr` decode agrees with an
+  independent ARGB `CopyFromScreen` path, and a read at **negative** virtual-
+  desktop coordinates (monitor left of primary) works — so the whole virtual
+  desktop is samplable.
+- **Known platform gap, deliberate:** button hidden off Windows
+  (`navigator.userAgent`, the convention already used in Settings/onboarding);
+  Linux keeps sliders + hex. Closing it needs the XDG portal's
+  `Screenshot.PickColor` on Wayland plus an X11 root-window read — not built.
 - `lib/color.ts`: `parseHex` / `toHex` / `normalizeHex`. `parseHex` returns null
   for partial input so per-keystroke parsing can't flash a wrong colour;
   `normalizeHex` now guards `bg` from the stored transform at the editor and both

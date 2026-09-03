@@ -600,6 +600,12 @@ export const saveCustomCape = (
   });
 export const removeCustomCape = (id: string) =>
   invoke<void>("remove_custom_cape", { id });
+/** Start a native screen colour pick (the colour picker's eyedropper).
+ *  Resolves with `#rrggbb`, or null when the user cancelled with Escape, a
+ *  secondary click, or by letting it time out. Emits `eyedropper-preview` with
+ *  the colour under the cursor while it runs. Windows only — see
+ *  `services::eyedropper`. */
+export const pickScreenColor = () => invoke<string | null>("pick_screen_color");
 /** Fetch a custom cape's original uploaded image (data URL) for re-editing.
  *  Kept separate from listCustomCapes so the library doesn't inline every
  *  source image (each up to 8 MB) into memory at once. */

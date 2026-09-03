@@ -62,4 +62,10 @@ windows-dpapi = "0.2"
 # show-state via ShowWindow, and use the AttachThreadInput focus trick so the
 # maximized window doesn't land behind the user's active window. The Threading
 # feature also covers the PID-liveness probe (OpenProcess/GetExitCodeProcess).
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Dwm", "Win32_System_Threading"] }
+# The Gdi + KeyboardAndMouse features drive services::eyedropper, the screen
+# colour picker behind the cape editor's "Pick from screen" button: Gdi for
+# GetDC/GetPixel (reading the pixel under the cursor off the composited desktop)
+# and KeyboardAndMouse for GetAsyncKeyState (detecting the commit click and the
+# Escape cancel). WebView2 exposes the EyeDropper JS API but never settles its
+# promise, so the pick has to happen natively.
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Dwm", "Win32_System_Threading", "Win32_Graphics_Gdi", "Win32_UI_Input_KeyboardAndMouse"] }

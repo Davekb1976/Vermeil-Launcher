@@ -6,16 +6,19 @@
  * `<input type="color">` worked here — WebView2 opened Chromium's colour popup
  * fine. What was dead was the **eyedropper button inside it**: that control is
  * host browser UI, and WebView2 doesn't drive it, so clicking it did nothing.
- * Since screen-picking is the part that matters for choosing a cape colour off
- * a reference image, and a native `<input type="color">` exposes no hook to add
- * anything to its popup, the picker had to become ours before an eyedropper
- * could be wired in at all. {@link ../components/ColorPicker} builds it from
- * ordinary DOM, which also means it looks and behaves the same on WebView2 and
- * WebKitGTK instead of being whatever popup each host happens to supply.
+ * The `EyeDropper` JS API is no better — WebView2 defines the constructor but
+ * never settles the promise `open()` returns, so it fails feature detection's
+ * whole purpose. Screen-picking therefore has to happen natively, in
+ * `services::eyedropper`, and a native `<input type="color">` exposes no hook to
+ * put a button next to. Owning the control is what made the eyedropper possible.
+ * {@link ../components/ColorPicker} builds it from ordinary DOM, which also means
+ * it looks and behaves the same on WebView2 and WebKitGTK instead of being
+ * whatever popup each host happens to supply.
  *
  * Both directions treat their input as untrusted: a hex string arrives from the
- * user typing into the field, from the EyeDropper API, or from a stored cape
- * transform, which the backend keeps as an opaque JSON blob it never validates.
+ * user typing into the field, from the native screen pick over IPC, or from a
+ * stored cape transform, which the backend keeps as an opaque JSON blob it never
+ * validates.
  */
 
 export interface Rgb {

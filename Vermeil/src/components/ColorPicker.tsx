@@ -1,5 +1,7 @@
 import { Component, createSignal, createEffect, onCleanup, Show } from "solid-js";
 import { parseHex, toHex, normalizeHex, Rgb } from "../lib/color";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { pickScreenColor } from "../ipc/commands";
 import { showToast } from "../App";
 import { IconCrosshair } from "./Icons";
 
@@ -11,21 +13,25 @@ import { IconCrosshair } from "./Icons";
  * eyedropper button inside it is host browser UI that WebView2 doesn't drive, so
  * screen-picking was dead and a native input offers no way to add it back — see
  * the note in `lib/color.ts`. Owning the control is what makes the eyedropper
- * below possible.
+ * below possible; the pick itself runs in `services::eyedropper`, because the
+ * `EyeDropper` JS API is present-but-inert in WebView2 too.
  *
  * Each channel track is painted with a gradient showing what moving that slider
  * does to the current colour, which is what makes plain RGB sliders workable for
  * picking rather than just for entering known values.
  */
 
-/** Minimal structural type for the EyeDropper API, so we don't need the DOM lib
- *  to declare it. Chromium-only (WebView2 on Windows); absent on WebKitGTK. */
-type EyeDropperCtor = new () => { open: () => Promise<{ sRGBHex: string }> };
-
-/** Feature-detected once. The button is hidden entirely when unsupported rather
- *  than shown and failing — on WebKitGTK (Linux) there is no such API, so Linux
- *  users get the sliders and hex field with no dead affordance. */
-const EyeDropperImpl = (globalThis as { EyeDropper?: EyeDropperCtor }).EyeDropper;
+/**
+ * Whether to offer the screen eyedropper. Backed by `services::eyedropper`,
+ * which is Windows-only for now, so gate on the platform rather than probing.
+ *
+ * Deliberately *not* feature-detected against `window.EyeDropper`: WebView2
+ * defines that constructor but never settles the promise `open()` returns, so
+ * detection passes and the button silently does nothing — which is the bug this
+ * replaced. Same `navigator.userAgent` convention the app already uses in
+ * Settings and the onboarding wizard.
+ */
+const SUPPORTS_SCREEN_PICK = navigator.userAgent.includes("Windows");
 
 interface Props {
   /** Current colour, `#rrggbb`. Anything invalid falls back to black. */
@@ -44,6 +50,9 @@ const CHANNELS: Array<{ key: keyof Rgb; name: string }> = [
 
 const ColorPicker: Component<Props> = (props) => {
   const [open, setOpen] = createSignal(false);
+  // True while a screen pick is in flight, so the popover stays put and the
+  // button reads as busy instead of inviting a second pick.
+  const [picking, setPicking] = createSignal(false);
   // What the hex field currently shows. Kept separate from `props.value` so a
   // half-typed value ("#2b2") isn't rewritten under the caret on each keystroke.
   const [draft, setDraft] = createSignal<string | null>(null);
@@ -73,30 +82,39 @@ const ColorPicker: Component<Props> = (props) => {
   };
 
   /**
-   * Sample a colour from anywhere on screen via the EyeDropper API — the
-   * magnifier-grid picker Chromium provides.
+   * Sample a colour from anywhere on screen, via the native picker in
+   * `services::eyedropper`.
    *
-   * `open()` must be called inside the click handler with no `await` before it:
-   * the API requires transient user activation, and awaiting anything first
-   * spends it and makes the call fail. It rejects with AbortError when the user
-   * presses Escape, which is a normal outcome and stays silent; anything else is
-   * a real failure worth surfacing.
+   * The backend streams `eyedropper-preview` as the cursor moves and we apply
+   * each one straight away, so the swatch and the cape preview update live —
+   * that live feedback is what stands in for the magnifier Chromium would have
+   * drawn. Because previewing mutates the real colour, the value from before the
+   * pick is captured and restored if the user cancels, so backing out leaves
+   * nothing changed. The listener is registered before the command is invoked,
+   * otherwise the first few preview events would arrive with nothing attached.
    */
-  const pickFromScreen = () => {
-    if (!EyeDropperImpl) return;
-    new EyeDropperImpl()
-      .open()
-      .then(({ sRGBHex }) => {
-        const parsed = parseHex(sRGBHex);
-        if (parsed) {
-          props.onInput(toHex(parsed));
-          setDraft(null); // resync the hex field to the sampled colour
-        }
-      })
-      .catch((err: unknown) => {
-        if (err instanceof DOMException && err.name === "AbortError") return; // dismissed
-        showToast({ title: "Couldn't pick a colour", message: String(err), type: "error" });
+  const pickFromScreen = async () => {
+    if (!SUPPORTS_SCREEN_PICK || picking()) return;
+    const before = hex();
+    setPicking(true);
+    let unlisten: UnlistenFn | undefined;
+    try {
+      unlisten = await listen<string>("eyedropper-preview", (e) => {
+        const parsed = parseHex(e.payload);
+        if (parsed) props.onInput(toHex(parsed));
       });
+      const picked = await pickScreenColor();
+      const parsed = picked ? parseHex(picked) : null;
+      // No colour means a deliberate cancel (Escape / secondary click / timeout).
+      props.onInput(parsed ? toHex(parsed) : before);
+      setDraft(null);
+    } catch (err) {
+      props.onInput(before);
+      showToast({ title: "Couldn't pick a colour", message: String(err), type: "error" });
+    } finally {
+      unlisten?.();
+      setPicking(false);
+    }
   };
 
   // Close on outside mousedown / Escape — same convention as the app's other
@@ -104,13 +122,17 @@ const ColorPicker: Component<Props> = (props) => {
   // dropped at the top of the document.
   createEffect(() => {
     if (!open()) return;
+    // Both guards skip while a screen pick is running: the commit click lands
+    // outside the popover and Escape is the pick's own cancel key, so reacting
+    // to either would tear the popover down mid-pick.
     const onDown = (e: MouseEvent) => {
+      if (picking()) return;
       const t = e.target as Node;
       if (panelEl?.contains(t) || triggerEl?.contains(t)) return;
       setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !picking()) {
         setOpen(false);
         triggerEl?.focus();
       }
@@ -141,10 +163,15 @@ const ColorPicker: Component<Props> = (props) => {
 
       <Show when={open()}>
         <div ref={panelEl} class="color-pop" role="dialog" aria-label={props.label}>
-          <Show when={EyeDropperImpl}>
-            <button type="button" class="btn btn--sm color-eyedrop" onClick={pickFromScreen}>
+          <Show when={SUPPORTS_SCREEN_PICK}>
+            <button
+              type="button"
+              class="btn btn--sm color-eyedrop"
+              onClick={pickFromScreen}
+              disabled={picking()}
+            >
               <IconCrosshair />
-              <span>Pick from screen</span>
+              <span>{picking() ? "Click a pixel · Esc to cancel" : "Pick from screen"}</span>
             </button>
           </Show>
 
