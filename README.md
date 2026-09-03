@@ -10,15 +10,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest"><img src="https://img.shields.io/github/v/release/Vermeil-Launcher/Vermeil-Launcher?style=flat-square&label=release&color=8b5cf6" alt="Release" /></a>
-  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/actions"><img src="https://img.shields.io/github/actions/workflow/status/Vermeil-Launcher/Vermeil-Launcher/release.yml?style=flat-square&label=build" alt="Build" /></a>
+  <a href="https://github.com/Davekb1976/Vermeil-Launcher/releases/latest"><img src="https://img.shields.io/github/v/release/Davekb1976/Vermeil-Launcher?style=flat-square&label=release&color=8b5cf6" alt="Release" /></a>
+  <a href="https://github.com/Davekb1976/Vermeil-Launcher/actions"><img src="https://img.shields.io/github/actions/workflow/status/Davekb1976/Vermeil-Launcher/release.yml?style=flat-square&label=build" alt="Build" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License" /></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational?style=flat-square" alt="Platform" />
   <img src="https://img.shields.io/badge/status-alpha-orange?style=flat-square" alt="Status" />
 </p>
 
 <p align="center">
-  <a href="https://vermeillauncher.app/">Website</a> · <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest">Download</a> · <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/issues">Issues</a>
+  <a href="https://vermeillauncher.app/">Website</a> · <a href="https://github.com/Davekb1976/Vermeil-Launcher/releases/latest">Download</a> · <a href="https://github.com/Davekb1976/Vermeil-Launcher/issues">Issues</a>
 </p>
 
 ---
@@ -59,7 +59,7 @@
 
 ## Download
 
-Get the latest release from the [Releases page](https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest).
+Get the latest release from the [Releases page](https://github.com/Davekb1976/Vermeil-Launcher/releases/latest).
 
 ### Windows
 
@@ -68,7 +68,7 @@ Download and run the `.exe` installer. Per-user install, no admin required. Unin
 ### Linux (one-liner)
 
 ```bash
-curl -fsSL https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/Davekb1976/Vermeil-Launcher/releases/latest/download/install.sh | bash
 ```
 
 Downloads the AppImage to `~/.local/bin` and creates a desktop entry. Remove with `vermeil-uninstall`.
@@ -101,4 +101,4 @@ See [DISCLAIMER.md](DISCLAIMER.md) for the full disclosure.
 
 Source code: [MIT License](LICENSE). Logo and icons: All Rights Reserved. See [LICENSES.md](LICENSES.md).
 
-This repository is public for transparency. External contributions are not accepted. Bug reports and feature suggestions via [Issues](https://github.com/Vermeil-Launcher/Vermeil-Launcher/issues) are welcome.
+This repository is public for transparency. External contributions are not accepted. Bug reports and feature suggestions via [Issues](https://github.com/Davekb1976/Vermeil-Launcher/issues) are welcome.
