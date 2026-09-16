@@ -15,6 +15,7 @@ import {
   prepareInstance,
   getSettings,
   companionSupportedVersions,
+  FabricVersion,
 } from "../ipc/commands";
 import { loaderBadgeClass, loaderLabel, loaderBannerColor } from "../lib/loader";
 import {
@@ -85,7 +86,7 @@ const CreateCustom: Component = () => {
   const [name, setName] = createSignal("");
   const [loader, setLoader] = createSignal<string>("vanilla");
   const [gameVersion, setGameVersion] = createSignal("");
-  const [loaderVersionMode, setLoaderVersionMode] = createSignal<"stable" | "latest" | "other">("stable");
+  const [customLoaderVersion, setCustomLoaderVersion] = createSignal<string | null>(null);
   const [creating, setCreating] = createSignal(false);
   const [versionDropOpen, setVersionDropOpen] = createSignal(false);
   const [versionQuery, setVersionQuery] = createSignal("");
@@ -93,16 +94,31 @@ const CreateCustom: Component = () => {
   let triggerEl: HTMLDivElement | undefined;
   let panelEl: HTMLDivElement | undefined;
 
+  const [loaderDropOpen, setLoaderDropOpen] = createSignal(false);
+  const [loaderQuery, setLoaderQuery] = createSignal("");
+  const [loaderTriggerRect, setLoaderTriggerRect] = createSignal<DOMRect | null>(null);
+  let loaderTriggerEl: HTMLDivElement | undefined;
+  let loaderPanelEl: HTMLDivElement | undefined;
+
   const updateRect = () => { if (triggerEl) setTriggerRect(triggerEl.getBoundingClientRect()); };
   const toggleVersionDrop = () => {
     if (versionDropOpen()) { setVersionDropOpen(false); return; }
     setVersionQuery("");
     updateRect();
+    setLoaderDropOpen(false);
     setVersionDropOpen(true);
   };
 
-  const panelStyle = () => {
-    const r = triggerRect();
+  const updateLoaderRect = () => { if (loaderTriggerEl) setLoaderTriggerRect(loaderTriggerEl.getBoundingClientRect()); };
+  const toggleLoaderDrop = () => {
+    if (loaderDropOpen()) { setLoaderDropOpen(false); return; }
+    setLoaderQuery("");
+    updateLoaderRect();
+    setVersionDropOpen(false);
+    setLoaderDropOpen(true);
+  };
+
+  const makePanelStyle = (r: DOMRect | null) => {
     if (!r) return "";
     const margin = 4;
     const spaceBelow = window.innerHeight - r.bottom;
@@ -115,23 +131,39 @@ const CreateCustom: Component = () => {
     return `position:fixed;left:${Math.round(r.left)}px;width:${Math.round(r.width)}px;${vert};max-height:${maxH}px`;
   };
 
+  const panelStyle = () => makePanelStyle(triggerRect());
+  const loaderPanelStyle = () => makePanelStyle(loaderTriggerRect());
+
   createEffect(() => {
-    if (!versionDropOpen()) return;
+    if (!versionDropOpen() && !loaderDropOpen()) return;
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node;
-      if (panelEl?.contains(t) || triggerEl?.contains(t)) return;
-      setVersionDropOpen(false);
+      if (versionDropOpen() && !panelEl?.contains(t) && !triggerEl?.contains(t)) {
+        setVersionDropOpen(false);
+      }
+      if (loaderDropOpen() && !loaderPanelEl?.contains(t) && !loaderTriggerEl?.contains(t)) {
+        setLoaderDropOpen(false);
+      }
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setVersionDropOpen(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setVersionDropOpen(false);
+        setLoaderDropOpen(false);
+      }
+    };
+    const onReposition = () => {
+      updateRect();
+      updateLoaderRect();
+    };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
-    window.addEventListener("resize", updateRect);
-    window.addEventListener("scroll", updateRect, true);
+    window.addEventListener("resize", onReposition);
+    window.addEventListener("scroll", onReposition, true);
     onCleanup(() => {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
-      window.removeEventListener("resize", updateRect);
-      window.removeEventListener("scroll", updateRect, true);
+      window.removeEventListener("resize", onReposition);
+      window.removeEventListener("scroll", onReposition, true);
     });
   });
 
@@ -179,15 +211,55 @@ const CreateCustom: Component = () => {
   const [neoforgeVersions] = createResource(() => selectedGameVersion(), (gv) => gv ? getNeoforgeVersions(gv) : Promise.resolve([]));
   const [forgeVersions] = createResource(() => selectedGameVersion(), (gv) => gv ? getForgeVersions(gv) : Promise.resolve([]));
 
-  const loaderVersion = () => {
-    const mode = loaderVersionMode();
+  const availableLoaderVersions = createMemo((): FabricVersion[] => {
     const l = loader();
-    if (l === "fabric") { const fv = fabricVersions(); if (!fv?.length) return null; return mode === "stable" ? (fv.find(v => v.stable)?.version || fv[0].version) : fv[0].version; }
-    if (l === "quilt") { const qv = quiltVersions(); return qv?.length ? qv[0].version : null; }
-    if (l === "neoforge") { const nv = neoforgeVersions(); return nv?.length ? nv[0].version : null; }
-    if (l === "forge") { const fv = forgeVersions(); if (!fv?.length) return null; return mode === "stable" ? (fv.find(v => v.stable)?.version || fv[0].version) : fv[0].version; }
-    return null;
+    if (l === "fabric") return fabricVersions() || [];
+    if (l === "quilt") return quiltVersions() || [];
+    if (l === "neoforge") return neoforgeVersions() || [];
+    if (l === "forge") return forgeVersions() || [];
+    return [];
+  });
+
+  const formatLoaderVersionDisplay = (ver: string) => {
+    const l = loader();
+    const gv = selectedGameVersion();
+    if (l === "forge" && ver.startsWith(`${gv}-`)) {
+      let clean = ver.slice(gv.length + 1);
+      if (clean.endsWith(`-${gv}`)) {
+        clean = clean.slice(0, clean.length - gv.length - 1);
+      }
+      return clean;
+    }
+    return ver;
   };
+
+  const loaderVersion = () => {
+    const list = availableLoaderVersions();
+    if (!list.length) return null;
+    const custom = customLoaderVersion();
+    if (custom && list.some(v => v.version === custom)) {
+      return custom;
+    }
+    return list[0].version;
+  };
+
+  const isRecommendedLoaderVersion = () => {
+    const list = availableLoaderVersions();
+    if (!list.length) return true;
+    const cur = loaderVersion();
+    return !cur || cur === list[0].version;
+  };
+
+  const filteredLoaderVersions = () => {
+    const q = loaderQuery().trim().toLowerCase();
+    const all = availableLoaderVersions();
+    if (!q) return all;
+    return all.filter(v => {
+      const display = formatLoaderVersionDisplay(v.version).toLowerCase();
+      return v.version.toLowerCase().includes(q) || display.includes(q);
+    });
+  };
+
 
   const suggestedName = createMemo(() => {
     const l = loaderLabel(loader());
@@ -289,6 +361,7 @@ const CreateCustom: Component = () => {
                         onClick={() => {
                           setLoader(item.id);
                           setGameVersion("");
+                          setCustomLoaderVersion(null);
                         }}
                       >
                         <div class={`loader-card-icon ${item.colorClass}`}>
@@ -356,7 +429,11 @@ const CreateCustom: Component = () => {
                                   <div
                                     class="custom-dropdown-option"
                                     classList={{ selected: selectedGameVersion() === v.id }}
-                                    onClick={() => { setGameVersion(v.id); setVersionDropOpen(false); }}
+                                    onClick={() => {
+                                      setGameVersion(v.id);
+                                      setCustomLoaderVersion(null);
+                                      setVersionDropOpen(false);
+                                    }}
                                   >
                                     <span>{v.id}{latestVersionId() === v.id ? " (latest)" : ""}</span>
                                     <Show when={isCompanionSupported(v.id)}>
@@ -377,34 +454,87 @@ const CreateCustom: Component = () => {
                 </div>
               </div>
 
-              {/* Mod Loader Build Channel Plate (Only when loader !== "vanilla") */}
+              {/* Mod Loader Version Dropdown Plate (Only when loader !== "vanilla") */}
               <Show when={loader() !== "vanilla"}>
                 <div class="setting-row">
                   <div class="setting-text">
-                    <div class="setting-name">{loaderLabel(loader())} Build Channel</div>
-                    <div class="setting-desc">Stable is recommended for standard gameplay; Beta includes preview fixes</div>
+                    <div class="setting-name">{loaderLabel(loader())} Version</div>
+                    <div class="setting-desc">Select a specific loader build or keep recommended for best mod compatibility</div>
                   </div>
-                  <div class="setting-control" style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                    <div class="loader-build-toggles">
-                      <button
-                        type="button"
-                        class={`btn btn--sm ${loaderVersionMode() === "stable" ? "btn--primary" : "btn--neutral"}`}
-                        onClick={() => setLoaderVersionMode("stable")}
-                      >
-                        Stable
-                      </button>
-                      <button
-                        type="button"
-                        class={`btn btn--sm ${loaderVersionMode() === "latest" ? "btn--primary" : "btn--neutral"}`}
-                        onClick={() => setLoaderVersionMode("latest")}
-                      >
-                        Beta / Latest
-                      </button>
-                    </div>
-                    <Show when={loaderVersion()}>
-                      <div class="loader-resolved-badge">
-                        <span>Build:</span>
-                        <code>{loader() === "fabric" && isLegacyVersion() ? "Legacy " : ""}{loaderVersion()}</code>
+                  <div class="setting-control" style="flex: 1; max-width: 320px;">
+                    <Show
+                      when={availableLoaderVersions().length > 0}
+                      fallback={
+                        <div class="settings-val" style="display:flex; align-items:center; gap:6px; color:var(--text-muted); font-size:12px;">
+                          <span>Resolving {loaderLabel(loader())} builds...</span>
+                        </div>
+                      }
+                    >
+                      <div class="custom-dropdown" style="--dropdown-height:var(--control-height-md)">
+                        <div class="custom-dropdown-selected" ref={loaderTriggerEl} onClick={toggleLoaderDrop}>
+                          <span style="display:flex; align-items:center; gap:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                            <span>
+                              {loader() === "fabric" && isLegacyVersion() ? "Legacy " : ""}
+                              {formatLoaderVersionDisplay(loaderVersion() || "")}
+                            </span>
+                            <Show when={isRecommendedLoaderVersion()}>
+                              <span class="loader-item-badge loader-item-badge--recommended">Recommended</span>
+                            </Show>
+                          </span>
+                          <span class="custom-dropdown-arrow" classList={{ open: loaderDropOpen() }}>▾</span>
+                        </div>
+                        <Show when={loaderDropOpen()}>
+                          <Portal>
+                            <div class="custom-dropdown-options custom-dropdown-options--floating" ref={loaderPanelEl} style={loaderPanelStyle()}>
+                              <input
+                                class="custom-dropdown-search"
+                                placeholder={`Search ${loaderLabel(loader())} builds...`}
+                                value={loaderQuery()}
+                                onInput={(e) => setLoaderQuery(e.currentTarget.value)}
+                                ref={(el) => setTimeout(() => el.focus(), 0)}
+                              />
+                              <div class="custom-dropdown-scroll">
+                                <For each={filteredLoaderVersions()}>
+                                  {(v, idx) => {
+                                    const isSelected = () => loaderVersion() === v.version;
+                                    const isTop = () => idx() === 0;
+                                    return (
+                                      <div
+                                        class="custom-dropdown-option"
+                                        classList={{ selected: isSelected() }}
+                                        onClick={() => {
+                                          setCustomLoaderVersion(v.version);
+                                          setLoaderDropOpen(false);
+                                        }}
+                                        style="display:flex; align-items:center; justify-content:space-between; gap:8px;"
+                                      >
+                                        <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+                                          <span style="font-family:var(--font-mono, monospace); font-size:12px;">
+                                            {formatLoaderVersionDisplay(v.version)}
+                                          </span>
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+                                          <Show when={isTop()}>
+                                            <span class="loader-item-badge loader-item-badge--recommended">Latest</span>
+                                          </Show>
+                                          <Show when={!v.stable}>
+                                            <span class="loader-item-badge loader-item-badge--beta">Beta</span>
+                                          </Show>
+                                          <Show when={v.stable && !isTop()}>
+                                            <span class="loader-item-badge loader-item-badge--stable">Stable</span>
+                                          </Show>
+                                        </div>
+                                      </div>
+                                    );
+                                  }}
+                                </For>
+                                <Show when={filteredLoaderVersions().length === 0}>
+                                  <div class="custom-dropdown-empty">No builds match "{loaderQuery()}"</div>
+                                </Show>
+                              </div>
+                            </div>
+                          </Portal>
+                        </Show>
                       </div>
                     </Show>
                   </div>
@@ -455,7 +585,10 @@ const CreateCustom: Component = () => {
                           {loaderLabel(loader())}
                         </span>
                         <Show when={loader() !== "vanilla" && loaderVersion()}>
-                          <span class="badge badge--vnum">{loaderVersion()}</span>
+                          <span class="badge badge--vnum">
+                            {loader() === "fabric" && isLegacyVersion() ? "Legacy " : ""}
+                            {formatLoaderVersionDisplay(loaderVersion()!)}
+                          </span>
                         </Show>
                       </div>
                     </div>
@@ -476,7 +609,9 @@ const CreateCustom: Component = () => {
                     <div class="create-spec-row">
                       <span class="create-spec-label">Loader Build</span>
                       <span class="create-spec-value">
-                        {loaderVersion() || "Resolving..."} ({loaderVersionMode()})
+                        {loaderVersion()
+                          ? `${loader() === "fabric" && isLegacyVersion() ? "Legacy " : ""}${formatLoaderVersionDisplay(loaderVersion()!)} ${isRecommendedLoaderVersion() ? "(Recommended)" : "(Custom)"}`
+                          : "Resolving..."}
                       </span>
                     </div>
                   </Show>

@@ -292,7 +292,13 @@ pub async fn get_quilt_loader_versions() -> Result<Vec<FabricVersionInfo>, Strin
     struct QuiltVersion { version: String }
 
     let versions: Vec<QuiltVersion> = resp.json().await.map_err(|e| format!("Parse: {}", e))?;
-    Ok(versions.iter().map(|v| FabricVersionInfo { version: v.version.clone(), stable: true }).collect())
+    Ok(versions
+        .iter()
+        .map(|v| FabricVersionInfo {
+            stable: !v.version.contains("beta") && !v.version.contains("alpha"),
+            version: v.version.clone(),
+        })
+        .collect())
 }
 
 #[tauri::command]
@@ -367,7 +373,13 @@ pub async fn get_neoforge_versions(game_version: String) -> Result<Vec<FabricVer
         .filter(|v| v.starts_with(&mc_prefix))
         .rev() // Latest first
         .take(20)
-        .map(|v| FabricVersionInfo { version: v.clone(), stable: true })
+        .map(|v| {
+            let lower = v.to_lowercase();
+            FabricVersionInfo {
+                version: v.clone(),
+                stable: !lower.contains("beta") && !lower.contains("alpha"),
+            }
+        })
         .collect();
 
     Ok(filtered)

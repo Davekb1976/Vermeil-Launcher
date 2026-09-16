@@ -2525,3 +2525,33 @@
   text-align: center;
   line-height: 1.35;
 }
+
+/* ── Loader Version Dropdown styles ── */
+.loader-item-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs, 4px);
+  font-size: 10px;
+  font-weight: var(--fw-semibold, 600);
+  line-height: 1;
+}
+
+.loader-item-badge--recommended {
+  background: var(--success-soft, rgba(46, 204, 113, 0.15));
+  color: var(--success, #2ecc71);
+  border: 1px solid rgba(46, 204, 113, 0.25);
+}
+
+.loader-item-badge--beta {
+  background: var(--warning-soft, rgba(230, 126, 34, 0.15));
+  color: var(--warning, #e67e22);
+  border: 1px solid rgba(230, 126, 34, 0.25);
+}
+
+.loader-item-badge--stable {
+  background: var(--surface-raised, rgba(255, 255, 255, 0.05));
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
