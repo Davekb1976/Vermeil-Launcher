@@ -189,11 +189,11 @@ const Library: Component = () => {
         </div>
       </Show>
 
-      <div class="card-grid library-grid">
+      <div class="card-grid">
           <For each={sortedInstances()}>
             {(inst) => (
               <div
-                class={`card card--inst ${selectMode() && selected().has(inst.id) ? "inst-card-selected" : ""}`}
+                class={`card--inst ${selectMode() && selected().has(inst.id) ? "inst-card-selected" : ""}`}
                 style="cursor:pointer"
                 onClick={() => {
                   // If a drag occurred, the cards were already added during drag
@@ -250,72 +250,70 @@ const Library: Component = () => {
 
                 {/* Right Content Area: Title, Subtitle, Badges */}
                 <div class="inst-card-body">
-                  <div class="inst-card-info">
-                    <Show when={renamingId() === inst.id} fallback={
-                      <div
-                        class="inst-card-title"
-                        title={inst.name}
-                        onClick={(e: MouseEvent) => { if (!selectMode()) e.stopImmediatePropagation(); }}
-                        onDblClick={(e) => {
-                          if (!selectMode()) {
-                            e.stopImmediatePropagation();
-                            setRenamingId(inst.id);
-                            setRenameValue(inst.name);
-                          }
-                        }}
-                      >
-                        {inst.name}
-                      </div>
-                    }>
-                      <input
-                        class="field-control field-control--text inst-card-rename-input"
-                        value={renameValue()}
-                        onInput={(e) => setRenameValue(e.currentTarget.value)}
-                        onBlur={async () => {
-                          if (renameValue().trim()) {
-                            await renameInstance(inst.id, renameValue());
-                            refetchInstances();
-                          }
-                          setRenamingId(null);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") (e.target as HTMLElement).blur();
-                          if (e.key === "Escape") setRenamingId(null);
-                        }}
-                        ref={(el) => setTimeout(() => { el.focus(); el.select(); }, 10)}
-                        onClick={(e: MouseEvent) => { if (!selectMode()) e.stopImmediatePropagation(); }}
-                      />
-                    </Show>
-                    <div class="inst-card-sub">
-                      {inst.mods.length} {inst.mods.length === 1 ? "mod" : "mods"} · {timeAgo(inst.last_played)}
+                  <Show when={renamingId() === inst.id} fallback={
+                    <div
+                      class="inst-card-title"
+                      title={inst.name}
+                      onClick={(e: MouseEvent) => { if (!selectMode()) e.stopImmediatePropagation(); }}
+                      onDblClick={(e) => {
+                        if (!selectMode()) {
+                          e.stopImmediatePropagation();
+                          setRenamingId(inst.id);
+                          setRenameValue(inst.name);
+                        }
+                      }}
+                    >
+                      {inst.name}
                     </div>
-                    <div class="inst-card-badges">
-                      <span class="badge badge--version">{inst.game_version}</span>
-                      <Show when={inst.source_project_id && inst.source_version}>
-                        <span class="badge badge--vnum" title={`Modpack version ${inst.source_version}`}>
-                          {inst.source_version}
-                        </span>
-                      </Show>
-                      <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>
-                        {loaderLabel(inst.loader.type)}
+                  }>
+                    <input
+                      class="field-control field-control--text inst-card-rename-input"
+                      value={renameValue()}
+                      onInput={(e) => setRenameValue(e.currentTarget.value)}
+                      onBlur={async () => {
+                        if (renameValue().trim()) {
+                          await renameInstance(inst.id, renameValue());
+                          refetchInstances();
+                        }
+                        setRenamingId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") (e.target as HTMLElement).blur();
+                        if (e.key === "Escape") setRenamingId(null);
+                      }}
+                      ref={(el) => setTimeout(() => { el.focus(); el.select(); }, 10)}
+                      onClick={(e: MouseEvent) => { if (!selectMode()) e.stopImmediatePropagation(); }}
+                    />
+                  </Show>
+                  <div class="inst-card-sub">
+                    {inst.mods.length} {inst.mods.length === 1 ? "mod" : "mods"} · {timeAgo(inst.last_played)}
+                  </div>
+                  <div class="inst-card-badges">
+                    <span class="badge badge--version">{inst.game_version}</span>
+                    <Show when={inst.source_project_id && inst.source_version}>
+                      <span class="badge badge--vnum" title={`Modpack version ${inst.source_version}`}>
+                        {inst.source_version}
                       </span>
-                      <span class="badge">{inst.java.memory_max_mb} MB</span>
-                      <Show when={(inst.source_platforms || []).includes("modrinth")}>
-                        <span class="badge badge--source badge--modrinth" title="Available on Modrinth">
-                          <IconModrinth />
-                        </span>
-                      </Show>
-                      <Show when={(inst.source_platforms || []).includes("curseforge")}>
-                        <span class="badge badge--source badge--curseforge" title="Available on CurseForge">
-                          <IconCurseForge />
-                        </span>
-                      </Show>
-                      <Show when={inst.ingame_cape_supported}>
-                        <span class="badge badge--companion" title="Vermeil companion mod supported">
-                          <img src="/logo.png" alt="Vermeil" draggable={false} />
-                        </span>
-                      </Show>
-                    </div>
+                    </Show>
+                    <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>
+                      {loaderLabel(inst.loader.type)}
+                    </span>
+                    <span class="badge">{inst.java.memory_max_mb} MB</span>
+                    <Show when={(inst.source_platforms || []).includes("modrinth")}>
+                      <span class="badge badge--source badge--modrinth" title="Available on Modrinth">
+                        <IconModrinth />
+                      </span>
+                    </Show>
+                    <Show when={(inst.source_platforms || []).includes("curseforge")}>
+                      <span class="badge badge--source badge--curseforge" title="Available on CurseForge">
+                        <IconCurseForge />
+                      </span>
+                    </Show>
+                    <Show when={inst.ingame_cape_supported}>
+                      <span class="badge badge--companion" title="Vermeil companion mod supported">
+                        <img src="/logo.png" alt="Vermeil" draggable={false} />
+                      </span>
+                    </Show>
                   </div>
                 </div>
               </div>

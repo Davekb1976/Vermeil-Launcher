@@ -4,10 +4,11 @@
    Instance card (.card--inst) — flush square thumbnail on left,
    structured metadata & badges on right (matches .world-card layout).
    ============================================================ */
+.card.card--inst,
 .card--inst {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
   height: 82px;
   background: var(--surface-panel);
   border: 1px solid var(--border);
@@ -20,6 +21,7 @@
   transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.15s;
 }
 
+.card.card--inst:hover,
 .card--inst:hover {
   border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
   background: var(--surface-raised);
@@ -27,6 +29,7 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
+.card.card--inst:active,
 .card--inst:active {
   transform: translateY(1px);
   box-shadow: none;
@@ -57,7 +60,8 @@
   transition: transform 0.2s ease;
 }
 
-.card--inst:hover .inst-card-thumb img {
+.card--inst:hover .inst-card-thumb img,
+.card.card--inst:hover .inst-card-thumb img {
   transform: scale(1.06);
 }
 
@@ -71,7 +75,8 @@
   transition: transform 0.2s ease;
 }
 
-.card--inst:hover .inst-card-thumb-letter {
+.card--inst:hover .inst-card-thumb-letter,
+.card.card--inst:hover .inst-card-thumb-letter {
   transform: scale(1.08);
 }
 
@@ -108,15 +113,7 @@
   justify-content: center;
   padding: 8px 12px;
   gap: 3px;
-}
-
-.inst-card-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 3px;
+  overflow: hidden;
 }
 
 .inst-card-title {

@@ -1478,10 +1478,6 @@
 .inst-card-icon.quilt, .inst-card-thumb.quilt, .world-card-thumb.quilt { background: var(--grad-inst-quilt); }
 .inst-card-icon.purple, .inst-card-thumb.purple, .world-card-thumb.purple { background: var(--grad-inst-quilt); }
 
-/* Library instance card grid — min 260px track for comfortable badge & thumbnail layout */
-.library-grid {
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-}
 
 /* Continue section grid — 3 columns so worlds don't stretch into massive 1-column banners */
 .continue-grid {
