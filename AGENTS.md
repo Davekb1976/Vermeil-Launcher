@@ -1,4 +1,4 @@
-﻿# Vermeil — Master Agent & Developer Guide
+# Vermeil — Master Agent & Developer Guide
 
 **Vermeil** is a custom, privacy-focused Minecraft: Java Edition desktop launcher for Windows and Linux built with **Tauri 2 (Rust)** and **SolidJS (TypeScript)**, featuring an optional in-game Java client companion mod (`companion-mod/`).
 
@@ -79,6 +79,7 @@ Vermeil/
 - **Icons:** **NEVER use emoji or unicode glyphs for UI buttons or interactive affordances.** Use SVGs from `src/components/Icons.tsx` (Feather Icons MIT, `viewBox="0 0 24 24"`, `stroke-width="1.8"`).
 - **Events:** Listen via `listen()` from `@tauri-apps/api/event`. Always store unlisten handle and invoke in `onCleanup()`. Kebab-case naming (`download-progress`, `game-crashed`).
 - **External Links:** Never use `window.open()` or raw `<a href>`. Always use `openUrl()` from `@tauri-apps/plugin-opener`. Intercept link clicks in rendered HTML descriptions.
+- **Design System & SloppyKeys Reference:** Vermeil's tactile UI language is adopted from the creator's companion project, **SloppyKeys** (visual reference in `docs/images/sloppykeys_reference.png`). Features chunky 3D bevel buttons (`--bevel`, `--bevel-strong`, lift/scale hover, press active), framed section panels (`.card-gamemode-section`) with distinct category tag badge tints (`.tag-settings-*`), recessed sunken wells (`.card-section-body` `#0f0e13`), interactive setting plates (`.setting-row` with 3px left border), and square checkboxes (`.check.check--lg`). Reference between the creator's two projects is authorized and intentional.
 
 ---
 
@@ -154,7 +155,7 @@ The launcher targets Windows (WebView2, Win32/DWM) and Linux (WebKitGTK, X11/Way
 - Using emoji or unicode glyphs as button or interactive icons.
 - Exposing Windows `\\?\` prefix to frontend.
 - Using `#[allow(dead_code)]` or suppressing compiler warnings. Build must remain zero-warning.
-- Referencing other launcher codebases by name (original work policy).
+- Referencing other launcher codebases by name (original work policy; SloppyKeys is the creator's own companion project, not a launcher).
 
 ---
 
