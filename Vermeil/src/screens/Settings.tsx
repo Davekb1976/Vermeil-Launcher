@@ -398,102 +398,181 @@ const Settings: Component = () => {
         {/* ═══ GENERAL ═══ */}
         <Show when={isSearching() ? matchesGeneral() : (tab() === "all" || tab() === "general")}>
           <div class="settings-section">
-            <div class="section-label" style="margin-bottom:8px">Launcher</div>
-            <div class="settings-group">
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">Minimize to tray on launch</div>
-                  <div class="settings-val">Hides launcher when game starts</div>
-                </div>
-                <div class={`toggle ${settings()!.close_on_launch ? "on" : ""}`} onClick={() => updateSetting("close_on_launch", !settings()!.close_on_launch)} />
-              </div>
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">Pop out logs on launch</div>
-                  <div class="settings-val">Opens the game log in a separate window</div>
-                </div>
-                <div class={`toggle ${settings()!.popout_logs ? "on" : ""}`} onClick={() => updateSetting("popout_logs", !settings()!.popout_logs)} />
-              </div>
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">Auto-update launcher</div>
-                </div>
-                <div class={`toggle ${settings()!.auto_update ? "on" : ""}`} onClick={() => updateSetting("auto_update", !settings()!.auto_update)} />
-              </div>
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">Boot splash</div>
-                  <div class="settings-val">Show the animated logo splash on startup</div>
-                </div>
-                <div class={`toggle ${settings()!.splash_screen ? "on" : ""}`} onClick={() => updateSetting("splash_screen", !settings()!.splash_screen)} />
-              </div>
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">Check for updates</div>
-                  <div class="settings-val">Manually check for a new version</div>
-                </div>
-                <button class="btn btn--sm" onClick={() => checkForUpdates(false)}>Check now</button>
-              </div>
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">Discord Rich Presence</div>
-                </div>
-                <div class={`toggle ${settings()!.discord_rpc ? "on" : ""}`} onClick={() => updateSetting("discord_rpc", !settings()!.discord_rpc)} />
-              </div>
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">Show snapshots</div>
-                  <div class="settings-val">Include experimental versions</div>
-                </div>
-                <div class={`toggle ${settings()!.show_snapshots ? "on" : ""}`} onClick={() => updateSetting("show_snapshots", !settings()!.show_snapshots)} />
-              </div>
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">Force delete</div>
-                  <div class="settings-val">Skip confirmation when deleting instances</div>
-                </div>
-                <div class={`toggle ${settings()!.force_delete ? "on" : ""}`} onClick={() => updateSetting("force_delete", !settings()!.force_delete)} />
+            <div class="settings-section-header">
+              <div>
+                <div class="settings-section-title">General</div>
+                <div class="settings-section-desc">Core launcher preferences, startup options, and updates</div>
               </div>
             </div>
-          </div>
 
-          <div class="settings-section">
-            <div class="section-label" style="margin-bottom:8px">About</div>
-            <div class="settings-group">
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">Vermeil</div>
-                  <div class="settings-val">Version {appVersion() || "..."}</div>
-                </div>
-                <button class="btn btn--sm" onClick={() => openUrl("https://github.com/Davekb1976/Vermeil-Launcher")}>
-                  <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-                </button>
+            <div class="settings-panel">
+              <div class="settings-group-header">
+                <span class="settings-badge">LAUNCHER</span>
+                <span class="settings-group-title">Launcher Preferences</span>
+                <span class="settings-group-desc">Client lifecycle and startup options</span>
               </div>
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">Website</div>
-                  <div class="settings-val">vermeillauncher.app</div>
-                </div>
-                <button class="btn btn--sm" onClick={() => openUrl("https://vermeillauncher.app/")}>
-                  <IconGlobe />
-                  Visit
-                </button>
+
+              <div class="settings-grid">
+                <Show when={matches("Minimize to tray on launch", "Hides launcher when game starts")}>
+                  <div class="settings-cell">
+                    <div class="settings-cell-content">
+                      <div class="settings-cell-title">Minimize to tray on launch</div>
+                      <div class="settings-cell-desc">Hides launcher when game starts</div>
+                    </div>
+                    <div class="settings-cell-control">
+                      <div class={`toggle ${settings()!.close_on_launch ? "on" : ""}`} onClick={() => updateSetting("close_on_launch", !settings()!.close_on_launch)} />
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={matches("Pop out logs on launch", "Opens the game log in a separate window")}>
+                  <div class="settings-cell">
+                    <div class="settings-cell-content">
+                      <div class="settings-cell-title">Pop out logs on launch</div>
+                      <div class="settings-cell-desc">Opens the game log in a separate window</div>
+                    </div>
+                    <div class="settings-cell-control">
+                      <div class={`toggle ${settings()!.popout_logs ? "on" : ""}`} onClick={() => updateSetting("popout_logs", !settings()!.popout_logs)} />
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={matches("Auto-update launcher", "Automatically checks for updates")}>
+                  <div class="settings-cell">
+                    <div class="settings-cell-content">
+                      <div class="settings-cell-title">Auto-update launcher</div>
+                      <div class="settings-cell-desc">Keep launcher up to date</div>
+                    </div>
+                    <div class="settings-cell-control">
+                      <div class={`toggle ${settings()!.auto_update ? "on" : ""}`} onClick={() => updateSetting("auto_update", !settings()!.auto_update)} />
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={matches("Boot splash", "Show the animated logo splash on startup")}>
+                  <div class="settings-cell">
+                    <div class="settings-cell-content">
+                      <div class="settings-cell-title">Boot splash</div>
+                      <div class="settings-cell-desc">Show animated logo splash on startup</div>
+                    </div>
+                    <div class="settings-cell-control">
+                      <div class={`toggle ${settings()!.splash_screen ? "on" : ""}`} onClick={() => updateSetting("splash_screen", !settings()!.splash_screen)} />
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={matches("Discord Rich Presence", "Display playing status")}>
+                  <div class="settings-cell">
+                    <div class="settings-cell-content">
+                      <div class="settings-cell-title">Discord Rich Presence</div>
+                      <div class="settings-cell-desc">Show game status in Discord</div>
+                    </div>
+                    <div class="settings-cell-control">
+                      <div class={`toggle ${settings()!.discord_rpc ? "on" : ""}`} onClick={() => updateSetting("discord_rpc", !settings()!.discord_rpc)} />
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={matches("Show snapshots", "Include experimental versions")}>
+                  <div class="settings-cell">
+                    <div class="settings-cell-content">
+                      <div class="settings-cell-title">Show snapshots</div>
+                      <div class="settings-cell-desc">Include experimental versions</div>
+                    </div>
+                    <div class="settings-cell-control">
+                      <div class={`toggle ${settings()!.show_snapshots ? "on" : ""}`} onClick={() => updateSetting("show_snapshots", !settings()!.show_snapshots)} />
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={matches("Force delete", "Skip confirmation when deleting instances")}>
+                  <div class="settings-cell">
+                    <div class="settings-cell-content">
+                      <div class="settings-cell-title">Force delete</div>
+                      <div class="settings-cell-desc">Skip confirmation when deleting instances</div>
+                    </div>
+                    <div class="settings-cell-control">
+                      <div class={`toggle ${settings()!.force_delete ? "on" : ""}`} onClick={() => updateSetting("force_delete", !settings()!.force_delete)} />
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={matches("Check for updates", "Manually check for a new version")}>
+                  <div class="settings-cell">
+                    <div class="settings-cell-content">
+                      <div class="settings-cell-title">Check for updates</div>
+                      <div class="settings-cell-desc">Manually check for a new version</div>
+                    </div>
+                    <div class="settings-cell-control">
+                      <button class="btn btn--sm" onClick={() => checkForUpdates(false)}>Check now</button>
+                    </div>
+                  </div>
+                </Show>
               </div>
-              <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:6px">
-                <div class="settings-key">Disclaimer</div>
-                <div class="settings-val" style="line-height:1.5">
-                  Vermeil is an unofficial Minecraft launcher. Not affiliated with, endorsed by, or sponsored by Mojang Studios or Microsoft.
-                  Minecraft is a trademark of Mojang Synergies AB.
-                </div>
+            </div>
+
+            <div class="settings-panel">
+              <div class="settings-group-header">
+                <span class="settings-badge">ABOUT</span>
+                <span class="settings-group-title">About Vermeil</span>
+                <span class="settings-group-desc">Version info, privacy, and community links</span>
               </div>
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">Privacy</div>
-                  <div class="settings-val">No data is collected or sent to Vermeil servers. All data stays on your device.</div>
-                </div>
-                <button class="btn btn--sm" onClick={() => openUrl("https://github.com/Davekb1976/Vermeil-Launcher/blob/main/PRIVACY.md")}>
-                  Read policy
-                </button>
+
+              <div class="settings-grid">
+                <Show when={matches("Vermeil", "Version", appVersion())}>
+                  <div class="settings-cell">
+                    <div class="settings-cell-content">
+                      <div class="settings-cell-title">Vermeil</div>
+                      <div class="settings-cell-desc">Version {appVersion() || "..."}</div>
+                    </div>
+                    <div class="settings-cell-control">
+                      <button class="btn btn--sm" onClick={() => openUrl("https://github.com/Davekb1976/Vermeil-Launcher")} title="GitHub Repository">
+                        <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={matches("Website", "vermeillauncher.app")}>
+                  <div class="settings-cell">
+                    <div class="settings-cell-content">
+                      <div class="settings-cell-title">Website</div>
+                      <div class="settings-cell-desc">vermeillauncher.app</div>
+                    </div>
+                    <div class="settings-cell-control">
+                      <button class="btn btn--sm" onClick={() => openUrl("https://vermeillauncher.app/")}>
+                        <IconGlobe />
+                        Visit
+                      </button>
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={matches("Privacy", "No data is collected")}>
+                  <div class="settings-cell">
+                    <div class="settings-cell-content">
+                      <div class="settings-cell-title">Privacy</div>
+                      <div class="settings-cell-desc">Zero telemetry, all data on device</div>
+                    </div>
+                    <div class="settings-cell-control">
+                      <button class="btn btn--sm" onClick={() => openUrl("https://github.com/Davekb1976/Vermeil-Launcher/blob/main/PRIVACY.md")}>
+                        Read policy
+                      </button>
+                    </div>
+                  </div>
+                </Show>
+
+                <Show when={matches("Disclaimer", "unofficial Minecraft launcher")}>
+                  <div class="settings-cell settings-cell--full">
+                    <div class="settings-cell-content">
+                      <div class="settings-cell-title">Disclaimer</div>
+                      <div class="settings-cell-desc" style="line-height:1.5">
+                        Vermeil is an unofficial Minecraft launcher. Not affiliated with, endorsed by, or sponsored by Mojang Studios or Microsoft.
+                        Minecraft is a trademark of Mojang Synergies AB.
+                      </div>
+                    </div>
+                  </div>
+                </Show>
               </div>
             </div>
           </div>
@@ -502,162 +581,189 @@ const Settings: Component = () => {
         {/* ═══ RESOURCES ═══ */}
         <Show when={isSearching() ? matchesResources() : (tab() === "all" || tab() === "resources")}>
           <div class="settings-section">
-            <div class="section-label" style="margin-bottom:8px">Storage</div>
-            <div class="settings-group">
-              <div
-                class="settings-row"
-                style="cursor:pointer"
-                onClick={() => openAppDirectory()}
-                title="Open in file manager"
-              >
-                <div>
-                  <div class="settings-key">App directory</div>
-                  <div class="settings-val settings-val--mono">{appDirectory() ?? "…"}</div>
-                </div>
-                <button
-                  class="btn btn--sm"
-                  onClick={(e) => { e.stopPropagation(); openAppDirectory(); }}
+            <div class="settings-section-header">
+              <div>
+                <div class="settings-section-title">Resources</div>
+                <div class="settings-section-desc">Storage paths, download concurrency, and Java environment</div>
+              </div>
+              <button class="btn btn--sm" onClick={handlePurgeCache} disabled={purging()}>
+                {purging() ? "Purging..." : "Purge cache"}
+              </button>
+            </div>
+
+            <div class="settings-panel">
+              <div class="settings-group-header">
+                <span class="settings-badge">STORAGE</span>
+                <span class="settings-group-title">Storage Management</span>
+                <span class="settings-group-desc">Application data path and local caches</span>
+              </div>
+
+              <div class="settings-grid settings-grid--2col">
+                <div
+                  class="settings-cell"
+                  style="cursor:pointer"
+                  onClick={() => openAppDirectory()}
+                  title="Open in file manager"
                 >
-                  <IconFolderOpen /> Open
-                </button>
-              </div>
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">App cache</div>
-                  <div class="settings-val">Version metadata and loader installers · {formatCacheSize()} MB</div>
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">App directory</div>
+                    <div class="settings-cell-desc settings-val--mono">{appDirectory() ?? "…"}</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <button
+                      class="btn btn--sm"
+                      onClick={(e) => { e.stopPropagation(); openAppDirectory(); }}
+                    >
+                      <IconFolderOpen /> Open
+                    </button>
+                  </div>
                 </div>
-                <button class="btn btn--sm" onClick={handlePurgeCache} disabled={purging()}>
-                  {purging() ? "Purging..." : "Purge cache"}
-                </button>
-              </div>
-            </div>
-          </div>
 
-          <div class="settings-section">
-            <div class="section-label" style="margin-bottom:8px">Performance</div>
-            <div class="settings-group">
-              <div class="settings-row" style="align-items:center">
-                <div>
-                  <div class="settings-key">Concurrent downloads</div>
-                  <div class="settings-val">Max files downloading simultaneously (1–20)</div>
-                </div>
-                <div class="concurrency-control">
-                  <input
-                    class="concurrency-slider"
-                    type="range"
-                    min="1"
-                    max="20"
-                    step="1"
-                    value={dlValue()}
-                    style={`--slider-pct: ${((dlValue() - 1) / 19) * 100}%`}
-                    onInput={(e) => {
-                      const safe = clampConcurrency(parseInt(e.currentTarget.value), 20);
-                      // Update the gradient fill synchronously so the visual
-                      // tracks the thumb instantly, bypassing Solid's render
-                      // queue. Without this, fast scrubs look laggy because
-                      // the fill repaint waits for the next render tick.
-                      e.currentTarget.style.setProperty('--slider-pct', `${((safe - 1) / 19) * 100}%`);
-                      setDlDraft(safe);
-                      updateSetting("concurrent_downloads", safe);
-                    }}
-                  />
-                  <input
-                    class="concurrency-number"
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={dlValue()}
-                    onChange={(e) => {
-                      const safe = clampConcurrency(parseInt(e.currentTarget.value), 20);
-                      e.currentTarget.value = String(safe);
-                      setDlDraft(safe);
-                      updateSetting("concurrent_downloads", safe);
-                    }}
-                  />
-                </div>
-              </div>
-              <div class="settings-row" style="align-items:center">
-                <div>
-                  <div class="settings-key">Concurrent writes</div>
-                  <div class="settings-val">Max files being written to disk simultaneously (1–50)</div>
-                </div>
-                <div class="concurrency-control">
-                  <input
-                    class="concurrency-slider"
-                    type="range"
-                    min="1"
-                    max="50"
-                    step="1"
-                    value={wrValue()}
-                    style={`--slider-pct: ${((wrValue() - 1) / 49) * 100}%`}
-                    onInput={(e) => {
-                      const safe = clampConcurrency(parseInt(e.currentTarget.value), 50);
-                      // Direct setProperty for instant visual fill — see
-                      // the concurrent-downloads slider above for rationale.
-                      e.currentTarget.style.setProperty('--slider-pct', `${((safe - 1) / 49) * 100}%`);
-                      setWrDraft(safe);
-                      updateSetting("concurrent_writes", safe);
-                    }}
-                  />
-                  <input
-                    class="concurrency-number"
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={wrValue()}
-                    onChange={(e) => {
-                      const safe = clampConcurrency(parseInt(e.currentTarget.value), 50);
-                      e.currentTarget.value = String(safe);
-                      setWrDraft(safe);
-                      updateSetting("concurrent_writes", safe);
-                    }}
-                  />
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">App cache</div>
+                    <div class="settings-cell-desc">{formatCacheSize()} MB cached metadata and installers</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <button class="btn btn--sm" onClick={handlePurgeCache} disabled={purging()}>
+                      {purging() ? "Purging..." : "Purge cache"}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div class="settings-section">
-            <div class="section-label" style="margin-bottom:8px">Java</div>
-            <div class="settings-val" style="margin-bottom:10px">
-              Each Minecraft major needs a different JRE. Use Detect to scan your system,
-              Install recommended to download Adoptium Temurin, or Browse to point at an
-              existing install.
-            </div>
-            {/* Java runtime + GC preset rows. Used to live under General →
-                Java; relocated here so every Java-related toggle (runtime
-                source, GC preset, per-major slots) is on one tab. */}
-            <div class="settings-group" style="margin-bottom:14px">
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">Java runtime</div>
-                  <div class="settings-val">{settings()!.java_runtime === "auto" ? "Auto-managed (Adoptium)" : settings()!.java_runtime}</div>
-                </div>
-                <Dropdown
-                  value={settings()!.java_runtime}
-                  options={[
-                    { value: "auto", label: "Auto (Adoptium)" },
-                    { value: "system", label: "System Java" },
-                  ]}
-                  onChange={(val) => updateSetting("java_runtime", val)}
-                />
+            <div class="settings-panel">
+              <div class="settings-group-header">
+                <span class="settings-badge">PERFORMANCE</span>
+                <span class="settings-group-title">Concurrency Limits</span>
+                <span class="settings-group-desc">Max concurrent downloads and disk writes</span>
               </div>
-              <div class="settings-row">
-                <div>
-                  <div class="settings-key">GC preset</div>
-                  <div class="settings-val">{settings()!.gc_preset === "g1gc" ? "G1GC (recommended)" : settings()!.gc_preset.toUpperCase()}</div>
+
+              <div class="settings-grid settings-grid--2col">
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">Concurrent downloads</div>
+                    <div class="settings-cell-desc">Max files downloading simultaneously (1–20)</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <div class="concurrency-control">
+                      <input
+                        class="concurrency-slider"
+                        type="range"
+                        min="1"
+                        max="20"
+                        step="1"
+                        value={dlValue()}
+                        style={`--slider-pct: ${((dlValue() - 1) / 19) * 100}%`}
+                        onInput={(e) => {
+                          const safe = clampConcurrency(parseInt(e.currentTarget.value), 20);
+                          e.currentTarget.style.setProperty('--slider-pct', `${((safe - 1) / 19) * 100}%`);
+                          setDlDraft(safe);
+                          updateSetting("concurrent_downloads", safe);
+                        }}
+                      />
+                      <input
+                        class="concurrency-number"
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={dlValue()}
+                        onChange={(e) => {
+                          const safe = clampConcurrency(parseInt(e.currentTarget.value), 20);
+                          e.currentTarget.value = String(safe);
+                          setDlDraft(safe);
+                          updateSetting("concurrent_downloads", safe);
+                        }}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <Dropdown
-                  value={settings()!.gc_preset}
-                  options={[
-                    { value: "g1gc", label: "G1GC (recommended)" },
-                    { value: "zgc", label: "ZGC (Java 21+)" },
-                    { value: "shenandoah", label: "Shenandoah" },
-                  ]}
-                  onChange={(val) => updateSetting("gc_preset", val)}
-                />
+
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">Concurrent writes</div>
+                    <div class="settings-cell-desc">Max files being written to disk simultaneously (1–50)</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <div class="concurrency-control">
+                      <input
+                        class="concurrency-slider"
+                        type="range"
+                        min="1"
+                        max="50"
+                        step="1"
+                        value={wrValue()}
+                        style={`--slider-pct: ${((wrValue() - 1) / 49) * 100}%`}
+                        onInput={(e) => {
+                          const safe = clampConcurrency(parseInt(e.currentTarget.value), 50);
+                          e.currentTarget.style.setProperty('--slider-pct', `${((safe - 1) / 49) * 100}%`);
+                          setWrDraft(safe);
+                          updateSetting("concurrent_writes", safe);
+                        }}
+                      />
+                      <input
+                        class="concurrency-number"
+                        type="number"
+                        min="1"
+                        max="50"
+                        value={wrValue()}
+                        onChange={(e) => {
+                          const safe = clampConcurrency(parseInt(e.currentTarget.value), 50);
+                          e.currentTarget.value = String(safe);
+                          setWrDraft(safe);
+                          updateSetting("concurrent_writes", safe);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
+
+            <div class="settings-panel">
+              <div class="settings-group-header">
+                <span class="settings-badge">JAVA</span>
+                <span class="settings-group-title">Java Environment</span>
+                <span class="settings-group-desc">Runtime provider, garbage collection preset, and version slots</span>
+              </div>
+
+              <div class="settings-grid settings-grid--2col" style="margin-bottom:14px">
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">Java runtime</div>
+                    <div class="settings-cell-desc">{settings()!.java_runtime === "auto" ? "Auto-managed (Adoptium)" : settings()!.java_runtime}</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <Dropdown
+                      value={settings()!.java_runtime}
+                      options={[
+                        { value: "auto", label: "Auto (Adoptium)" },
+                        { value: "system", label: "System Java" },
+                      ]}
+                      onChange={(val) => updateSetting("java_runtime", val)}
+                    />
+                  </div>
+                </div>
+
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">GC preset</div>
+                    <div class="settings-cell-desc">{settings()!.gc_preset === "g1gc" ? "G1GC (recommended)" : settings()!.gc_preset.toUpperCase()}</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <Dropdown
+                      value={settings()!.gc_preset}
+                      options={[
+                        { value: "g1gc", label: "G1GC (recommended)" },
+                        { value: "zgc", label: "ZGC (Java 21+)" },
+                        { value: "shenandoah", label: "Shenandoah" },
+                      ]}
+                      onChange={(val) => updateSetting("gc_preset", val)}
+                    />
+                  </div>
+                </div>
+              </div>
             <div class="java-slots">
               <For each={JAVA_SLOTS}>
                 {(major) => {
@@ -753,318 +859,367 @@ const Settings: Component = () => {
                   );
                 }}
               </For>
-            </div>
-          </div>
-        </Show>
+            </div>{/* .java-slots */}
+          </div>{/* .settings-panel */}
+        </div>{/* .settings-section */}
+      </Show>
 
         {/* ═══ INSTANCE OPTIONS ═══ */}
         <Show when={isSearching() ? matchesInstances() : (tab() === "all" || tab() === "instances")}>
           <div class="settings-section">
-            <div class="section-label section-label--sub section-label--row">
-              Video
+            <div class="settings-section-header">
+              <div>
+                <div class="settings-section-title">Global Instance Defaults</div>
+                <div class="settings-section-desc">Default video, audio, window, and memory configurations applied to all instances</div>
+              </div>
               <button class="btn btn--sm" onClick={() => {
                 updateVideoSettings({ max_fps: 120, vsync: true, view_bobbing: true, gui_scale: 0, fov: 0.0, fov_effects: 1.0, master_volume: 1.0, music_volume: 1.0, window_width: null, window_height: null, start_maximized: null });
               }}>Reset All</button>
             </div>
-            <div class="settings-hint">
-              Max FPS is capped by VSync — set VSync to Off for true Unlimited. FOV Effects requires Minecraft 1.16+ (or 1.8.9 with the Vermeil companion mod).
-            </div>
-            <div class="vs-grid">
-              {/* Max Framerate — slider */}
-              <div class="vs-cell">
-                <div class="vs-key">Max FPS</div>
-                <input
-                  type="range"
-                  min="10"
-                  max="260"
-                  step="10"
-                  value={vs().max_fps ?? 120}
-                  class="slider vs-slider"
-                  style={`--slider-pct:${((vs().max_fps ?? 120) - 10) / 250 * 100}%`}
-                  onInput={(e) => {
-                    const val = parseInt(e.currentTarget.value);
-                    e.currentTarget.style.setProperty('--slider-pct', `${(val - 10) / 250 * 100}%`);
-                    updateVideoSettings({ max_fps: val });
-                  }}
-                />
-                <div class="vs-val">{(vs().max_fps ?? 120) === 260 ? "Unlimited" : `${vs().max_fps ?? 120} FPS`}</div>
+
+            {/* Video Panel */}
+            <div class="settings-panel">
+              <div class="settings-group-header">
+                <span class="settings-badge">VIDEO</span>
+                <span class="settings-group-title">Display & Rendering</span>
+                <span class="settings-group-desc">Framerate, VSync, FOV, and visual effects</span>
               </div>
 
-              {/* VSync */}
-              <div class="vs-cell">
-                <div class="vs-key">VSync</div>
-                <div style="flex:1" />
-                <Dropdown
-                  value={(vs().vsync ?? true) ? "true" : "false"}
-                  options={[
-                    { value: "true", label: "On" },
-                    { value: "false", label: "Off" },
-                  ]}
-                  onChange={(val) => {
-                    updateVideoSettings({ vsync: val === "true" });
-                  }}
-                />
-              </div>
+              <div class="settings-grid">
+                {/* Max Framerate — slider */}
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">Max FPS</div>
+                    <div class="settings-cell-desc">{(vs().max_fps ?? 120) === 260 ? "Unlimited" : `${vs().max_fps ?? 120} FPS`}</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <input
+                      type="range"
+                      min="10"
+                      max="260"
+                      step="10"
+                      value={vs().max_fps ?? 120}
+                      class="slider vs-slider"
+                      style={`--slider-pct:${((vs().max_fps ?? 120) - 10) / 250 * 100}%`}
+                      onInput={(e) => {
+                        const val = parseInt(e.currentTarget.value);
+                        e.currentTarget.style.setProperty('--slider-pct', `${(val - 10) / 250 * 100}%`);
+                        updateVideoSettings({ max_fps: val });
+                      }}
+                    />
+                  </div>
+                </div>
 
-              {/* View Bobbing */}
-              <div class="vs-cell">
-                <div class="vs-key">View Bobbing</div>
-                <div style="flex:1" />
-                <Dropdown
-                  value={(vs().view_bobbing ?? true) ? "true" : "false"}
-                  options={[
-                    { value: "true", label: "On" },
-                    { value: "false", label: "Off" },
-                  ]}
-                  onChange={(val) => {
-                    updateVideoSettings({ view_bobbing: val === "true" });
-                  }}
-                />
-              </div>
+                {/* VSync */}
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">VSync</div>
+                    <div class="settings-cell-desc">Sync frame rate with monitor</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <Dropdown
+                      value={(vs().vsync ?? true) ? "true" : "false"}
+                      options={[
+                        { value: "true", label: "On" },
+                        { value: "false", label: "Off" },
+                      ]}
+                      onChange={(val) => {
+                        updateVideoSettings({ vsync: val === "true" });
+                      }}
+                    />
+                  </div>
+                </div>
 
-              {/* GUI Scale */}
-              <div class="vs-cell">
-                <div class="vs-key">GUI Scale</div>
-                <div style="flex:1" />
-                <Dropdown
-                  value={String(vs().gui_scale ?? 0)}
-                  options={[
-                    { value: "0", label: "Auto" },
-                    { value: "1", label: "Small" },
-                    { value: "2", label: "Normal" },
-                    { value: "3", label: "Large" },
-                    { value: "4", label: "Huge" },
-                  ]}
-                  onChange={(val) => {
-                    updateVideoSettings({ gui_scale: parseInt(val) });
-                  }}
-                />
-              </div>
+                {/* View Bobbing */}
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">View Bobbing</div>
+                    <div class="settings-cell-desc">Camera motion while walking</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <Dropdown
+                      value={(vs().view_bobbing ?? true) ? "true" : "false"}
+                      options={[
+                        { value: "true", label: "On" },
+                        { value: "false", label: "Off" },
+                      ]}
+                      onChange={(val) => {
+                        updateVideoSettings({ view_bobbing: val === "true" });
+                      }}
+                    />
+                  </div>
+                </div>
 
-              {/* FOV */}
-              <div class="vs-cell">
-                <div class="vs-key">FOV</div>
-                <input
-                  type="range"
-                  min="30"
-                  max="110"
-                  step="1"
-                  value={vs().fov === null ? 70 : Math.round(40 * vs().fov! + 70)}
-                  class="slider vs-slider"
-                  style={`--slider-pct:${((vs().fov === null ? 70 : Math.round(40 * vs().fov! + 70)) - 30) / 80 * 100}%`}
-                  onInput={(e) => {
-                    const degrees = parseInt(e.currentTarget.value);
-                    e.currentTarget.style.setProperty('--slider-pct', `${(degrees - 30) / 80 * 100}%`);
-                    const fovValue = (degrees - 70) / 40;
-                    updateVideoSettings({ fov: fovValue });
-                  }}
-                />
-                <div class="vs-val">{`${Math.round(40 * (vs().fov ?? 0) + 70)}°`}</div>
-              </div>
+                {/* GUI Scale */}
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">GUI Scale</div>
+                    <div class="settings-cell-desc">User interface scale</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <Dropdown
+                      value={String(vs().gui_scale ?? 0)}
+                      options={[
+                        { value: "0", label: "Auto" },
+                        { value: "1", label: "Small" },
+                        { value: "2", label: "Normal" },
+                        { value: "3", label: "Large" },
+                        { value: "4", label: "Huge" },
+                      ]}
+                      onChange={(val) => {
+                        updateVideoSettings({ gui_scale: parseInt(val) });
+                      }}
+                    />
+                  </div>
+                </div>
 
-              {/* FOV Effects */}
-              <div class="vs-cell">
-                <div class="vs-key">FOV Effects</div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={vs().fov_effects === null ? 100 : Math.round(vs().fov_effects! * 100)}
-                  class="slider vs-slider"
-                  style={`--slider-pct:${(vs().fov_effects === null ? 100 : Math.round(vs().fov_effects! * 100))}%`}
-                  onInput={(e) => {
-                    const pct = parseInt(e.currentTarget.value);
-                    e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
-                    updateVideoSettings({ fov_effects: pct / 100 });
-                  }}
-                />
-                <div class="vs-val">{`${Math.round((vs().fov_effects ?? 1) * 100)}%`}</div>
-              </div>
-            </div>
-          </div>
+                {/* FOV */}
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">FOV</div>
+                    <div class="settings-cell-desc">{`${Math.round(40 * (vs().fov ?? 0) + 70)}°`}</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <input
+                      type="range"
+                      min="30"
+                      max="110"
+                      step="1"
+                      value={vs().fov === null ? 70 : Math.round(40 * vs().fov! + 70)}
+                      class="slider vs-slider"
+                      style={`--slider-pct:${((vs().fov === null ? 70 : Math.round(40 * vs().fov! + 70)) - 30) / 80 * 100}%`}
+                      onInput={(e) => {
+                        const degrees = parseInt(e.currentTarget.value);
+                        e.currentTarget.style.setProperty('--slider-pct', `${(degrees - 30) / 80 * 100}%`);
+                        const fovValue = (degrees - 70) / 40;
+                        updateVideoSettings({ fov: fovValue });
+                      }}
+                    />
+                  </div>
+                </div>
 
-          {/* Sound section */}
-          <div class="settings-section">
-            <div class="section-label section-label--sub">Sound</div>
-            <div class="vs-grid">
-              {/* Master Volume */}
-              <div class="vs-cell">
-                <div class="vs-key">Master</div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={vs().master_volume === null ? 100 : Math.round(vs().master_volume! * 100)}
-                  class="slider vs-slider"
-                  style={`--slider-pct:${(vs().master_volume === null ? 100 : Math.round(vs().master_volume! * 100))}%`}
-                  onInput={(e) => {
-                    const pct = parseInt(e.currentTarget.value);
-                    e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
-                    updateVideoSettings({ master_volume: pct / 100 });
-                  }}
-                />
-                <div class="vs-val">{`${Math.round((vs().master_volume ?? 1) * 100)}%`}</div>
-              </div>
-
-              {/* Music Volume */}
-              <div class="vs-cell">
-                <div class="vs-key">Music</div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={vs().music_volume === null ? 100 : Math.round(vs().music_volume! * 100)}
-                  class="slider vs-slider"
-                  style={`--slider-pct:${(vs().music_volume === null ? 100 : Math.round(vs().music_volume! * 100))}%`}
-                  onInput={(e) => {
-                    const pct = parseInt(e.currentTarget.value);
-                    e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
-                    updateVideoSettings({ music_volume: pct / 100 });
-                  }}
-                />
-                <div class="vs-val">{`${Math.round((vs().music_volume ?? 1) * 100)}%`}</div>
+                {/* FOV Effects */}
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">FOV Effects</div>
+                    <div class="settings-cell-desc">{`${Math.round((vs().fov_effects ?? 1) * 100)}%`}</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={vs().fov_effects === null ? 100 : Math.round(vs().fov_effects! * 100)}
+                      class="slider vs-slider"
+                      style={`--slider-pct:${(vs().fov_effects === null ? 100 : Math.round(vs().fov_effects! * 100))}%`}
+                      onInput={(e) => {
+                        const pct = parseInt(e.currentTarget.value);
+                        e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
+                        updateVideoSettings({ fov_effects: pct / 100 });
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-            <div class="settings-hint">Applied to all instances on launch. "Default" keeps whatever is set in-game.</div>
-          </div>
 
-          {/* Window section */}
-          <div class="settings-section">
-            <div class="section-label section-label--sub">Window</div>
-            <div class="vs-grid">
-              {/* Resolution preset dropdown. Disabled when Maximized is on,
-                  because the backend ignores the explicit resolution in that
-                  case (it launches at monitor size and maximizes). Greying it
-                  out makes that override visible instead of letting the two
-                  controls look like equal peers. */}
-              <div class="vs-cell">
-                <div class="vs-key">Resolution</div>
-                <div style="flex:1" />
-                <Dropdown
-                  disabled={!!vs().start_maximized}
-                  value={vs().window_width && vs().window_height ? `${vs().window_width}x${vs().window_height}` : "1280x720"}
-                  options={[
-                    { value: "1280x720", label: "1280 × 720" },
-                    { value: "1366x768", label: "1366 × 768" },
-                    { value: "1600x900", label: "1600 × 900" },
-                    { value: "1920x1080", label: "1920 × 1080" },
-                    { value: "2560x1440", label: "2560 × 1440" },
-                    { value: "3840x2160", label: "3840 × 2160" },
-                  ]}
-                  onChange={(val) => {
-                    const [w, h] = val.split("x").map(Number);
-                    updateVideoSettings({ window_width: w, window_height: h });
-                  }}
-                />
+            {/* Audio Panel */}
+            <div class="settings-panel">
+              <div class="settings-group-header">
+                <span class="settings-badge">AUDIO</span>
+                <span class="settings-group-title">Sound Levels</span>
+                <span class="settings-group-desc">Master and music volume levels</span>
               </div>
 
-              {/* Maximized toggle */}
-              <div class="vs-cell">
-                <div class="vs-key">Maximized</div>
-                <div style="flex:1" />
-                <div class={`toggle ${vs().start_maximized ? "on" : ""}`} onClick={() => updateVideoSettings({ start_maximized: !vs().start_maximized })} />
+              <div class="settings-grid settings-grid--2col">
+                {/* Master Volume */}
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">Master Volume</div>
+                    <div class="settings-cell-desc">{`${Math.round((vs().master_volume ?? 1) * 100)}%`}</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={vs().master_volume === null ? 100 : Math.round(vs().master_volume! * 100)}
+                      class="slider vs-slider"
+                      style={`--slider-pct:${(vs().master_volume === null ? 100 : Math.round(vs().master_volume! * 100))}%`}
+                      onInput={(e) => {
+                        const pct = parseInt(e.currentTarget.value);
+                        e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
+                        updateVideoSettings({ master_volume: pct / 100 });
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Music Volume */}
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">Music Volume</div>
+                    <div class="settings-cell-desc">{`${Math.round((vs().music_volume ?? 1) * 100)}%`}</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={vs().music_volume === null ? 100 : Math.round(vs().music_volume! * 100)}
+                      class="slider vs-slider"
+                      style={`--slider-pct:${(vs().music_volume === null ? 100 : Math.round(vs().music_volume! * 100))}%`}
+                      onInput={(e) => {
+                        const pct = parseInt(e.currentTarget.value);
+                        e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
+                        updateVideoSettings({ music_volume: pct / 100 });
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-            <Show when={vs().start_maximized}>
-              <div class="settings-hint">Resolution is ignored while Maximized is on — the game fills the screen on launch.</div>
-            </Show>
-          </div>
 
-          {/* Memory section. Memory is allocated automatically per instance
-              (services/memory.rs) from the pack's loader, mod count, and
-              content; this single control caps how high that can go. */}
-          <div class="settings-section">
-            <div class="section-label section-label--sub">Memory</div>
-            <div class="settings-val" style="margin-bottom:10px;line-height:1.5">
-              Memory is allocated <span style="color:var(--accent)">automatically</span> for each instance based on its pack, up to the maximum below.
-            </div>
-            <div class="vs-grid">
-              {/* Maximum RAM cap. Capped at 16 GB to keep G1GC pause times
-                  healthy. Auto resolves to a system-RAM-derived default. */}
-              <div class="vs-cell">
-                <div class="vs-key">Maximum RAM</div>
-                <div style="flex:1" />
-                <Dropdown
-                  value={String(settings()!.adaptive_ram_max_mb || 0)}
-                  options={(() => {
-                    const sysMb = systemMemoryMb() || 0;
-                    const auto = adaptiveDefaultMax(sysMb);
-                    return [
-                      { value: "0", label: `Auto (${formatMemoryGb(auto)})` },
-                      { value: "2048", label: "2 GB" },
-                      { value: "3072", label: "3 GB" },
-                      { value: "4096", label: "4 GB" },
-                      { value: "6144", label: "6 GB" },
-                      { value: "8192", label: "8 GB" },
-                      { value: "10240", label: "10 GB" },
-                      { value: "12288", label: "12 GB" },
-                      { value: "14336", label: "14 GB" },
-                      { value: "16384", label: "16 GB" },
-                    ];
-                  })()}
-                  onChange={(val) => {
-                    updateSetting("adaptive_ram_max_mb", parseInt(val) || 0);
-                  }}
-                />
+            {/* Window & Memory Panel */}
+            <div class="settings-panel">
+              <div class="settings-group-header">
+                <span class="settings-badge">WINDOW & RAM</span>
+                <span class="settings-group-title">Window & Memory Defaults</span>
+                <span class="settings-group-desc">Launch dimensions and adaptive RAM ceiling</span>
+              </div>
+
+              <div class="settings-grid">
+                {/* Resolution preset dropdown */}
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">Resolution</div>
+                    <div class="settings-cell-desc">Default window size</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <Dropdown
+                      disabled={!!vs().start_maximized}
+                      value={vs().window_width && vs().window_height ? `${vs().window_width}x${vs().window_height}` : "1280x720"}
+                      options={[
+                        { value: "1280x720", label: "1280 × 720" },
+                        { value: "1366x768", label: "1366 × 768" },
+                        { value: "1600x900", label: "1600 × 900" },
+                        { value: "1920x1080", label: "1920 × 1080" },
+                        { value: "2560x1440", label: "2560 × 1440" },
+                        { value: "3840x2160", label: "3840 × 2160" },
+                      ]}
+                      onChange={(val) => {
+                        const [w, h] = val.split("x").map(Number);
+                        updateVideoSettings({ window_width: w, window_height: h });
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Maximized toggle */}
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">Maximized</div>
+                    <div class="settings-cell-desc">Launch filled to monitor</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <div class={`toggle ${vs().start_maximized ? "on" : ""}`} onClick={() => updateVideoSettings({ start_maximized: !vs().start_maximized })} />
+                  </div>
+                </div>
+
+                {/* Maximum RAM cap */}
+                <div class="settings-cell">
+                  <div class="settings-cell-content">
+                    <div class="settings-cell-title">Maximum RAM</div>
+                    <div class="settings-cell-desc">Adaptive ceiling</div>
+                  </div>
+                  <div class="settings-cell-control">
+                    <Dropdown
+                      value={String(settings()!.adaptive_ram_max_mb || 0)}
+                      options={(() => {
+                        const sysMb = systemMemoryMb() || 0;
+                        const auto = adaptiveDefaultMax(sysMb);
+                        return [
+                          { value: "0", label: `Auto (${formatMemoryGb(auto)})` },
+                          { value: "2048", label: "2 GB" },
+                          { value: "3072", label: "3 GB" },
+                          { value: "4096", label: "4 GB" },
+                          { value: "6144", label: "6 GB" },
+                          { value: "8192", label: "8 GB" },
+                          { value: "10240", label: "10 GB" },
+                          { value: "12288", label: "12 GB" },
+                          { value: "14336", label: "14 GB" },
+                          { value: "16384", label: "16 GB" },
+                        ];
+                      })()}
+                      onChange={(val) => {
+                        updateSetting("adaptive_ram_max_mb", parseInt(val) || 0);
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="settings-section">
-            <div class="section-label" style="margin-bottom:8px">Select an instance to configure</div>
-            <div class="settings-val" style="margin-bottom:12px">Configure memory, resolution, Java arguments, and more per instance.</div>
-            <div class="card-grid">
-              <For each={instances() || []}>
-                {(inst) => {
-                  const iconUrl = (!inst.icon || inst.icon === "cube") ? undefined : inst.icon;
-                  const colorClass = (() => {
-                    switch (inst.loader.type) {
-                      case "fabric": return "fabric";
-                      case "quilt": return "quilt";
-                      case "neoforge": return "blue";
-                      case "forge": return "orange";
-                      default: return "green";
-                    }
-                  })();
-                  return (
-                    <div class="card card--inst" style="cursor:pointer" onClick={() => openInstanceOptions(inst.id)}>
-                      <div class="card-body">
-                        <div class={`inst-card-icon ${colorClass}`}>
-                          <Show when={iconUrl} fallback={
-                            <span class="inst-card-icon-letter">{inst.name.trim().charAt(0).toUpperCase() || "?"}</span>
-                          }>
-                            <img src={iconUrl!} alt="" draggable={false} />
-                          </Show>
-                        </div>
-                        <div class="inst-card-content">
-                          <div class="card-title">{inst.name}</div>
-                          <div class="card-sub">
-                            {inst.game_version} · {inst.mods.length} mods · {inst.window.width}x{inst.window.height}
+            {/* Instances Panel */}
+            <div class="settings-panel">
+              <div class="settings-group-header">
+                <span class="settings-badge">INSTANCES</span>
+                <span class="settings-group-title">Configure Instances</span>
+                <span class="settings-group-desc">Select an instance to configure overrides</span>
+              </div>
+              <div class="card-grid">
+                <For each={instances() || []}>
+                  {(inst) => {
+                    const iconUrl = (!inst.icon || inst.icon === "cube") ? undefined : inst.icon;
+                    const colorClass = (() => {
+                      switch (inst.loader.type) {
+                        case "fabric": return "fabric";
+                        case "quilt": return "quilt";
+                        case "neoforge": return "blue";
+                        case "forge": return "orange";
+                        default: return "green";
+                      }
+                    })();
+                    return (
+                      <div class="card card--inst" style="cursor:pointer" onClick={() => openInstanceOptions(inst.id)}>
+                        <div class="card-body">
+                          <div class={`inst-card-icon ${colorClass}`}>
+                            <Show when={iconUrl} fallback={
+                              <span class="inst-card-icon-letter">{inst.name.trim().charAt(0).toUpperCase() || "?"}</span>
+                            }>
+                              <img src={iconUrl!} alt="" draggable={false} />
+                            </Show>
                           </div>
-                          <div class="inst-card-badges">
-                            <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>{loaderLabel(inst.loader.type)}</span>
-                            <Show when={(inst.source_platforms || []).includes("modrinth")}>
-                              <span class="badge badge--source badge--modrinth"><IconModrinth /></span>
-                            </Show>
-                            <Show when={(inst.source_platforms || []).includes("curseforge")}>
-                              <span class="badge badge--source badge--curseforge"><IconCurseForge /></span>
-                            </Show>
-                            <Show when={inst.ingame_cape_supported}>
-                              <span class="badge badge--companion" title="Vermeil companion mod supported">
-                                <img src="/logo.png" alt="Vermeil" draggable={false} />
-                              </span>
-                            </Show>
+                          <div class="inst-card-content">
+                            <div class="card-title">{inst.name}</div>
+                            <div class="card-sub">
+                              {inst.game_version} · {inst.mods.length} mods · {inst.window.width}x{inst.window.height}
+                            </div>
+                            <div class="inst-card-badges">
+                              <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>{loaderLabel(inst.loader.type)}</span>
+                              <Show when={(inst.source_platforms || []).includes("modrinth")}>
+                                <span class="badge badge--source badge--modrinth"><IconModrinth /></span>
+                              </Show>
+                              <Show when={(inst.source_platforms || []).includes("curseforge")}>
+                                <span class="badge badge--source badge--curseforge"><IconCurseForge /></span>
+                              </Show>
+                              <Show when={inst.ingame_cape_supported}>
+                                <span class="badge badge--companion" title="Vermeil companion mod supported">
+                                  <img src="/logo.png" alt="Vermeil" draggable={false} />
+                                </span>
+                              </Show>
+                            </div>
                           </div>
+                          <span class="side-icon" style="color:var(--muted)"><IconChevronRight /></span>
                         </div>
-                        <span class="side-icon" style="color:var(--muted)"><IconChevronRight /></span>
                       </div>
-                    </div>
-                  );
-                }}
-              </For>
+                    );
+                  }}
+                </For>
+              </div>
             </div>
           </div>
         </Show>
@@ -1072,38 +1227,57 @@ const Settings: Component = () => {
         {/* ═══ KEYBINDS ═══ */}
         <Show when={isSearching() ? matchesKeybinds() : (tab() === "all" || tab() === "keybinds")}>
           <div class="settings-section">
-            <div class="section-label" style="margin-bottom:8px">Keyboard shortcuts</div>
-            <div class="settings-group">
-              <For each={KEYBINDS}>
-                {(action) => (
-                  <div class="settings-row">
-                    <div>
-                      <div class="settings-key">{action.label}</div>
-                      <Show when={action.description}>
-                        <div class="settings-val">{action.description}</div>
-                      </Show>
-                    </div>
-                    <KeybindCapture
-                      binding={resolveBinding(action.id, settings()?.keybinds)}
-                      defaultBinding={action.default}
-                      onChange={(newBinding) => {
-                        const current = { ...(settings()?.keybinds ?? {}) };
-                        if (!newBinding) {
-                          // Reset → remove override so default kicks in
-                          delete current[action.id];
-                        } else {
-                          current[action.id] = newBinding;
-                        }
-                        updateSetting("keybinds", current);
-                      }}
-                    />
-                  </div>
-                )}
-              </For>
+            <div class="settings-section-header">
+              <div>
+                <div class="settings-section-title">Keybinds</div>
+                <div class="settings-section-desc">Global keyboard shortcuts and in-app navigation hotkeys</div>
+              </div>
+              <button class="btn btn--sm" onClick={() => updateSetting("keybinds", {})}>Reset to Defaults</button>
             </div>
-            <div class="settings-hint" style="padding:0 4px">
-              Click a binding and press the new key combination. Escape cancels capture.
-              The reset arrow restores the default.
+
+            <div class="settings-panel">
+              <div class="settings-group-header">
+                <span class="settings-badge">SHORTCUTS</span>
+                <span class="settings-group-title">Global Launcher Hotkeys</span>
+                <span class="settings-group-desc">Click any key badge to record a new key combination</span>
+              </div>
+
+              <div class="settings-grid">
+                <For each={KEYBINDS}>
+                  {(action) => (
+                    <Show when={matches(action.label, action.description)}>
+                      <div class="settings-cell">
+                        <div class="settings-cell-content">
+                          <div class="settings-cell-title">{action.label}</div>
+                          <Show when={action.description}>
+                            <div class="settings-cell-desc">{action.description}</div>
+                          </Show>
+                        </div>
+                        <div class="settings-cell-control">
+                          <KeybindCapture
+                            binding={resolveBinding(action.id, settings()?.keybinds)}
+                            defaultBinding={action.default}
+                            onChange={(newBinding) => {
+                              const current = { ...(settings()?.keybinds ?? {}) };
+                              if (!newBinding) {
+                                // Reset → remove override so default kicks in
+                                delete current[action.id];
+                              } else {
+                                current[action.id] = newBinding;
+                              }
+                              updateSetting("keybinds", current);
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </Show>
+                  )}
+                </For>
+              </div>
+
+              <div class="settings-hint" style="margin-top:12px">
+                Click a binding and press the new key combination. Escape cancels capture. The reset arrow restores default.
+              </div>
             </div>
           </div>
         </Show>
