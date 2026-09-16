@@ -1,9 +1,85 @@
-import { Component, createSignal, createResource, createEffect, onCleanup, For, Show } from "solid-js";
+import { Component, createSignal, createResource, createEffect, onCleanup, For, Show, createMemo } from "solid-js";
 import { Portal } from "solid-js/web";
 import { setActiveScreen, refetchInstances, refreshPinnedInstanceIds, showToast } from "../App";
-import { getGameVersions, getFabricLoaderVersions, getFabricGameVersions, getQuiltLoaderVersions, getQuiltGameVersions, getNeoforgeVersions, getNeoforgeGameVersions, getForgeVersions, getForgeGameVersions, createInstance, prepareInstance, getSettings, companionSupportedVersions } from "../ipc/commands";
+import {
+  getGameVersions,
+  getFabricLoaderVersions,
+  getFabricGameVersions,
+  getQuiltLoaderVersions,
+  getQuiltGameVersions,
+  getNeoforgeVersions,
+  getNeoforgeGameVersions,
+  getForgeVersions,
+  getForgeGameVersions,
+  createInstance,
+  prepareInstance,
+  getSettings,
+  companionSupportedVersions,
+} from "../ipc/commands";
+import { loaderBadgeClass, loaderLabel, loaderBannerColor } from "../lib/loader";
+import {
+  IconArrowLeft,
+  IconCube,
+  IconLayers,
+  IconBolt,
+  IconWand,
+  IconPuzzle,
+  IconCheck,
+  IconShieldCheck,
+  IconPlus,
+} from "../components/Icons";
 
-const LOADERS = ["vanilla", "fabric", "neoforge", "forge", "quilt"] as const;
+interface LoaderInfo {
+  id: string;
+  name: string;
+  desc: string;
+  tag: string;
+  colorClass: string;
+  icon: () => any;
+}
+
+const LOADER_INFOS: LoaderInfo[] = [
+  {
+    id: "vanilla",
+    name: "Vanilla",
+    desc: "Clean official game without modding framework",
+    tag: "Official",
+    colorClass: "green",
+    icon: () => <IconCube />,
+  },
+  {
+    id: "fabric",
+    name: "Fabric",
+    desc: "Lightweight, modular, and fast modern mod loader",
+    tag: "Popular",
+    colorClass: "fabric",
+    icon: () => <IconLayers />,
+  },
+  {
+    id: "neoforge",
+    name: "NeoForge",
+    desc: "Modern community successor to Forge for 1.20.2+",
+    tag: "Modern",
+    colorClass: "purple",
+    icon: () => <IconBolt />,
+  },
+  {
+    id: "forge",
+    name: "Forge",
+    desc: "Classic heavyweight modding framework",
+    tag: "Classic",
+    colorClass: "orange",
+    icon: () => <IconWand />,
+  },
+  {
+    id: "quilt",
+    name: "Quilt",
+    desc: "Community fork of Fabric with wide compatibility",
+    tag: "Modular",
+    colorClass: "quilt",
+    icon: () => <IconPuzzle />,
+  },
+];
 
 const CreateCustom: Component = () => {
   const [name, setName] = createSignal("");
@@ -91,6 +167,7 @@ const CreateCustom: Component = () => {
     if (l === "quilt") { const s = quiltGameVersions() || []; return s.length ? all.filter(v => s.includes(v.id)) : all; }
     return all;
   };
+
   const selectedGameVersion = () => gameVersion() || (gameVersionList().length > 0 ? gameVersionList()[0].id : "");
   const latestVersionId = () => { const l = gameVersionList(); return l.length > 0 ? l[0].id : ""; };
   const filteredVersions = () => {
@@ -112,8 +189,14 @@ const CreateCustom: Component = () => {
     return null;
   };
 
+  const suggestedName = createMemo(() => {
+    const l = loaderLabel(loader());
+    const v = selectedGameVersion();
+    return v ? `${l} ${v}` : l;
+  });
+
   const handleCreate = async () => {
-    const instanceName = name().trim();
+    const instanceName = name().trim() || suggestedName();
     if (!instanceName) return;
     setCreating(true);
     try {
@@ -139,86 +222,307 @@ const CreateCustom: Component = () => {
   };
 
   return (
-    <div class="screen-enter">
-      <div style="display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-4)">
-        <button class="btn btn--sm btn--ghost" onClick={() => setActiveScreen("create-choose")}>← Back</button>
-        <span class="section-label" style="margin-bottom:0;border-bottom:none;padding-bottom:0">Custom setup</span>
+    <div class="screen-enter create-custom-screen">
+      {/* Top Header & Navigation */}
+      <div class="page-header" style="margin-bottom: var(--space-4);">
+        <div style="display:flex; align-items:center; gap: 12px;">
+          <button
+            type="button"
+            class="btn btn--sm btn--neutral"
+            onClick={() => setActiveScreen("create-choose")}
+          >
+            <IconArrowLeft /> Back
+          </button>
+          <div class="page-title-group">
+            <div class="page-title">Custom Setup</div>
+            <div class="page-subtitle">Configure your Minecraft version, mod loader, and instance identity</div>
+          </div>
+        </div>
       </div>
 
-      <div class="settings-group" style="max-width:560px">
-        <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:var(--space-2)">
-          <div class="settings-key">Name</div>
-          <input class="field-control field-control--text" placeholder="e.g. Fabric 1.21.4" value={name()} onInput={(e) => setName(e.currentTarget.value)} />
-        </div>
-
-        <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:var(--space-2)">
-          <div class="settings-key">Loader</div>
-          <div class="tab-strip">
-            <For each={LOADERS}>
-              {(l) => (
-                <div class={`tab ${loader() === l ? "active" : ""}`} onClick={() => { setLoader(l); setGameVersion(""); }}>
-                  {l === "neoforge" ? "NeoForge" : l.charAt(0).toUpperCase() + l.slice(1)}
+      {/* 2-Column Responsive Layout */}
+      <div class="create-custom-layout">
+        {/* Left Column: Form Sections */}
+        <div class="create-form-column">
+          {/* ═══ SECTION 1: INSTANCE IDENTITY ═══ */}
+          <div class="card-gamemode-section">
+            <div class="card-section-header">
+              <span class="card-section-tag tag-settings-general">IDENTITY</span>
+              <span class="card-section-label">Instance Profile</span>
+              <span class="card-section-desc">Choose a unique display name for your new instance</span>
+            </div>
+            <div class="card-section-body">
+              <div class="setting-row">
+                <div class="setting-text">
+                  <div class="setting-name">Instance Name</div>
+                  <div class="setting-desc">Visible across Library and Continue shelves</div>
                 </div>
-              )}
-            </For>
+                <div class="setting-control" style="flex: 1; max-width: 320px; display: flex; gap: 8px;">
+                  <input
+                    class="field-control field-control--text"
+                    placeholder={`e.g. ${suggestedName()}`}
+                    value={name()}
+                    onInput={(e) => setName(e.currentTarget.value)}
+                    style="flex: 1;"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn--sm btn--neutral"
+                    onClick={() => setName(suggestedName())}
+                    data-tip={`Set name to "${suggestedName()}"`}
+                    style="white-space: nowrap;"
+                  >
+                    Auto-name
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ═══ SECTION 2: MOD LOADER SELECTION ═══ */}
+          <div class="card-gamemode-section">
+            <div class="card-section-header">
+              <span class="card-section-tag tag-settings-account">LOADER</span>
+              <span class="card-section-label">Modding Framework</span>
+              <span class="card-section-desc">Select the runtime environment for your instance</span>
+            </div>
+            <div class="card-section-body">
+              <div class="loader-grid">
+                <For each={LOADER_INFOS}>
+                  {(item) => {
+                    const isSelected = () => loader() === item.id;
+                    return (
+                      <div
+                        class="loader-card"
+                        classList={{ selected: isSelected() }}
+                        onClick={() => {
+                          setLoader(item.id);
+                          setGameVersion("");
+                        }}
+                      >
+                        <div class={`loader-card-icon ${item.colorClass}`}>
+                          {item.icon()}
+                        </div>
+                        <div class="loader-card-info">
+                          <div class="loader-card-top">
+                            <span class="loader-card-name">{item.name}</span>
+                            <span class="loader-card-tag">{item.tag}</span>
+                          </div>
+                          <div class="loader-card-desc">{item.desc}</div>
+                        </div>
+                        <Show when={isSelected()}>
+                          <div class="loader-card-check">
+                            <IconCheck />
+                          </div>
+                        </Show>
+                      </div>
+                    );
+                  }}
+                </For>
+              </div>
+            </div>
+          </div>
+
+          {/* ═══ SECTION 3: VERSION SELECTION ═══ */}
+          <div class="card-gamemode-section">
+            <div class="card-section-header">
+              <span class="card-section-tag tag-settings-storage">VERSIONS</span>
+              <span class="card-section-label">Game & Runtime Version</span>
+              <span class="card-section-desc">Select Minecraft release and compatible loader build</span>
+            </div>
+            <div class="card-section-body">
+              {/* Game Version Plate */}
+              <div class="setting-row">
+                <div class="setting-text">
+                  <div class="setting-name">Minecraft Version</div>
+                  <div class="setting-desc">Select release or snapshot version for this instance</div>
+                </div>
+                <div class="setting-control" style="flex: 1; max-width: 320px;">
+                  <Show when={gameVersionList().length > 0} fallback={<div class="settings-val">Loading versions...</div>}>
+                    <div class="custom-dropdown" style="--dropdown-height:var(--control-height-md)">
+                      <div class="custom-dropdown-selected" ref={triggerEl} onClick={toggleVersionDrop}>
+                        <span>{selectedGameVersion() || "Select version"}{latestVersionId() === selectedGameVersion() ? " (latest)" : ""}</span>
+                        <Show when={isCompanionSupported(selectedGameVersion())}>
+                          <span class="companion-tag tip-below" data-tip="Vermeil companion mod supported">
+                            <IconShieldCheck /> Companion
+                          </span>
+                        </Show>
+                        <span class="custom-dropdown-arrow" classList={{ open: versionDropOpen() }}>▾</span>
+                      </div>
+                      <Show when={versionDropOpen()}>
+                        <Portal>
+                          <div class="custom-dropdown-options custom-dropdown-options--floating" ref={panelEl} style={panelStyle()}>
+                            <input
+                              class="custom-dropdown-search"
+                              placeholder="Search versions..."
+                              value={versionQuery()}
+                              onInput={(e) => setVersionQuery(e.currentTarget.value)}
+                              ref={(el) => setTimeout(() => el.focus(), 0)}
+                            />
+                            <div class="custom-dropdown-scroll">
+                              <For each={filteredVersions()}>
+                                {(v) => (
+                                  <div
+                                    class="custom-dropdown-option"
+                                    classList={{ selected: selectedGameVersion() === v.id }}
+                                    onClick={() => { setGameVersion(v.id); setVersionDropOpen(false); }}
+                                  >
+                                    <span>{v.id}{latestVersionId() === v.id ? " (latest)" : ""}</span>
+                                    <Show when={isCompanionSupported(v.id)}>
+                                      <img class="companion-version-mark" src="/logo.png" alt="" title="Vermeil companion mod supported" draggable={false} />
+                                    </Show>
+                                  </div>
+                                )}
+                              </For>
+                              <Show when={filteredVersions().length === 0}>
+                                <div class="custom-dropdown-empty">No versions match "{versionQuery()}"</div>
+                              </Show>
+                            </div>
+                          </div>
+                        </Portal>
+                      </Show>
+                    </div>
+                  </Show>
+                </div>
+              </div>
+
+              {/* Mod Loader Build Channel Plate (Only when loader !== "vanilla") */}
+              <Show when={loader() !== "vanilla"}>
+                <div class="setting-row">
+                  <div class="setting-text">
+                    <div class="setting-name">{loaderLabel(loader())} Build Channel</div>
+                    <div class="setting-desc">Stable is recommended for standard gameplay; Beta includes preview fixes</div>
+                  </div>
+                  <div class="setting-control" style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                    <div class="loader-build-toggles">
+                      <button
+                        type="button"
+                        class={`btn btn--sm ${loaderVersionMode() === "stable" ? "btn--primary" : "btn--neutral"}`}
+                        onClick={() => setLoaderVersionMode("stable")}
+                      >
+                        Stable
+                      </button>
+                      <button
+                        type="button"
+                        class={`btn btn--sm ${loaderVersionMode() === "latest" ? "btn--primary" : "btn--neutral"}`}
+                        onClick={() => setLoaderVersionMode("latest")}
+                      >
+                        Beta / Latest
+                      </button>
+                    </div>
+                    <Show when={loaderVersion()}>
+                      <div class="loader-resolved-badge">
+                        <span>Build:</span>
+                        <code>{loader() === "fabric" && isLegacyVersion() ? "Legacy " : ""}{loaderVersion()}</code>
+                      </div>
+                    </Show>
+                  </div>
+                </div>
+              </Show>
+
+              {/* Companion Mod Status Notice */}
+              <Show when={isCompanionSupported(selectedGameVersion())}>
+                <div class="create-companion-banner">
+                  <IconShieldCheck />
+                  <div class="create-companion-text">
+                    <span class="create-companion-title">Vermeil Companion Mod Supported</span>
+                    <span class="create-companion-desc">In-game skin & cape sync, rich presence, and performance telemetry will be active for this instance.</span>
+                  </div>
+                </div>
+              </Show>
+            </div>
           </div>
         </div>
 
-        <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:var(--space-2)">
-          <div class="settings-key">Game version</div>
-          <Show when={gameVersionList().length > 0} fallback={<div class="settings-val">Loading versions...</div>}>
-            <div class="custom-dropdown" style="--dropdown-height:var(--control-height-md)">
-              <div class="custom-dropdown-selected" ref={triggerEl} onClick={toggleVersionDrop}>
-                <span>{selectedGameVersion() || "Select version"}{latestVersionId() === selectedGameVersion() ? " (latest)" : ""}</span>
-                <Show when={isCompanionSupported(selectedGameVersion())}>
-                  <img class="companion-version-mark" src="/logo.png" alt="" title="Vermeil companion mod supported" draggable={false} />
-                </Show>
-                <span class="custom-dropdown-arrow" classList={{ open: versionDropOpen() }}>▾</span>
+        {/* Right Column: Live Preview & Creation Station */}
+        <div class="create-preview-column">
+          <div class="create-preview-station">
+            <div class="card-gamemode-section">
+              <div class="card-section-header">
+                <span class="card-section-tag tag-settings-performance">PREVIEW</span>
+                <span class="card-section-label">Instance Card</span>
               </div>
-              <Show when={versionDropOpen()}>
-                <Portal>
-                  <div class="custom-dropdown-options custom-dropdown-options--floating" ref={panelEl} style={panelStyle()}>
-                    <input class="custom-dropdown-search" placeholder="Search versions..." value={versionQuery()} onInput={(e) => setVersionQuery(e.currentTarget.value)} ref={(el) => setTimeout(() => el.focus(), 0)} />
-                    <div class="custom-dropdown-scroll">
-                      <For each={filteredVersions()}>
-                        {(v) => (
-                          <div class="custom-dropdown-option" classList={{ selected: selectedGameVersion() === v.id }} onClick={() => { setGameVersion(v.id); setVersionDropOpen(false); }}>
-                            <span>{v.id}{latestVersionId() === v.id ? " (latest)" : ""}</span>
-                            <Show when={isCompanionSupported(v.id)}>
-                              <img class="companion-version-mark" src="/logo.png" alt="" title="Vermeil companion mod supported" draggable={false} />
-                            </Show>
-                          </div>
-                        )}
-                      </For>
-                      <Show when={filteredVersions().length === 0}>
-                        <div class="custom-dropdown-empty">No versions match "{versionQuery()}"</div>
-                      </Show>
+              <div class="card-section-body" style="gap: 12px;">
+                {/* Instance Card Preview */}
+                <div class="card card--inst create-preview-card">
+                  <div class="card-body">
+                    <div class={`inst-card-icon ${loaderBannerColor(loader())}`}>
+                      <span class="inst-card-icon-letter">
+                        {(name().trim() || suggestedName() || "?").charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div class="inst-card-content">
+                      <div class="card-title">
+                        {name().trim() || suggestedName() || "New Instance"}
+                      </div>
+                      <div class="card-sub">
+                        0 mods · Just created
+                      </div>
+                      <div class="inst-card-badges">
+                        <span class="badge badge--version">{selectedGameVersion() || "..."}</span>
+                        <span class={`badge badge--loader ${loaderBadgeClass(loader())}`}>
+                          {loaderLabel(loader())}
+                        </span>
+                        <Show when={loader() !== "vanilla" && loaderVersion()}>
+                          <span class="badge badge--vnum">{loaderVersion()}</span>
+                        </Show>
+                      </div>
                     </div>
                   </div>
-                </Portal>
-              </Show>
-            </div>
-          </Show>
-        </div>
+                </div>
 
-        <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:var(--space-2)">
-          <div class="settings-key">Loader version</div>
-          <Show when={loader() !== "vanilla"} fallback={<div class="settings-val">No mod loader selected</div>}>
-            <div class="tab-strip">
-              <div class={`tab ${loaderVersionMode() === "stable" ? "active" : ""}`} onClick={() => setLoaderVersionMode("stable")}>Stable</div>
-              <div class={`tab ${loaderVersionMode() === "latest" ? "active" : ""}`} onClick={() => setLoaderVersionMode("latest")}>Beta</div>
-            </div>
-            <Show when={loaderVersion()}>
-              <div class="settings-val" style="margin-top:var(--space-1);font-family:var(--font-mono)">→ {loader() === "fabric" && isLegacyVersion() ? "Legacy " : ""}{loaderVersion()}</div>
-            </Show>
-          </Show>
-        </div>
-      </div>
+                {/* Specification Table */}
+                <div class="create-specs-box">
+                  <div class="create-spec-row">
+                    <span class="create-spec-label">Minecraft</span>
+                    <span class="create-spec-value">{selectedGameVersion() || "Select version"}</span>
+                  </div>
+                  <div class="create-spec-row">
+                    <span class="create-spec-label">Mod Loader</span>
+                    <span class="create-spec-value">{loaderLabel(loader())}</span>
+                  </div>
+                  <Show when={loader() !== "vanilla"}>
+                    <div class="create-spec-row">
+                      <span class="create-spec-label">Loader Build</span>
+                      <span class="create-spec-value">
+                        {loaderVersion() || "Resolving..."} ({loaderVersionMode()})
+                      </span>
+                    </div>
+                  </Show>
+                  <div class="create-spec-row">
+                    <span class="create-spec-label">Companion Mod</span>
+                    <span
+                      class="create-spec-value"
+                      classList={{ "create-spec-value--active": isCompanionSupported(selectedGameVersion()) }}
+                    >
+                      {isCompanionSupported(selectedGameVersion()) ? "Supported" : "Not available"}
+                    </span>
+                  </div>
+                  <div class="create-spec-row">
+                    <span class="create-spec-label">Allocated RAM</span>
+                    <span class="create-spec-value">4096 MB (Default)</span>
+                  </div>
+                </div>
 
-      <div style="margin-top:var(--space-5)">
-        <button class="btn btn--primary" onClick={handleCreate} disabled={creating() || !name().trim()}>
-          {creating() ? "Creating..." : "+ Create instance"}
-        </button>
+                {/* Primary Action Button */}
+                <button
+                  type="button"
+                  class="btn btn--primary btn--lg btn--block create-submit-btn"
+                  onClick={handleCreate}
+                  disabled={creating()}
+                >
+                  <Show when={creating()} fallback={<><IconPlus /> Create Instance</>}>
+                    Create Instance
+                  </Show>
+                </button>
+
+                <div class="create-hint-text">
+                  Ready to build. Click to set up files and register in Library.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

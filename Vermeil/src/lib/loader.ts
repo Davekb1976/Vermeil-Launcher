@@ -20,3 +20,15 @@ export function loaderBadgeClass(loader: string): string {
 export function loaderLabel(loader: string): string {
   return loader === "vanilla" ? "Vanilla" : loader.charAt(0).toUpperCase() + loader.slice(1);
 }
+
+/** Loader-tinted icon-tile background class (green, fabric, purple, orange, quilt). */
+export function loaderBannerColor(loader: string): string {
+  switch (loader) {
+    case "fabric": return "fabric";
+    case "quilt": return "quilt";
+    case "forge": return "orange";
+    case "neoforge": return "purple";
+    default: return "green";
+  }
+}
+
