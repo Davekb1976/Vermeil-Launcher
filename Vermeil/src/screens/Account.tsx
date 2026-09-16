@@ -141,7 +141,7 @@ const Account: Component = () => {
         <div class="account-error-banner">
           <IconAlertTriangle />
           <div class="account-error-msg">{error()}</div>
-          <button type="button" class="account-error-dismiss" onClick={() => setError(null)} title="Dismiss">
+          <button type="button" class="account-error-dismiss" onClick={() => setError(null)} data-tip="Dismiss">
             <IconX />
           </button>
         </div>
@@ -174,7 +174,6 @@ const Account: Component = () => {
                   <div
                     class={`account-card ${acc.active ? "active" : ""}`}
                     onClick={() => !acc.active && handleSwitch(acc.id)}
-                    title={acc.active ? `${acc.name} (Active)` : `Switch to ${acc.name}`}
                   >
                     <div class="account-card-avatar">
                       <PlayerHead
@@ -184,7 +183,7 @@ const Account: Component = () => {
                       />
                     </div>
                     <div class="account-card-info">
-                      <div class="account-card-name" title={acc.name}>{acc.name}</div>
+                      <div class="account-card-name">{acc.name}</div>
                       <div class="account-card-type">
                         {acc.is_offline ? "Offline Profile" : "Microsoft"}
                       </div>
@@ -198,8 +197,8 @@ const Account: Component = () => {
                     <button
                       type="button"
                       class="account-card-remove"
+                      data-tip={`Remove ${acc.name}`}
                       onClick={(e) => { e.stopPropagation(); handleRemove(acc.id); }}
-                      title={`Remove ${acc.name}`}
                     >
                       <IconTrash />
                     </button>
