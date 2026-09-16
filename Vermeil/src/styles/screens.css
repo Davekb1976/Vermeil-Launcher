@@ -2555,3 +2555,30 @@
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
 }
 
+.loader-unsupported-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--warning-soft, rgba(230, 126, 34, 0.12));
+  border: 1px solid rgba(230, 126, 34, 0.3);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--warning, #e67e22);
+  font-size: 12px;
+  font-weight: 500;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.loader-unsupported-box svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.create-spec-value--warning {
+  color: var(--warning, #e67e22) !important;
+  font-weight: 600;
+}
+
+

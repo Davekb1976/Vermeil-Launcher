@@ -26,6 +26,7 @@ import {
   IconPuzzle,
   IconCheck,
   IconShieldCheck,
+  IconAlertTriangle,
   IconPlus,
   IconX,
 } from "../components/Icons";
@@ -200,7 +201,15 @@ const CreateCustom: Component = () => {
     return all;
   };
 
-  const selectedGameVersion = () => gameVersion() || (gameVersionList().length > 0 ? gameVersionList()[0].id : "");
+  const selectedGameVersion = () => {
+    const list = gameVersionList();
+    if (!list.length) return gameVersion() || "";
+    const chosen = gameVersion();
+    if (chosen && list.some(v => v.id === chosen)) {
+      return chosen;
+    }
+    return list[0].id;
+  };
   const latestVersionId = () => { const l = gameVersionList(); return l.length > 0 ? l[0].id : ""; };
   const filteredVersions = () => {
     const q = versionQuery().trim().toLowerCase();
@@ -210,6 +219,15 @@ const CreateCustom: Component = () => {
 
   const [neoforgeVersions] = createResource(() => selectedGameVersion(), (gv) => gv ? getNeoforgeVersions(gv) : Promise.resolve([]));
   const [forgeVersions] = createResource(() => selectedGameVersion(), (gv) => gv ? getForgeVersions(gv) : Promise.resolve([]));
+
+  const isLoaderLoading = () => {
+    const l = loader();
+    if (l === "fabric") return fabricVersions.loading;
+    if (l === "quilt") return quiltVersions.loading;
+    if (l === "neoforge") return neoforgeVersions.loading;
+    if (l === "forge") return forgeVersions.loading;
+    return false;
+  };
 
   const availableLoaderVersions = createMemo((): FabricVersion[] => {
     const l = loader();
@@ -465,9 +483,19 @@ const CreateCustom: Component = () => {
                     <Show
                       when={availableLoaderVersions().length > 0}
                       fallback={
-                        <div class="settings-val" style="display:flex; align-items:center; gap:6px; color:var(--text-muted); font-size:12px;">
-                          <span>Resolving {loaderLabel(loader())} builds...</span>
-                        </div>
+                        <Show
+                          when={isLoaderLoading()}
+                          fallback={
+                            <div class="loader-unsupported-box">
+                              <IconAlertTriangle />
+                              <span>No {loaderLabel(loader())} builds for Minecraft {selectedGameVersion()}</span>
+                            </div>
+                          }
+                        >
+                          <div class="settings-val" style="display:flex; align-items:center; gap:6px; color:var(--text-muted); font-size:12px;">
+                            <span>Resolving {loaderLabel(loader())} builds...</span>
+                          </div>
+                        </Show>
                       }
                     >
                       <div class="custom-dropdown" style="--dropdown-height:var(--control-height-md)">
@@ -608,10 +636,15 @@ const CreateCustom: Component = () => {
                   <Show when={loader() !== "vanilla"}>
                     <div class="create-spec-row">
                       <span class="create-spec-label">Loader Build</span>
-                      <span class="create-spec-value">
+                      <span
+                        class="create-spec-value"
+                        classList={{ "create-spec-value--warning": !loaderVersion() && !isLoaderLoading() }}
+                      >
                         {loaderVersion()
                           ? `${loader() === "fabric" && isLegacyVersion() ? "Legacy " : ""}${formatLoaderVersionDisplay(loaderVersion()!)} ${isRecommendedLoaderVersion() ? "(Recommended)" : "(Custom)"}`
-                          : "Resolving..."}
+                          : isLoaderLoading()
+                          ? "Resolving..."
+                          : `Unsupported on MC ${selectedGameVersion()}`}
                       </span>
                     </div>
                   </Show>
@@ -643,7 +676,7 @@ const CreateCustom: Component = () => {
                     type="button"
                     class="btn btn--primary btn--lg create-submit-btn"
                     onClick={handleCreate}
-                    disabled={creating()}
+                    disabled={creating() || (loader() !== "vanilla" && !loaderVersion())}
                   >
                     <Show when={creating()} fallback={<><IconPlus /> Create Instance</>}>
                       Create Instance
@@ -652,7 +685,12 @@ const CreateCustom: Component = () => {
                 </div>
 
                 <div class="create-hint-text">
-                  Ready to build. Click to set up files and register in Library.
+                  <Show
+                    when={loader() === "vanilla" || !!loaderVersion()}
+                    fallback={<span style="color:var(--warning);">{loaderLabel(loader())} is not available for Minecraft {selectedGameVersion()}. Please choose a supported version.</span>}
+                  >
+                    Ready to build. Click to set up files and register in Library.
+                  </Show>
                 </div>
               </div>
             </div>
