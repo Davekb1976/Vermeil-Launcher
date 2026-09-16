@@ -580,84 +580,395 @@
 
 
 /* ============================================================
-   Account screen — 2-column card grid (replaces the old single-
-   column .account-row list). Each card shows the player's skin
-   head, name, and account type.
+   Account screen — Tactical chunky panels, active badge with
+   blinking square dot, and square delete button with danger hover.
    ============================================================ */
+.account-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  box-sizing: border-box;
+  padding-bottom: 80px; /* breathing room above floating dock */
+}
+
 .account-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 300px));
-  gap: var(--space-3);
-  justify-content: start;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
-@media (max-width: 720px) {
+@media (max-width: 680px) {
   .account-grid { grid-template-columns: 1fr; }
 }
+
 .account-card {
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  gap: 12px;
+  padding: 10px 14px;
   background: var(--surface-panel);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
   border-radius: 0;
+  box-sizing: border-box;
+  box-shadow: var(--bevel);
   cursor: pointer;
-  transition: border-color 0.12s, background 0.12s;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.15s;
+  user-select: none;
 }
-.account-card:hover { border-color: var(--accent); }
+
+.account-card:hover:not(.active) {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  border-left-color: var(--accent);
+  background: var(--surface-raised);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.account-card:active:not(.active) {
+  transform: translateY(1px) scale(0.99);
+  box-shadow: none;
+}
+
+/* Active account card — highlighted plate with purple accent frame (Image 2) */
 .account-card.active {
-  border-color: var(--accent);
-  background: var(--accent-tint);
+  border: 1px solid var(--accent);
+  border-left: 3px solid var(--accent);
+  background: rgba(139, 92, 246, 0.08);
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.12), var(--bevel);
   cursor: default;
 }
+
 .account-card-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 0;
+  border: 1px solid var(--border);
+  background: var(--surface-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
 }
+
 .account-card-info {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 2px;
 }
+
 .account-card-name {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
 }
+
 .account-card-type {
   font-size: 10px;
-  color: var(--muted);
-  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
+
+.account-card.active .account-card-type {
+  color: #a78bfa;
+}
+
+/* Active status badge with blinking square dot (Image 2) */
+.account-badge-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.45);
+  color: #c4b5fd;
+  padding: 4px 9px 4px 7px;
+  border-radius: 0;
+  letter-spacing: 0.02em;
+  user-select: none;
+  flex-shrink: 0;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.account-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
+  background: #a78bfa;
+  box-shadow: 0 0 6px rgba(167, 139, 250, 0.85);
+  animation: accountSquareDotBlink 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes accountSquareDotBlink {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 6px rgba(167, 139, 250, 0.9);
+  }
+  50% {
+    opacity: 0.25;
+    transform: scale(0.85);
+    box-shadow: 0 0 1px rgba(167, 139, 250, 0.2);
+  }
+}
+
+/* Delete button: square keycap plate (Image 2 & 3) */
 .account-card-remove {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: none;
-  border: none;
-  color: var(--muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 0;
+  background: var(--surface-raised);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
   cursor: pointer;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-xs);
-  opacity: 0.55;
-  transition: opacity 0.12s, color 0.12s, background 0.12s;
+  padding: 0;
+  flex-shrink: 0;
+  box-shadow: var(--bevel);
+  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1),
+              background 0.15s ease,
+              border-color 0.15s ease,
+              color 0.15s ease,
+              box-shadow 0.15s ease;
 }
+
+/* In active card: purple border outline (Image 2) */
+.account-card.active .account-card-remove {
+  border-color: #a78bfa;
+  background: rgba(139, 92, 246, 0.1);
+  color: #c4b5fd;
+}
+
 .account-card-remove svg {
   width: 14px;
   height: 14px;
+  transition: transform 0.12s;
 }
-.account-card:hover .account-card-remove {
-  opacity: 1;
-}
+
+/* Hover: becomes salmon/red with lavender/purple border (Image 3) */
 .account-card-remove:hover {
-  color: var(--danger);
-  background: rgba(224, 82, 82, 0.1);
+  background: #d65d5d !important;
+  border-color: #a78bfa !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.35), 0 2px 8px rgba(214, 93, 93, 0.35) !important;
+  transform: translateY(-2px) scale(1.05);
+}
+
+.account-card-remove:active {
+  transform: translateY(1px) scale(0.96);
+  box-shadow: none !important;
+}
+
+/* Empty state well when no accounts are saved */
+.account-empty-well {
+  padding: 28px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.account-empty-well svg {
+  width: 30px;
+  height: 30px;
+  color: var(--text-faint);
+}
+.account-empty-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.account-empty-desc {
+  font-size: 11px;
+  color: var(--text-faint);
+  max-width: 420px;
+  line-height: 1.45;
+}
+
+/* Authentication methods grid */
+.account-add-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+@media (max-width: 760px) {
+  .account-add-grid { grid-template-columns: 1fr; }
+}
+
+.account-add-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  box-sizing: border-box;
+  box-shadow: var(--bevel);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.account-add-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  background: var(--surface-raised);
+}
+
+.account-add-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-add-card-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 2px 6px;
+  width: fit-content;
+}
+
+.account-add-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.account-add-card-desc {
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.45;
+}
+
+.account-add-card-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.account-offline-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.account-offline-input {
+  flex: 1;
+  min-width: 0;
+  height: var(--control-height-md);
+  padding: 0 10px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.account-offline-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Security & Privacy card */
+.account-security-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  box-sizing: border-box;
+}
+
+.account-security-icon {
+  width: 18px;
+  height: 18px;
+  color: #a78bfa;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.account-security-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.account-security-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.account-security-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.account-security-desc {
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.45;
+}
+
+/* Error banner */
+.account-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  color: var(--rose);
+  font-size: 12px;
+  font-weight: 600;
+}
+.account-error-banner svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.account-error-msg {
+  flex: 1;
+}
+.account-error-dismiss {
+  background: transparent;
+  border: none;
+  color: var(--rose);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.account-error-dismiss svg {
+  width: 14px;
+  height: 14px;
 }
 
 

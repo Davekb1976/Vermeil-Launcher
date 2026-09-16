@@ -9,7 +9,7 @@ import {
   getAccountSkin,
 } from "../ipc/commands";
 import PlayerHead from "../components/PlayerHead";
-import { IconX } from "../components/Icons";
+import { IconX, IconTrash, IconPlus, IconUser, IconShieldCheck, IconAlertTriangle } from "../components/Icons";
 import type { MinecraftProfile } from "../ipc/commands";
 
 /**
@@ -127,93 +127,174 @@ const Account: Component = () => {
   };
 
   return (
-    <div class="screen-enter">
-      <div class="section-label">Accounts</div>
-
-      {/* Account grid — two columns at any reasonable window width, one
-          column when the launcher is dragged narrow. Wider cards leave room
-          for the head, name, type, badge, and the remove button without
-          crowding. */}
-      <Show when={accounts() && accounts()!.length > 0}>
-        <div class="account-grid">
-          <For each={accounts()}>
-            {(acc: MinecraftProfile) => (
-              <div
-                class={`account-card ${acc.active ? "active" : ""}`}
-                onClick={() => !acc.active && handleSwitch(acc.id)}
-              >
-                <div class="account-card-avatar">
-                  <PlayerHead
-                    skinUrl={skinFor(acc)}
-                    name={acc.name}
-                    size={48}
-                  />
-                </div>
-                <div class="account-card-info">
-                  <div class="account-card-name">{acc.name}</div>
-                  <div class="account-card-type">
-                    {acc.is_offline ? "Offline" : "Microsoft"}
-                  </div>
-                </div>
-                <Show when={acc.active}>
-                  <span class="account-badge-active">Active</span>
-                </Show>
-                <button
-                  class="account-card-remove"
-                  onClick={(e) => { e.stopPropagation(); handleRemove(acc.id); }}
-                  title="Remove account"
-                >
-                  <IconX />
-                </button>
-              </div>
-            )}
-          </For>
-        </div>
-      </Show>
-
-      {/* Add account section */}
-      <div style="margin-top:20px">
-        <div class="section-label">Add account</div>
-
-        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <button
-            class="btn btn--primary"
-            onClick={handleLogin}
-            disabled={loggingIn()}
-          >
-            {loggingIn() ? "Signing in..." : "+ Microsoft"}
-          </button>
-        </div>
-
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">
-          Or add an offline account:
-        </div>
-        <div style="display:flex;gap:8px">
-          <input
-            class="field-control field-control--text"
-            placeholder="Username (1-16 chars)"
-            style="max-width:220px"
-            value={offlineUsername()}
-            onInput={(e) => setOfflineUsername(e.currentTarget.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") handleOfflineLogin(); }}
-            maxLength={16}
-          />
-          <button class="btn" onClick={handleOfflineLogin} disabled={!offlineUsername().trim()}>
-            + Offline
-          </button>
+    <div class="screen-enter account-screen">
+      {/* Page Header */}
+      <div class="page-header">
+        <div class="page-title-group">
+          <div class="page-title">Accounts</div>
+          <div class="page-subtitle">Manage saved profiles, active identities, and authentication methods</div>
         </div>
       </div>
 
+      {/* Error alert banner */}
       <Show when={error()}>
-        <div style="color:var(--danger);font-size:11px;margin-top:12px;padding:8px 10px;background:var(--danger-soft);border:1px solid var(--danger)">
-          {error()}
+        <div class="account-error-banner">
+          <IconAlertTriangle />
+          <div class="account-error-msg">{error()}</div>
+          <button type="button" class="account-error-dismiss" onClick={() => setError(null)} title="Dismiss">
+            <IconX />
+          </button>
         </div>
       </Show>
 
-      <div style="font-size:10px;color:var(--muted);margin-top:20px;line-height:1.5">
-        Vermeil is unofficial. Not affiliated with Mojang Studios or Microsoft.
-        Authentication uses Microsoft's official OAuth flow.
-        Tokens are stored locally only — Vermeil has no servers.
+      {/* ═══ SAVED PROFILES SECTION ═══ */}
+      <div class="card-gamemode-section">
+        <div class="card-section-header">
+          <span class="card-section-tag tag-settings-account">PROFILES</span>
+          <span class="card-section-label">Active & Saved Profiles</span>
+          <span class="card-section-desc">Click any inactive profile to switch your active identity</span>
+        </div>
+
+        <div class="card-section-body">
+          <Show
+            when={accounts() && accounts()!.length > 0}
+            fallback={
+              <div class="account-empty-well">
+                <IconUser />
+                <div class="account-empty-title">No accounts added yet</div>
+                <div class="account-empty-desc">
+                  Sign in with an official Microsoft account or create an offline profile below to start playing.
+                </div>
+              </div>
+            }
+          >
+            <div class="account-grid">
+              <For each={accounts()}>
+                {(acc: MinecraftProfile) => (
+                  <div
+                    class={`account-card ${acc.active ? "active" : ""}`}
+                    onClick={() => !acc.active && handleSwitch(acc.id)}
+                    title={acc.active ? `${acc.name} (Active)` : `Switch to ${acc.name}`}
+                  >
+                    <div class="account-card-avatar">
+                      <PlayerHead
+                        skinUrl={skinFor(acc)}
+                        name={acc.name}
+                        size={44}
+                      />
+                    </div>
+                    <div class="account-card-info">
+                      <div class="account-card-name" title={acc.name}>{acc.name}</div>
+                      <div class="account-card-type">
+                        {acc.is_offline ? "Offline Profile" : "Microsoft"}
+                      </div>
+                    </div>
+                    <Show when={acc.active}>
+                      <div class="account-badge-active">
+                        <span class="account-badge-dot" />
+                        <span>Active</span>
+                      </div>
+                    </Show>
+                    <button
+                      type="button"
+                      class="account-card-remove"
+                      onClick={(e) => { e.stopPropagation(); handleRemove(acc.id); }}
+                      title={`Remove ${acc.name}`}
+                    >
+                      <IconTrash />
+                    </button>
+                  </div>
+                )}
+              </For>
+            </div>
+          </Show>
+        </div>
+      </div>
+
+      {/* ═══ ADD ACCOUNT SECTION ═══ */}
+      <div class="card-gamemode-section">
+        <div class="card-section-header">
+          <span class="card-section-tag tag-settings-general">AUTHENTICATION</span>
+          <span class="card-section-label">Add Account</span>
+          <span class="card-section-desc">Connect an official Microsoft account or create an offline local profile</span>
+        </div>
+
+        <div class="card-section-body">
+          <div class="account-add-grid">
+            {/* Microsoft Account Card */}
+            <div class="account-add-card">
+              <div class="account-add-card-header">
+                <div class="account-add-card-badge tag-settings-account">ONLINE</div>
+                <div class="account-add-card-title">Microsoft Account</div>
+                <div class="account-add-card-desc">
+                  Official Mojang / Microsoft authentication. Required for online multiplayer, Realms, and official skin sync.
+                </div>
+              </div>
+              <div class="account-add-card-footer">
+                <button
+                  type="button"
+                  class="btn btn--primary"
+                  onClick={handleLogin}
+                  disabled={loggingIn()}
+                >
+                  <Show when={loggingIn()} fallback={
+                    <>
+                      <IconPlus />
+                      <span>Add Microsoft Account</span>
+                    </>
+                  }>
+                    <span>Signing in via browser...</span>
+                  </Show>
+                </button>
+              </div>
+            </div>
+
+            {/* Offline Account Card */}
+            <div class="account-add-card">
+              <div class="account-add-card-header">
+                <div class="account-add-card-badge tag-settings-about">OFFLINE</div>
+                <div class="account-add-card-title">Offline / Local Profile</div>
+                <div class="account-add-card-desc">
+                  Local username for singleplayer and LAN worlds. Does not require Microsoft sign-in or an internet connection.
+                </div>
+              </div>
+              <div class="account-add-card-footer">
+                <div class="account-offline-form">
+                  <input
+                    class="account-offline-input"
+                    placeholder="Username (1-16 chars)"
+                    value={offlineUsername()}
+                    onInput={(e) => setOfflineUsername(e.currentTarget.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleOfflineLogin(); }}
+                    maxLength={16}
+                  />
+                  <button
+                    type="button"
+                    class="btn btn--neutral"
+                    onClick={handleOfflineLogin}
+                    disabled={!offlineUsername().trim()}
+                  >
+                    <IconPlus />
+                    <span>Add Offline</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══ SECURITY & ENCRYPTION NOTE ═══ */}
+      <div class="account-security-card">
+        <div class="account-security-icon">
+          <IconShieldCheck />
+        </div>
+        <div class="account-security-content">
+          <div class="account-security-title">Local & Encrypted Credentials</div>
+          <div class="account-security-desc">
+            Vermeil authenticates directly with Microsoft's official OAuth 2.0 PKCE flow. Refresh tokens and profile data are encrypted locally on your computer using OS-level secure storage (DPAPI on Windows, Secret Service on Linux). Vermeil operates zero external servers and collects zero telemetry.
+          </div>
+        </div>
       </div>
     </div>
   );
