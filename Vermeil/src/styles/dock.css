@@ -48,22 +48,21 @@
   transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1), opacity 0.25s ease;
 }
 
-/* The dock pill — clean, seamless dark container matching Image 2 & 3.
-   No harsh 2px black border! */
+/* The dock pill — clean, seamless dark container with frosted glassmorphism. */
 .dock {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #1b1826, #120f1a);
+  background: var(--surface-glass);
   backdrop-filter: blur(16px) saturate(140%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
   border-radius: 0;
   padding: 10px 14px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 20px 40px -10px rgba(0, 0, 0, 0.7);
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 32px rgba(0, 0, 0, 0.55);
   pointer-events: auto;
   transition: padding 0.25s ease, background 0.25s ease;
 }
@@ -72,7 +71,7 @@
    accommodate the carousel and use a slightly different surface tint. */
 .dock-wrap.pin-mode .dock {
   padding: var(--space-2) var(--space-3);
-  background: linear-gradient(180deg, #221e30, #161320);
+  background: var(--surface-glass-strong);
 }
 
 /* Unified nav row — all 7 buttons in one seamless line with even spacing */
@@ -109,8 +108,8 @@
   width: 42px;
   height: 42px;
   border-radius: 0;
-  background: #231f30;
-  color: #9891ab;
+  background: var(--surface-raised);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -119,9 +118,9 @@
   flex-shrink: 0;
   user-select: none;
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.12),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.08),
     inset 0 -2px 0 rgba(0, 0, 0, 0.35),
-    0 var(--dock-press-travel) 0 #0d0a14;
+    0 var(--dock-press-travel) 0 var(--surface-sunken);
   transition:
     transform 0.08s cubic-bezier(0.2, 0, 0, 1),
     box-shadow 0.08s cubic-bezier(0.2, 0, 0, 1),
@@ -151,61 +150,61 @@
 .dock-btn:focus-visible {
   outline: none;
   transform: translateY(var(--dock-press-travel));
-  background: #2b2638;
-  color: #f5f2fc;
+  background: var(--border-strong);
+  color: var(--text);
   box-shadow:
-    inset 0 3px 5px rgba(0, 0, 0, 0.5),
+    inset 0 2px 4px rgba(0, 0, 0, 0.35),
     inset 0 -1px 0 rgba(255, 255, 255, 0.04),
-    0 0 0 #0d0a14;
+    0 0 0 var(--surface-sunken);
 }
 .dock-btn:hover svg {
   transform: scale(1.06);
 }
 .dock-btn:active {
   transform: translateY(var(--dock-press-travel));
-  background: #1e1a28;
-  color: #ffffff;
+  background: var(--surface-panel);
+  color: var(--text);
   box-shadow:
-    inset 0 4px 6px rgba(0, 0, 0, 0.65),
-    0 0 0 #0d0a14;
+    inset 0 3px 5px rgba(0, 0, 0, 0.45),
+    0 0 0 var(--surface-sunken);
 }
 
-/* Active route button state — exactly matches Image 2 & 3 */
+/* Active route button state */
 .dock-btn.active {
-  background: linear-gradient(180deg, #a98bfb, #8b5cf6);
-  color: #f7f3ff;
+  background: var(--accent);
+  color: var(--accent-contrast);
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
-    inset 0 -2px 0 #4a2a90,
-    0 var(--dock-press-travel) 0 #4a2a90;
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -2px 0 var(--accent-strong),
+    0 var(--dock-press-travel) 0 var(--accent-shadow);
 }
 .dock-btn.active:hover,
 .dock-btn.active:focus-visible {
   transform: translateY(var(--dock-press-travel));
-  background: linear-gradient(180deg, #9d7df8, #7c4cf0);
-  color: #ffffff;
+  background: var(--accent-strong);
+  color: var(--accent-contrast);
   box-shadow:
-    inset 0 3px 6px rgba(0, 0, 0, 0.35),
-    0 0 0 #4a2a90;
+    inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    0 0 0 var(--accent-shadow);
 }
 .dock-btn.active:active {
   transform: translateY(var(--dock-press-travel));
-  background: linear-gradient(180deg, #8c68f5, #6d3be8);
+  background: var(--accent-strong);
   box-shadow:
-    inset 0 4px 8px rgba(0, 0, 0, 0.45),
-    0 0 0 #4a2a90;
+    inset 0 3px 6px rgba(0, 0, 0, 0.4),
+    0 0 0 var(--accent-shadow);
 }
 
-/* Active indicator bar inside button — matches user snippet & Image 2 */
+/* Active indicator bar inside button */
 .dock-btn-dot {
   position: absolute;
-  bottom: 7px;
+  bottom: 5px;
   left: 50%;
   transform: translateX(-50%);
-  width: 14px;
-  height: 3px;
+  width: 12px;
+  height: 2.5px;
   border-radius: 0;
-  background: #f7f3ff;
+  background: var(--accent-contrast);
   opacity: 0.95;
   pointer-events: none;
   z-index: 2;
@@ -253,25 +252,25 @@
 
 /* Stop state (game running) */
 .dock-btn.dock-btn-stop {
-  background: linear-gradient(180deg, #ef4444, #dc2626) !important;
+  background: var(--danger) !important;
   color: #ffffff !important;
   box-shadow:
     inset 0 1.5px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -2px 0 #7f1d1d,
-    0 var(--dock-press-travel) 0 #5c1414 !important;
+    inset 0 -2px 0 var(--danger-soft),
+    0 var(--dock-press-travel) 0 var(--danger-shadow) !important;
 }
 .dock-btn.dock-btn-stop:hover {
   transform: translateY(var(--dock-press-travel));
-  background: linear-gradient(180deg, #f87171, #ef4444) !important;
+  background: #f87171 !important;
   box-shadow:
-    inset 0 3px 6px rgba(0, 0, 0, 0.4),
-    0 0 0 #5c1414 !important;
+    inset 0 2px 4px rgba(0, 0, 0, 0.35),
+    0 0 0 var(--danger-shadow) !important;
 }
 .dock-btn.dock-btn-stop:active {
   transform: translateY(var(--dock-press-travel));
   box-shadow:
-    inset 0 4px 8px rgba(0, 0, 0, 0.55),
-    0 0 0 #5c1414 !important;
+    inset 0 3px 6px rgba(0, 0, 0, 0.45),
+    0 0 0 var(--danger-shadow) !important;
 }
 
 /* Close button for pin selector mode */
@@ -284,16 +283,16 @@
   height: 42px;
   border: 0;
   border-radius: 0;
-  background: linear-gradient(180deg, #2b2638, #1e1a29);
-  color: #9891ab;
+  background: var(--surface-raised);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.4),
-    0 var(--dock-press-travel) 0 #0d0a14,
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.35),
+    0 var(--dock-press-travel) 0 var(--surface-sunken),
     0 8px 20px rgba(0, 0, 0, 0.5);
   transition:
     transform 0.08s cubic-bezier(0.2, 0, 0, 1),
@@ -304,17 +303,18 @@
 }
 .dock-pin-close-btn:hover {
   transform: translateX(-50%) translateY(var(--dock-press-travel));
-  color: #ffffff;
-  background: #352e45;
+  color: var(--text);
+  background: var(--border-strong);
   box-shadow:
-    inset 0 3px 5px rgba(0, 0, 0, 0.5),
-    0 0 0 #0d0a14;
+    inset 0 2px 4px rgba(0, 0, 0, 0.35),
+    0 0 0 var(--surface-sunken);
 }
 .dock-pin-close-btn:active {
   transform: translateX(-50%) translateY(var(--dock-press-travel));
+  background: var(--surface-panel);
   box-shadow:
-    inset 0 4px 8px rgba(0, 0, 0, 0.65),
-    0 0 0 #0d0a14;
+    inset 0 3px 6px rgba(0, 0, 0, 0.45),
+    0 0 0 var(--surface-sunken);
 }
 
 /* ============================================================
