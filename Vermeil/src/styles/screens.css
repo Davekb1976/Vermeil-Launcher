@@ -820,17 +820,23 @@
   left: calc(100% + 10px);
   top: 50%;
   transform: translateY(-50%);
-  background: var(--bg4);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  border-left: 2.5px solid var(--accent);
   color: var(--text);
+  font-family: var(--font);
   font-size: 11px;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-xs);
+  font-weight: var(--fw-semibold);
+  padding: 4px 9px 4px 8px;
+  border-radius: 0;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.12s;
+  transition: opacity 0.12s ease;
   z-index: 100;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.65),
+    0 1px 3px rgba(0, 0, 0, 0.4);
 }
 .nav-pin-icon[data-tooltip]:hover::after { opacity: 1; }
 /* Loader-tinted backgrounds — mirror Library .inst-banner palette so the

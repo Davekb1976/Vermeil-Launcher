@@ -7,27 +7,42 @@
  * never render anywhere now.
  */
 
-/* Generic tooltip (appears above element) — used by [data-tip] outside the dock. */
+/* Generic tooltip (appears above element) — used by [data-tip] outside the dock.
+   Sharp corners with purple accent tag. */
 [data-tip] { position: relative; }
 [data-tip]::after {
   content: attr(data-tip);
-  position: absolute; bottom: calc(100% + 8px); left: 50%;
-  transform: translateX(-50%) translateY(4px);
-  background: var(--bg3); border: 1px solid var(--border); color: var(--text);
-  font-size: 10px; font-weight: 500; padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm);
-  white-space: nowrap; opacity: 0; pointer-events: none;
-  transition: opacity .15s, transform .15s;
-  z-index: 200; box-shadow: 0 4px 12px rgba(0,0,0,.4);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(3px);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  border-left: 2.5px solid var(--accent);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: var(--fw-semibold);
+  padding: 4px 9px 4px 8px;
+  border-radius: 0;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease, transform .12s cubic-bezier(0.2, 0, 0, 1);
+  z-index: 200;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.65),
+    0 1px 3px rgba(0, 0, 0, 0.4);
 }
 [data-tip]:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
-.tip-below[data-tip]::after { bottom: auto; top: calc(100% + 8px); transform: translateX(-50%) translateY(-4px); }
+.tip-below[data-tip]::after { bottom: auto; top: calc(100% + 8px); transform: translateX(-50%) translateY(-3px); }
 .tip-below[data-tip]:hover::after { transform: translateX(-50%) translateY(0); }
-.tip-left[data-tip]::after { left: 0; transform: translateY(4px); }
+.tip-left[data-tip]::after { left: 0; transform: translateY(3px); }
 .tip-left[data-tip]:hover::after { transform: translateY(0); }
 /* Right-anchored variant — pins the tooltip's right edge to the element so it
    extends leftward. For affordances at the right edge of the window (e.g. the
    "Official" news badge) where a centered tooltip would clip off-screen. */
-.tip-right[data-tip]::after { left: auto; right: 0; transform: translateY(4px); white-space: normal; max-width: 280px; }
+.tip-right[data-tip]::after { left: auto; right: 0; transform: translateY(3px); white-space: normal; max-width: 280px; }
 .tip-right[data-tip]:hover::after { transform: translateY(0); }
 
 /* Main area — fills the window now that the sidebar is gone. The warm
