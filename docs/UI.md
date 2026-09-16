@@ -48,11 +48,12 @@ Defined entirely as tokens in `base.css :root` — reference `var(--token)`, nev
 
 - **Sharp edges.** All `--radius-*` are `0`. Keep referencing the tokens so radius can return cohesively later.
 - **Flat surfaces, hairline borders.** Depth from contrast + one shadow scale. Bevel tokens resolve to `none`.
-- **Dark gray + purple.** Surface ramp + single `--accent` purple. Gold/teal/emerald tokens exist but are unused — don't reach for them.
+- **Dark gray + purple.** Surface ramp + single `--accent` purple (`#8b5cf6`). Block keycap shadows use `--key-shadow` (`#08060d`), `--accent-shadow` (`#4a2a90`), and `--danger-shadow` (`#4a1515`).
+- **Chunky keycap buttons:** 3px physical block drop shadow at rest with zero border (`border: 0`). On hover/active, the button translates down by 3px (`transform: translateY(3px)`) and the drop shadow collapses to `0 0 0` with an inset shadow (`inset 0 2.5px 4px rgba(0,0,0,.45)`), giving tactile mechanical switch travel with zero visible gap.
 - **No ornament.** `.panel--bracketed` is a no-op (`display:none`).
 - **Fonts:** `--font-display` (Oswald, uppercase headers), `--font` (DM Sans, body), `--font-mono` (DM Mono, versions/paths).
 
-Token groups (see `base.css` for values): surfaces (`--surface-*`), borders (`--border*`), text (`--text*`), accent (`--accent*`), semantic state (`--danger/warn/success/info` + `*-soft`), type scale (`--fs-*`, `--fw-*`), spacing (`--space-0..8`, 4px scale), control heights (`--control-height-*`), card tracks (`--card-track`, `--card-track-compact`), shadows, loader/source brand hues.
+Token groups (see `base.css` for values): surfaces (`--surface-*`), borders (`--border*`), text (`--text*`), accent (`--accent*`), semantic state (`--danger/warn/success/info` + `*-soft`), type scale (`--fs-*`, `--fw-*`), spacing (`--space-0..8`, 4px scale), control heights (`--control-height-*`), card tracks (`--card-track`, `--card-track-compact`), shadows (`--key-shadow`, `--accent-shadow`, `--danger-shadow`), loader/source brand hues.
 
 ## Canonical component vocabulary
 
@@ -60,7 +61,7 @@ Token groups (see `base.css` for values): surfaces (`--surface-*`), borders (`--
 
 | Role | Class | Key variants |
 |------|-------|--------------|
-| Button | `.btn` | `--sm/--md/--lg`, `--primary/--neutral/--ghost/--danger`, `--block` |
+| Button | `.btn` | `--sm/--md/--lg`, `--primary/--neutral/--ghost/--danger`, `--block` (tactile 3px keycap) |
 | Card | `.card` | `--inst`, `--mod`, `--media`, `--compact`, `--expanded` |
 | Card grid | `.card-grid` | `--compact`. `auto-fit minmax(track,1fr)` — reflows, fills rows evenly |
 | Badge | `.badge` | `--loader` (+ per-loader), `--version`, `--vnum` (content version), `--source` |

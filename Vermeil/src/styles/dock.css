@@ -12,7 +12,7 @@
  */
 
 :root {
-  --dock-press-travel: 4px;
+  --dock-press-travel: 3px;
 }
 
 /* Wrapper centers the dock and reserves space for the raised FAB. */
