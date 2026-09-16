@@ -1478,10 +1478,56 @@
 .inst-card-icon.quilt { background: var(--grad-inst-quilt); }
 .inst-card-icon.purple { background: var(--grad-inst-quilt); }
 
+/* Continue section grid — 3 columns so worlds don't stretch into massive 1-column banners */
+.continue-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 24px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1100px) {
+  .continue-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .continue-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Continue-section world cards — reuse the instance-card row layout, with the
    world's icon.png in the tile, a modpack icon + name sub-row, loader/version
    badges, and a trailing Play button. */
-.world-card .card-body { align-items: center; }
+.world-card {
+  border-radius: 0;
+  box-shadow: var(--bevel);
+  transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+.world-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  background: var(--surface-raised);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.world-card:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+.world-card .card-body {
+  align-items: center;
+  padding: 10px 12px;
+  gap: 10px;
+  min-width: 0;
+}
+.world-card .inst-card-icon,
+.world-card .inst-card-icon img {
+  border-radius: 0;
+}
 .world-card .inst-card-icon .side-icon {
   display: flex;
   align-items: center;
@@ -1489,6 +1535,17 @@
   color: rgba(255, 255, 255, 0.9);
 }
 .world-card .inst-card-icon .side-icon svg { width: 22px; height: 22px; }
+.world-card .inst-card-content {
+  min-width: 0;
+  flex: 1;
+}
+.world-card .card-title {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .world-card-sub {
   display: flex;
   align-items: center;
@@ -1498,7 +1555,7 @@
 .world-card-inst-icon {
   width: 14px;
   height: 14px;
-  border-radius: var(--radius-xs);
+  border-radius: 0;
   object-fit: cover;
   flex-shrink: 0;
 }
@@ -1506,6 +1563,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.world-card .inst-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  flex-wrap: wrap;
 }
 .world-card-play {
   flex-shrink: 0;

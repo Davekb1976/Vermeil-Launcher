@@ -252,7 +252,7 @@ const Home: Component = () => {
             No recent worlds. Play a game to see your worlds here.
           </div>
         }>
-          <div class="card-grid" style="margin-bottom:24px">
+          <div class="continue-grid">
             <For each={recentWorlds()}>
               {(world) => (
                 <div
