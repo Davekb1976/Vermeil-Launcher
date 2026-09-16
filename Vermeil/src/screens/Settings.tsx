@@ -473,9 +473,9 @@ const Settings: Component = () => {
         <Show when={isSearching() ? matchesGeneral() : (tab() === "all" || tab() === "general")}>
           <div class="settings-category">
             <div class="page-header">
-              <div>
-                <span class="page-title">General</span>
-                <span class="page-subtitle">Core launcher preferences, startup options, and updates</span>
+              <div class="page-title-group">
+                <div class="page-title">General</div>
+                <div class="page-subtitle">Core launcher preferences, startup options, and updates</div>
               </div>
             </div>
 
@@ -624,7 +624,7 @@ const Settings: Component = () => {
                       </Show>
 
                       <Show when={isGeneralSection() || matches("Check for updates", "Manually check for a new version", "update")}>
-                        <div class="setting-row">
+                        <div class="setting-row setting-row--span-2">
                           <div class="setting-info">
                             <span class="setting-name">Check for updates</span>
                             <span class="setting-desc">Manually check for a new version</span>
@@ -715,7 +715,7 @@ const Settings: Component = () => {
         <Show when={isSearching() ? matchesResources() : (tab() === "all" || tab() === "resources")}>
           <div class="settings-category">
             <div class="page-header">
-              <div>
+              <div class="page-title-group">
                 <div class="page-title">Resources</div>
                 <div class="page-subtitle">Storage paths, download concurrency, and Java environment</div>
               </div>
@@ -1024,7 +1024,7 @@ const Settings: Component = () => {
         <Show when={isSearching() ? matchesInstances() : (tab() === "all" || tab() === "instances")}>
           <div class="settings-category">
             <div class="page-header">
-              <div>
+              <div class="page-title-group">
                 <div class="page-title">Global Instance Defaults</div>
                 <div class="page-subtitle">Default video, audio, window, and memory configurations applied to all instances</div>
               </div>
@@ -1430,7 +1430,7 @@ const Settings: Component = () => {
         <Show when={isSearching() ? matchesKeybinds() : (tab() === "all" || tab() === "keybinds")}>
           <div class="settings-category">
             <div class="page-header">
-              <div>
+              <div class="page-title-group">
                 <div class="page-title">Keybinds</div>
                 <div class="page-subtitle">Global keyboard shortcuts and in-app navigation hotkeys</div>
               </div>

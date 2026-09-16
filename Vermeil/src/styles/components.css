@@ -1243,12 +1243,21 @@
   border-bottom: 1px solid var(--border);
 }
 
-.page-title,
+.page-title-group,
+.page-header > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.page-header .page-title,
 .settings-section-title {
   font-family: var(--font);
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
+  letter-spacing: normal;
+  text-transform: none;
   line-height: 1.2;
 }
 
@@ -1256,7 +1265,7 @@
 .settings-section-desc {
   font-size: 11px;
   color: var(--text-faint);
-  margin-top: 2px;
+  margin-top: 0;
   line-height: 1.4;
 }
 
@@ -1406,18 +1415,24 @@
   line-height: 1.4;
 }
 
-/* 2-Column Responsive Card Grid */
+/* 3-Column Responsive Card Grid (3-column ceiling) */
 .setting-card-grid,
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   width: 100%;
   box-sizing: border-box;
 }
 .setting-card-grid--2col,
 .settings-grid--2col {
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 1100px) {
+  .setting-card-grid,
+  .settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 @media (max-width: 680px) {
   .setting-card-grid,
@@ -1425,6 +1440,12 @@
   .setting-card-grid--2col,
   .settings-grid--2col {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 1101px) {
+  .setting-row--span-2 {
+    grid-column: span 2;
   }
 }
 
@@ -1549,9 +1570,14 @@
 /* Java Slots Grid & Card Plates */
 .java-slots {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   width: 100%;
+}
+@media (max-width: 680px) {
+  .java-slots {
+    grid-template-columns: 1fr;
+  }
 }
 .java-slot {
   display: flex;
