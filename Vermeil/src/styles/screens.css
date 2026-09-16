@@ -1471,12 +1471,12 @@
 
 
 /* Instance card icon loader-tinted backgrounds — sharp accent borders. */
-.inst-card-icon.green { background: var(--grad-inst-green); }
-.inst-card-icon.fabric { background: var(--grad-inst-fabric); }
-.inst-card-icon.blue { background: var(--grad-inst-blue); }
-.inst-card-icon.orange { background: var(--grad-inst-orange); }
-.inst-card-icon.quilt { background: var(--grad-inst-quilt); }
-.inst-card-icon.purple { background: var(--grad-inst-quilt); }
+.inst-card-icon.green, .world-card-thumb.green { background: var(--grad-inst-green); }
+.inst-card-icon.fabric, .world-card-thumb.fabric { background: var(--grad-inst-fabric); }
+.inst-card-icon.blue, .world-card-thumb.blue { background: var(--grad-inst-blue); }
+.inst-card-icon.orange, .world-card-thumb.orange { background: var(--grad-inst-orange); }
+.inst-card-icon.quilt, .world-card-thumb.quilt { background: var(--grad-inst-quilt); }
+.inst-card-icon.purple, .world-card-thumb.purple { background: var(--grad-inst-quilt); }
 
 /* Continue section grid — 3 columns so worlds don't stretch into massive 1-column banners */
 .continue-grid {
@@ -1498,82 +1498,241 @@
   .continue-grid {
     grid-template-columns: 1fr;
   }
+  .continue-grid:has(.world-card) .continue-placeholder {
+    display: none;
+  }
 }
 
-/* Continue-section world cards — reuse the instance-card row layout, with the
-   world's icon.png in the tile, a modpack icon + name sub-row, loader/version
-   badges, and a trailing Play button. */
+/* Continue-section world cards — Image 2 redesigned layout:
+   Pink area: Full square PNG thumbnail (flush to left/top/bottom edges)
+   Green area: Info (title, instance, badges) + Play button */
 .world-card {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
   border-radius: 0;
   box-shadow: var(--bevel);
+  overflow: hidden;
+  height: 82px;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
   transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.15s;
 }
+
 .world-card:hover {
   border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
   background: var(--surface-raised);
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
+
 .world-card:active {
   transform: translateY(1px);
   box-shadow: none;
 }
-.world-card .card-body {
-  align-items: center;
-  padding: 10px 12px;
-  gap: 10px;
-  min-width: 0;
-}
-.world-card .inst-card-icon,
-.world-card .inst-card-icon img {
-  border-radius: 0;
-}
-.world-card .inst-card-icon .side-icon {
+
+/* Pink Area: Full square PNG thumbnail (Image 2) */
+.world-card-thumb {
+  width: 80px;
+  min-width: 80px;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  background: var(--bg2);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.9);
 }
-.world-card .inst-card-icon .side-icon svg { width: 22px; height: 22px; }
-.world-card .inst-card-content {
-  min-width: 0;
+
+.world-card-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  image-rendering: pixelated;
+  transition: transform 0.2s ease;
+}
+
+.world-card:hover .world-card-thumb img {
+  transform: scale(1.06);
+}
+
+.world-card-globe {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.world-card-globe svg {
+  width: 28px;
+  height: 28px;
+}
+
+/* Green Area: Content, metadata, badges, and Play action (Image 2) */
+.world-card-body {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  gap: 10px;
 }
-.world-card .card-title {
+
+.world-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
+.world-card-title {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -0.01em;
 }
+
 .world-card-sub {
   display: flex;
   align-items: center;
   gap: 5px;
   min-width: 0;
+  font-size: 11px;
+  color: var(--muted);
 }
+
 .world-card-inst-icon {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   border-radius: 0;
   object-fit: cover;
   flex-shrink: 0;
 }
+
 .world-card-inst-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.world-card .inst-card-badges {
+
+.world-card-badges {
   display: flex;
   align-items: center;
   gap: 4px;
   margin-top: 2px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
+
 .world-card-play {
   flex-shrink: 0;
   align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  height: 28px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Image 3: Onion skin placeholder for empty Continue slots */
+.continue-placeholder {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  height: 82px;
+  background: rgba(255, 255, 255, 0.012);
+  border: 1.5px dashed var(--border);
+  border-radius: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  opacity: 0.6;
+  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.continue-placeholder:hover {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  background: rgba(139, 92, 246, 0.03);
+}
+
+.continue-placeholder-thumb {
+  width: 80px;
+  min-width: 80px;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1.5px dashed var(--border);
+  background: rgba(255, 255, 255, 0.008);
+  color: var(--muted);
+  transition: color 0.15s, border-right-color 0.15s;
+}
+
+.continue-placeholder-thumb svg {
+  width: 20px;
+  height: 20px;
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+
+.continue-placeholder:hover .continue-placeholder-thumb {
+  border-right-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  color: var(--accent);
+}
+
+.continue-placeholder:hover .continue-placeholder-thumb svg {
+  opacity: 1;
+}
+
+.continue-placeholder-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 12px;
+  gap: 3px;
+}
+
+.continue-placeholder-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: -0.01em;
+  transition: color 0.15s;
+}
+
+.continue-placeholder:hover .continue-placeholder-title {
+  color: var(--text);
+}
+
+.continue-placeholder-sub {
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

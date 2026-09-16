@@ -3,7 +3,7 @@ import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, setGameLau
 import { launchInstance, listInstanceWorlds, getJavaNews, getArticleBody, NewsArticle } from "../ipc/commands";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
-import { IconPlay, IconGlobe, IconShieldCheck } from "../components/Icons";
+import { IconPlay, IconGlobe, IconShieldCheck, IconPlus } from "../components/Icons";
 import PlayerHead from "../components/PlayerHead";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
@@ -137,6 +137,12 @@ const Home: Component = () => {
     return allWorlds.slice(0, 3);
   });
 
+  // Number of empty slots to display so Continue section always has 3 balanced cards
+  const emptySlotCount = createMemo(() => {
+    const count = recentWorlds()?.length ?? 0;
+    return Math.max(0, 3 - count);
+  });
+
   const handlePlayWorld = async (instanceId: string) => {
     if (!ensureAccountOrPrompt()) return;
     setActiveInstanceId(instanceId);
@@ -247,68 +253,77 @@ const Home: Component = () => {
 
         {/* Continue section */}
         <div class="section-label">Continue</div>
-        <Show when={recentWorlds() && recentWorlds()!.length > 0} fallback={
-          <div style="color:var(--muted);font-size:12px;margin-bottom:24px;padding:14px;background:var(--surface-panel);border:1px solid var(--border)">
-            No recent worlds. Play a game to see your worlds here.
-          </div>
-        }>
-          <div class="continue-grid">
-            <For each={recentWorlds()}>
-              {(world) => (
-                <div
-                  class="card card--inst world-card"
-                  style="cursor:pointer"
-                  onClick={() => {
-                    // Default click action is to open the instance — matches
-                    // the same behavior as clicking an instance card in the
-                    // Library. Only the Play button itself launches the game.
-                    setActiveInstanceId(world.instanceId);
-                    setInitialInstanceTab("content");
-                    setActiveScreen("mods");
-                  }}
-                >
-                  <div class="card-body">
-                    {/* World thumbnail (icon.png) — loader-tinted tile with a
-                        globe fallback when the world has no icon yet. */}
-                    <div class={`inst-card-icon ${bannerColor(world.loader)}`}>
-                      <Show when={world.worldIcon} fallback={<span class="side-icon"><IconGlobe /></span>}>
-                        <img src={world.worldIcon!} alt="" draggable={false} />
-                      </Show>
-                    </div>
-                    <div class="inst-card-content">
-                      <div class="card-title">{world.worldName}</div>
-                      <div class="card-sub world-card-sub">
-                        {/* Modpack/instance icon + name so it's clear which
-                            instance the world belongs to. */}
-                        <Show when={world.instanceIcon && world.instanceIcon !== 'cube'}>
-                          <img class="world-card-inst-icon" src={world.instanceIcon} alt="" draggable={false} />
-                        </Show>
-                        <span class="world-card-inst-name">{world.instanceName}</span>
-                      </div>
-                      <div class="inst-card-badges">
-                        <span class="badge badge--version">{world.gameVersion}</span>
-                        <span class={`badge badge--loader ${loaderBadgeClass(world.loader)}`}>
-                          {loaderLabel(world.loader)}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      class="btn btn--primary btn--sm world-card-play"
-                      onClick={(e) => {
-                        // Stop the bubble so the card-level handler doesn't
-                        // also fire and double-navigate.
-                        e.stopPropagation();
-                        handlePlayWorld(world.instanceId);
-                      }}
-                    >
-                      <IconPlay /> Play
-                    </button>
-                  </div>
+        <div class="continue-grid">
+          <For each={recentWorlds() ?? []}>
+            {(world) => (
+              <div
+                class="world-card"
+                onClick={() => {
+                  // Default click action is to open the instance
+                  setActiveInstanceId(world.instanceId);
+                  setInitialInstanceTab("content");
+                  setActiveScreen("mods");
+                }}
+              >
+                {/* World thumbnail (Pink area in Image 2) — full square PNG tile */}
+                <div class={`world-card-thumb ${bannerColor(world.loader)}`}>
+                  <Show when={world.worldIcon} fallback={<span class="world-card-globe"><IconGlobe /></span>}>
+                    <img src={world.worldIcon!} alt="" draggable={false} />
+                  </Show>
                 </div>
-              )}
-            </For>
-          </div>
-        </Show>
+
+                {/* Content & Action (Green area in Image 2) — title, instance info, badges, and Play button */}
+                <div class="world-card-body">
+                  <div class="world-card-info">
+                    <div class="world-card-title">{world.worldName}</div>
+                    <div class="world-card-sub">
+                      {/* Modpack/instance icon + name */}
+                      <Show when={world.instanceIcon && world.instanceIcon !== 'cube'}>
+                        <img class="world-card-inst-icon" src={world.instanceIcon} alt="" draggable={false} />
+                      </Show>
+                      <span class="world-card-inst-name">{world.instanceName}</span>
+                    </div>
+                    <div class="world-card-badges">
+                      <span class="badge badge--version">{world.gameVersion}</span>
+                      <span class={`badge badge--loader ${loaderBadgeClass(world.loader)}`}>
+                        {loaderLabel(world.loader)}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    class="btn btn--primary btn--sm world-card-play"
+                    onClick={(e) => {
+                      // Stop the bubble so card-level navigation doesn't also fire
+                      e.stopPropagation();
+                      handlePlayWorld(world.instanceId);
+                    }}
+                  >
+                    <IconPlay /> Play
+                  </button>
+                </div>
+              </div>
+            )}
+          </For>
+
+          {/* Empty slot indicators (Image 3) — dashed onion-skin placeholder slots */}
+          <For each={Array.from({ length: emptySlotCount() })}>
+            {() => (
+              <div
+                class="continue-placeholder"
+                onClick={() => setActiveScreen("library")}
+                data-tip="Launch an instance in your Library to play a world"
+              >
+                <div class="continue-placeholder-thumb">
+                  <IconPlus />
+                </div>
+                <div class="continue-placeholder-body">
+                  <span class="continue-placeholder-title">Empty Slot</span>
+                  <span class="continue-placeholder-sub">Create or play a world in an instance</span>
+                </div>
+              </div>
+            )}
+          </For>
+        </div>
 
         {/* News section */}
         <div class="section-label section-label--row">
