@@ -206,13 +206,9 @@
   height: 3px;
   border-radius: 0;
   background: #f7f3ff;
-  opacity: 0;
-  transition: opacity 0.15s ease;
+  opacity: 0.95;
   pointer-events: none;
   z-index: 2;
-}
-.dock-btn.active .dock-btn-dot {
-  opacity: 0.95;
 }
 
 .dock-center-icon {
