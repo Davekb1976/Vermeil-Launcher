@@ -19,9 +19,9 @@ import { createSignal, onCleanup } from "solid-js";
  *   <div class="card-grid" ref={page.setEl}>…</div>
  *   // page.size() → items to show/fetch per page
  */
-export function createGridPageSize(opts: { track: number; gap: number; rowHeight: number; maxRows: number; debounceMs?: number }) {
+export function createGridPageSize(opts: { track: number; gap: number; rowHeight: number; maxRows: number; maxCols?: number; debounceMs?: number }) {
   const debounceMs = opts.debounceMs ?? 300;
-  const [size, setSize] = createSignal(opts.maxRows * 4 || 16);
+  const [size, setSize] = createSignal((opts.maxCols ? opts.maxCols * opts.maxRows : opts.maxRows * 4) || 12);
   let el: HTMLElement | undefined;
   let settle: number | undefined;
 
@@ -29,7 +29,8 @@ export function createGridPageSize(opts: { track: number; gap: number; rowHeight
     if (!el) return;
     const w = el.clientWidth;
     if (w <= 0) return;
-    const cols = Math.max(1, Math.floor((w + opts.gap) / (opts.track + opts.gap)));
+    const rawCols = Math.max(1, Math.floor((w + opts.gap) / (opts.track + opts.gap)));
+    const cols = opts.maxCols ? Math.min(opts.maxCols, rawCols) : rawCols;
     const content = el.closest(".content") as HTMLElement | null;
     let availH = window.innerHeight;
     if (content) {
