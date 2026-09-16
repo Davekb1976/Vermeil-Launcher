@@ -1423,8 +1423,7 @@
   border-radius: 0;
   user-select: none;
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
-    inset 0 -1.5px 0 rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
     0 3px 0 var(--key-shadow);
   transition:
     transform 0.08s cubic-bezier(0.2, 0, 0, 1),
@@ -1437,14 +1436,14 @@
   color: #ffffff;
   transform: translateY(3px);
   box-shadow:
-    inset 0 2px 3px rgba(0, 0, 0, 0.45),
+    inset 0 2px 3px rgba(0, 0, 0, 0.35),
     0 0 0 var(--key-shadow);
 }
 .cat-btn:active:not(.active) {
   transform: translateY(3px);
   background: var(--surface-panel);
   box-shadow:
-    inset 0 2.5px 5px rgba(0, 0, 0, 0.55),
+    inset 0 2.5px 5px rgba(0, 0, 0, 0.45),
     0 0 0 var(--key-shadow);
 }
 .cat-btn.active {
@@ -1453,19 +1452,18 @@
   font-weight: 700;
   box-shadow:
     inset 0 1.5px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -1.5px 0 rgba(0, 0, 0, 0.3),
     0 3px 0 var(--cat-shadow, var(--accent-shadow));
 }
 .cat-btn.active:hover {
   transform: translateY(3px);
   box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 2px 4px rgba(0, 0, 0, 0.35),
     0 0 0 var(--cat-shadow, var(--accent-shadow));
 }
 .cat-btn.active:active {
   transform: translateY(3px);
   box-shadow:
-    inset 0 2.5px 5px rgba(0, 0, 0, 0.5),
+    inset 0 2.5px 5px rgba(0, 0, 0, 0.45),
     0 0 0 var(--cat-shadow, var(--accent-shadow));
 }
 
