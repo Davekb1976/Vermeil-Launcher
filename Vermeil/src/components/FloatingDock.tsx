@@ -95,6 +95,23 @@ const FloatingDock: Component = () => {
     return "create";
   });
 
+  const createScreens: Screen[] = [
+    "create-choose",
+    "create-custom",
+    "create-modpack",
+    "create-import",
+  ];
+
+  const isCenterActive = () => {
+    if (centerMode() === "create") {
+      return createScreens.includes(activeScreen());
+    }
+    if (centerMode() === "play") {
+      return activeScreen() === "mods";
+    }
+    return false;
+  };
+
   const centerLabel = () => {
     switch (centerMode()) {
       case "close": return "Close pin selector";
@@ -269,20 +286,40 @@ const FloatingDock: Component = () => {
       <div class="dock">
         {/* NAV MODE */}
         <Show when={!pinSelectorOpen()}>
-          <div class="dock-group dock-group-left">
+          <div class="dock-row">
             <DockBtn screens={["home"]} target="home" icon={<IconHome />} label="Home" />
             <DockBtn
-              screens={["library", "mods", "create-choose", "create-custom", "create-modpack", "create-import"]}
+              screens={isCenterActive() ? ["library"] : ["library", "mods"]}
               target="library"
               icon={<IconGrid />}
               label="Library"
             />
             <DockBtn screens={["skins"]} target="skins" icon={<IconShirt />} label="Skins" />
-          </div>
 
-          <div class="dock-notch" aria-hidden="true" />
+            {/* Center Action Keycap */}
+            <div class="dock-btn-slot">
+              <button
+                type="button"
+                class={`dock-btn dock-center-btn ${isCenterActive() ? "active" : ""} ${centerMode() === "stop" ? "dock-btn-stop" : ""}`}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleCenterClick}
+                data-tooltip={centerLabel()}
+              >
+                <span class="dock-center-icon">
+                  <Show when={centerMode() === "play"}>
+                    <IconPlay />
+                  </Show>
+                  <Show when={centerMode() === "create"}>
+                    <IconPlus />
+                  </Show>
+                  <Show when={centerMode() === "stop"}>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>
+                  </Show>
+                </span>
+                <span class="dock-btn-dot" />
+              </button>
+            </div>
 
-          <div class="dock-group dock-group-right">
             <DockBtn screens={["downloads"]} target="downloads" icon={<IconDownload />} label="Downloads" />
             <DockBtn screens={["settings"]} target="settings" icon={<IconSettings />} label="Settings" />
             <DockBtn screens={["account"]} target="account" icon={<IconUser />} label="Account" />
@@ -355,34 +392,20 @@ const FloatingDock: Component = () => {
               </button>
             </div>
           </div>
-        </Show>
 
-        {/* Center FAB */}
-        <button
-          type="button"
-          class={`dock-center dock-center-${centerMode()}`}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={handleCenterClick}
-          data-tooltip={centerLabel()}
-        >
-          <span class="dock-center-icon">
-            <Show when={centerMode() === "play"}>
-              <IconPlay />
-            </Show>
-            <Show when={centerMode() === "create"}>
-              <IconPlus />
-            </Show>
-            <Show when={centerMode() === "stop"}>
-              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg>
-            </Show>
-            <Show when={centerMode() === "close"}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                <line x1="6" y1="6" x2="18" y2="18" />
-                <line x1="18" y1="6" x2="6" y2="18" />
-              </svg>
-            </Show>
-          </span>
-        </button>
+          <button
+            type="button"
+            class="dock-pin-close-btn"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={handleCenterClick}
+            data-tooltip="Close pin selector"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <line x1="6" y1="6" x2="18" y2="18" />
+              <line x1="18" y1="6" x2="6" y2="18" />
+            </svg>
+          </button>
+        </Show>
       </div>
     </div>
   );
