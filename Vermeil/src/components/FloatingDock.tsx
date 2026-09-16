@@ -54,18 +54,21 @@ const FloatingDock: Component = () => {
   const hidden = () => dockHidden() && !nearBottom() && !pinSelectorOpen();
 
   const DockBtn = (props: { screens: Screen[]; target: Screen; icon: any; label: string }) => (
-    <button
-      type="button"
-      class={`dock-btn ${isActive(props.screens) ? "active" : ""}`}
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={() => {
-        setActiveScreen(props.target);
-        if (props.target !== "mods") setActiveInstanceId(null);
-      }}
-      data-tooltip={props.label}
-    >
-      {props.icon}
-    </button>
+    <div class="dock-btn-slot">
+      <button
+        type="button"
+        class={`dock-btn ${isActive(props.screens) ? "active" : ""}`}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => {
+          setActiveScreen(props.target);
+          if (props.target !== "mods") setActiveInstanceId(null);
+        }}
+        data-tooltip={props.label}
+      >
+        {props.icon}
+        <span class="dock-btn-dot" />
+      </button>
+    </div>
   );
 
   const pinnedInstances = () => {

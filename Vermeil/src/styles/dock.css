@@ -11,6 +11,10 @@
  *     keybind (default Ctrl+P).
  */
 
+:root {
+  --dock-press-travel: 3px;
+}
+
 /* Wrapper centers the dock and reserves space for the raised FAB. */
 .dock-wrap {
   position: fixed;
@@ -44,19 +48,21 @@
   transition: transform 0.3s cubic-bezier(0.34, 1.2, 0.64, 1), opacity 0.25s ease;
 }
 
-/* The dock pill — single rounded container. Width animates between
+/* The dock pill — single sharp container with deep dark gradient. Width animates between
    nav and pin-selector modes. */
 .dock {
   position: relative;
   display: flex;
   align-items: center;
-  background: var(--surface-glass);
+  background: linear-gradient(180deg, #1b1826, #120f1a);
   backdrop-filter: blur(16px) saturate(140%);
   -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid var(--border);
+  border: 2px solid #050409;
   border-radius: 0;
-  padding: var(--space-2);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  padding: 8px 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 20px 40px -15px rgba(0, 0, 0, 0.75);
   pointer-events: auto;
   transition: padding 0.25s ease, background 0.25s ease;
 }
@@ -65,7 +71,7 @@
    accommodate the carousel and use a slightly different surface tint. */
 .dock-wrap.pin-mode .dock {
   padding: var(--space-2) var(--space-3);
-  background: var(--surface-glass-strong);
+  background: linear-gradient(180deg, #221e30, #161320);
 }
 
 /* In pin mode, raise the FAB above the pill like before so it reads
@@ -75,23 +81,20 @@
   transform: translateX(-50%);
 }
 .dock-wrap.pin-mode .dock-center:hover {
-  transform: translateX(-50%) scale(1.08);
+  transform: translateX(-50%) translateY(var(--dock-press-travel));
 }
 .dock-wrap.pin-mode .dock-center:active {
-  transform: translateX(-50%) scale(0.95);
+  transform: translateX(-50%) translateY(var(--dock-press-travel));
 }
 
-/* Left/right nav groups — each holds nav buttons. Both groups reserve the
-   same width so the absolutely-centered FAB stays centered even when the two
-   sides hold different button counts (3 left / 2 right after the Downloads
-   pill was consolidated into Library). Contents are centered within each
-   equal-width half so the pill reads as symmetric around the FAB. */
+/* Left/right nav groups — each holds 3 nav buttons in fixed-size slots.
+   Width is 3 * 40px + 2 * 8px gap = 136px. */
 .dock-group {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
-  width: 122px;
+  gap: 8px;
+  width: 136px;
   animation: dockGroupIn 0.2s ease-out;
 }
 @keyframes dockGroupIn {
@@ -101,34 +104,54 @@
 
 /* Notch — a transparent spacer sized to the FAB diameter. */
 .dock-notch {
-  width: 54px;
+  width: 56px;
   flex-shrink: 0;
 }
 
-/* Individual nav button — sharp square. */
+/* Button slot — fixed size box that never moves or resizes during button press,
+   preventing layout shift or empty space jitter. */
+.dock-btn-slot {
+  width: 40px;
+  height: calc(40px + var(--dock-press-travel));
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+
+/* Individual nav button — chunky 3D keycap with sharp corners. */
 .dock-btn {
-  width: 38px;
-  height: 38px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 40px;
   border: none;
-  background: transparent;
+  background: #231f30;
   border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--muted);
+  color: #9891ab;
   position: relative;
   transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    transform 0.15s ease;
+    transform 0.08s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.08s cubic-bezier(0.2, 0, 0, 1),
+    background 0.12s ease,
+    color 0.12s ease;
   flex-shrink: 0;
   padding: 0;
+  user-select: none;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.35),
+    0 var(--dock-press-travel) 0 #08060d;
 }
 .dock-btn svg {
   width: 18px;
   height: 18px;
-  transition: transform 0.15s ease;
+  transition: transform 0.08s cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* Linux/WebKitGTK renders thin SVG strokes noticeably heavier than Chromium
@@ -141,35 +164,75 @@
 .platform-linux .dock-pin-tile-manage .dock-pin-tile-img svg {
   stroke-width: 1.5;
 }
-.dock-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text);
+
+.dock-btn:hover,
+.dock-btn:focus-visible {
+  transform: translateY(var(--dock-press-travel));
+  background: #2b2638;
+  color: #f5f2fc;
+  box-shadow:
+    inset 0 3px 5px rgba(0, 0, 0, 0.5),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    0 0 0 #08060d;
 }
-.dock-btn:hover svg { transform: scale(1.08); }
-.dock-btn:active { transform: scale(0.92); }
+.dock-btn:hover svg {
+  transform: scale(1.06);
+}
+.dock-btn:active {
+  transform: translateY(var(--dock-press-travel));
+  background: #1e1a28;
+  color: #ffffff;
+  box-shadow:
+    inset 0 4px 6px rgba(0, 0, 0, 0.65),
+    0 0 0 #08060d;
+}
+
+/* Active route button state */
 .dock-btn.active {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: linear-gradient(180deg, #a98bfb, #8b5cf6);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 #4a2a90,
+    0 var(--dock-press-travel) 0 #4a2a90;
 }
-.dock-btn.active::after {
-  content: "";
+.dock-btn.active:hover,
+.dock-btn.active:focus-visible {
+  transform: translateY(var(--dock-press-travel));
+  background: linear-gradient(180deg, #9d7df8, #7c4cf0);
+  color: #ffffff;
+  box-shadow:
+    inset 0 3px 6px rgba(0, 0, 0, 0.35),
+    0 0 0 #4a2a90;
+}
+.dock-btn.active:active {
+  transform: translateY(var(--dock-press-travel));
+  background: linear-gradient(180deg, #8c68f5, #6d3be8);
+  box-shadow:
+    inset 0 4px 8px rgba(0, 0, 0, 0.45),
+    0 0 0 #4a2a90;
+}
+
+/* Active indicator bar inside button */
+.dock-btn-dot {
   position: absolute;
-  bottom: -2px;
+  bottom: 4px;
   left: 50%;
   transform: translateX(-50%);
   width: 14px;
   height: 2px;
   border-radius: 0;
-  background: var(--accent);
-  animation: dotIn 0.2s ease-out;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
 }
-@keyframes dotIn {
-  from { opacity: 0; transform: translate(-50%, -2px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+.dock-btn.active .dock-btn-dot {
+  opacity: 0.95;
 }
 
 /* ============================================================
-   Center FAB — centered vertically within the pill, state-aware.
+   Center FAB — chunky 3D keycap, centered vertically, state-aware.
    ============================================================ */
 .dock-center {
   position: absolute;
@@ -179,42 +242,42 @@
   width: 48px;
   height: 48px;
   border-radius: 0;
-  border: 1px solid var(--accent-strong);
-  background: var(--accent);
-  color: var(--accent-contrast);
+  border: 2px solid #050409;
+  background: linear-gradient(180deg, #a98bfb, #8b5cf6);
+  color: #ffffff;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  /* Chunky 3D plate — same hard inner under-shadow as the toggle thumb,
-     scaled to the FAB's 48px height (~14% of height, matching the thumb's
-     22px/3px ratio). The drop glow stays as the outer halo; the inset is
-     what gives the button physical depth. */
+  user-select: none;
   box-shadow:
-    0 4px 14px rgba(139, 92, 246, 0.4),
-    inset 0 -6px 0 rgba(0, 0, 0, 0.30);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -3px 0 #4a2a90,
+    0 var(--dock-press-travel) 0 #321966,
+    0 8px 20px rgba(139, 92, 246, 0.4);
   transition:
-    box-shadow 0.2s ease,
-    transform 0.15s ease,
-    background 0.15s ease;
+    transform 0.08s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.08s cubic-bezier(0.2, 0, 0, 1),
+    background 0.12s ease;
   pointer-events: auto;
   z-index: 1;
   padding: 0;
 }
 .dock-center:hover {
-  background: var(--accent-strong);
-  transform: translate(-50%, -50%) scale(1.04);
-  /* Drop the inset under-shadow on hover so the button visually "presses
-     flat into the dock". The chunky depth is the resting state; hover and
-     press both flatten it for the pushed-in feel. */
-  box-shadow: 0 6px 18px rgba(139, 92, 246, 0.55);
+  background: linear-gradient(180deg, #9d7df8, #7c4cf0);
+  transform: translate(-50%, calc(-50% + var(--dock-press-travel)));
+  box-shadow:
+    inset 0 3px 6px rgba(0, 0, 0, 0.35),
+    0 0 0 #321966,
+    0 4px 12px rgba(139, 92, 246, 0.35);
 }
 .dock-center:active {
-  transform: translate(-50%, -50%) scale(0.96);
-  /* Pressed and held — keep the button flat against the dock with a tighter
-     drop shadow to amplify the "sunk in" sense paired with the scale shrink. */
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+  transform: translate(-50%, calc(-50% + var(--dock-press-travel)));
+  background: linear-gradient(180deg, #8c68f5, #6d3be8);
+  box-shadow:
+    inset 0 4px 8px rgba(0, 0, 0, 0.5),
+    0 0 0 #321966;
 }
 
 .dock-center-icon {
@@ -265,32 +328,51 @@
 }
 
 .dock-center-stop {
-  background: var(--danger);
+  background: linear-gradient(180deg, #ef4444, #dc2626);
+  border-color: #050409;
   box-shadow:
-    var(--shadow-md),
-    inset 0 -6px 0 rgba(0, 0, 0, 0.30),
-    0 1px 0 rgba(255, 255, 255, 0.15) inset;
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -3px 0 #7f1d1d,
+    0 var(--dock-press-travel) 0 #5c1414,
+    0 8px 20px rgba(239, 68, 68, 0.4);
 }
 .dock-center-stop:hover {
+  background: linear-gradient(180deg, #f87171, #ef4444);
+  transform: translate(-50%, calc(-50% + var(--dock-press-travel)));
   box-shadow:
-    var(--shadow-lg),
-    0 0 0 4px var(--danger-soft),
-    0 1px 0 rgba(255, 255, 255, 0.2) inset;
+    inset 0 3px 6px rgba(0, 0, 0, 0.4),
+    0 0 0 #5c1414,
+    0 4px 12px rgba(239, 68, 68, 0.3);
+}
+.dock-center-stop:active {
+  transform: translate(-50%, calc(-50% + var(--dock-press-travel)));
+  box-shadow:
+    inset 0 4px 8px rgba(0, 0, 0, 0.55),
+    0 0 0 #5c1414;
 }
 
 /* Close mode (pin selector open) — neutral warm surface so it reads as "dismiss". */
 .dock-center-close {
-  background: linear-gradient(135deg, var(--surface-raised), var(--surface-panel));
+  background: linear-gradient(180deg, #2b2638, #1e1a29);
+  border-color: #050409;
   box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.35),
-    inset 0 -6px 0 rgba(0, 0, 0, 0.35),
-    0 1px 0 rgba(255, 255, 255, 0.1) inset;
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.4),
+    0 var(--dock-press-travel) 0 #08060d,
+    0 8px 20px rgba(0, 0, 0, 0.5);
 }
 .dock-center-close:hover {
+  background: #352e45;
+  transform: translateX(-50%) translateY(var(--dock-press-travel));
   box-shadow:
-    0 6px 20px rgba(0, 0, 0, 0.5),
-    0 0 0 4px rgba(255, 255, 255, 0.05),
-    0 1px 0 rgba(255, 255, 255, 0.15) inset;
+    inset 0 3px 5px rgba(0, 0, 0, 0.5),
+    0 0 0 #08060d;
+}
+.dock-center-close:active {
+  transform: translateX(-50%) translateY(var(--dock-press-travel));
+  box-shadow:
+    inset 0 4px 8px rgba(0, 0, 0, 0.65),
+    0 0 0 #08060d;
 }
 
 /* Play state — pulsing accent border (sharp). */
