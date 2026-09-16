@@ -916,17 +916,42 @@
 
 
 /* ============================================================
-   Download history cards — full card layout with icon, name,
-   loader/version badges, category, and timestamp.
+   Download history grid & cards — 3-column card layout
    ============================================================ */
-.dl-card-failed { border-color: var(--danger-soft); }
+.dl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+@media (max-width: 1080px) {
+  .dl-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 680px) {
+  .dl-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dl-card {
+  transition: border-color .15s ease, transform .1s ease;
+}
+.dl-card:hover {
+  border-color: var(--accent);
+}
+.dl-card-failed {
+  border-color: var(--danger-soft);
+}
 .dl-card-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
+  width: 38px;
+  height: 38px;
+  border-radius: 0;
   flex-shrink: 0;
   overflow: hidden;
-  background: var(--bg4);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -954,6 +979,14 @@
   justify-content: space-between;
   gap: var(--space-2);
 }
+.dl-card-title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
 .dl-card-name {
   font-size: 12px;
   font-weight: 600;
@@ -961,6 +994,12 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.dl-card-author {
+  font-size: 10px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .dl-card-status {
   font-size: 11px;

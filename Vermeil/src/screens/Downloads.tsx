@@ -29,8 +29,8 @@ const Downloads: Component = () => {
 
   return (
     <div class="screen-enter">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <div class="section-label">Download History</div>
+      <div class="section-label section-label--row">
+        <span>Download History</span>
         <Show when={history().length > 0}>
           <button class="btn btn--sm" onClick={clearDownloadHistory}>Clear</button>
         </Show>
@@ -40,7 +40,7 @@ const Downloads: Component = () => {
           Download history will appear here.
         </div>
       }>
-        <div class="card-grid" style="margin-bottom:16px">
+        <div class="dl-grid">
           <For each={history()}>
             {(dl) => <DownloadCard entry={dl} timeAgo={timeAgo} />}
           </For>
@@ -56,7 +56,7 @@ const DownloadCard: Component<{ entry: DownloadEntry; timeAgo: (ts: number) => s
   const failed = () => dl().status === "failed";
 
   return (
-    <div class="card card--inst" classList={{ "dl-card-failed": failed() }}>
+    <div class="card card--inst dl-card" classList={{ "dl-card-failed": failed() }}>
       <div class="card-body">
         <div class="dl-card-icon">
           <Show when={dl().iconUrl} fallback={
@@ -67,10 +67,12 @@ const DownloadCard: Component<{ entry: DownloadEntry; timeAgo: (ts: number) => s
         </div>
         <div class="dl-card-body">
           <div class="dl-card-header">
-            <span class="dl-card-name">{dl().name}</span>
-            <Show when={dl().author}>
-              <span class="dl-card-author">by {dl().author}</span>
-            </Show>
+            <div class="dl-card-title-group">
+              <span class="dl-card-name" title={dl().name}>{dl().name}</span>
+              <Show when={dl().author}>
+                <span class="dl-card-author">by {dl().author}</span>
+              </Show>
+            </div>
             <span class={`dl-card-status side-icon ${failed() ? "failed" : "success"}`}>
               {failed() ? <IconX /> : <IconCheck />}
             </span>
