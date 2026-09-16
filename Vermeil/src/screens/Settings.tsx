@@ -5,7 +5,7 @@ import { checkForUpdates } from "../services/updater";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
-import { IconDownload, IconSearch, IconFolderOpen, IconTrash, IconModrinth, IconCurseForge, IconChevronRight, IconGlobe } from "../components/Icons";
+import { IconDownload, IconSearch, IconFolderOpen, IconTrash, IconModrinth, IconCurseForge, IconChevronRight, IconGlobe, IconSettings as IconSettingsIcon, IconLayers, IconCube, IconMonitor, IconBolt } from "../components/Icons";
 import JavaPathInput from "../components/JavaPathInput";
 import JavaChooserModal from "../modals/JavaChooserModal";
 import Dropdown from "../components/Dropdown";
@@ -14,7 +14,7 @@ import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { KEYBINDS, resolveBinding } from "../lib/keybinds";
 import { listen } from "@tauri-apps/api/event";
 
-type SettingsTab = "general" | "resources" | "instances" | "keybinds";
+type SettingsTab = "all" | "general" | "resources" | "instances" | "keybinds";
 
 /// Clamp a concurrency setting to a per-field range. The download semaphore is
 /// capped at 10 because most CDNs throttle individual clients past that point;
@@ -23,7 +23,7 @@ const clampConcurrency = (n: number, max: number): number =>
   Math.max(1, Math.min(max, Math.round(Number.isNaN(n) ? 10 : n)));
 
 const Settings: Component = () => {
-  const [tab, setTab] = createSignal<SettingsTab>("general");
+  const [tab, setTab] = createSignal<SettingsTab>("all");
   const [settings, { refetch, mutate }] = createResource(getSettings);
   const [appVersion] = createResource(getVersion);
   const [appDirectory] = createResource(getAppDirectory);
@@ -315,17 +315,31 @@ const Settings: Component = () => {
     <div class="screen-enter">
       <div class="section-label">Settings</div>
 
-      {/* Tabs */}
-      <div class="tab-strip" style="margin-bottom:16px">
-        <div class={`tab ${tab() === "general" ? "active" : ""}`} onClick={() => setTab("general")}>General</div>
-        <div class={`tab ${tab() === "resources" ? "active" : ""}`} onClick={() => setTab("resources")}>Resources</div>
-        <div class={`tab ${tab() === "instances" ? "active" : ""}`} onClick={() => setTab("instances")}>Global Instance</div>
-        <div class={`tab ${tab() === "keybinds" ? "active" : ""}`} onClick={() => setTab("keybinds")}>Keybinds</div>
-      </div>
+      <div class="settings-layout">
+        {/* Sidebar navigation */}
+        <nav class="settings-sidebar">
+          <div class={`settings-nav-item ${tab() === "all" ? "active" : ""}`} onClick={() => setTab("all")}>
+            <IconLayers /> All
+          </div>
+          <div class={`settings-nav-item ${tab() === "general" ? "active" : ""}`} onClick={() => setTab("general")}>
+            <IconSettingsIcon /> General
+          </div>
+          <div class={`settings-nav-item ${tab() === "resources" ? "active" : ""}`} onClick={() => setTab("resources")}>
+            <IconCube /> Resources
+          </div>
+          <div class={`settings-nav-item ${tab() === "instances" ? "active" : ""}`} onClick={() => setTab("instances")}>
+            <IconMonitor /> Instance
+          </div>
+          <div class={`settings-nav-item ${tab() === "keybinds" ? "active" : ""}`} onClick={() => setTab("keybinds")}>
+            <IconBolt /> Keybinds
+          </div>
+        </nav>
 
+        {/* Content area */}
+        <div class="settings-content">
       <Show when={settings()}>
         {/* ═══ GENERAL ═══ */}
-        <Show when={tab() === "general"}>
+        <Show when={tab() === "all" || tab() === "general"}>
           <div class="settings-section">
             <div class="section-label" style="margin-bottom:8px">Launcher</div>
             <div class="settings-group">
@@ -429,7 +443,7 @@ const Settings: Component = () => {
         </Show>
 
         {/* ═══ RESOURCES ═══ */}
-        <Show when={tab() === "resources"}>
+        <Show when={tab() === "all" || tab() === "resources"}>
           <div class="settings-section">
             <div class="section-label" style="margin-bottom:8px">Storage</div>
             <div class="settings-group">
@@ -687,7 +701,7 @@ const Settings: Component = () => {
         </Show>
 
         {/* ═══ INSTANCE OPTIONS ═══ */}
-        <Show when={tab() === "instances"}>
+        <Show when={tab() === "all" || tab() === "instances"}>
           <div class="settings-section">
             <div class="section-label section-label--sub section-label--row">
               Video
@@ -999,7 +1013,7 @@ const Settings: Component = () => {
         </Show>
 
         {/* ═══ KEYBINDS ═══ */}
-        <Show when={tab() === "keybinds"}>
+        <Show when={tab() === "all" || tab() === "keybinds"}>
           <div class="settings-section">
             <div class="section-label" style="margin-bottom:8px">Keyboard shortcuts</div>
             <div class="settings-group">
@@ -1036,7 +1050,9 @@ const Settings: Component = () => {
             </div>
           </div>
         </Show>
-      </Show>
+        </Show>
+        </div>{/* .settings-content */}
+      </div>{/* .settings-layout */}
 
       {/* Chooser modal — rendered at the screen root so it overlays the
           Settings tabs when the Detect action returns multiple matches. The
