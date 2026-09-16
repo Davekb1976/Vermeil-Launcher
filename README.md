@@ -90,10 +90,11 @@ This project was built entirely with AI assistance. The author directed architec
 **Models:**
 
 - Claude Opus 5 / Claude Sonnet 5 — primary code generation and architecture
+- Gemini 3.8 Flash / Claude Opus 4.6 (Thinking) — ongoing development, agentic workflows, and architecture
 - GPT 5.6 (Terra / Luna) — miscellaneous tasks
 - Earlier development used Claude Opus 4.6–4.8 and Sonnet 4.6
 
-**IDE:** Kiro
+**IDEs & Platforms:** Kiro, Antigravity 2.0
 
 See [DISCLAIMER.md](DISCLAIMER.md) for the full disclosure.
 

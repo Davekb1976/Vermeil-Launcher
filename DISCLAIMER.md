@@ -8,7 +8,7 @@ Vermeil is in **alpha** — early, active development. Features are incomplete o
 
 ## AI-Generated Codebase
 
-The entire Vermeil codebase was generated with the assistance of AI tools — primarily Claude (Opus 5 / Sonnet 5), with GPT 5.6 (Terra / Luna) for miscellaneous tasks, via Kiro IDE. This means:
+The entire Vermeil codebase was generated with the assistance of AI tools — primarily Claude (Opus 5 / Sonnet 5 / Opus 4.6 Thinking) and Gemini (3.8 Flash), with GPT 5.6 (Terra / Luna) for miscellaneous tasks, via Kiro IDE and Antigravity 2.0. This means:
 
 - Code may contain bugs, logic errors, or incomplete implementations
 - Features may behave unexpectedly or break without warning
