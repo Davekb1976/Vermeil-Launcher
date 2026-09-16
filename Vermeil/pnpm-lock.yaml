@@ -7,6 +7,7 @@ settings:
 overrides:
   esbuild: '>=0.28.1'
   '@babel/core': '>=7.29.6'
+  fflate: '>=0.6.11'
 
 importers:
 
@@ -672,8 +673,8 @@ packages:
       picomatch:
         optional: true
 
-  fflate@0.6.10:
-    resolution: {integrity: sha512-IQrh3lEPM93wVCEczc9SaAOvkmcoQn/G8Bo1e8ZPlY3X3bnAxWaBdvTdvM1hP62iZp0BXWDy4vTAy4fF0+Dlpg==}
+  fflate@0.8.3:
+    resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
 
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
@@ -1295,7 +1296,7 @@ snapshots:
     dependencies:
       '@types/stats.js': 0.17.4
       '@types/webxr': 0.5.24
-      fflate: 0.6.10
+      fflate: 0.8.3
       meshoptimizer: 0.18.1
 
   '@types/webxr@0.5.24': {}
@@ -1375,7 +1376,7 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.4
 
-  fflate@0.6.10: {}
+  fflate@0.8.3: {}
 
   fsevents@2.3.3:
     optional: true

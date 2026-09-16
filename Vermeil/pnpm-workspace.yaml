@@ -12,6 +12,11 @@ allowBuilds:
 # read via sourceMappingURL comment). Pulled in transitively by
 # vite-plugin-solid → babel-preset-solid; the override forces the patched
 # version.
+#
+# Pin fflate >= 0.6.11 to address GHSA-px8p-9vwx-vf98 (infinite loop in
+# unzipSync with malformed ZIP64 archives). Pulled transitively by
+# @types/three; the override forces the patched version.
 overrides:
   esbuild: ">=0.28.1"
   "@babel/core": ">=7.29.6"
+  fflate: ">=0.6.11"
