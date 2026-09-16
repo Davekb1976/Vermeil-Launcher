@@ -1451,7 +1451,7 @@
   gap: 6px;
   height: 28px;
   padding: 0 12px;
-  border: 0;
+  border: 1px solid var(--border);
   outline: none;
   background: var(--surface-raised);
   color: var(--text-muted);
@@ -1461,49 +1461,34 @@
   cursor: pointer;
   border-radius: 0;
   user-select: none;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 3px 0 var(--key-shadow);
-  transition:
-    transform 0.08s cubic-bezier(0.2, 0, 0, 1),
-    box-shadow 0.08s cubic-bezier(0.2, 0, 0, 1),
-    background 0.12s ease,
-    color 0.12s ease;
+  box-shadow: var(--bevel);
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.12s;
 }
 .cat-btn:hover:not(.active) {
-  background: var(--border-strong);
+  background: var(--surface-panel);
+  border-color: var(--border-hover);
   color: #ffffff;
-  transform: translateY(3px);
-  box-shadow:
-    inset 0 2px 3px rgba(0, 0, 0, 0.35),
-    0 0 0 var(--key-shadow);
+  box-shadow: none;
+  transform: translateY(-2px) scale(1.03);
 }
 .cat-btn:active:not(.active) {
-  transform: translateY(3px);
-  background: var(--surface-panel);
-  box-shadow:
-    inset 0 2.5px 5px rgba(0, 0, 0, 0.45),
-    0 0 0 var(--key-shadow);
+  transform: translateY(1px) scale(0.97);
+  box-shadow: none;
 }
 .cat-btn.active {
   background: var(--cat-bg, var(--accent));
   color: var(--cat-fg, var(--accent-contrast));
+  border-color: var(--cat-bg, var(--accent));
   font-weight: 700;
-  box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.35),
-    0 3px 0 var(--cat-shadow, var(--accent-shadow));
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.30);
 }
 .cat-btn.active:hover {
-  transform: translateY(3px);
-  box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.35),
-    0 0 0 var(--cat-shadow, var(--accent-shadow));
+  box-shadow: none;
+  transform: translateY(-2px) scale(1.03);
 }
 .cat-btn.active:active {
-  transform: translateY(3px);
-  box-shadow:
-    inset 0 2.5px 5px rgba(0, 0, 0, 0.45),
-    0 0 0 var(--cat-shadow, var(--accent-shadow));
+  transform: translateY(1px) scale(0.97);
+  box-shadow: none;
 }
 
 /* Count rendered inside the search input as a trailing suffix, so it never

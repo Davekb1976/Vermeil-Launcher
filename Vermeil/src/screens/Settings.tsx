@@ -396,8 +396,8 @@ const Settings: Component = () => {
 
       <div class="settings-layout">
         {/* Sidebar navigation */}
-        <aside class="settings-sidebar">
-          <div class="settings-sidebar-sticky">
+        <aside class="settings-nav">
+          <div class="settings-nav-sticky">
             {/* Search input */}
             <div class="settings-search-wrap">
               <span class="settings-search-icon">
@@ -405,7 +405,7 @@ const Settings: Component = () => {
               </span>
               <input
                 type="text"
-                class="settings-search-input"
+                class="settings-search"
                 placeholder="Search..."
                 value={search()}
                 onInput={(e) => setSearch(e.currentTarget.value)}
@@ -423,21 +423,46 @@ const Settings: Component = () => {
             </div>
 
             {/* Tab Buttons */}
-            <div class={`settings-nav-item ${tab() === "all" && !isSearching() ? "active" : ""}`} onClick={() => { setTab("all"); setSearch(""); }}>
-              <IconLayers /> All
-            </div>
-            <div class={`settings-nav-item ${tab() === "general" && !isSearching() ? "active" : ""}`} onClick={() => { setTab("general"); setSearch(""); }}>
-              <IconSettingsIcon /> General
-            </div>
-            <div class={`settings-nav-item ${tab() === "resources" && !isSearching() ? "active" : ""}`} onClick={() => { setTab("resources"); setSearch(""); }}>
-              <IconCube /> Resources
-            </div>
-            <div class={`settings-nav-item ${tab() === "instances" && !isSearching() ? "active" : ""}`} onClick={() => { setTab("instances"); setSearch(""); }}>
-              <IconMonitor /> Instance
-            </div>
-            <div class={`settings-nav-item ${tab() === "keybinds" && !isSearching() ? "active" : ""}`} onClick={() => { setTab("keybinds"); setSearch(""); }}>
-              <IconBolt /> Keybinds
-            </div>
+            <button
+              type="button"
+              class={`settings-nav-btn ${tab() === "all" && !isSearching() ? "active" : ""}`}
+              onClick={() => { setTab("all"); setSearch(""); }}
+            >
+              <IconLayers />
+              <span>All</span>
+            </button>
+            <button
+              type="button"
+              class={`settings-nav-btn ${tab() === "general" && !isSearching() ? "active" : ""}`}
+              onClick={() => { setTab("general"); setSearch(""); }}
+            >
+              <IconSettingsIcon />
+              <span>General</span>
+            </button>
+            <button
+              type="button"
+              class={`settings-nav-btn ${tab() === "resources" && !isSearching() ? "active" : ""}`}
+              onClick={() => { setTab("resources"); setSearch(""); }}
+            >
+              <IconCube />
+              <span>Resources</span>
+            </button>
+            <button
+              type="button"
+              class={`settings-nav-btn ${tab() === "instances" && !isSearching() ? "active" : ""}`}
+              onClick={() => { setTab("instances"); setSearch(""); }}
+            >
+              <IconMonitor />
+              <span>Instance</span>
+            </button>
+            <button
+              type="button"
+              class={`settings-nav-btn ${tab() === "keybinds" && !isSearching() ? "active" : ""}`}
+              onClick={() => { setTab("keybinds"); setSearch(""); }}
+            >
+              <IconBolt />
+              <span>Keybinds</span>
+            </button>
           </div>
         </aside>
 
@@ -446,940 +471,1018 @@ const Settings: Component = () => {
       <Show when={settings()}>
         {/* ═══ GENERAL ═══ */}
         <Show when={isSearching() ? matchesGeneral() : (tab() === "all" || tab() === "general")}>
-          <div class="settings-section">
-            <div class="settings-section-header">
+          <div class="settings-category">
+            <div class="page-header">
               <div>
-                <div class="settings-section-title">General</div>
-                <div class="settings-section-desc">Core launcher preferences, startup options, and updates</div>
+                <span class="page-title">General</span>
+                <span class="page-subtitle">Core launcher preferences, startup options, and updates</span>
               </div>
             </div>
 
-            <Show when={!isSearching() || matchesLauncher()}>
-              <div class="settings-panel">
-                <div class="settings-group-header">
-                  <span class="settings-badge settings-badge--launcher">LAUNCHER</span>
-                  <span class="settings-group-title">Launcher Preferences</span>
-                  <span class="settings-group-desc">Client lifecycle and startup options</span>
-                </div>
+            <div class="cards-container">
+              <Show when={!isSearching() || matchesLauncher()}>
+                <div class="card-gamemode-section">
+                  <div class="card-section-header">
+                    <span class="card-section-tag tag-settings-general">LAUNCHER</span>
+                    <span class="card-section-label">Launcher Preferences</span>
+                    <span class="card-section-desc">Client lifecycle and startup options</span>
+                  </div>
 
-                <div class="settings-grid">
-                  <Show when={isGeneralSection() || matches("Minimize to tray on launch", "Hides launcher when game starts", "tray", "minimize", "hide", "close")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Minimize to tray on launch</div>
-                        <div class="settings-cell-desc">Hides launcher when game starts</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <div class={`toggle ${settings()!.close_on_launch ? "on" : ""}`} onClick={() => updateSetting("close_on_launch", !settings()!.close_on_launch)} />
-                      </div>
-                    </div>
-                  </Show>
-
-                  <Show when={isGeneralSection() || matches("Pop out logs on launch", "Opens the game log in a separate window", "logs", "popout", "console")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Pop out logs on launch</div>
-                        <div class="settings-cell-desc">Opens the game log in a separate window</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <div class={`toggle ${settings()!.popout_logs ? "on" : ""}`} onClick={() => updateSetting("popout_logs", !settings()!.popout_logs)} />
-                      </div>
-                    </div>
-                  </Show>
-
-                  <Show when={isGeneralSection() || matches("Auto-update launcher", "Automatically checks for updates", "update", "updates", "updater")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Auto-update launcher</div>
-                        <div class="settings-cell-desc">Keep launcher up to date</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <div class={`toggle ${settings()!.auto_update ? "on" : ""}`} onClick={() => updateSetting("auto_update", !settings()!.auto_update)} />
-                      </div>
-                    </div>
-                  </Show>
-
-                  <Show when={isGeneralSection() || matches("Boot splash", "Show the animated logo splash on startup", "splash", "startup", "boot")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Boot splash</div>
-                        <div class="settings-cell-desc">Show animated logo splash on startup</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <div class={`toggle ${settings()!.splash_screen ? "on" : ""}`} onClick={() => updateSetting("splash_screen", !settings()!.splash_screen)} />
-                      </div>
-                    </div>
-                  </Show>
-
-                  <Show when={isGeneralSection() || matches("Discord Rich Presence", "Display playing status", "discord", "rpc", "rich presence")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Discord Rich Presence</div>
-                        <div class="settings-cell-desc">Show game status in Discord</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <div class={`toggle ${settings()!.discord_rpc ? "on" : ""}`} onClick={() => updateSetting("discord_rpc", !settings()!.discord_rpc)} />
-                      </div>
-                    </div>
-                  </Show>
-
-                  <Show when={isGeneralSection() || matches("Show snapshots", "Include experimental versions", "snapshots", "snapshot", "experimental")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Show snapshots</div>
-                        <div class="settings-cell-desc">Include experimental versions</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <div class={`toggle ${settings()!.show_snapshots ? "on" : ""}`} onClick={() => updateSetting("show_snapshots", !settings()!.show_snapshots)} />
-                      </div>
-                    </div>
-                  </Show>
-
-                  <Show when={isGeneralSection() || matches("Force delete", "Skip confirmation when deleting instances", "delete", "remove", "confirmation")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Force delete</div>
-                        <div class="settings-cell-desc">Skip confirmation when deleting instances</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <div class={`toggle ${settings()!.force_delete ? "on" : ""}`} onClick={() => updateSetting("force_delete", !settings()!.force_delete)} />
-                      </div>
-                    </div>
-                  </Show>
-
-                  <Show when={isGeneralSection() || matches("Check for updates", "Manually check for a new version", "update")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Check for updates</div>
-                        <div class="settings-cell-desc">Manually check for a new version</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <button class="btn btn--sm" onClick={() => checkForUpdates(false)}>Check now</button>
-                      </div>
-                    </div>
-                  </Show>
-                </div>
-              </div>
-            </Show>
-
-            <Show when={!isSearching() || matchesAbout()}>
-              <div class="settings-panel">
-                <div class="settings-group-header">
-                  <span class="settings-badge settings-badge--about">ABOUT</span>
-                  <span class="settings-group-title">About Vermeil</span>
-                  <span class="settings-group-desc">Version info, privacy, and community links</span>
-                </div>
-
-                <div class="settings-grid">
-                  <Show when={isGeneralSection() || matches("Vermeil", "Version", appVersion())}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Vermeil</div>
-                        <div class="settings-cell-desc">Version {appVersion() || "..."}</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <button class="btn btn--sm" onClick={() => openUrl("https://github.com/Davekb1976/Vermeil-Launcher")} title="GitHub Repository">
-                          <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-                        </button>
-                      </div>
-                    </div>
-                  </Show>
-
-                  <Show when={isGeneralSection() || matches("Website", "vermeillauncher.app")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Website</div>
-                        <div class="settings-cell-desc">vermeillauncher.app</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <button class="btn btn--sm" onClick={() => openUrl("https://vermeillauncher.app/")}>
-                          <IconGlobe />
-                          Visit
-                        </button>
-                      </div>
-                    </div>
-                  </Show>
-
-                  <Show when={isGeneralSection() || matches("Privacy", "No data is collected")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Privacy</div>
-                        <div class="settings-cell-desc">Zero telemetry, all data on device</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <button class="btn btn--sm" onClick={() => openUrl("https://github.com/Davekb1976/Vermeil-Launcher/blob/main/PRIVACY.md")}>
-                          Read policy
-                        </button>
-                      </div>
-                    </div>
-                  </Show>
-
-                  <Show when={isGeneralSection() || matches("Disclaimer", "unofficial Minecraft launcher")}>
-                    <div class="settings-cell settings-cell--full">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Disclaimer</div>
-                        <div class="settings-cell-desc" style="line-height:1.5">
-                          Vermeil is an unofficial Minecraft launcher. Not affiliated with, endorsed by, or sponsored by Mojang Studios or Microsoft.
-                          Minecraft is a trademark of Mojang Synergies AB.
+                  <div class="card-section-body">
+                    <div class="setting-card-grid">
+                      <Show when={isGeneralSection() || matches("Minimize to tray on launch", "Hides launcher when game starts", "tray", "minimize", "hide", "close")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Minimize to tray on launch</span>
+                            <span class="setting-desc">Hides launcher when game starts</span>
+                          </div>
+                          <div class="setting-control">
+                            <label class="check check--lg">
+                              <input
+                                type="checkbox"
+                                checked={settings()!.close_on_launch}
+                                onChange={(e) => updateSetting("close_on_launch", e.currentTarget.checked)}
+                              />
+                              <span class="check-box"></span>
+                            </label>
+                          </div>
                         </div>
-                      </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Pop out logs on launch", "Opens the game log in a separate window", "logs", "popout", "console")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Pop out logs on launch</span>
+                            <span class="setting-desc">Opens the game log in a separate window</span>
+                          </div>
+                          <div class="setting-control">
+                            <label class="check check--lg">
+                              <input
+                                type="checkbox"
+                                checked={settings()!.popout_logs}
+                                onChange={(e) => updateSetting("popout_logs", e.currentTarget.checked)}
+                              />
+                              <span class="check-box"></span>
+                            </label>
+                          </div>
+                        </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Auto-update launcher", "Automatically checks for updates", "update", "updates", "updater")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Auto-update launcher</span>
+                            <span class="setting-desc">Keep launcher up to date</span>
+                          </div>
+                          <div class="setting-control">
+                            <label class="check check--lg">
+                              <input
+                                type="checkbox"
+                                checked={settings()!.auto_update}
+                                onChange={(e) => updateSetting("auto_update", e.currentTarget.checked)}
+                              />
+                              <span class="check-box"></span>
+                            </label>
+                          </div>
+                        </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Boot splash", "Show the animated logo splash on startup", "splash", "startup", "boot")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Boot splash</span>
+                            <span class="setting-desc">Show animated logo splash on startup</span>
+                          </div>
+                          <div class="setting-control">
+                            <label class="check check--lg">
+                              <input
+                                type="checkbox"
+                                checked={settings()!.splash_screen}
+                                onChange={(e) => updateSetting("splash_screen", e.currentTarget.checked)}
+                              />
+                              <span class="check-box"></span>
+                            </label>
+                          </div>
+                        </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Discord Rich Presence", "Display playing status", "discord", "rpc", "rich presence")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Discord Rich Presence</span>
+                            <span class="setting-desc">Show game status in Discord</span>
+                          </div>
+                          <div class="setting-control">
+                            <label class="check check--lg">
+                              <input
+                                type="checkbox"
+                                checked={settings()!.discord_rpc}
+                                onChange={(e) => updateSetting("discord_rpc", e.currentTarget.checked)}
+                              />
+                              <span class="check-box"></span>
+                            </label>
+                          </div>
+                        </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Show snapshots", "Include experimental versions", "snapshots", "snapshot", "experimental")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Show snapshots</span>
+                            <span class="setting-desc">Include experimental versions</span>
+                          </div>
+                          <div class="setting-control">
+                            <label class="check check--lg">
+                              <input
+                                type="checkbox"
+                                checked={settings()!.show_snapshots}
+                                onChange={(e) => updateSetting("show_snapshots", e.currentTarget.checked)}
+                              />
+                              <span class="check-box"></span>
+                            </label>
+                          </div>
+                        </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Force delete", "Skip confirmation when deleting instances", "delete", "remove", "confirmation")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Force delete</span>
+                            <span class="setting-desc">Skip confirmation when deleting instances</span>
+                          </div>
+                          <div class="setting-control">
+                            <label class="check check--lg">
+                              <input
+                                type="checkbox"
+                                checked={settings()!.force_delete}
+                                onChange={(e) => updateSetting("force_delete", e.currentTarget.checked)}
+                              />
+                              <span class="check-box"></span>
+                            </label>
+                          </div>
+                        </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Check for updates", "Manually check for a new version", "update")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Check for updates</span>
+                            <span class="setting-desc">Manually check for a new version</span>
+                          </div>
+                          <div class="setting-control">
+                            <button class="btn btn--sm" onClick={() => checkForUpdates(false)}>Check now</button>
+                          </div>
+                        </div>
+                      </Show>
                     </div>
-                  </Show>
+                  </div>
                 </div>
-              </div>
-            </Show>
+              </Show>
+
+              <Show when={!isSearching() || matchesAbout()}>
+                <div class="card-gamemode-section">
+                  <div class="card-section-header">
+                    <span class="card-section-tag tag-settings-about">ABOUT</span>
+                    <span class="card-section-label">About Vermeil</span>
+                    <span class="card-section-desc">Version info, privacy, and community links</span>
+                  </div>
+
+                  <div class="card-section-body">
+                    <div class="setting-card-grid">
+                      <Show when={isGeneralSection() || matches("Vermeil", "Version", appVersion())}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Vermeil</span>
+                            <span class="setting-desc">Version {appVersion() || "..."}</span>
+                          </div>
+                          <div class="setting-control">
+                            <button class="btn btn--sm" onClick={() => openUrl("https://github.com/Davekb1976/Vermeil-Launcher")} title="GitHub Repository">
+                              <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                            </button>
+                          </div>
+                        </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Website", "vermeillauncher.app")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Website</span>
+                            <span class="setting-desc">vermeillauncher.app</span>
+                          </div>
+                          <div class="setting-control">
+                            <button class="btn btn--sm" onClick={() => openUrl("https://vermeillauncher.app/")}>
+                              <IconGlobe />
+                              Visit
+                            </button>
+                          </div>
+                        </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Privacy", "No data is collected")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Privacy</span>
+                            <span class="setting-desc">Zero telemetry, all data on device</span>
+                          </div>
+                          <div class="setting-control">
+                            <button class="btn btn--sm" onClick={() => openUrl("https://github.com/Davekb1976/Vermeil-Launcher/blob/main/PRIVACY.md")}>
+                              Read policy
+                            </button>
+                          </div>
+                        </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Disclaimer", "unofficial Minecraft launcher")}>
+                        <div class="setting-row full">
+                          <div class="setting-info">
+                            <span class="setting-name">Disclaimer</span>
+                            <span class="setting-desc" style="line-height:1.5">
+                              Vermeil is an unofficial Minecraft launcher. Not affiliated with, endorsed by, or sponsored by Mojang Studios or Microsoft.
+                              Minecraft is a trademark of Mojang Synergies AB.
+                            </span>
+                          </div>
+                        </div>
+                      </Show>
+                    </div>
+                  </div>
+                </div>
+              </Show>
+            </div>
           </div>
         </Show>
 
         {/* ═══ RESOURCES ═══ */}
         <Show when={isSearching() ? matchesResources() : (tab() === "all" || tab() === "resources")}>
-          <div class="settings-section">
-            <div class="settings-section-header">
+          <div class="settings-category">
+            <div class="page-header">
               <div>
-                <div class="settings-section-title">Resources</div>
-                <div class="settings-section-desc">Storage paths, download concurrency, and Java environment</div>
+                <div class="page-title">Resources</div>
+                <div class="page-subtitle">Storage paths, download concurrency, and Java environment</div>
               </div>
               <button class="btn btn--sm" onClick={handlePurgeCache} disabled={purging()}>
                 {purging() ? "Purging..." : "Purge cache"}
               </button>
             </div>
 
-            <Show when={!isSearching() || matchesStorage()}>
-              <div class="settings-panel">
-                <div class="settings-group-header">
-                  <span class="settings-badge settings-badge--storage">STORAGE</span>
-                  <span class="settings-group-title">Storage Management</span>
-                  <span class="settings-group-desc">Application data path and local caches</span>
-                </div>
-
-                <div class="settings-grid settings-grid--2col">
-                  <div
-                    class="settings-cell"
-                    style="cursor:pointer"
-                    onClick={() => openAppDirectory()}
-                    title="Open in file manager"
-                  >
-                    <div class="settings-cell-content">
-                      <div class="settings-cell-title">App directory</div>
-                      <div class="settings-cell-desc settings-val--mono">{appDirectory() ?? "…"}</div>
-                    </div>
-                    <div class="settings-cell-control">
-                      <button
-                        class="btn btn--sm"
-                        onClick={(e) => { e.stopPropagation(); openAppDirectory(); }}
+            <div class="cards-container">
+              <Show when={!isSearching() || matchesStorage()}>
+                <div class="card-gamemode-section">
+                  <div class="card-section-header">
+                    <span class="card-section-tag tag-settings-storage">STORAGE</span>
+                    <span class="card-section-label">Storage Management</span>
+                    <span class="card-section-desc">Application data path and local caches</span>
+                  </div>
+                  <div class="card-section-body">
+                    <div class="setting-card-grid setting-card-grid--2col">
+                      <div
+                        class="setting-row"
+                        style="cursor:pointer"
+                        onClick={() => openAppDirectory()}
+                        title="Open in file manager"
                       >
-                        <IconFolderOpen /> Open
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="settings-cell">
-                    <div class="settings-cell-content">
-                      <div class="settings-cell-title">App cache</div>
-                      <div class="settings-cell-desc">{formatCacheSize()} MB cached metadata and installers</div>
-                    </div>
-                    <div class="settings-cell-control">
-                      <button class="btn btn--sm" onClick={handlePurgeCache} disabled={purging()}>
-                        {purging() ? "Purging..." : "Purge cache"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Show>
-
-            <Show when={!isSearching() || matchesPerformance()}>
-              <div class="settings-panel">
-                <div class="settings-group-header">
-                  <span class="settings-badge settings-badge--perf">PERFORMANCE</span>
-                  <span class="settings-group-title">Concurrency Limits</span>
-                  <span class="settings-group-desc">Max concurrent downloads and disk writes</span>
-                </div>
-
-                <div class="settings-grid settings-grid--2col">
-                  <div class="settings-cell">
-                    <div class="settings-cell-content">
-                      <div class="settings-cell-title">Concurrent downloads</div>
-                      <div class="settings-cell-desc">Max files downloading simultaneously (1–20)</div>
-                    </div>
-                    <div class="settings-cell-control">
-                      <div class="concurrency-control">
-                        <input
-                          class="concurrency-slider"
-                          type="range"
-                          min="1"
-                          max="20"
-                          step="1"
-                          value={dlValue()}
-                          style={`--slider-pct: ${((dlValue() - 1) / 19) * 100}%`}
-                          onInput={(e) => {
-                            const safe = clampConcurrency(parseInt(e.currentTarget.value), 20);
-                            e.currentTarget.style.setProperty('--slider-pct', `${((safe - 1) / 19) * 100}%`);
-                            setDlDraft(safe);
-                            updateSetting("concurrent_downloads", safe);
-                          }}
-                        />
-                        <input
-                          class="concurrency-number"
-                          type="number"
-                          min="1"
-                          max="20"
-                          value={dlValue()}
-                          onChange={(e) => {
-                            const safe = clampConcurrency(parseInt(e.currentTarget.value), 20);
-                            e.currentTarget.value = String(safe);
-                            setDlDraft(safe);
-                            updateSetting("concurrent_downloads", safe);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="settings-cell">
-                    <div class="settings-cell-content">
-                      <div class="settings-cell-title">Concurrent writes</div>
-                      <div class="settings-cell-desc">Max files being written to disk simultaneously (1–50)</div>
-                    </div>
-                    <div class="settings-cell-control">
-                      <div class="concurrency-control">
-                        <input
-                          class="concurrency-slider"
-                          type="range"
-                          min="1"
-                          max="50"
-                          step="1"
-                          value={wrValue()}
-                          style={`--slider-pct: ${((wrValue() - 1) / 49) * 100}%`}
-                          onInput={(e) => {
-                            const safe = clampConcurrency(parseInt(e.currentTarget.value), 50);
-                            e.currentTarget.style.setProperty('--slider-pct', `${((safe - 1) / 49) * 100}%`);
-                            setWrDraft(safe);
-                            updateSetting("concurrent_writes", safe);
-                          }}
-                        />
-                        <input
-                          class="concurrency-number"
-                          type="number"
-                          min="1"
-                          max="50"
-                          value={wrValue()}
-                          onChange={(e) => {
-                            const safe = clampConcurrency(parseInt(e.currentTarget.value), 50);
-                            e.currentTarget.value = String(safe);
-                            setWrDraft(safe);
-                            updateSetting("concurrent_writes", safe);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Show>
-
-            <Show when={!isSearching() || matchesJava()}>
-              <div class="settings-panel">
-                <div class="settings-group-header">
-                  <span class="settings-badge settings-badge--java">JAVA</span>
-                  <span class="settings-group-title">Java Environment</span>
-                  <span class="settings-group-desc">Runtime provider, garbage collection preset, and version slots</span>
-                </div>
-
-                <div class="settings-grid settings-grid--2col" style="margin-bottom:14px">
-                  <div class="settings-cell">
-                    <div class="settings-cell-content">
-                      <div class="settings-cell-title">Java runtime</div>
-                      <div class="settings-cell-desc">{settings()!.java_runtime === "auto" ? "Auto-managed (Adoptium)" : settings()!.java_runtime}</div>
-                    </div>
-                    <div class="settings-cell-control">
-                      <Dropdown
-                        value={settings()!.java_runtime}
-                        options={[
-                          { value: "auto", label: "Auto (Adoptium)" },
-                          { value: "system", label: "System Java" },
-                        ]}
-                        onChange={(val) => updateSetting("java_runtime", val)}
-                      />
-                    </div>
-                  </div>
-
-                  <div class="settings-cell">
-                    <div class="settings-cell-content">
-                      <div class="settings-cell-title">GC preset</div>
-                      <div class="settings-cell-desc">{settings()!.gc_preset === "g1gc" ? "G1GC (recommended)" : settings()!.gc_preset.toUpperCase()}</div>
-                    </div>
-                    <div class="settings-cell-control">
-                      <Dropdown
-                        value={settings()!.gc_preset}
-                        options={[
-                          { value: "g1gc", label: "G1GC (recommended)" },
-                          { value: "zgc", label: "ZGC (Java 21+)" },
-                          { value: "shenandoah", label: "Shenandoah" },
-                        ]}
-                        onChange={(val) => updateSetting("gc_preset", val)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              <div class="java-slots">
-                <For each={JAVA_SLOTS}>
-                  {(major) => {
-                    const path = () => javaPathFor(major);
-                    const installed = () => Boolean(path());
-                    const det = () => detectionFor(major);
-                    const busy = () => javaBusy()[major] ?? null;
-                    const eraLabel = () => {
-                      switch (major) {
-                        case 25: return "Minecraft 26.x+";
-                        case 21: return "Minecraft 1.20.5 – 1.21.x";
-                        case 17: return "Minecraft 1.18 – 1.20.4";
-                        case 8: return "Minecraft 1.8.9 – 1.16";
-                        default: return "";
-                      }
-                    };
-                    return (
-                      <div class="java-slot">
-                        <div class="java-slot-header">
-                          <div class="java-slot-title-wrap">
-                            <span class="java-slot-title">Java {major}</span>
-                            <span class="java-slot-subtitle">{eraLabel()}</span>
-                          </div>
-                          <Show when={installed()} fallback={
-                            <span class="java-status-badge java-status-badge--missing">Missing</span>
-                          }>
-                            <span class="java-status-badge java-status-badge--ready">
-                              {det()?.is_vermeil_managed ? "Managed" : "Ready"}
-                            </span>
-                          </Show>
+                        <div class="setting-info">
+                          <span class="setting-name">App directory</span>
+                          <span class="setting-desc settings-val--mono">{appDirectory() ?? "…"}</span>
                         </div>
-                        <JavaPathInput
-                          major={major}
-                          value={path()}
-                          placeholder={`No Java ${major} configured`}
-                          disabled={busy() !== null}
-                          onCommit={async (newPath) => {
-                            // Refresh the settings resource so other UI sees the
-                            // change, and refresh detections so the meta line
-                            // under the input picks up the new install.
-                            await refetch();
-                            if (newPath) {
-                              try {
-                                const install = await validateJavaPath(newPath);
-                                setJavaDetections(prev => {
-                                  const without = prev.filter(i => i.path !== install.path);
-                                  return [...without, install];
-                                });
-                              } catch {
-                                // Already toasted by JavaPathInput on the unhappy path.
-                              }
+                        <div class="setting-control">
+                          <button
+                            class="btn btn--sm"
+                            onClick={(e) => { e.stopPropagation(); openAppDirectory(); }}
+                          >
+                            <IconFolderOpen /> Open
+                          </button>
+                        </div>
+                      </div>
+
+                      <div class="setting-row">
+                        <div class="setting-info">
+                          <span class="setting-name">App cache</span>
+                          <span class="setting-desc">{formatCacheSize()} MB cached metadata and installers</span>
+                        </div>
+                        <div class="setting-control">
+                          <button class="btn btn--sm" onClick={handlePurgeCache} disabled={purging()}>
+                            {purging() ? "Purging..." : "Purge cache"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Show>
+
+              <Show when={!isSearching() || matchesPerformance()}>
+                <div class="card-gamemode-section">
+                  <div class="card-section-header">
+                    <span class="card-section-tag tag-settings-performance">PERFORMANCE</span>
+                    <span class="card-section-label">Concurrency Limits</span>
+                    <span class="card-section-desc">Max concurrent downloads and disk writes</span>
+                  </div>
+                  <div class="card-section-body">
+                    <div class="setting-card-grid setting-card-grid--2col">
+                      <div class="setting-row">
+                        <div class="setting-info">
+                          <span class="setting-name">Concurrent downloads</span>
+                          <span class="setting-desc">Max files downloading simultaneously (1–20)</span>
+                        </div>
+                        <div class="setting-control">
+                          <div class="concurrency-control">
+                            <input
+                              class="concurrency-slider"
+                              type="range"
+                              min="1"
+                              max="20"
+                              step="1"
+                              value={dlValue()}
+                              style={`--slider-pct: ${((dlValue() - 1) / 19) * 100}%`}
+                              onInput={(e) => {
+                                const safe = clampConcurrency(parseInt(e.currentTarget.value), 20);
+                                e.currentTarget.style.setProperty('--slider-pct', `${((safe - 1) / 19) * 100}%`);
+                                setDlDraft(safe);
+                                updateSetting("concurrent_downloads", safe);
+                              }}
+                            />
+                            <input
+                              class="concurrency-number"
+                              type="number"
+                              min="1"
+                              max="20"
+                              value={dlValue()}
+                              onChange={(e) => {
+                                const safe = clampConcurrency(parseInt(e.currentTarget.value), 20);
+                                e.currentTarget.value = String(safe);
+                                setDlDraft(safe);
+                                updateSetting("concurrent_downloads", safe);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="setting-row">
+                        <div class="setting-info">
+                          <span class="setting-name">Concurrent writes</span>
+                          <span class="setting-desc">Max files being written to disk simultaneously (1–50)</span>
+                        </div>
+                        <div class="setting-control">
+                          <div class="concurrency-control">
+                            <input
+                              class="concurrency-slider"
+                              type="range"
+                              min="1"
+                              max="50"
+                              step="1"
+                              value={wrValue()}
+                              style={`--slider-pct: ${((wrValue() - 1) / 49) * 100}%`}
+                              onInput={(e) => {
+                                const safe = clampConcurrency(parseInt(e.currentTarget.value), 50);
+                                e.currentTarget.style.setProperty('--slider-pct', `${((safe - 1) / 49) * 100}%`);
+                                setWrDraft(safe);
+                                updateSetting("concurrent_writes", safe);
+                              }}
+                            />
+                            <input
+                              class="concurrency-number"
+                              type="number"
+                              min="1"
+                              max="50"
+                              value={wrValue()}
+                              onChange={(e) => {
+                                const safe = clampConcurrency(parseInt(e.currentTarget.value), 50);
+                                e.currentTarget.value = String(safe);
+                                setWrDraft(safe);
+                                updateSetting("concurrent_writes", safe);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Show>
+
+              <Show when={!isSearching() || matchesJava()}>
+                <div class="card-gamemode-section">
+                  <div class="card-section-header">
+                    <span class="card-section-tag tag-settings-java">JAVA</span>
+                    <span class="card-section-label">Java Environment</span>
+                    <span class="card-section-desc">Runtime provider, garbage collection preset, and version slots</span>
+                  </div>
+                  <div class="card-section-body">
+                    <div class="setting-card-grid setting-card-grid--2col" style="margin-bottom:14px">
+                      <div class="setting-row">
+                        <div class="setting-info">
+                          <span class="setting-name">Java runtime</span>
+                          <span class="setting-desc">{settings()!.java_runtime === "auto" ? "Auto-managed (Adoptium)" : settings()!.java_runtime}</span>
+                        </div>
+                        <div class="setting-control">
+                          <Dropdown
+                            value={settings()!.java_runtime}
+                            options={[
+                              { value: "auto", label: "Auto (Adoptium)" },
+                              { value: "system", label: "System Java" },
+                            ]}
+                            onChange={(val) => updateSetting("java_runtime", val)}
+                          />
+                        </div>
+                      </div>
+
+                      <div class="setting-row">
+                        <div class="setting-info">
+                          <span class="setting-name">GC preset</span>
+                          <span class="setting-desc">{settings()!.gc_preset === "g1gc" ? "G1GC (recommended)" : settings()!.gc_preset.toUpperCase()}</span>
+                        </div>
+                        <div class="setting-control">
+                          <Dropdown
+                            value={settings()!.gc_preset}
+                            options={[
+                              { value: "g1gc", label: "G1GC (recommended)" },
+                              { value: "zgc", label: "ZGC (Java 21+)" },
+                              { value: "shenandoah", label: "Shenandoah" },
+                            ]}
+                            onChange={(val) => updateSetting("gc_preset", val)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div class="java-slots">
+                      <For each={JAVA_SLOTS}>
+                        {(major) => {
+                          const path = () => javaPathFor(major);
+                          const installed = () => Boolean(path());
+                          const det = () => detectionFor(major);
+                          const busy = () => javaBusy()[major] ?? null;
+                          const eraLabel = () => {
+                            switch (major) {
+                              case 25: return "Minecraft 26.x+";
+                              case 21: return "Minecraft 1.20.5 – 1.21.x";
+                              case 17: return "Minecraft 1.18 – 1.20.4";
+                              case 8: return "Minecraft 1.8.9 – 1.16";
+                              default: return "";
                             }
-                          }}
-                        />
-                        <Show when={det() && installed()}>
-                          <div class="java-slot-meta">
-                            {det()!.full_version} · {det()!.arch} · {det()!.source.replace("_", " ")}
-                          </div>
-                        </Show>
-                        <div class="java-slot-actions">
-                          <button
-                            class={`btn btn--sm ${installed() ? "btn--neutral" : "btn--primary"}`}
-                            onClick={() => runInstall(major)}
-                            disabled={busy() !== null}
-                            title={installed() ? "Replace with a fresh Adoptium download" : "Download from Adoptium"}
-                          >
-                            <IconDownload />
-                            {busy() === "install" ? "Installing..." : "Install recommended"}
-                          </button>
-                          <button
-                            class="btn btn--sm btn--neutral"
-                            onClick={() => runDetect(major)}
-                            disabled={busy() !== null}
-                          >
-                            <IconSearch />
-                            {busy() === "detect" ? "Detecting..." : "Detect"}
-                          </button>
-                          <button
-                            class="btn btn--sm btn--neutral"
-                            onClick={() => runBrowse(major)}
-                            disabled={busy() !== null}
-                          >
-                            <IconFolderOpen />
-                            {busy() === "browse" ? "Picking..." : "Browse"}
-                          </button>
-                          {(() => {
-                            const det = javaDetections().find((i) => i.path === path());
-                            const ownsCurrent = det?.is_vermeil_managed === true;
-                            return (
-                              <Show when={ownsCurrent}>
-                                <button
-                                  class="btn btn--sm btn--danger"
-                                  onClick={() => runDelete(major)}
-                                  disabled={busy() !== null}
-                                  title="Delete Vermeil's downloaded copy"
-                                >
-                                  <IconTrash />
-                                  {busy() === "delete" ? "Deleting..." : "Delete"}
-                                </button>
+                          };
+                          return (
+                            <div class="java-slot">
+                              <div class="java-slot-header">
+                                <div class="java-slot-title-wrap">
+                                  <span class="java-slot-title">Java {major}</span>
+                                  <span class="java-slot-subtitle">{eraLabel()}</span>
+                                </div>
+                                <Show when={installed()} fallback={
+                                  <span class="java-status-badge java-status-badge--missing">Missing</span>
+                                }>
+                                  <span class="java-status-badge java-status-badge--ready">
+                                    {det()?.is_vermeil_managed ? "Managed" : "Ready"}
+                                  </span>
+                                </Show>
+                              </div>
+                              <JavaPathInput
+                                major={major}
+                                value={path()}
+                                placeholder={`No Java ${major} configured`}
+                                disabled={busy() !== null}
+                                onCommit={async (newPath) => {
+                                  // Refresh the settings resource so other UI sees the
+                                  // change, and refresh detections so the meta line
+                                  // under the input picks up the new install.
+                                  await refetch();
+                                  if (newPath) {
+                                    try {
+                                      const install = await validateJavaPath(newPath);
+                                      setJavaDetections(prev => {
+                                        const without = prev.filter(i => i.path !== install.path);
+                                        return [...without, install];
+                                      });
+                                    } catch {
+                                      // Already toasted by JavaPathInput on the unhappy path.
+                                    }
+                                  }
+                                }}
+                              />
+                              <Show when={det() && installed()}>
+                                <div class="java-slot-meta">
+                                  {det()!.full_version} · {det()!.arch} · {det()!.source.replace("_", " ")}
+                                </div>
                               </Show>
-                            );
-                          })()}
-                        </div>
-                      </div>
-                    );
-                  }}
-                </For>
-              </div>{/* .java-slots */}
-            </div>{/* .settings-panel */}
-          </Show>
-        </div>{/* .settings-section */}
-      </Show>
+                              <div class="java-slot-actions">
+                                <button
+                                  class={`btn btn--sm ${installed() ? "btn--neutral" : "btn--primary"}`}
+                                  onClick={() => runInstall(major)}
+                                  disabled={busy() !== null}
+                                  title={installed() ? "Replace with a fresh Adoptium download" : "Download from Adoptium"}
+                                >
+                                  <IconDownload />
+                                  {busy() === "install" ? "Installing..." : "Install recommended"}
+                                </button>
+                                <button
+                                  class="btn btn--sm btn--neutral"
+                                  onClick={() => runDetect(major)}
+                                  disabled={busy() !== null}
+                                >
+                                  <IconSearch />
+                                  {busy() === "detect" ? "Detecting..." : "Detect"}
+                                </button>
+                                <button
+                                  class="btn btn--sm btn--neutral"
+                                  onClick={() => runBrowse(major)}
+                                  disabled={busy() !== null}
+                                >
+                                  <IconFolderOpen />
+                                  {busy() === "browse" ? "Picking..." : "Browse"}
+                                </button>
+                                {(() => {
+                                  const det = javaDetections().find((i) => i.path === path());
+                                  const ownsCurrent = det?.is_vermeil_managed === true;
+                                  return (
+                                    <Show when={ownsCurrent}>
+                                      <button
+                                        class="btn btn--sm btn--danger"
+                                        onClick={() => runDelete(major)}
+                                        disabled={busy() !== null}
+                                        title="Delete Vermeil's downloaded copy"
+                                      >
+                                        <IconTrash />
+                                        {busy() === "delete" ? "Deleting..." : "Delete"}
+                                      </button>
+                                    </Show>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+                          );
+                        }}
+                      </For>
+                    </div>{/* .java-slots */}
+                  </div>{/* .card-section-body */}
+                </div>{/* .card-gamemode-section */}
+              </Show>
+            </div>{/* .cards-container */}
+          </div>{/* .settings-category */}
+        </Show>
 
         {/* ═══ INSTANCE OPTIONS ═══ */}
         <Show when={isSearching() ? matchesInstances() : (tab() === "all" || tab() === "instances")}>
-          <div class="settings-section">
-            <div class="settings-section-header">
+          <div class="settings-category">
+            <div class="page-header">
               <div>
-                <div class="settings-section-title">Global Instance Defaults</div>
-                <div class="settings-section-desc">Default video, audio, window, and memory configurations applied to all instances</div>
+                <div class="page-title">Global Instance Defaults</div>
+                <div class="page-subtitle">Default video, audio, window, and memory configurations applied to all instances</div>
               </div>
               <button class="btn btn--sm" onClick={() => {
                 updateVideoSettings({ max_fps: 120, vsync: true, view_bobbing: true, gui_scale: 0, fov: 0.0, fov_effects: 1.0, master_volume: 1.0, music_volume: 1.0, window_width: null, window_height: null, start_maximized: null });
               }}>Reset All</button>
             </div>
 
-            {/* Video Panel */}
-            <Show when={!isSearching() || matchesVideo()}>
-              <div class="settings-panel">
-                <div class="settings-group-header">
-                  <span class="settings-badge settings-badge--video">VIDEO</span>
-                  <span class="settings-group-title">Display & Rendering</span>
-                  <span class="settings-group-desc">Framerate, VSync, FOV, and visual effects</span>
-                </div>
-
-                <div class="settings-grid">
-                  {/* Max Framerate — slider */}
-                  <Show when={isInstancesSection() || matches("max fps", "framerate", "fps limit")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Max FPS</div>
-                        <div class="settings-cell-desc">{(vs().max_fps ?? 120) === 260 ? "Unlimited" : `${vs().max_fps ?? 120} FPS`}</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <input
-                          type="range"
-                          min="10"
-                          max="260"
-                          step="10"
-                          value={vs().max_fps ?? 120}
-                          class="slider vs-slider"
-                          style={`--slider-pct:${((vs().max_fps ?? 120) - 10) / 250 * 100}%`}
-                          onInput={(e) => {
-                            const val = parseInt(e.currentTarget.value);
-                            e.currentTarget.style.setProperty('--slider-pct', `${(val - 10) / 250 * 100}%`);
-                            updateVideoSettings({ max_fps: val });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </Show>
-
-                  {/* VSync */}
-                  <Show when={isInstancesSection() || matches("vsync", "vertical sync", "sync frame rate")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">VSync</div>
-                        <div class="settings-cell-desc">Sync frame rate with monitor</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <Dropdown
-                          value={(vs().vsync ?? true) ? "true" : "false"}
-                          options={[
-                            { value: "true", label: "On" },
-                            { value: "false", label: "Off" },
-                          ]}
-                          onChange={(val) => {
-                            updateVideoSettings({ vsync: val === "true" });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </Show>
-
-                  {/* View Bobbing */}
-                  <Show when={isInstancesSection() || matches("view bobbing", "camera motion", "walking")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">View Bobbing</div>
-                        <div class="settings-cell-desc">Camera motion while walking</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <Dropdown
-                          value={(vs().view_bobbing ?? true) ? "true" : "false"}
-                          options={[
-                            { value: "true", label: "On" },
-                            { value: "false", label: "Off" },
-                          ]}
-                          onChange={(val) => {
-                            updateVideoSettings({ view_bobbing: val === "true" });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </Show>
-
-                  {/* GUI Scale */}
-                  <Show when={isInstancesSection() || matches("gui scale", "ui scale", "interface scale")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">GUI Scale</div>
-                        <div class="settings-cell-desc">User interface scale</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <Dropdown
-                          value={String(vs().gui_scale ?? 0)}
-                          options={[
-                            { value: "0", label: "Auto" },
-                            { value: "1", label: "Small" },
-                            { value: "2", label: "Normal" },
-                            { value: "3", label: "Large" },
-                            { value: "4", label: "Huge" },
-                          ]}
-                          onChange={(val) => {
-                            updateVideoSettings({ gui_scale: parseInt(val) });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </Show>
-
-                  {/* FOV */}
-                  <Show when={isInstancesSection() || matches("fov", "field of view")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">FOV</div>
-                        <div class="settings-cell-desc">{`${Math.round(40 * (vs().fov ?? 0) + 70)}°`}</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <input
-                          type="range"
-                          min="30"
-                          max="110"
-                          step="1"
-                          value={vs().fov === null ? 70 : Math.round(40 * vs().fov! + 70)}
-                          class="slider vs-slider"
-                          style={`--slider-pct:${((vs().fov === null ? 70 : Math.round(40 * vs().fov! + 70)) - 30) / 80 * 100}%`}
-                          onInput={(e) => {
-                            const degrees = parseInt(e.currentTarget.value);
-                            e.currentTarget.style.setProperty('--slider-pct', `${(degrees - 30) / 80 * 100}%`);
-                            const fovValue = (degrees - 70) / 40;
-                            updateVideoSettings({ fov: fovValue });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </Show>
-
-                  {/* FOV Effects */}
-                  <Show when={isInstancesSection() || matches("fov effects", "distortion", "effects")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">FOV Effects</div>
-                        <div class="settings-cell-desc">{`${Math.round((vs().fov_effects ?? 1) * 100)}%`}</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          step="1"
-                          value={vs().fov_effects === null ? 100 : Math.round(vs().fov_effects! * 100)}
-                          class="slider vs-slider"
-                          style={`--slider-pct:${(vs().fov_effects === null ? 100 : Math.round(vs().fov_effects! * 100))}%`}
-                          onInput={(e) => {
-                            const pct = parseInt(e.currentTarget.value);
-                            e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
-                            updateVideoSettings({ fov_effects: pct / 100 });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </Show>
-                </div>
-              </div>
-            </Show>
-
-            {/* Audio Panel */}
-            <Show when={!isSearching() || matchesAudio()}>
-              <div class="settings-panel">
-                <div class="settings-group-header">
-                  <span class="settings-badge settings-badge--audio">AUDIO</span>
-                  <span class="settings-group-title">Sound Levels</span>
-                  <span class="settings-group-desc">Master and music volume levels</span>
-                </div>
-
-                <div class="settings-grid settings-grid--2col">
-                  {/* Master Volume */}
-                  <Show when={isInstancesSection() || matches("master volume", "master", "sound")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Master Volume</div>
-                        <div class="settings-cell-desc">{`${Math.round((vs().master_volume ?? 1) * 100)}%`}</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          step="1"
-                          value={vs().master_volume === null ? 100 : Math.round(vs().master_volume! * 100)}
-                          class="slider vs-slider"
-                          style={`--slider-pct:${(vs().master_volume === null ? 100 : Math.round(vs().master_volume! * 100))}%`}
-                          onInput={(e) => {
-                            const pct = parseInt(e.currentTarget.value);
-                            e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
-                            updateVideoSettings({ master_volume: pct / 100 });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </Show>
-
-                  {/* Music Volume */}
-                  <Show when={isInstancesSection() || matches("music volume", "music", "soundtrack")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Music Volume</div>
-                        <div class="settings-cell-desc">{`${Math.round((vs().music_volume ?? 1) * 100)}%`}</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          step="1"
-                          value={vs().music_volume === null ? 100 : Math.round(vs().music_volume! * 100)}
-                          class="slider vs-slider"
-                          style={`--slider-pct:${(vs().music_volume === null ? 100 : Math.round(vs().music_volume! * 100))}%`}
-                          onInput={(e) => {
-                            const pct = parseInt(e.currentTarget.value);
-                            e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
-                            updateVideoSettings({ music_volume: pct / 100 });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </Show>
-                </div>
-              </div>
-            </Show>
-
-            {/* Window & Memory Panel */}
-            <Show when={!isSearching() || matchesWindow() || matchesMemory()}>
-              <div class="settings-panel">
-                <div class="settings-group-header">
-                  <span class="settings-badge settings-badge--window">WINDOW & RAM</span>
-                  <span class="settings-group-title">Window & Memory Defaults</span>
-                  <span class="settings-group-desc">Launch dimensions and adaptive RAM ceiling</span>
-                </div>
-
-                <div class="settings-grid">
-                  {/* Resolution preset dropdown */}
-                  <Show when={isInstancesSection() || matches("resolution", "window size", "dimensions", "width", "height")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Resolution</div>
-                        <div class="settings-cell-desc">Default window size</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <Dropdown
-                          disabled={!!vs().start_maximized}
-                          value={vs().window_width && vs().window_height ? `${vs().window_width}x${vs().window_height}` : "1280x720"}
-                          options={[
-                            { value: "1280x720", label: "1280 × 720" },
-                            { value: "1366x768", label: "1366 × 768" },
-                            { value: "1600x900", label: "1600 × 900" },
-                            { value: "1920x1080", label: "1920 × 1080" },
-                            { value: "2560x1440", label: "2560 × 1440" },
-                            { value: "3840x2160", label: "3840 × 2160" },
-                          ]}
-                          onChange={(val) => {
-                            const [w, h] = val.split("x").map(Number);
-                            updateVideoSettings({ window_width: w, window_height: h });
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </Show>
-
-                  {/* Maximized toggle */}
-                  <Show when={isInstancesSection() || matches("maximized", "start maximized", "fullscreen", "monitor")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Maximized</div>
-                        <div class="settings-cell-desc">Launch filled to monitor</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <div class={`toggle ${vs().start_maximized ? "on" : ""}`} onClick={() => updateVideoSettings({ start_maximized: !vs().start_maximized })} />
-                      </div>
-                    </div>
-                  </Show>
-
-                  {/* Maximum RAM cap */}
-                  <Show when={isInstancesSection() || matches("maximum ram", "ram", "memory", "adaptive ceiling", "heap", "mb", "gb")}>
-                    <div class="settings-cell">
-                      <div class="settings-cell-content">
-                        <div class="settings-cell-title">Maximum RAM</div>
-                        <div class="settings-cell-desc">Adaptive ceiling</div>
-                      </div>
-                      <div class="settings-cell-control">
-                        <Dropdown
-                          value={String(settings()!.adaptive_ram_max_mb || 0)}
-                          options={(() => {
-                            const sysMb = systemMemoryMb() || 0;
-                            const auto = adaptiveDefaultMax(sysMb);
-                            return [
-                              { value: "0", label: `Auto (${formatMemoryGb(auto)})` },
-                              { value: "2048", label: "2 GB" },
-                              { value: "3072", label: "3 GB" },
-                              { value: "4096", label: "4 GB" },
-                              { value: "6144", label: "6 GB" },
-                              { value: "8192", label: "8 GB" },
-                              { value: "10240", label: "10 GB" },
-                              { value: "12288", label: "12 GB" },
-                              { value: "14336", label: "14 GB" },
-                              { value: "16384", label: "16 GB" },
-                            ];
-                          })()}
-                          onChange={(val) => {
-                            updateSetting("adaptive_ram_max_mb", parseInt(val) || 0);
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </Show>
-                </div>
-              </div>
-            </Show>
-
-            {/* Instances Panel */}
-            <Show when={!isSearching() || isInstancesSection() || (instances() || []).some(i => matches(i.name, i.game_version, i.loader.type))}>
-              <div class="settings-panel">
-                <div class="settings-group-header">
-                  <span class="settings-badge settings-badge--instances">INSTANCES</span>
-                  <span class="settings-group-title">Configure Instances</span>
-                  <span class="settings-group-desc">Select an instance to configure overrides</span>
-                </div>
-                <div class="card-grid">
-                  <For each={instances() || []}>
-                    {(inst) => {
-                      const iconUrl = (!inst.icon || inst.icon === "cube") ? undefined : inst.icon;
-                      const colorClass = (() => {
-                        switch (inst.loader.type) {
-                          case "fabric": return "fabric";
-                          case "quilt": return "quilt";
-                          case "neoforge": return "blue";
-                          case "forge": return "orange";
-                          default: return "green";
-                        }
-                      })();
-                      return (
-                        <Show when={!isSearching() || isInstancesSection() || matches(inst.name, inst.game_version, inst.loader.type)}>
-                          <div class="card card--inst" style="cursor:pointer" onClick={() => openInstanceOptions(inst.id)}>
-                            <div class="card-body">
-                              <div class={`inst-card-icon ${colorClass}`}>
-                                <Show when={iconUrl} fallback={
-                                  <span class="inst-card-icon-letter">{inst.name.trim().charAt(0).toUpperCase() || "?"}</span>
-                                }>
-                                  <img src={iconUrl!} alt="" draggable={false} />
-                                </Show>
-                              </div>
-                              <div class="inst-card-content">
-                                <div class="card-title">{inst.name}</div>
-                                <div class="card-sub">
-                                  {inst.game_version} · {inst.mods.length} mods · {inst.window.width}x{inst.window.height}
-                                </div>
-                                <div class="inst-card-badges">
-                                  <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>{loaderLabel(inst.loader.type)}</span>
-                                  <Show when={(inst.source_platforms || []).includes("modrinth")}>
-                                    <span class="badge badge--source badge--modrinth"><IconModrinth /></span>
-                                  </Show>
-                                  <Show when={(inst.source_platforms || []).includes("curseforge")}>
-                                    <span class="badge badge--source badge--curseforge"><IconCurseForge /></span>
-                                  </Show>
-                                  <Show when={inst.ingame_cape_supported}>
-                                    <span class="badge badge--companion" title="Vermeil companion mod supported">
-                                      <img src="/logo.png" alt="Vermeil" draggable={false} />
-                                    </span>
-                                  </Show>
-                                </div>
-                              </div>
-                              <span class="side-icon" style="color:var(--muted)"><IconChevronRight /></span>
-                            </div>
+            <div class="cards-container">
+              {/* Video Panel */}
+              <Show when={!isSearching() || matchesVideo()}>
+                <div class="card-gamemode-section">
+                  <div class="card-section-header">
+                    <span class="card-section-tag tag-settings-video">VIDEO</span>
+                    <span class="card-section-label">Display & Rendering</span>
+                    <span class="card-section-desc">Framerate, VSync, FOV, and visual effects</span>
+                  </div>
+                  <div class="card-section-body">
+                    <div class="setting-card-grid">
+                      {/* Max Framerate — slider */}
+                      <Show when={isInstancesSection() || matches("max fps", "framerate", "fps limit")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Max FPS</span>
+                            <span class="setting-desc">{(vs().max_fps ?? 120) === 260 ? "Unlimited" : `${vs().max_fps ?? 120} FPS`}</span>
                           </div>
-                        </Show>
-                      );
-                    }}
-                  </For>
+                          <div class="setting-control">
+                            <input
+                              type="range"
+                              min="10"
+                              max="260"
+                              step="10"
+                              value={vs().max_fps ?? 120}
+                              class="slider vs-slider"
+                              style={`--slider-pct:${((vs().max_fps ?? 120) - 10) / 250 * 100}%`}
+                              onInput={(e) => {
+                                const val = parseInt(e.currentTarget.value);
+                                e.currentTarget.style.setProperty('--slider-pct', `${(val - 10) / 250 * 100}%`);
+                                updateVideoSettings({ max_fps: val });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* VSync */}
+                      <Show when={isInstancesSection() || matches("vsync", "vertical sync", "sync frame rate")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">VSync</span>
+                            <span class="setting-desc">Sync frame rate with monitor</span>
+                          </div>
+                          <div class="setting-control">
+                            <Dropdown
+                              value={(vs().vsync ?? true) ? "true" : "false"}
+                              options={[
+                                { value: "true", label: "On" },
+                                { value: "false", label: "Off" },
+                              ]}
+                              onChange={(val) => {
+                                updateVideoSettings({ vsync: val === "true" });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* View Bobbing */}
+                      <Show when={isInstancesSection() || matches("view bobbing", "camera motion", "walking")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">View Bobbing</span>
+                            <span class="setting-desc">Camera motion while walking</span>
+                          </div>
+                          <div class="setting-control">
+                            <Dropdown
+                              value={(vs().view_bobbing ?? true) ? "true" : "false"}
+                              options={[
+                                { value: "true", label: "On" },
+                                { value: "false", label: "Off" },
+                              ]}
+                              onChange={(val) => {
+                                updateVideoSettings({ view_bobbing: val === "true" });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* GUI Scale */}
+                      <Show when={isInstancesSection() || matches("gui scale", "ui scale", "interface scale")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">GUI Scale</span>
+                            <span class="setting-desc">User interface scale</span>
+                          </div>
+                          <div class="setting-control">
+                            <Dropdown
+                              value={String(vs().gui_scale ?? 0)}
+                              options={[
+                                { value: "0", label: "Auto" },
+                                { value: "1", label: "Small" },
+                                { value: "2", label: "Normal" },
+                                { value: "3", label: "Large" },
+                                { value: "4", label: "Huge" },
+                              ]}
+                              onChange={(val) => {
+                                updateVideoSettings({ gui_scale: parseInt(val) });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* FOV */}
+                      <Show when={isInstancesSection() || matches("fov", "field of view")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">FOV</span>
+                            <span class="setting-desc">{`${Math.round(40 * (vs().fov ?? 0) + 70)}°`}</span>
+                          </div>
+                          <div class="setting-control">
+                            <input
+                              type="range"
+                              min="30"
+                              max="110"
+                              step="1"
+                              value={vs().fov === null ? 70 : Math.round(40 * vs().fov! + 70)}
+                              class="slider vs-slider"
+                              style={`--slider-pct:${((vs().fov === null ? 70 : Math.round(40 * vs().fov! + 70)) - 30) / 80 * 100}%`}
+                              onInput={(e) => {
+                                const degrees = parseInt(e.currentTarget.value);
+                                e.currentTarget.style.setProperty('--slider-pct', `${(degrees - 30) / 80 * 100}%`);
+                                const fovValue = (degrees - 70) / 40;
+                                updateVideoSettings({ fov: fovValue });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* FOV Effects */}
+                      <Show when={isInstancesSection() || matches("fov effects", "distortion", "effects")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">FOV Effects</span>
+                            <span class="setting-desc">{`${Math.round((vs().fov_effects ?? 1) * 100)}%`}</span>
+                          </div>
+                          <div class="setting-control">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={vs().fov_effects === null ? 100 : Math.round(vs().fov_effects! * 100)}
+                              class="slider vs-slider"
+                              style={`--slider-pct:${(vs().fov_effects === null ? 100 : Math.round(vs().fov_effects! * 100))}%`}
+                              onInput={(e) => {
+                                const pct = parseInt(e.currentTarget.value);
+                                e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
+                                updateVideoSettings({ fov_effects: pct / 100 });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </Show>
-          </div>
+              </Show>
+
+              {/* Audio Panel */}
+              <Show when={!isSearching() || matchesAudio()}>
+                <div class="card-gamemode-section">
+                  <div class="card-section-header">
+                    <span class="card-section-tag tag-settings-audio">AUDIO</span>
+                    <span class="card-section-label">Sound Levels</span>
+                    <span class="card-section-desc">Master and music volume levels</span>
+                  </div>
+                  <div class="card-section-body">
+                    <div class="setting-card-grid setting-card-grid--2col">
+                      {/* Master Volume */}
+                      <Show when={isInstancesSection() || matches("master volume", "master", "sound")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Master Volume</span>
+                            <span class="setting-desc">{`${Math.round((vs().master_volume ?? 1) * 100)}%`}</span>
+                          </div>
+                          <div class="setting-control">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={vs().master_volume === null ? 100 : Math.round(vs().master_volume! * 100)}
+                              class="slider vs-slider"
+                              style={`--slider-pct:${(vs().master_volume === null ? 100 : Math.round(vs().master_volume! * 100))}%`}
+                              onInput={(e) => {
+                                const pct = parseInt(e.currentTarget.value);
+                                e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
+                                updateVideoSettings({ master_volume: pct / 100 });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* Music Volume */}
+                      <Show when={isInstancesSection() || matches("music volume", "music", "soundtrack")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Music Volume</span>
+                            <span class="setting-desc">{`${Math.round((vs().music_volume ?? 1) * 100)}%`}</span>
+                          </div>
+                          <div class="setting-control">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={vs().music_volume === null ? 100 : Math.round(vs().music_volume! * 100)}
+                              class="slider vs-slider"
+                              style={`--slider-pct:${(vs().music_volume === null ? 100 : Math.round(vs().music_volume! * 100))}%`}
+                              onInput={(e) => {
+                                const pct = parseInt(e.currentTarget.value);
+                                e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
+                                updateVideoSettings({ music_volume: pct / 100 });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+                    </div>
+                  </div>
+                </div>
+              </Show>
+
+              {/* Window & Memory Panel */}
+              <Show when={!isSearching() || matchesWindow() || matchesMemory()}>
+                <div class="card-gamemode-section">
+                  <div class="card-section-header">
+                    <span class="card-section-tag tag-settings-window">WINDOW & RAM</span>
+                    <span class="card-section-label">Window & Memory Defaults</span>
+                    <span class="card-section-desc">Launch dimensions and adaptive RAM ceiling</span>
+                  </div>
+                  <div class="card-section-body">
+                    <div class="setting-card-grid">
+                      {/* Resolution preset dropdown */}
+                      <Show when={isInstancesSection() || matches("resolution", "window size", "dimensions", "width", "height")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Resolution</span>
+                            <span class="setting-desc">Default window size</span>
+                          </div>
+                          <div class="setting-control">
+                            <Dropdown
+                              disabled={!!vs().start_maximized}
+                              value={vs().window_width && vs().window_height ? `${vs().window_width}x${vs().window_height}` : "1280x720"}
+                              options={[
+                                { value: "1280x720", label: "1280 × 720" },
+                                { value: "1366x768", label: "1366 × 768" },
+                                { value: "1600x900", label: "1600 × 900" },
+                                { value: "1920x1080", label: "1920 × 1080" },
+                                { value: "2560x1440", label: "2560 × 1440" },
+                                { value: "3840x2160", label: "3840 × 2160" },
+                              ]}
+                              onChange={(val) => {
+                                const [w, h] = val.split("x").map(Number);
+                                updateVideoSettings({ window_width: w, window_height: h });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* Maximized toggle */}
+                      <Show when={isInstancesSection() || matches("maximized", "start maximized", "fullscreen", "monitor")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Maximized</span>
+                            <span class="setting-desc">Launch filled to monitor</span>
+                          </div>
+                          <div class="setting-control">
+                            <label class="check check--lg">
+                              <input
+                                type="checkbox"
+                                checked={!!vs().start_maximized}
+                                onChange={(e) => updateVideoSettings({ start_maximized: e.currentTarget.checked })}
+                              />
+                              <span class="check-box" />
+                            </label>
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* Maximum RAM cap */}
+                      <Show when={isInstancesSection() || matches("maximum ram", "ram", "memory", "adaptive ceiling", "heap", "mb", "gb")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Maximum RAM</span>
+                            <span class="setting-desc">Adaptive ceiling</span>
+                          </div>
+                          <div class="setting-control">
+                            <Dropdown
+                              value={String(settings()!.adaptive_ram_max_mb || 0)}
+                              options={(() => {
+                                const sysMb = systemMemoryMb() || 0;
+                                const auto = adaptiveDefaultMax(sysMb);
+                                return [
+                                  { value: "0", label: `Auto (${formatMemoryGb(auto)})` },
+                                  { value: "2048", label: "2 GB" },
+                                  { value: "3072", label: "3 GB" },
+                                  { value: "4096", label: "4 GB" },
+                                  { value: "6144", label: "6 GB" },
+                                  { value: "8192", label: "8 GB" },
+                                  { value: "10240", label: "10 GB" },
+                                  { value: "12288", label: "12 GB" },
+                                  { value: "14336", label: "14 GB" },
+                                  { value: "16384", label: "16 GB" },
+                                ];
+                              })()}
+                              onChange={(val) => {
+                                updateSetting("adaptive_ram_max_mb", parseInt(val) || 0);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+                    </div>
+                  </div>
+                </div>
+              </Show>
+
+              {/* Instances Panel */}
+              <Show when={!isSearching() || isInstancesSection() || (instances() || []).some(i => matches(i.name, i.game_version, i.loader.type))}>
+                <div class="card-gamemode-section">
+                  <div class="card-section-header">
+                    <span class="card-section-tag tag-settings-instances">INSTANCES</span>
+                    <span class="card-section-label">Configure Instances</span>
+                    <span class="card-section-desc">Select an instance to configure overrides</span>
+                  </div>
+                  <div class="card-section-body">
+                    <div class="card-grid">
+                      <For each={instances() || []}>
+                        {(inst) => {
+                          const iconUrl = (!inst.icon || inst.icon === "cube") ? undefined : inst.icon;
+                          const colorClass = (() => {
+                            switch (inst.loader.type) {
+                              case "fabric": return "fabric";
+                              case "quilt": return "quilt";
+                              case "neoforge": return "blue";
+                              case "forge": return "orange";
+                              default: return "green";
+                            }
+                          })();
+                          return (
+                            <Show when={!isSearching() || isInstancesSection() || matches(inst.name, inst.game_version, inst.loader.type)}>
+                              <div class="card card--inst" style="cursor:pointer" onClick={() => openInstanceOptions(inst.id)}>
+                                <div class="card-body">
+                                  <div class={`inst-card-icon ${colorClass}`}>
+                                    <Show when={iconUrl} fallback={
+                                      <span class="inst-card-icon-letter">{inst.name.trim().charAt(0).toUpperCase() || "?"}</span>
+                                    }>
+                                      <img src={iconUrl!} alt="" draggable={false} />
+                                    </Show>
+                                  </div>
+                                  <div class="inst-card-content">
+                                    <div class="card-title">{inst.name}</div>
+                                    <div class="card-sub">
+                                      {inst.game_version} · {inst.mods.length} mods · {inst.window.width}x{inst.window.height}
+                                    </div>
+                                    <div class="inst-card-badges">
+                                      <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>{loaderLabel(inst.loader.type)}</span>
+                                      <Show when={(inst.source_platforms || []).includes("modrinth")}>
+                                        <span class="badge badge--source badge--modrinth"><IconModrinth /></span>
+                                      </Show>
+                                      <Show when={(inst.source_platforms || []).includes("curseforge")}>
+                                        <span class="badge badge--source badge--curseforge"><IconCurseForge /></span>
+                                      </Show>
+                                      <Show when={inst.ingame_cape_supported}>
+                                        <span class="badge badge--companion" title="Vermeil companion mod supported">
+                                          <img src="/logo.png" alt="Vermeil" draggable={false} />
+                                        </span>
+                                      </Show>
+                                    </div>
+                                  </div>
+                                  <span class="side-icon" style="color:var(--muted)"><IconChevronRight /></span>
+                                </div>
+                              </div>
+                            </Show>
+                          );
+                        }}
+                      </For>
+                    </div>
+                  </div>
+                </div>
+              </Show>
+            </div>{/* .cards-container */}
+          </div>{/* .settings-category */}
         </Show>
 
         {/* ═══ KEYBINDS ═══ */}
         <Show when={isSearching() ? matchesKeybinds() : (tab() === "all" || tab() === "keybinds")}>
-          <div class="settings-section">
-            <div class="settings-section-header">
+          <div class="settings-category">
+            <div class="page-header">
               <div>
-                <div class="settings-section-title">Keybinds</div>
-                <div class="settings-section-desc">Global keyboard shortcuts and in-app navigation hotkeys</div>
+                <div class="page-title">Keybinds</div>
+                <div class="page-subtitle">Global keyboard shortcuts and in-app navigation hotkeys</div>
               </div>
               <button class="btn btn--sm" onClick={() => updateSetting("keybinds", {})}>Reset to Defaults</button>
             </div>
 
-            <div class="settings-panel">
-              <div class="settings-group-header">
-                <span class="settings-badge settings-badge--shortcuts">SHORTCUTS</span>
-                <span class="settings-group-title">Global Launcher Hotkeys</span>
-                <span class="settings-group-desc">Click any key badge to record a new key combination</span>
-              </div>
+            <div class="cards-container">
+              <div class="card-gamemode-section">
+                <div class="card-section-header">
+                  <span class="card-section-tag tag-settings-hotkeys">SHORTCUTS</span>
+                  <span class="card-section-label">Global Launcher Hotkeys</span>
+                  <span class="card-section-desc">Click any key badge to record a new key combination</span>
+                </div>
 
-              <div class="settings-grid">
-                <For each={KEYBINDS}>
-                  {(action) => (
-                    <Show when={isKeybindsSection() || matches(action.label, action.description, action.default)}>
-                      <div class="settings-cell">
-                        <div class="settings-cell-content">
-                          <div class="settings-cell-title">{action.label}</div>
-                          <Show when={action.description}>
-                            <div class="settings-cell-desc">{action.description}</div>
-                          </Show>
-                        </div>
-                        <div class="settings-cell-control">
-                          <KeybindCapture
-                            binding={resolveBinding(action.id, settings()?.keybinds)}
-                            defaultBinding={action.default}
-                            onChange={(newBinding) => {
-                              const current = { ...(settings()?.keybinds ?? {}) };
-                              if (!newBinding) {
-                                // Reset → remove override so default kicks in
-                                delete current[action.id];
-                              } else {
-                                current[action.id] = newBinding;
-                              }
-                              updateSetting("keybinds", current);
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </Show>
-                  )}
-                </For>
-              </div>
+                <div class="card-section-body">
+                  <div class="setting-card-grid">
+                    <For each={KEYBINDS}>
+                      {(action) => (
+                        <Show when={isKeybindsSection() || matches(action.label, action.description, action.default)}>
+                          <div class="setting-row">
+                            <div class="setting-info">
+                              <span class="setting-name">{action.label}</span>
+                              <Show when={action.description}>
+                                <span class="setting-desc">{action.description}</span>
+                              </Show>
+                            </div>
+                            <div class="setting-control">
+                              <KeybindCapture
+                                binding={resolveBinding(action.id, settings()?.keybinds)}
+                                defaultBinding={action.default}
+                                onChange={(newBinding) => {
+                                  const current = { ...(settings()?.keybinds ?? {}) };
+                                  if (!newBinding) {
+                                    // Reset → remove override so default kicks in
+                                    delete current[action.id];
+                                  } else {
+                                    current[action.id] = newBinding;
+                                  }
+                                  updateSetting("keybinds", current);
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </Show>
+                      )}
+                    </For>
+                  </div>
 
-              <div class="settings-hint" style="margin-top:12px">
-                Click a binding and press the new key combination. Escape cancels capture. The reset arrow restores default.
+                  <div class="card-section-hint" style="margin-top:4px">
+                    Click a binding and press the new key combination. Escape cancels capture. The reset arrow restores default.
+                  </div>
+                </div>
               </div>
             </div>
           </div>

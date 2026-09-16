@@ -50,17 +50,26 @@
   --accent: #8b5cf6;          /* primary purple (brand) */
   --accent-strong: #7c4dde;   /* deeper purple hover */
   --accent-soft: #1a1428;     /* deep purple tint for active backgrounds */
-  --key-shadow: rgba(0, 0, 0, 0.38); /* single unified block shadow matching the UI color scheme */
-  --accent-shadow: var(--key-shadow);
   --accent-contrast: #ffffff; /* light label/icon color on accent fills */
+
+  /* --- Chunky plate bevel tokens (SloppyKeys design system) --- */
+  --bevel: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+  --bevel-strong: inset 0 -4px 0 rgba(0, 0, 0, 0.30);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+
+  --key-shadow: rgba(0, 0, 0, 0.38); /* fallback drop shadow token */
+  --accent-shadow: var(--key-shadow);
 
   /* --- Color: semantic state (+ soft tints) --- */
   --danger: #e05656;
+  --rose: #e05656;
   --danger-soft: #3a1818;
   --danger-shadow: var(--key-shadow);
   --warn: #e8a23a;
+  --amber: #e8a23a;
   --warn-soft: #322512;
   --success: #4caf72;
+  --teal: #4caf72;
   --success-soft: #16291d;
   --info: #5b8af0;
   --info-soft: #16203a;
