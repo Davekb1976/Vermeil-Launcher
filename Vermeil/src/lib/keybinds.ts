@@ -65,8 +65,30 @@ export interface ParsedKeybind {
   alt: boolean;
   shift: boolean;
   meta: boolean;
-  /** Lowercase, without modifiers. e.g. "p", ",", "f5", "arrowup". */
+  /** Lowercase, without modifiers. e.g. "p", ",", "f5", "arrowup", "mouse4". */
   key: string;
+}
+
+/**
+ * Map mouse button number to a keybind identifier.
+ * - button 1 = Middle Click -> "Mouse3"
+ * - button 3 = Side button 1 (Browser Back) -> "Mouse4"
+ * - button 4 = Side button 2 (Browser Forward) -> "Mouse5"
+ * - button >= 5 -> `Mouse${button + 1}`
+ * (button 0 [left] and button 2 [right] are excluded from hotkey binding)
+ */
+export function mouseButtonToKey(button: number): string | null {
+  switch (button) {
+    case 1:
+      return "Mouse3";
+    case 3:
+      return "Mouse4";
+    case 4:
+      return "Mouse5";
+    default:
+      if (button >= 5) return `Mouse${button + 1}`;
+      return null;
+  }
 }
 
 export function parseKeybind(binding: string): ParsedKeybind | null {
@@ -80,14 +102,14 @@ export function parseKeybind(binding: string): ParsedKeybind | null {
     else if (lower === "alt" || lower === "option") out.alt = true;
     else if (lower === "shift") out.shift = true;
     else if (lower === "meta" || lower === "cmd" || lower === "win") out.meta = true;
-    else out.key = lower;
+    else out.key = lower.replace(/\s+/g, "");
   }
   if (!out.key) return null;
   return out;
 }
 
-/** Does the given KeyboardEvent match the binding string? */
-export function matchesKeybind(e: KeyboardEvent, binding: string): boolean {
+/** Does the given KeyboardEvent or MouseEvent match the binding string? */
+export function matchesKeybind(e: KeyboardEvent | MouseEvent, binding: string): boolean {
   const parsed = parseKeybind(binding);
   if (!parsed) return false;
   // Modifier flags must match exactly so `Ctrl+P` doesn't fire on `Ctrl+Shift+P`.
@@ -95,7 +117,15 @@ export function matchesKeybind(e: KeyboardEvent, binding: string): boolean {
   if (e.altKey !== parsed.alt) return false;
   if (e.shiftKey !== parsed.shift) return false;
   if (e.metaKey !== parsed.meta) return false;
-  return e.key.toLowerCase() === parsed.key;
+
+  if ("key" in e) {
+    return e.key.toLowerCase() === parsed.key;
+  }
+  if ("button" in e) {
+    const mouseKey = mouseButtonToKey(e.button);
+    return mouseKey ? mouseKey.toLowerCase() === parsed.key : false;
+  }
+  return false;
 }
 
 /**
@@ -131,7 +161,23 @@ export function formatBindingFromEvent(e: KeyboardEvent): string | null {
   return parts.join("+");
 }
 
-/** Pretty version for display. e.g. "Ctrl+P" stays the same; "Ctrl+ArrowUp" → "Ctrl+↑". */
+/**
+ * Format a MouseEvent into a binding string usable for storage.
+ * Returns null for left/right buttons.
+ */
+export function formatBindingFromMouseEvent(e: MouseEvent): string | null {
+  const mouseKey = mouseButtonToKey(e.button);
+  if (!mouseKey) return null;
+  const parts: string[] = [];
+  if (e.ctrlKey) parts.push("Ctrl");
+  if (e.altKey) parts.push("Alt");
+  if (e.shiftKey) parts.push("Shift");
+  if (e.metaKey) parts.push("Meta");
+  parts.push(mouseKey);
+  return parts.join("+");
+}
+
+/** Pretty version for display. e.g. "Ctrl+P" stays the same; "Ctrl+ArrowUp" → "Ctrl+↑", "Mouse4" → "Mouse 4". */
 export function formatBindingForDisplay(binding: string): string {
   if (!binding) return "—";
   return binding
@@ -139,5 +185,9 @@ export function formatBindingForDisplay(binding: string): string {
     .replace("ArrowDown", "↓")
     .replace("ArrowLeft", "←")
     .replace("ArrowRight", "→")
-    .replace(" ", "Space");
+    .replace(" ", "Space")
+    .replace("Mouse3", "Mouse 3")
+    .replace("Mouse4", "Mouse 4")
+    .replace("Mouse5", "Mouse 5")
+    .replace(/Mouse(\d+)/g, "Mouse $1");
 }

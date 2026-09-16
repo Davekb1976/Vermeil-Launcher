@@ -514,6 +514,37 @@ const App: Component = () => {
       refreshBindings();
     });
 
+    // Customizable shortcuts. Each lookup resolves to either the user's
+    // override or the action's default. Supports keyboard shortcuts and mouse side buttons.
+    const handleActionTrigger = (e: KeyboardEvent | MouseEvent) => {
+      // Don't fire app shortcuts while the user is typing in a text field — a
+      // keybind like "T" or "P" must type the character, not toggle a feature.
+      // Escape (handled above) still works so users can back out of an input.
+      const target = e.target as HTMLElement | null;
+      if (target && (target.isContentEditable
+        || target.tagName === "INPUT"
+        || target.tagName === "TEXTAREA"
+        || target.tagName === "SELECT")) {
+        return;
+      }
+
+      if (matchesKeybind(e, resolveBinding("create_instance", userBindings))) {
+        e.preventDefault();
+        setActiveScreen("create-choose");
+        return;
+      }
+      if (matchesKeybind(e, resolveBinding("open_settings", userBindings))) {
+        e.preventDefault();
+        setActiveScreen("settings");
+        return;
+      }
+      if (matchesKeybind(e, resolveBinding("toggle_pin_selector", userBindings))) {
+        e.preventDefault();
+        setPinSelectorOpen((v) => !v);
+        return;
+      }
+    };
+
     document.addEventListener("keydown", (e) => {
       // Escape is hardcoded — closes the topmost open modal/tool. Not
       // user-rebindable because users expect Escape to "back out" of UI
@@ -541,34 +572,20 @@ const App: Component = () => {
         }
       }
 
-      // Customizable shortcuts. Each lookup resolves to either the user's
-      // override or the action's default.
+      handleActionTrigger(e);
+    });
 
-      // Don't fire app shortcuts while the user is typing in a text field — a
-      // keybind like "T" or "P" must type the character, not toggle a feature.
-      // Escape (handled above) still works so users can back out of an input.
-      const target = e.target as HTMLElement | null;
-      if (target && (target.isContentEditable
-        || target.tagName === "INPUT"
-        || target.tagName === "TEXTAREA"
-        || target.tagName === "SELECT")) {
-        return;
-      }
+    document.addEventListener("mousedown", (e) => {
+      // Only process auxiliary/side buttons (Middle=1, Side1=3, Side2=4, etc.)
+      // Left click (0) and right click (2) are ignored so normal UI interaction is undisturbed
+      if (e.button === 0 || e.button === 2) return;
+      handleActionTrigger(e);
+    });
 
-      if (matchesKeybind(e, resolveBinding("create_instance", userBindings))) {
+    // Prevent default browser back/forward navigation when mouse side buttons are clicked
+    window.addEventListener("auxclick", (e) => {
+      if (e.button === 3 || e.button === 4) {
         e.preventDefault();
-        setActiveScreen("create-choose");
-        return;
-      }
-      if (matchesKeybind(e, resolveBinding("open_settings", userBindings))) {
-        e.preventDefault();
-        setActiveScreen("settings");
-        return;
-      }
-      if (matchesKeybind(e, resolveBinding("toggle_pin_selector", userBindings))) {
-        e.preventDefault();
-        setPinSelectorOpen((v) => !v);
-        return;
       }
     });
   });
