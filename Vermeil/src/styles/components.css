@@ -1,61 +1,252 @@
 /* components.css — Reusable UI: cards, buttons, fields, badges, modals (base), forms, controls */
 
-/* Instance card sub-elements — the card container itself is now the
-   canonical `.card .card--inst`; these layout helpers compose inside it. */
-.inst-card-row {
+/* ============================================================
+   Instance card (.card--inst) — flush square thumbnail on left,
+   structured metadata & badges on right (matches .world-card layout).
+   ============================================================ */
+.card--inst {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-.inst-card-icon {
-  width: 44px;
-  height: 44px;
+  flex-direction: row;
+  align-items: stretch;
+  height: 82px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
   border-radius: 0;
+  box-shadow: var(--bevel);
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+
+.card--inst:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  background: var(--surface-raised);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.card--inst:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+/* Flush Left Square Thumbnail */
+.inst-card-thumb {
+  width: 80px;
+  min-width: 80px;
+  height: 100%;
+  aspect-ratio: 1 / 1;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  background: var(--bg2);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  border: 1px solid var(--border);
 }
-.inst-card-icon img {
+
+.inst-card-thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: var(--radius-md);
+  display: block;
+  image-rendering: pixelated;
+  transition: transform 0.2s ease;
 }
-.inst-card-icon-letter {
-  font-size: 14px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.85);
+
+.card--inst:hover .inst-card-thumb img {
+  transform: scale(1.06);
 }
-.inst-card-content {
+
+.inst-card-thumb-letter {
+  font-size: 26px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  user-select: none;
+  letter-spacing: -0.02em;
+  transition: transform 0.2s ease;
+}
+
+.card--inst:hover .inst-card-thumb-letter {
+  transform: scale(1.08);
+}
+
+/* Select mode checkbox badge on thumbnail */
+.inst-card-check {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-xs);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  transition: background 0.15s, border-color 0.15s;
+  z-index: 2;
+}
+
+.inst-card-check.is-selected {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
+/* Right Content Area */
+.inst-card-body {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  justify-content: center;
+  padding: 8px 12px;
+  gap: 3px;
+}
+
+.inst-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
+.inst-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.inst-card-rename-input {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  height: 22px;
+  padding: 1px 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.inst-card-sub {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.25;
 }
 
 .inst-card-badges {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  margin-top: var(--space-1);
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
+.inst-card-badges > * {
+  flex-shrink: 0;
+}
 
-/* Add card */
+/* Add instance card — mirrors 82px height and flush left square thumb */
 .add-card {
-  background: var(--bg3); border: 1.5px dashed var(--border); border-radius: var(--radius);
-  display: flex; flex-direction: row;
-  align-items: center; justify-content: center; gap: var(--space-2); cursor: pointer;
-  color: var(--muted); transition: border-color .15s, color .15s, background .15s;
-  padding: var(--space-2) var(--space-3);
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  height: 82px;
+  background: rgba(255, 255, 255, 0.012);
+  border: 1.5px dashed var(--border);
+  border-radius: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  opacity: 0.7;
+  transition: opacity 0.15s, border-color 0.15s, background 0.15s, transform 0.12s;
 }
-.add-card:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-tint); }
-.add-card svg { width: 18px; height: 18px; flex-shrink: 0; }
-.add-label { font-size: 11px; font-weight: 500; }
+
+.add-card:hover {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  background: rgba(139, 92, 246, 0.04);
+  transform: translateY(-1px);
+}
+
+.add-card:active {
+  transform: translateY(1px);
+}
+
+.add-card-thumb {
+  width: 80px;
+  min-width: 80px;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1.5px dashed var(--border);
+  background: rgba(255, 255, 255, 0.008);
+  color: var(--muted);
+  transition: color 0.15s, border-right-color 0.15s;
+}
+
+.add-card-thumb svg {
+  width: 22px;
+  height: 22px;
+  opacity: 0.6;
+  transition: opacity 0.15s, transform 0.2s;
+}
+
+.add-card:hover .add-card-thumb {
+  border-right-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  color: var(--accent);
+}
+
+.add-card:hover .add-card-thumb svg {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.add-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 12px;
+  gap: 3px;
+}
+
+.add-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  transition: color 0.15s;
+}
+
+.add-card:hover .add-card-title {
+  color: var(--accent);
+}
+
+.add-card-sub {
+  font-size: 11px;
+  color: var(--muted);
+}
 
 /* ============================================================
    Canonical button — one .btn vocabulary
@@ -460,12 +651,7 @@
   -webkit-box-orient: vertical;
 }
 
-/* Variant — instance card: icon + content laid out in a row */
-.card--inst .card-body {
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-3);
-}
+/* Variant — instance card (.card--inst) styled above with flush thumbnail + .inst-card-body */
 
 /* Variant — mod card: vertical body with a min-height floor so equal-row
    heights are easy to honor; content beyond the box is clipped (Req 7.5).

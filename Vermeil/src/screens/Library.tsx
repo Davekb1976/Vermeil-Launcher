@@ -189,7 +189,7 @@ const Library: Component = () => {
         </div>
       </Show>
 
-      <div class="card-grid">
+      <div class="card-grid library-grid">
           <For each={sortedInstances()}>
             {(inst) => (
               <div
@@ -230,43 +230,85 @@ const Library: Component = () => {
                   }
                 }}
               >
-                <div class="card-body">
-                  <div class={`inst-card-icon ${bannerColor(inst.loader.type)}`}>
-                    <Show when={instanceIconUrl(inst)} fallback={
-                      <span class="inst-card-icon-letter">{inst.name.trim().charAt(0).toUpperCase() || "?"}</span>
-                    }>
-                      <img src={instanceIconUrl(inst)!} alt="" draggable={false} />
-                    </Show>
-                  </div>
-                  <div class="inst-card-content">
+                {/* Flush Left Square Thumbnail (matches .world-card-thumb) */}
+                <div class={`inst-card-thumb inst-card-icon ${bannerColor(inst.loader.type)}`}>
+                  <Show when={instanceIconUrl(inst)} fallback={
+                    <span class="inst-card-thumb-letter">{inst.name.trim().charAt(0).toUpperCase() || "?"}</span>
+                  }>
+                    <img src={instanceIconUrl(inst)!} alt="" draggable={false} />
+                  </Show>
+                  <Show when={selectMode()}>
+                    <div class={`inst-card-check ${selected().has(inst.id) ? "is-selected" : ""}`}>
+                      <Show when={selected().has(inst.id)}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </Show>
+                    </div>
+                  </Show>
+                </div>
+
+                {/* Right Content Area: Title, Subtitle, Badges */}
+                <div class="inst-card-body">
+                  <div class="inst-card-info">
                     <Show when={renamingId() === inst.id} fallback={
-                      <div class="card-title" onClick={(e: MouseEvent) => { if (!selectMode()) e.stopImmediatePropagation(); }} onDblClick={(e) => { if (!selectMode()) { e.stopImmediatePropagation(); setRenamingId(inst.id); setRenameValue(inst.name); } }}>{inst.name}</div>
+                      <div
+                        class="inst-card-title"
+                        title={inst.name}
+                        onClick={(e: MouseEvent) => { if (!selectMode()) e.stopImmediatePropagation(); }}
+                        onDblClick={(e) => {
+                          if (!selectMode()) {
+                            e.stopImmediatePropagation();
+                            setRenamingId(inst.id);
+                            setRenameValue(inst.name);
+                          }
+                        }}
+                      >
+                        {inst.name}
+                      </div>
                     }>
-                      <input class="field-control field-control--text" style="font-size:var(--fs-xs);font-weight:600;height:auto;padding:2px 6px" value={renameValue()}
+                      <input
+                        class="field-control field-control--text inst-card-rename-input"
+                        value={renameValue()}
                         onInput={(e) => setRenameValue(e.currentTarget.value)}
-                        onBlur={async () => { if (renameValue().trim()) { await renameInstance(inst.id, renameValue()); refetchInstances(); } setRenamingId(null); }}
-                        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLElement).blur(); if (e.key === "Escape") setRenamingId(null); }}
+                        onBlur={async () => {
+                          if (renameValue().trim()) {
+                            await renameInstance(inst.id, renameValue());
+                            refetchInstances();
+                          }
+                          setRenamingId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") (e.target as HTMLElement).blur();
+                          if (e.key === "Escape") setRenamingId(null);
+                        }}
                         ref={(el) => setTimeout(() => { el.focus(); el.select(); }, 10)}
                         onClick={(e: MouseEvent) => { if (!selectMode()) e.stopImmediatePropagation(); }}
                       />
                     </Show>
-                    <div class="card-sub">
-                      {inst.mods.length} mods · {timeAgo(inst.last_played)}
+                    <div class="inst-card-sub">
+                      {inst.mods.length} {inst.mods.length === 1 ? "mod" : "mods"} · {timeAgo(inst.last_played)}
                     </div>
                     <div class="inst-card-badges">
                       <span class="badge badge--version">{inst.game_version}</span>
                       <Show when={inst.source_project_id && inst.source_version}>
-                        <span class="badge badge--vnum" title={`Modpack version ${inst.source_version}`}>{inst.source_version}</span>
+                        <span class="badge badge--vnum" title={`Modpack version ${inst.source_version}`}>
+                          {inst.source_version}
+                        </span>
                       </Show>
                       <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>
                         {loaderLabel(inst.loader.type)}
                       </span>
                       <span class="badge">{inst.java.memory_max_mb} MB</span>
                       <Show when={(inst.source_platforms || []).includes("modrinth")}>
-                        <span class="badge badge--source badge--modrinth" title="Available on Modrinth"><IconModrinth /></span>
+                        <span class="badge badge--source badge--modrinth" title="Available on Modrinth">
+                          <IconModrinth />
+                        </span>
                       </Show>
                       <Show when={(inst.source_platforms || []).includes("curseforge")}>
-                        <span class="badge badge--source badge--curseforge" title="Available on CurseForge"><IconCurseForge /></span>
+                        <span class="badge badge--source badge--curseforge" title="Available on CurseForge">
+                          <IconCurseForge />
+                        </span>
                       </Show>
                       <Show when={inst.ingame_cape_supported}>
                         <span class="badge badge--companion" title="Vermeil companion mod supported">
@@ -280,9 +322,15 @@ const Library: Component = () => {
             )}
           </For>
 
+          {/* New instance card — matching geometry and flush left icon layout */}
           <div class="add-card" onClick={() => setActiveScreen("create-choose")}>
-            <IconPlus />
-            <div class="add-label">New instance</div>
+            <div class="add-card-thumb">
+              <IconPlus />
+            </div>
+            <div class="add-card-body">
+              <span class="add-card-title">New instance</span>
+              <span class="add-card-sub">Create or import</span>
+            </div>
           </div>
         </div>
     </div>

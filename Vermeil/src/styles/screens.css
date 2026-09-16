@@ -1470,13 +1470,18 @@
 }
 
 
-/* Instance card icon loader-tinted backgrounds — sharp accent borders. */
-.inst-card-icon.green, .world-card-thumb.green { background: var(--grad-inst-green); }
-.inst-card-icon.fabric, .world-card-thumb.fabric { background: var(--grad-inst-fabric); }
-.inst-card-icon.blue, .world-card-thumb.blue { background: var(--grad-inst-blue); }
-.inst-card-icon.orange, .world-card-thumb.orange { background: var(--grad-inst-orange); }
-.inst-card-icon.quilt, .world-card-thumb.quilt { background: var(--grad-inst-quilt); }
-.inst-card-icon.purple, .world-card-thumb.purple { background: var(--grad-inst-quilt); }
+/* Instance card icon & thumbnail loader-tinted backgrounds — sharp accent borders. */
+.inst-card-icon.green, .inst-card-thumb.green, .world-card-thumb.green { background: var(--grad-inst-green); }
+.inst-card-icon.fabric, .inst-card-thumb.fabric, .world-card-thumb.fabric { background: var(--grad-inst-fabric); }
+.inst-card-icon.blue, .inst-card-thumb.blue, .world-card-thumb.blue { background: var(--grad-inst-blue); }
+.inst-card-icon.orange, .inst-card-thumb.orange, .world-card-thumb.orange { background: var(--grad-inst-orange); }
+.inst-card-icon.quilt, .inst-card-thumb.quilt, .world-card-thumb.quilt { background: var(--grad-inst-quilt); }
+.inst-card-icon.purple, .inst-card-thumb.purple, .world-card-thumb.purple { background: var(--grad-inst-quilt); }
+
+/* Library instance card grid — min 260px track for comfortable badge & thumbnail layout */
+.library-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
 
 /* Continue section grid — 3 columns so worlds don't stretch into massive 1-column banners */
 .continue-grid {
