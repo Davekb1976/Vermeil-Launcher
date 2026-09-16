@@ -2459,15 +2459,64 @@
   margin-top: 4px;
 }
 
-.create-back-btn {
+.create-cancel-btn {
   flex: 0 0 auto;
   padding: 0 16px;
   white-space: nowrap;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+
+.create-cancel-btn:hover {
+  border-color: #ef4444;
+  background: #3a1818;
+  color: #fca5a5;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+}
+
+.create-cancel-btn:active {
+  transform: translateY(1px);
+  box-shadow: none;
 }
 
 .create-submit-btn {
+  position: relative;
+  overflow: hidden;
   flex: 1;
   white-space: nowrap;
+}
+
+/* Enchanted glint effect (violet shimmer panning across button) */
+.create-submit-btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    transparent 30%,
+    rgba(230, 150, 255, 0.45) 42%,
+    rgba(255, 220, 255, 0.7) 50%,
+    rgba(230, 150, 255, 0.45) 58%,
+    transparent 70%,
+    transparent 100%
+  );
+  background-size: 300% 100%;
+  background-position: 100% 0;
+  animation: enchantGlint 3.2s linear infinite;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.create-submit-btn:disabled::after {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .create-submit-btn::after {
+    animation: none;
+    display: none;
+  }
 }
 
 .create-hint-text {

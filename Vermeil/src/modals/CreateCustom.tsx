@@ -18,7 +18,6 @@ import {
 } from "../ipc/commands";
 import { loaderBadgeClass, loaderLabel, loaderBannerColor } from "../lib/loader";
 import {
-  IconArrowLeft,
   IconCube,
   IconLayers,
   IconBolt,
@@ -27,6 +26,7 @@ import {
   IconCheck,
   IconShieldCheck,
   IconPlus,
+  IconX,
 } from "../components/Icons";
 
 interface LoaderInfo {
@@ -499,10 +499,10 @@ const CreateCustom: Component = () => {
                 <div class="create-actions-row">
                   <button
                     type="button"
-                    class="btn btn--neutral btn--lg create-back-btn"
+                    class="btn btn--neutral btn--lg create-cancel-btn"
                     onClick={() => setActiveScreen("create-choose")}
                   >
-                    <IconArrowLeft /> Back
+                    <IconX /> Cancel
                   </button>
                   <button
                     type="button"
