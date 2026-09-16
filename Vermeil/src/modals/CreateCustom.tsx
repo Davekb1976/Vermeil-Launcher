@@ -223,20 +223,11 @@ const CreateCustom: Component = () => {
 
   return (
     <div class="screen-enter create-custom-screen">
-      {/* Top Header & Navigation */}
+      {/* Top Header */}
       <div class="page-header" style="margin-bottom: var(--space-4);">
-        <div style="display:flex; align-items:center; gap: 12px;">
-          <button
-            type="button"
-            class="btn btn--sm btn--neutral"
-            onClick={() => setActiveScreen("create-choose")}
-          >
-            <IconArrowLeft /> Back
-          </button>
-          <div class="page-title-group">
-            <div class="page-title">Custom Setup</div>
-            <div class="page-subtitle">Configure your Minecraft version, mod loader, and instance identity</div>
-          </div>
+        <div class="page-title-group">
+          <div class="page-title">Custom Setup</div>
+          <div class="page-subtitle">Configure your Minecraft version, mod loader, and instance identity</div>
         </div>
       </div>
 
@@ -504,17 +495,26 @@ const CreateCustom: Component = () => {
                   </div>
                 </div>
 
-                {/* Primary Action Button */}
-                <button
-                  type="button"
-                  class="btn btn--primary btn--lg btn--block create-submit-btn"
-                  onClick={handleCreate}
-                  disabled={creating()}
-                >
-                  <Show when={creating()} fallback={<><IconPlus /> Create Instance</>}>
-                    Create Instance
-                  </Show>
-                </button>
+                {/* Action Buttons */}
+                <div class="create-actions-row">
+                  <button
+                    type="button"
+                    class="btn btn--neutral btn--lg create-back-btn"
+                    onClick={() => setActiveScreen("create-choose")}
+                  >
+                    <IconArrowLeft /> Back
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--primary btn--lg create-submit-btn"
+                    onClick={handleCreate}
+                    disabled={creating()}
+                  >
+                    <Show when={creating()} fallback={<><IconPlus /> Create Instance</>}>
+                      Create Instance
+                    </Show>
+                  </button>
+                </div>
 
                 <div class="create-hint-text">
                   Ready to build. Click to set up files and register in Library.
