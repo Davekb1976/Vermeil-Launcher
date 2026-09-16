@@ -241,29 +241,96 @@
    showing the resolved path plus Install / Detect / Browse.
    ============================================================ */
 .java-slots {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+@media (max-width: 900px) {
+  .java-slots {
+    grid-template-columns: 1fr;
+  }
+}
+.onboarding-java-slots {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  max-height: 380px;
+  overflow-y: auto;
 }
+
 .java-slot {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4) var(--space-4);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0;
+  padding: var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  transition: border-color 0.15s, background 0.15s;
+}
+.java-slot:hover {
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.java-slot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.java-slot-title-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 .java-slot-title {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
 }
+.java-slot-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.java-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 0;
+  line-height: 1.2;
+}
+.java-status-badge::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  background: currentColor;
+  border-radius: 0;
+}
+.java-status-badge--ready {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.java-status-badge--missing {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
 .java-slot-path {
-  background: var(--bg1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  background: #110e1a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
   padding: var(--space-2) var(--space-3);
   font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
   font-size: 11px;
@@ -287,9 +354,9 @@
 }
 .java-slot-input {
   flex: 1;
-  background: var(--bg1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  background: #110e1a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
   padding: var(--space-2) var(--space-3);
   font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
   font-size: 11px;
@@ -316,18 +383,19 @@
 }
 .java-slot-meta {
   font-size: 10px;
-  color: var(--muted);
+  font-family: var(--font-mono);
+  color: var(--text-muted);
   letter-spacing: 0.02em;
-  text-transform: lowercase;
 }
 .java-slot-actions {
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
+  margin-top: 2px;
 }
 .java-slot-actions .btn {
   font-size: 11px;
-  padding: var(--space-1) var(--space-3);
+  padding: 0 var(--space-2);
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -336,7 +404,6 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
-
 
 /* Java step inside the onboarding wizard. Scrolls if the slot list is taller
    than the modal body — same `.java-slot` cards as Settings, just constrained. */

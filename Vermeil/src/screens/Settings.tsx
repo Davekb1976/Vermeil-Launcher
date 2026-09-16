@@ -407,7 +407,7 @@ const Settings: Component = () => {
 
             <div class="settings-panel">
               <div class="settings-group-header">
-                <span class="settings-badge">LAUNCHER</span>
+                <span class="settings-badge settings-badge--launcher">LAUNCHER</span>
                 <span class="settings-group-title">Launcher Preferences</span>
                 <span class="settings-group-desc">Client lifecycle and startup options</span>
               </div>
@@ -513,7 +513,7 @@ const Settings: Component = () => {
 
             <div class="settings-panel">
               <div class="settings-group-header">
-                <span class="settings-badge">ABOUT</span>
+                <span class="settings-badge settings-badge--about">ABOUT</span>
                 <span class="settings-group-title">About Vermeil</span>
                 <span class="settings-group-desc">Version info, privacy, and community links</span>
               </div>
@@ -593,7 +593,7 @@ const Settings: Component = () => {
 
             <div class="settings-panel">
               <div class="settings-group-header">
-                <span class="settings-badge">STORAGE</span>
+                <span class="settings-badge settings-badge--storage">STORAGE</span>
                 <span class="settings-group-title">Storage Management</span>
                 <span class="settings-group-desc">Application data path and local caches</span>
               </div>
@@ -635,7 +635,7 @@ const Settings: Component = () => {
 
             <div class="settings-panel">
               <div class="settings-group-header">
-                <span class="settings-badge">PERFORMANCE</span>
+                <span class="settings-badge settings-badge--perf">PERFORMANCE</span>
                 <span class="settings-group-title">Concurrency Limits</span>
                 <span class="settings-group-desc">Max concurrent downloads and disk writes</span>
               </div>
@@ -723,7 +723,7 @@ const Settings: Component = () => {
 
             <div class="settings-panel">
               <div class="settings-group-header">
-                <span class="settings-badge">JAVA</span>
+                <span class="settings-badge settings-badge--java">JAVA</span>
                 <span class="settings-group-title">Java Environment</span>
                 <span class="settings-group-desc">Runtime provider, garbage collection preset, and version slots</span>
               </div>
@@ -771,9 +771,30 @@ const Settings: Component = () => {
                   const installed = () => Boolean(path());
                   const det = () => detectionFor(major);
                   const busy = () => javaBusy()[major] ?? null;
+                  const eraLabel = () => {
+                    switch (major) {
+                      case 25: return "Minecraft 26.x+";
+                      case 21: return "Minecraft 1.20.5 – 1.21.x";
+                      case 17: return "Minecraft 1.18 – 1.20.4";
+                      case 8: return "Minecraft 1.8.9 – 1.16";
+                      default: return "";
+                    }
+                  };
                   return (
                     <div class="java-slot">
-                      <div class="java-slot-title">Java {major} location</div>
+                      <div class="java-slot-header">
+                        <div class="java-slot-title-wrap">
+                          <span class="java-slot-title">Java {major}</span>
+                          <span class="java-slot-subtitle">{eraLabel()}</span>
+                        </div>
+                        <Show when={installed()} fallback={
+                          <span class="java-status-badge java-status-badge--missing">Missing</span>
+                        }>
+                          <span class="java-status-badge java-status-badge--ready">
+                            {det()?.is_vermeil_managed ? "Managed" : "Ready"}
+                          </span>
+                        </Show>
+                      </div>
                       <JavaPathInput
                         major={major}
                         value={path()}
@@ -804,7 +825,7 @@ const Settings: Component = () => {
                       </Show>
                       <div class="java-slot-actions">
                         <button
-                          class="btn"
+                          class={`btn btn--sm ${installed() ? "btn--neutral" : "btn--primary"}`}
                           onClick={() => runInstall(major)}
                           disabled={busy() !== null}
                           title={installed() ? "Replace with a fresh Adoptium download" : "Download from Adoptium"}
@@ -813,7 +834,7 @@ const Settings: Component = () => {
                           {busy() === "install" ? "Installing..." : "Install recommended"}
                         </button>
                         <button
-                          class="btn"
+                          class="btn btn--sm btn--neutral"
                           onClick={() => runDetect(major)}
                           disabled={busy() !== null}
                         >
@@ -821,39 +842,30 @@ const Settings: Component = () => {
                           {busy() === "detect" ? "Detecting..." : "Detect"}
                         </button>
                         <button
-                          class="btn"
+                          class="btn btn--sm btn--neutral"
                           onClick={() => runBrowse(major)}
                           disabled={busy() !== null}
                         >
                           <IconFolderOpen />
                           {busy() === "browse" ? "Picking..." : "Browse"}
                         </button>
-                        {/* Delete is gated on the *current slot's path*
-                            being a Vermeil-managed install (path lives
-                            inside `<data>/java/`). We look up the detection
-                            by exact path — not by major — because multiple
-                            JREs can share a major (e.g. Oracle + Adoptium)
-                            and a `.find(major)` would return the wrong one
-                            after we splice in a new install. The backend
-                            also re-checks the path-prefix before any rm-rf,
-                            so a stale UI state can never wipe a user JDK. */}
-                          {(() => {
-                            const det = javaDetections().find((i) => i.path === path());
-                            const ownsCurrent = det?.is_vermeil_managed === true;
-                            return (
-                              <Show when={ownsCurrent}>
-                                <button
-                                  class="btn btn--danger"
-                                  onClick={() => runDelete(major)}
-                                  disabled={busy() !== null}
-                                  title="Delete Vermeil's downloaded copy"
-                                >
-                                  <IconTrash />
-                                  {busy() === "delete" ? "Deleting..." : "Delete"}
-                                </button>
-                              </Show>
-                            );
-                          })()}
+                        {(() => {
+                          const det = javaDetections().find((i) => i.path === path());
+                          const ownsCurrent = det?.is_vermeil_managed === true;
+                          return (
+                            <Show when={ownsCurrent}>
+                              <button
+                                class="btn btn--sm btn--danger"
+                                onClick={() => runDelete(major)}
+                                disabled={busy() !== null}
+                                title="Delete Vermeil's downloaded copy"
+                              >
+                                <IconTrash />
+                                {busy() === "delete" ? "Deleting..." : "Delete"}
+                              </button>
+                            </Show>
+                          );
+                        })()}
                       </div>
                     </div>
                   );
@@ -880,7 +892,7 @@ const Settings: Component = () => {
             {/* Video Panel */}
             <div class="settings-panel">
               <div class="settings-group-header">
-                <span class="settings-badge">VIDEO</span>
+                <span class="settings-badge settings-badge--video">VIDEO</span>
                 <span class="settings-group-title">Display & Rendering</span>
                 <span class="settings-group-desc">Framerate, VSync, FOV, and visual effects</span>
               </div>
@@ -1027,7 +1039,7 @@ const Settings: Component = () => {
             {/* Audio Panel */}
             <div class="settings-panel">
               <div class="settings-group-header">
-                <span class="settings-badge">AUDIO</span>
+                <span class="settings-badge settings-badge--audio">AUDIO</span>
                 <span class="settings-group-title">Sound Levels</span>
                 <span class="settings-group-desc">Master and music volume levels</span>
               </div>
@@ -1086,7 +1098,7 @@ const Settings: Component = () => {
             {/* Window & Memory Panel */}
             <div class="settings-panel">
               <div class="settings-group-header">
-                <span class="settings-badge">WINDOW & RAM</span>
+                <span class="settings-badge settings-badge--window">WINDOW & RAM</span>
                 <span class="settings-group-title">Window & Memory Defaults</span>
                 <span class="settings-group-desc">Launch dimensions and adaptive RAM ceiling</span>
               </div>
@@ -1166,7 +1178,7 @@ const Settings: Component = () => {
             {/* Instances Panel */}
             <div class="settings-panel">
               <div class="settings-group-header">
-                <span class="settings-badge">INSTANCES</span>
+                <span class="settings-badge settings-badge--instances">INSTANCES</span>
                 <span class="settings-group-title">Configure Instances</span>
                 <span class="settings-group-desc">Select an instance to configure overrides</span>
               </div>
@@ -1237,7 +1249,7 @@ const Settings: Component = () => {
 
             <div class="settings-panel">
               <div class="settings-group-header">
-                <span class="settings-badge">SHORTCUTS</span>
+                <span class="settings-badge settings-badge--shortcuts">SHORTCUTS</span>
                 <span class="settings-group-title">Global Launcher Hotkeys</span>
                 <span class="settings-group-desc">Click any key badge to record a new key combination</span>
               </div>
