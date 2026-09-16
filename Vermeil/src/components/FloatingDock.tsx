@@ -66,9 +66,6 @@ const FloatingDock: Component = () => {
         data-tooltip={props.label}
       >
         {props.icon}
-        <Show when={isActive(props.screens)}>
-          <span class="dock-btn-dot" />
-        </Show>
       </button>
     </div>
   );
