@@ -88,12 +88,12 @@
   max-width: 100%;
   align-self: start;         /* don't stretch in a flex/grid parent */
   flex-shrink: 0;
-  height: var(--control-height-md);   /* default = medium, fixed height */
-  min-width: var(--control-height-md);
+  height: 32px;
+  min-width: 32px;
   padding: 0 var(--space-3);
   font-family: var(--font);
   font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
+  font-weight: var(--fw-semibold);
   line-height: 1;
   background: var(--surface-raised);
   color: var(--text);
@@ -102,9 +102,9 @@
   border-radius: 0;
   cursor: pointer;
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1.5px 0 rgba(0, 0, 0, 0.35),
-    0 2.5px 0 var(--surface-sunken);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.4),
+    0 4px 0 var(--key-shadow);
   transition:
     transform 0.08s cubic-bezier(0.2, 0, 0, 1),
     box-shadow 0.08s cubic-bezier(0.2, 0, 0, 1),
@@ -116,50 +116,51 @@
 }
 .btn:hover:not(:disabled) {
   background: var(--border-strong);
-  color: var(--text);
+  color: #ffffff;
   transform: translateY(1.5px);
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.12),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.22),
     inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-    0 1px 0 var(--surface-sunken);
+    0 2.5px 0 var(--key-shadow);
 }
 .btn:active:not(:disabled) {
-  transform: translateY(2.5px);
+  transform: translateY(4px);
   background: var(--surface-panel);
   box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.45),
+    inset 0 2.5px 4px rgba(0, 0, 0, 0.55),
     inset 0 -1px 0 rgba(255, 255, 255, 0.04),
-    0 0 0 var(--surface-sunken);
+    0 0 0 var(--key-shadow);
 }
 .btn svg { width: 13px; height: 13px; flex-shrink: 0; }
 
 /* Size variants — each fixes height (Requirement 7.2) */
 .btn--sm {
-  height: 26px;
-  min-width: 26px;
+  height: 28px;
+  min-width: 28px;
   padding: 0 var(--space-2);
   font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
-    0 2px 0 var(--surface-sunken);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.4),
+    0 3.5px 0 var(--key-shadow);
 }
 .btn--sm:hover:not(:disabled) {
-  transform: translateY(1px);
+  transform: translateY(1.5px);
   background: var(--border-strong);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
     inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-    0 1px 0 var(--surface-sunken);
+    0 2px 0 var(--key-shadow);
 }
 .btn--sm:active:not(:disabled) {
-  transform: translateY(2px);
+  transform: translateY(3.5px);
   background: var(--surface-panel);
   box-shadow:
-    inset 0 2px 3px rgba(0, 0, 0, 0.45),
-    0 0 0 var(--surface-sunken);
+    inset 0 2px 3px rgba(0, 0, 0, 0.5),
+    0 0 0 var(--key-shadow);
 }
-.btn--md { height: var(--control-height-md); min-width: var(--control-height-md); padding: 0 var(--space-3); font-size: var(--fs-sm); }
+.btn--md { height: 32px; min-width: 32px; padding: 0 var(--space-3); font-size: var(--fs-sm); }
 .btn--lg { height: var(--control-height-lg); min-width: var(--control-height-lg); padding: 0 var(--space-4); font-size: var(--fs-md); }
 
 /* Intent variants */
@@ -167,65 +168,101 @@
   background: var(--surface-raised);
   color: var(--text);
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1.5px 0 rgba(0, 0, 0, 0.35),
-    0 2.5px 0 var(--surface-sunken);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.4),
+    0 4px 0 var(--key-shadow);
 }
 .btn--neutral:hover:not(:disabled) {
   background: var(--border-strong);
-  color: var(--text);
+  color: #ffffff;
+}
+
+.btn--sm.btn--neutral {
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.4),
+    0 3.5px 0 var(--key-shadow);
+}
+.btn--sm.btn--neutral:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 2px 0 var(--key-shadow);
 }
 
 .btn--primary {
   background: var(--accent);
   color: var(--accent-contrast);
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -1.5px 0 rgba(0, 0, 0, 0.35),
-    0 2.5px 0 var(--accent-shadow);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.35),
+    0 4px 0 var(--accent-shadow);
 }
 .btn--primary:hover:not(:disabled) {
   background: var(--accent-strong);
   color: var(--accent-contrast);
   transform: translateY(1.5px);
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.3),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
     inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-    0 1px 0 var(--accent-shadow);
+    0 2.5px 0 var(--accent-shadow);
 }
 .btn--primary:active:not(:disabled) {
-  transform: translateY(2.5px);
+  transform: translateY(4px);
   background: var(--accent-strong);
   box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.45),
+    inset 0 2.5px 4px rgba(0, 0, 0, 0.5),
     0 0 0 var(--accent-shadow);
 }
 
-.btn--danger {
-  background: var(--danger-soft);
-  color: var(--danger);
-  border: 1px solid var(--danger);
+.btn--sm.btn--primary {
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.1),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.38),
     inset 0 -1.5px 0 rgba(0, 0, 0, 0.35),
-    0 2.5px 0 var(--danger-shadow);
+    0 3.5px 0 var(--accent-shadow);
 }
-.btn--danger:hover:not(:disabled) {
-  background: var(--danger);
+.btn--sm.btn--primary:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 2px 0 var(--accent-shadow);
+}
+
+.btn--danger {
+  background: #8e2424;
   color: #ffffff;
-  border-color: var(--danger);
-  transform: translateY(1.5px);
+  border: 0;
+  font-weight: var(--fw-semibold);
   box-shadow:
     inset 0 1.5px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.4),
+    0 4px 0 var(--danger-shadow);
+}
+.btn--danger:hover:not(:disabled) {
+  background: #a82424;
+  color: #ffffff;
+  transform: translateY(1.5px);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.3),
     inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-    0 1px 0 var(--danger-shadow);
+    0 2.5px 0 var(--danger-shadow);
 }
 .btn--danger:active:not(:disabled) {
-  transform: translateY(2.5px);
-  background: var(--danger);
+  transform: translateY(4px);
+  background: #6e1515;
   box-shadow:
-    inset 0 2px 4px rgba(0, 0, 0, 0.45),
+    inset 0 2.5px 4px rgba(0, 0, 0, 0.55),
     0 0 0 var(--danger-shadow);
+}
+
+.btn--sm.btn--danger {
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.4),
+    0 3.5px 0 var(--danger-shadow);
+}
+.btn--sm.btn--danger:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 2px 0 var(--danger-shadow);
 }
 
 .btn--ghost {
@@ -335,72 +372,88 @@
 .tab-strip {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 8px;
+  padding-bottom: 4px;
 }
-/* Segmented plates, matching the chunky geometry of the category filter
-   buttons (.cat-btn in screens.css): same padding, weight, sharp edges, and
-   inset bevel that flattens on hover. Deliberately NOT reusing the category
-   colours — those encode content type (blue = mods, green = resources), so
-   borrowing them for navigation would imply meaning that isn't there. Tabs
-   stay on the neutral surface ramp and the active one takes the accent fill,
-   mirroring the accent-filled "All" pill. */
+/* Chunky 3D keycap tab buttons — sharp corners, hard block shadows, solid tactile press */
 .tab {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
-  padding: 6px var(--space-3);
-  background: var(--bg3);
-  border: 1px solid var(--border);
+  padding: 0 var(--space-3);
+  height: 28px;
+  background: var(--surface-raised);
+  border: 0;
+  outline: none;
   border-radius: 0;
   font-family: var(--font);
   font-size: var(--fs-xs);
   font-weight: var(--fw-semibold);
   line-height: 1;
-  color: var(--text-muted);          /* inactive label color (Req 6.3) */
+  color: var(--text-muted);
   cursor: pointer;
   white-space: nowrap;
-  opacity: 0.6;
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.20);
-  transition: box-shadow .18s ease, transform .12s ease, opacity .15s ease,
-              background .15s ease, color .15s ease, border-color .15s ease;
+  user-select: none;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.4),
+    0 3px 0 var(--key-shadow);
+  transition:
+    transform 0.08s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.08s cubic-bezier(0.2, 0, 0, 1),
+    background 0.12s ease,
+    color 0.12s ease;
 }
-/* Hover — inactive, enabled tabs ONLY (Requirement 6.4). Flattens the plate
-   and lifts slightly for a physical "raised" feel. */
+/* Hover — inactive, enabled tabs ONLY */
 .tab:hover:not(.active):not(:disabled):not(.disabled) {
-  color: var(--text);
-  opacity: 0.9;
-  box-shadow: none;
-  transform: translateY(-2px) scale(1.04);
+  color: #ffffff;
+  background: var(--border-strong);
+  transform: translateY(1.5px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 1.5px 0 var(--key-shadow);
 }
 .tab:active:not(:disabled):not(.disabled) {
-  transform: translateY(1px) scale(0.97);
-  box-shadow: none;
+  transform: translateY(3px);
+  background: var(--surface-panel);
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.5),
+    0 0 0 var(--key-shadow);
 }
-/* Active — accent plate with an accent ring (Requirement 6.2). */
+/* Active — vibrant accent plate with deep accent shadow */
 .tab.active {
-  opacity: 1;
   background: var(--tab-bg, var(--accent));
-  border-color: var(--tab-edge, var(--accent-strong));
   color: var(--tab-fg, var(--accent-contrast));
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.20), 0 0 0 1px var(--tab-edge, var(--accent-strong));
+  font-weight: var(--fw-bold);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -1.5px 0 rgba(0, 0, 0, 0.35),
+    0 3px 0 var(--tab-edge, var(--accent-shadow));
 }
 .tab.active:hover {
-  box-shadow: 0 0 0 1px var(--tab-edge, var(--accent-strong));
-  transform: translateY(-2px) scale(1.04);
+  background: var(--accent-strong);
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 2px 0 var(--tab-edge, var(--accent-shadow));
 }
-/* Disabled — single treatment, no hover/active applied. Declared after
-   the active rules so an .active.disabled tab still resolves to the
-   disabled (non-active) treatment (Requirement 6.5). */
+.tab.active:active {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    0 0 0 var(--tab-edge, var(--accent-shadow));
+}
+/* Disabled — single treatment, no hover/active applied */
 .tab:disabled,
 .tab.disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  background: var(--bg3);
-  border-color: var(--border);
+  background: var(--surface-panel);
   color: var(--text-muted);
-  box-shadow: none;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
   transform: none;
 }
 
@@ -1044,7 +1097,8 @@
   top: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 12px;
+  padding-bottom: var(--space-3);
 }
 .settings-search-wrap {
   position: relative;
@@ -1118,14 +1172,15 @@
   font-weight: var(--fw-semibold);
   color: var(--text-muted);
   cursor: pointer;
-  background: var(--surface-panel);
+  background: var(--surface-raised);
   border: 0;
   outline: none;
   border-radius: 0;
+  margin-bottom: 2px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1.5px 0 rgba(0, 0, 0, 0.35),
-    0 2px 0 var(--surface-sunken);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.4),
+    0 4px 0 var(--key-shadow);
   transition:
     transform 0.08s cubic-bezier(0.2, 0, 0, 1),
     box-shadow 0.08s cubic-bezier(0.2, 0, 0, 1),
@@ -1138,34 +1193,35 @@
   width: 17px;
   height: 17px;
   flex-shrink: 0;
-  opacity: 0.75;
+  opacity: 0.8;
   transition: opacity .15s, transform .15s;
 }
 .settings-nav-item:hover:not(.active) {
-  background: var(--surface-raised);
-  color: var(--text);
-  transform: translateY(1px);
+  background: var(--border-strong);
+  color: #ffffff;
+  transform: translateY(1.5px);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 1px 0 var(--surface-sunken);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 2.5px 0 var(--key-shadow);
 }
 .settings-nav-item:hover:not(.active) svg {
   opacity: 1;
 }
 .settings-nav-item:active:not(.active) {
-  transform: translateY(2px);
-  background: var(--surface-sunken);
+  transform: translateY(4px);
+  background: var(--surface-panel);
   box-shadow:
-    inset 0 2px 3px rgba(0, 0, 0, 0.4),
-    0 0 0 var(--surface-sunken);
+    inset 0 2.5px 4px rgba(0, 0, 0, 0.55),
+    0 0 0 var(--key-shadow);
 }
 .settings-nav-item.active {
   background: var(--accent);
   color: var(--accent-contrast);
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.25),
-    inset 0 -1.5px 0 rgba(0, 0, 0, 0.35),
-    0 2px 0 var(--accent-shadow);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.35),
+    0 4px 0 var(--accent-shadow);
   font-weight: var(--fw-bold);
 }
 .settings-nav-item.active svg {
@@ -1174,10 +1230,16 @@
 }
 .settings-nav-item.active:hover {
   background: var(--accent-strong);
-  transform: translateY(1px);
+  transform: translateY(1.5px);
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.3),
-    0 1px 0 var(--accent-shadow);
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.45),
+    0 2.5px 0 var(--accent-shadow);
+}
+.settings-nav-item.active:active {
+  transform: translateY(4px);
+  box-shadow:
+    inset 0 2.5px 5px rgba(0, 0, 0, 0.5),
+    0 0 0 var(--accent-shadow);
 }
 .settings-content {
   flex: 1;

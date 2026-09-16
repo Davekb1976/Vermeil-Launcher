@@ -413,7 +413,7 @@ const OnboardingWizard: Component = () => {
                         </Show>
                         <div class="java-slot-actions">
                           <button
-                            class="btn btn--neutral"
+                            class={`btn btn--sm ${installed() ? "btn--neutral" : "btn--primary"}`}
                             onClick={() => handleJavaInstall(major)}
                             disabled={busy() !== null}
                             title={installed() ? "Replace with a fresh Adoptium download" : "Download from Adoptium"}
@@ -422,7 +422,7 @@ const OnboardingWizard: Component = () => {
                             {busy() === "install" ? "Installing..." : "Install recommended"}
                           </button>
                           <button
-                            class="btn btn--neutral"
+                            class="btn btn--sm btn--neutral"
                             onClick={() => handleJavaDetect(major)}
                             disabled={busy() !== null}
                           >
@@ -430,7 +430,7 @@ const OnboardingWizard: Component = () => {
                             {busy() === "detect" ? "Detecting..." : "Detect"}
                           </button>
                           <button
-                            class="btn btn--neutral"
+                            class="btn btn--sm btn--neutral"
                             onClick={() => handleJavaBrowse(major)}
                             disabled={busy() !== null}
                           >

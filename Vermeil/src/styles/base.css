@@ -50,13 +50,14 @@
   --accent: #8b5cf6;          /* primary purple (brand) */
   --accent-strong: #7c4dde;   /* deeper purple hover */
   --accent-soft: #1a1428;     /* deep purple tint for active backgrounds */
-  --accent-shadow: #4c2889;   /* deep purple shadow for active keycaps */
+  --key-shadow: #050408;      /* crisp hard block shadow for 3D keycaps */
+  --accent-shadow: #3b166d;   /* deep rich purple shadow for active keycaps */
   --accent-contrast: #ffffff; /* light label/icon color on accent fills */
 
   /* --- Color: semantic state (+ soft tints) --- */
   --danger: #e05656;
   --danger-soft: #3a1818;
-  --danger-shadow: #200808;
+  --danger-shadow: #380808;
   --warn: #e8a23a;
   --warn-soft: #322512;
   --success: #4caf72;
