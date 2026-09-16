@@ -5,7 +5,7 @@ import { checkForUpdates } from "../services/updater";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
-import { IconDownload, IconSearch, IconFolderOpen, IconTrash, IconModrinth, IconCurseForge, IconChevronRight, IconGlobe, IconSettings as IconSettingsIcon, IconLayers, IconCube, IconMonitor, IconBolt } from "../components/Icons";
+import { IconDownload, IconSearch, IconFolderOpen, IconTrash, IconModrinth, IconCurseForge, IconChevronRight, IconGlobe, IconSettings as IconSettingsIcon, IconLayers, IconCube, IconMonitor, IconBolt, IconX } from "../components/Icons";
 import JavaPathInput from "../components/JavaPathInput";
 import JavaChooserModal from "../modals/JavaChooserModal";
 import Dropdown from "../components/Dropdown";
@@ -24,6 +24,36 @@ const clampConcurrency = (n: number, max: number): number =>
 
 const Settings: Component = () => {
   const [tab, setTab] = createSignal<SettingsTab>("all");
+  const [search, setSearch] = createSignal("");
+  const q = () => search().trim().toLowerCase();
+  const isSearching = () => q().length > 0;
+  const matches = (...texts: (string | undefined | null | number)[]): boolean => {
+    const query = q();
+    if (!query) return true;
+    return texts.some(t => t !== null && t !== undefined && String(t).toLowerCase().includes(query));
+  };
+  const matchesGeneral = () => matches(
+    "Launcher", "Minimize to tray on launch", "Hides launcher when game starts",
+    "Pop out logs on launch", "Opens the game log in a separate window",
+    "Auto-update launcher", "Boot splash", "Show the animated logo splash on startup",
+    "Check for updates", "Discord Rich Presence", "Show snapshots", "Include experimental versions",
+    "Force delete", "Skip confirmation when deleting instances",
+    "About", "Vermeil", "Version", "Website", "vermeillauncher.app", "Disclaimer", "Privacy"
+  );
+  const matchesResources = () => matches(
+    "Storage", "App directory", "App cache", "Version metadata and loader installers",
+    "Performance", "Concurrent downloads", "Concurrent writes",
+    "Java", "runtime", "Adoptium", "GC preset", "g1gc", "zgc", "shenandoah", "slots", "location"
+  );
+  const matchesInstances = () => matches(
+    "Video", "Max FPS", "VSync", "View Bobbing", "GUI Scale", "FOV", "FOV Effects",
+    "Sound", "Master", "Music",
+    "Window", "Resolution", "Maximized",
+    "Memory", "Maximum RAM", "adaptive",
+    "Select an instance to configure", "instance"
+  ) || (instances() || []).some(i => matches(i.name, i.game_version, i.loader.type));
+  const matchesKeybinds = () => KEYBINDS.some(a => matches(a.label, a.description));
+  const hasAnyMatches = () => !isSearching() || matchesGeneral() || matchesResources() || matchesInstances() || matchesKeybinds();
   const [settings, { refetch, mutate }] = createResource(getSettings);
   const [appVersion] = createResource(getVersion);
   const [appDirectory] = createResource(getAppDirectory);
@@ -317,29 +347,56 @@ const Settings: Component = () => {
 
       <div class="settings-layout">
         {/* Sidebar navigation */}
-        <nav class="settings-sidebar">
-          <div class={`settings-nav-item ${tab() === "all" ? "active" : ""}`} onClick={() => setTab("all")}>
-            <IconLayers /> All
+        <aside class="settings-sidebar">
+          <div class="settings-sidebar-sticky">
+            {/* Search input */}
+            <div class="settings-search-wrap">
+              <span class="settings-search-icon">
+                <IconSearch />
+              </span>
+              <input
+                type="text"
+                class="settings-search-input"
+                placeholder="Search..."
+                value={search()}
+                onInput={(e) => setSearch(e.currentTarget.value)}
+              />
+              <Show when={search()}>
+                <button
+                  type="button"
+                  class="settings-search-clear"
+                  onClick={() => setSearch("")}
+                  title="Clear search"
+                >
+                  <IconX />
+                </button>
+              </Show>
+            </div>
+
+            {/* Tab Buttons */}
+            <div class={`settings-nav-item ${tab() === "all" && !isSearching() ? "active" : ""}`} onClick={() => { setTab("all"); setSearch(""); }}>
+              <IconLayers /> All
+            </div>
+            <div class={`settings-nav-item ${tab() === "general" && !isSearching() ? "active" : ""}`} onClick={() => { setTab("general"); setSearch(""); }}>
+              <IconSettingsIcon /> General
+            </div>
+            <div class={`settings-nav-item ${tab() === "resources" && !isSearching() ? "active" : ""}`} onClick={() => { setTab("resources"); setSearch(""); }}>
+              <IconCube /> Resources
+            </div>
+            <div class={`settings-nav-item ${tab() === "instances" && !isSearching() ? "active" : ""}`} onClick={() => { setTab("instances"); setSearch(""); }}>
+              <IconMonitor /> Instance
+            </div>
+            <div class={`settings-nav-item ${tab() === "keybinds" && !isSearching() ? "active" : ""}`} onClick={() => { setTab("keybinds"); setSearch(""); }}>
+              <IconBolt /> Keybinds
+            </div>
           </div>
-          <div class={`settings-nav-item ${tab() === "general" ? "active" : ""}`} onClick={() => setTab("general")}>
-            <IconSettingsIcon /> General
-          </div>
-          <div class={`settings-nav-item ${tab() === "resources" ? "active" : ""}`} onClick={() => setTab("resources")}>
-            <IconCube /> Resources
-          </div>
-          <div class={`settings-nav-item ${tab() === "instances" ? "active" : ""}`} onClick={() => setTab("instances")}>
-            <IconMonitor /> Instance
-          </div>
-          <div class={`settings-nav-item ${tab() === "keybinds" ? "active" : ""}`} onClick={() => setTab("keybinds")}>
-            <IconBolt /> Keybinds
-          </div>
-        </nav>
+        </aside>
 
         {/* Content area */}
         <div class="settings-content">
       <Show when={settings()}>
         {/* ═══ GENERAL ═══ */}
-        <Show when={tab() === "all" || tab() === "general"}>
+        <Show when={isSearching() ? matchesGeneral() : (tab() === "all" || tab() === "general")}>
           <div class="settings-section">
             <div class="section-label" style="margin-bottom:8px">Launcher</div>
             <div class="settings-group">
@@ -443,7 +500,7 @@ const Settings: Component = () => {
         </Show>
 
         {/* ═══ RESOURCES ═══ */}
-        <Show when={tab() === "all" || tab() === "resources"}>
+        <Show when={isSearching() ? matchesResources() : (tab() === "all" || tab() === "resources")}>
           <div class="settings-section">
             <div class="section-label" style="margin-bottom:8px">Storage</div>
             <div class="settings-group">
@@ -701,7 +758,7 @@ const Settings: Component = () => {
         </Show>
 
         {/* ═══ INSTANCE OPTIONS ═══ */}
-        <Show when={tab() === "all" || tab() === "instances"}>
+        <Show when={isSearching() ? matchesInstances() : (tab() === "all" || tab() === "instances")}>
           <div class="settings-section">
             <div class="section-label section-label--sub section-label--row">
               Video
@@ -1013,7 +1070,7 @@ const Settings: Component = () => {
         </Show>
 
         {/* ═══ KEYBINDS ═══ */}
-        <Show when={tab() === "all" || tab() === "keybinds"}>
+        <Show when={isSearching() ? matchesKeybinds() : (tab() === "all" || tab() === "keybinds")}>
           <div class="settings-section">
             <div class="section-label" style="margin-bottom:8px">Keyboard shortcuts</div>
             <div class="settings-group">
@@ -1048,6 +1105,13 @@ const Settings: Component = () => {
               Click a binding and press the new key combination. Escape cancels capture.
               The reset arrow restores the default.
             </div>
+          </div>
+        </Show>
+
+        {/* Empty state when search has no results */}
+        <Show when={!hasAnyMatches()}>
+          <div class="settings-no-results">
+            No settings found matching "{search()}"
           </div>
         </Show>
         </Show>
