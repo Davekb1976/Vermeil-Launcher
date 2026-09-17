@@ -1,5 +1,5 @@
 import { Component, createSignal, createResource, createEffect, onCleanup, onMount, Show, For } from "solid-js";
-import { account, showToast, refreshActiveSkin } from "../App";
+import { account, showToast, refreshActiveSkin, setDockHidden } from "../App";
 import {
   getSkinProfile,
   uploadSkin,
@@ -325,6 +325,14 @@ const Skins: Component = () => {
     if (stageEl) ro.observe(stageEl);
     onCleanup(() => ro.disconnect());
   });
+
+  // Auto-hide the floating dock while on the Skins screen so the Character Studio
+  // and pedestal remain unobstructed. Reveals when the cursor nears bottom.
+  createEffect(() => {
+    const isAvailable = !!(account() && !account()!.is_offline);
+    setDockHidden(isAvailable);
+  });
+  onCleanup(() => setDockHidden(false));
 
   onCleanup(() => {
     stopCapeAnimation();
@@ -782,8 +790,8 @@ const Skins: Component = () => {
                 <span class="skins-count-badge">{(localSkins() ?? []).length}</span>
               </div>
               <button
-                class="skins-mini-btn tip-left"
-                data-tip="Import skin PNG file"
+                class="skins-mini-btn tip-below tip-right"
+                data-tip="Import skin PNG"
                 onClick={handleUpload}
                 disabled={busy() !== null}
               >
@@ -850,7 +858,7 @@ const Skins: Component = () => {
                           </div>
                           <div class="skins-lib-card-actions">
                             <button
-                              class="skins-lib-btn-delete tip-left"
+                              class="skins-lib-btn-delete tip-right"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleRemoveLocal(skin);
@@ -888,7 +896,7 @@ const Skins: Component = () => {
                     classList={{ active: variant() === "CLASSIC" }}
                     disabled={busy() !== null}
                     onClick={() => handleVariantSwitch("CLASSIC")}
-                    data-tip="Classic model (4px arm thickness)"
+                    data-tip="Classic (4px arms)"
                   >
                     Classic
                   </button>
@@ -897,7 +905,7 @@ const Skins: Component = () => {
                     classList={{ active: variant() === "SLIM" }}
                     disabled={busy() !== null}
                     onClick={() => handleVariantSwitch("SLIM")}
-                    data-tip="Slim model (3px arm thickness)"
+                    data-tip="Slim (3px arms)"
                   >
                     Slim
                   </button>
@@ -909,7 +917,7 @@ const Skins: Component = () => {
                   class="skins-studio-btn tip-below"
                   onClick={handleReset}
                   disabled={busy() !== null}
-                  data-tip="Reset skin to Mojang default"
+                  data-tip="Reset to default"
                 >
                   <IconRotateCcw />
                   <span>Reset</span>
@@ -918,16 +926,16 @@ const Skins: Component = () => {
                   class="skins-studio-btn tip-below"
                   onClick={handleRefresh}
                   disabled={busy() !== null}
-                  data-tip="Refresh skin & capes from Mojang"
+                  data-tip="Refresh from Mojang"
                 >
                   <IconReload />
                   <span>Refresh</span>
                 </button>
                 <button
-                  class="skins-studio-btn skins-zen-btn tip-below"
+                  class="skins-studio-btn skins-zen-btn tip-below tip-right"
                   classList={{ active: zenMode() }}
                   onClick={() => setZenMode(!zenMode())}
-                  data-tip={zenMode() ? "Exit Zen Mode (Show Panels)" : "Zen Mode (Inspect Model)"}
+                  data-tip={zenMode() ? "Exit Zen mode" : "Zen mode (hide panels)"}
                 >
                   {zenMode() ? <IconMinimize2 /> : <IconMaximize2 />}
                   <span>{zenMode() ? "Exit Zen" : "Zen"}</span>
@@ -965,9 +973,9 @@ const Skins: Component = () => {
                   <IconMinus />
                 </button>
                 <button
-                  class="skins-zoom-btn"
+                  class="skins-zoom-btn tip-right"
                   onClick={resetZoom}
-                  data-tip="Reset view zoom"
+                  data-tip="Reset zoom"
                 >
                   <IconRotateCcw />
                 </button>
@@ -984,18 +992,18 @@ const Skins: Component = () => {
               </div>
               <div class="skins-segmented-switch skins-segmented-switch--sm">
                 <button
-                  class="skins-segment-btn tip-below"
+                  class="skins-segment-btn tip-below tip-right"
                   classList={{ active: !showElytra() }}
                   onClick={() => setShowElytra(false)}
-                  data-tip="Display back-equipment as Cape"
+                  data-tip="Show cape"
                 >
                   Cape
                 </button>
                 <button
-                  class="skins-segment-btn tip-below"
+                  class="skins-segment-btn tip-below tip-right"
                   classList={{ active: showElytra() }}
                   onClick={() => setShowElytra(true)}
-                  data-tip="Display back-equipment as Elytra wings"
+                  data-tip="Show elytra wings"
                 >
                   Elytra
                 </button>
@@ -1009,7 +1017,7 @@ const Skins: Component = () => {
                 <div class="skins-cape-grid">
                   {/* No cape */}
                   <button
-                    class="skins-cape-tile tip-below"
+                    class="skins-cape-tile tip-below tip-left"
                     classList={{
                       active:
                         !activeCustomCapeId() &&
@@ -1027,12 +1035,14 @@ const Skins: Component = () => {
 
                   {/* Mojang-granted capes */}
                   <For each={profile()?.capes ?? []}>
-                    {(cape) => {
+                    {(cape, idx) => {
                       const isEquipped = () =>
                         !activeCustomCapeId() && cape.state === "ACTIVE";
+                      const col = (idx() + 1) % 3;
+                      const tipPos = col === 0 ? "tip-below tip-left" : col === 2 ? "tip-below tip-right" : "tip-below";
                       return (
                         <button
-                          class="skins-cape-tile tip-below"
+                          class={`skins-cape-tile ${tipPos}`}
                           classList={{ active: isEquipped() }}
                           onClick={() => handleEquipCape(cape.id)}
                           disabled={busy() !== null}
@@ -1059,8 +1069,8 @@ const Skins: Component = () => {
                     In-Game Capes <span class="skins-subhead-badge">Companion</span>
                   </div>
                   <button
-                    class="skins-mini-btn tip-left"
-                    data-tip="Create new animated or static cape"
+                    class="skins-mini-btn tip-below tip-right"
+                    data-tip="New custom cape"
                     onClick={openNewCape}
                     disabled={busy() !== null}
                   >
@@ -1095,7 +1105,7 @@ const Skins: Component = () => {
                             classList={{ active: isEquipped() }}
                           >
                             <button
-                              class="skins-custom-cape-equip tip-below"
+                              class="skins-custom-cape-equip tip-below tip-left"
                               onClick={() => handleEquipCustomCape(cape.id)}
                               disabled={busy() !== null || ingameBusy()}
                               data-tip={isEquipped() ? "Unequip cape" : "Equip in-game cape"}
@@ -1120,7 +1130,7 @@ const Skins: Component = () => {
                             </div>
                             <div class="skins-custom-cape-actions">
                               <button
-                                class="skins-lib-btn tip-left"
+                                class="skins-lib-btn tip-right"
                                 onClick={() => openEditCape(cape)}
                                 disabled={busy() !== null}
                                 data-tip="Edit cape"
@@ -1128,7 +1138,7 @@ const Skins: Component = () => {
                                 <IconEdit />
                               </button>
                               <button
-                                class="skins-lib-btn skins-lib-btn-delete tip-left"
+                                class="skins-lib-btn skins-lib-btn-delete tip-right"
                                 onClick={() => handleRemoveCustomCape(cape.id)}
                                 disabled={busy() !== null}
                                 data-tip="Delete cape"

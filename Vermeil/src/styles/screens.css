@@ -8,8 +8,8 @@
 
 .skins-screen {
   padding-bottom: 0;
-  height: calc(100vh - 100px);
-  min-height: 520px;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -48,7 +48,6 @@
   height: 100%;
   min-height: 0;
   min-width: 0;
-  overflow: hidden;
   transition: opacity 0.25s ease, border-color 0.15s ease;
 }
 
@@ -63,6 +62,8 @@
   min-height: 42px;
   box-sizing: border-box;
   flex-shrink: 0;
+  position: relative;
+  z-index: 20;
 }
 
 .skins-panel-title-wrap {
@@ -328,7 +329,6 @@
   border: 1px solid var(--border);
   box-shadow: var(--bevel);
   position: relative;
-  overflow: hidden;
 }
 
 /* Top Studio Toolbar */
@@ -343,7 +343,8 @@
   min-height: 42px;
   box-sizing: border-box;
   flex-shrink: 0;
-  z-index: 10;
+  position: relative;
+  z-index: 20;
 }
 
 .skins-topbar-left {
@@ -490,7 +491,8 @@
   min-height: 36px;
   box-sizing: border-box;
   flex-shrink: 0;
-  z-index: 10;
+  position: relative;
+  z-index: 20;
 }
 
 .skins-stage-hint {
