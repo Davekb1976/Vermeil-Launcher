@@ -348,7 +348,6 @@
   flex-shrink: 0;
   position: relative;
   z-index: 20;
-  overflow: hidden;
   min-width: 0;
 }
 
