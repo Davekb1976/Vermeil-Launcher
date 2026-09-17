@@ -33,12 +33,34 @@
 
 ## Table of Contents
 
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [Download](#download)
 - [Development](#development)
 - [Privacy](#privacy)
 - [AI Disclosure](#ai-disclosure)
 - [License](#license)
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/images/screenshots/browse-mods.png" alt="Vermeil Instance & Content Browser" width="100%" />
+</p>
+<p align="center">
+  <em>Browse & install mods, resource packs, and shaders directly from Modrinth and CurseForge</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshots/settings.png" alt="Vermeil Settings Screen" width="49%" />
+  <img src="docs/images/screenshots/accounts.png" alt="Vermeil Account Management" width="49%" />
+</p>
+<p align="center">
+  <em>Tactile launcher preferences, storage management, and encrypted local account profiles</em>
+</p>
+
+<p align="center">
+  <a href="docs/SCREENSHOTS.md"><strong>Explore the full screenshot gallery and UI details &rarr;</strong></a>
+</p>
 
 ## Features
 
