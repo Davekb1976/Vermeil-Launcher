@@ -1464,7 +1464,7 @@ const InstanceMods: Component = () => {
             {/* Row 1: Open Folder · Search Input · Check Updates */}
             <div class="inst-search-row">
               <button
-                class="btn inst-panel-btn tip-below tip-left"
+                class="btn inst-panel-btn tip-left"
                 onClick={() => { if (instance()) openInstanceFolder(instance()!.id); }}
                 data-tip="Open instance folder"
               >
@@ -1485,7 +1485,7 @@ const InstanceMods: Component = () => {
                 </Show>
               </div>
               <button
-                class="btn inst-panel-btn inst-action-btn tip-below tip-right"
+                class="btn inst-panel-btn inst-action-btn tip-right"
                 disabled={checkingUpdates() || (instance()?.mods.length ?? 0) === 0}
                 onClick={() => refreshUpdates(true)}
                 data-tip="Check for newer versions"
@@ -1714,7 +1714,7 @@ const InstanceMods: Component = () => {
               {/* Row 1: Source Toggle · Search Input · Select */}
               <div class="inst-search-row">
                 <button
-                  class={`btn inst-panel-btn mod-source-toggle ${modSource() === "modrinth" ? "mr" : "cf"} tip-below tip-left`}
+                  class={`btn inst-panel-btn mod-source-toggle ${modSource() === "modrinth" ? "mr" : "cf"} tip-left`}
                   onClick={handleSourceToggle}
                   data-tip={modSource() === "modrinth" ? "Source: Modrinth (click for CurseForge)" : "Source: CurseForge (click for Modrinth)"}
                 >
@@ -1737,7 +1737,7 @@ const InstanceMods: Component = () => {
                   </Show>
                 </div>
                 <button
-                  class={`btn inst-panel-btn inst-action-btn tip-below tip-right ${selectMode() ? "active" : ""}`}
+                  class={`btn inst-panel-btn inst-action-btn tip-right ${selectMode() ? "active" : ""}`}
                   data-tip="Bulk install"
                   onClick={() => { setSelectMode(!selectMode()); if (selectMode()) setSelectedItems(new Map()); }}
                 >

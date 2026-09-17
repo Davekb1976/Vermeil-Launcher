@@ -2888,6 +2888,7 @@ select.field-input[size] { appearance: none; }
   overflow: visible;
   position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  isolation: isolate;
 }
 
 .inst-search-row {
@@ -2895,6 +2896,8 @@ select.field-input[size] { appearance: none; }
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
+  position: relative;
+  z-index: 10;
 }
 
 .inst-panel-btn {
@@ -3013,6 +3016,8 @@ select.field-input[size] { appearance: none; }
   border-top: 1px solid #1e1a2b;
   font-size: 13px;
   color: #948fa3;
+  position: relative;
+  z-index: 5;
 }
 .inst-meta-left {
   display: flex;

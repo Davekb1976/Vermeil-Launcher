@@ -34,6 +34,7 @@
     0 4px 16px rgba(0, 0, 0, 0.65),
     0 1px 3px rgba(0, 0, 0, 0.4);
 }
+[data-tip]:hover { z-index: 300; }
 [data-tip]:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
 .tip-below[data-tip]::after { bottom: auto; top: calc(100% + 8px); transform: translateX(-50%) translateY(-3px); }
 .tip-below[data-tip]:hover::after { transform: translateX(-50%) translateY(0); }
@@ -42,7 +43,7 @@
 /* Right-anchored variant — pins the tooltip's right edge to the element so it
    extends leftward. For affordances at the right edge of the window (e.g. the
    "Official" news badge) where a centered tooltip would clip off-screen. */
-.tip-right[data-tip]::after { left: auto; right: 0; transform: translateY(3px); white-space: normal; max-width: 280px; }
+.tip-right[data-tip]::after { left: auto; right: 0; transform: translateY(3px); white-space: nowrap; }
 .tip-right[data-tip]:hover::after { transform: translateY(0); }
 
 /* Left-anchored bottom tooltip — pins left edge to button to prevent left clipping */
