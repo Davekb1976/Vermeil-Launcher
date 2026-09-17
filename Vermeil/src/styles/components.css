@@ -29,6 +29,17 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
+.card.card--inst:hover .badge,
+.card--inst:hover .badge {
+  border-color: var(--border-strong);
+}
+
+.card.card--inst:hover .badge:not(.badge--loader):not(.badge--source):not(.badge--companion):not(.badge--vnum),
+.card--inst:hover .badge:not(.badge--loader):not(.badge--source):not(.badge--companion):not(.badge--vnum) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
+}
+
 .card.card--inst:active,
 .card--inst:active {
   transform: translateY(1px);
@@ -1052,11 +1063,14 @@
   line-height: 1;
   border-radius: var(--radius-xs);
   background: var(--surface-raised);   /* neutral default surface */
+  border: 1px solid var(--border);
   color: var(--text-muted);
   white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 /* Variant — loader identity (color set by a per-loader modifier) */
+.badge--loader { border-color: transparent; }
 .badge--loader.badge--fabric   { background: var(--loader-fabric-soft);   color: var(--loader-fabric); }
 .badge--loader.badge--forge    { background: var(--loader-forge-soft);    color: var(--loader-forge); }
 .badge--loader.badge--neoforge { background: var(--loader-neoforge-soft); color: var(--loader-neoforge); }
@@ -1067,7 +1081,16 @@
 .badge--version {
   font-family: var(--font-mono);
   background: var(--surface-raised);
+  border: 1px solid var(--border);
   color: var(--text);
+}
+
+/* Variant — RAM (compact memory readout) */
+.badge--ram {
+  font-family: var(--font);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
 }
 
 /* Variant — content version (the item's own release). Accent-tinted to read as
@@ -1076,6 +1099,7 @@
 .badge--vnum {
   font-family: var(--font-mono);
   background: var(--accent-soft);
+  border: 1px solid transparent;
   color: var(--accent);
   max-width: 160px;
   overflow: hidden;
@@ -1084,6 +1108,7 @@
 }
 
 /* Variant — source (brand tints + inline source-logo SVG sizing) */
+.badge--source { border-color: transparent; }
 .badge--source.badge--modrinth   { background: var(--source-modrinth-soft);   color: var(--source-modrinth); }
 .badge--source.badge--curseforge { background: var(--source-curseforge-soft); color: var(--source-curseforge); }
 .badge--source svg { width: 12px; height: 12px; flex-shrink: 0; }

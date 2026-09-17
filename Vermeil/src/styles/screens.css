@@ -1525,6 +1525,15 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
+.world-card:hover .badge {
+  border-color: var(--border-strong);
+}
+
+.world-card:hover .badge:not(.badge--loader):not(.badge--source):not(.badge--companion):not(.badge--vnum) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-hover);
+}
+
 .world-card:active {
   transform: translateY(1px);
   box-shadow: none;

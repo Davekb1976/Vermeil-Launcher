@@ -298,7 +298,7 @@ const Library: Component = () => {
                     <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>
                       {loaderLabel(inst.loader.type)}
                     </span>
-                    <span class="badge">{inst.java.memory_max_mb} MB</span>
+                    <span class="badge badge--ram">{inst.java.memory_max_mb} MB</span>
                     <Show when={(inst.source_platforms || []).includes("modrinth")}>
                       <span class="badge badge--source badge--modrinth" title="Available on Modrinth">
                         <IconModrinth />
