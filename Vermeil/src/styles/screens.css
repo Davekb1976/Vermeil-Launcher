@@ -79,6 +79,7 @@
   color: var(--text);
   letter-spacing: 0.01em;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .skins-count-badge {
@@ -329,6 +330,8 @@
   border: 1px solid var(--border);
   box-shadow: var(--bevel);
   position: relative;
+  container-type: inline-size;
+  container-name: skins-stage;
 }
 
 /* Top Studio Toolbar */
@@ -337,7 +340,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: 8px 12px;
+  padding: 8px 10px;
   background: var(--surface-panel);
   border-bottom: 1px solid var(--border);
   min-height: 42px;
@@ -345,12 +348,16 @@
   flex-shrink: 0;
   position: relative;
   z-index: 20;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .skins-topbar-left {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .skins-studio-identity {
@@ -361,12 +368,14 @@
   font-weight: 700;
   color: var(--text);
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .skins-topbar-center {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 /* Segmented switch (SloppyKeys 3D style) */
@@ -413,6 +422,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .skins-studio-btn {
@@ -451,6 +461,63 @@
 .skins-studio-btn svg {
   width: 13px;
   height: 13px;
+}
+
+/* Responsive adjustments when stage width is constrained */
+@container skins-stage (max-width: 560px) {
+  .skins-stage-topbar {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+  .skins-topbar-right {
+    gap: 4px;
+  }
+  .skins-studio-btn {
+    padding: 5px 7px;
+  }
+  .skins-studio-btn span {
+    display: none;
+  }
+}
+
+@container skins-stage (max-width: 440px) {
+  .skins-studio-title-text {
+    display: none;
+  }
+  .skins-topbar-left {
+    flex-shrink: 0;
+  }
+  .skins-segmented-switch .skins-segment-btn {
+    padding: 3px 7px;
+    font-size: 10.5px;
+  }
+}
+
+/* Viewport media queries for fallback compatibility */
+@media (max-width: 1180px) {
+  .skins-studio:not(.zen-mode) .skins-studio-btn span {
+    display: none;
+  }
+  .skins-studio:not(.zen-mode) .skins-studio-btn {
+    padding: 5px 7px;
+  }
+  .skins-studio:not(.zen-mode) .skins-stage-topbar {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+  .skins-studio:not(.zen-mode) .skins-topbar-right {
+    gap: 4px;
+  }
+}
+
+@media (max-width: 1040px) {
+  .skins-studio:not(.zen-mode) .skins-studio-title-text {
+    display: none;
+  }
+  .skins-studio:not(.zen-mode) .skins-segmented-switch .skins-segment-btn {
+    padding: 3px 7px;
+    font-size: 10.5px;
+  }
 }
 
 /* Stage Canvas */
@@ -540,6 +607,25 @@
 }
 
 /* Equipment / Capes & Wings Panel */
+.skins-equipment-mode-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--bevel);
+  flex-shrink: 0;
+}
+
+.skins-equipment-mode-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
 .skins-equipment-section {
   display: flex;
   flex-direction: column;

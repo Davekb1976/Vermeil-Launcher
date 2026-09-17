@@ -884,7 +884,7 @@ const Skins: Component = () => {
             <div class="skins-stage-topbar">
               <div class="skins-topbar-left">
                 <div class="skins-studio-identity">
-                  <span>Character Studio</span>
+                  <span class="skins-studio-title-text">Character Studio</span>
                   <span class="beta-pill">Beta</span>
                 </div>
               </div>
@@ -989,28 +989,36 @@ const Skins: Component = () => {
               <div class="skins-panel-title-wrap">
                 <span class="card-section-tag tag-settings-video">EQUIPMENT</span>
                 <span class="skins-panel-title">Capes & Wings</span>
-              </div>
-              <div class="skins-segmented-switch skins-segmented-switch--sm">
-                <button
-                  class="skins-segment-btn tip-below tip-right"
-                  classList={{ active: !showElytra() }}
-                  onClick={() => setShowElytra(false)}
-                  data-tip="Show cape"
-                >
-                  Cape
-                </button>
-                <button
-                  class="skins-segment-btn tip-below tip-right"
-                  classList={{ active: showElytra() }}
-                  onClick={() => setShowElytra(true)}
-                  data-tip="Show elytra wings"
-                >
-                  Elytra
-                </button>
+                <span class="skins-count-badge">
+                  {(profile()?.capes ?? []).length + (customCapes() ?? []).length}
+                </span>
               </div>
             </div>
 
             <div class="skins-panel-body">
+              {/* Wear/Display Mode: Cape vs Elytra */}
+              <div class="skins-equipment-mode-bar">
+                <span class="skins-equipment-mode-label">Wear as</span>
+                <div class="skins-segmented-switch skins-segmented-switch--sm">
+                  <button
+                    class="skins-segment-btn tip-below"
+                    classList={{ active: !showElytra() }}
+                    onClick={() => setShowElytra(false)}
+                    data-tip="Show cape on model"
+                  >
+                    Cape
+                  </button>
+                  <button
+                    class="skins-segment-btn tip-below tip-right"
+                    classList={{ active: showElytra() }}
+                    onClick={() => setShowElytra(true)}
+                    data-tip="Show elytra wings on model"
+                  >
+                    Elytra
+                  </button>
+                </div>
+              </div>
+
               {/* Mojang Capes */}
               <div class="skins-equipment-section">
                 <div class="skins-section-subhead">Mojang Capes</div>
