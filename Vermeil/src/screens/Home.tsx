@@ -78,13 +78,13 @@ function getNewsCategory(article: NewsArticle): NewsBadgeInfo {
 const Home: Component = () => {
   const [news] = createResource(getJavaNews);
   const [newsPage, setNewsPage] = createSignal(1);
-  // Fixed 4x3 (12 cards) on maximized/large windows (> 820px) and 4x2 (8 cards)
-  // on smaller windows. Adapts column count downwards if window width narrows.
+  // Fixed 4x3 (12 cards) on maximized/large windows (> 800px) and 4x2 (8 cards)
+  // on standard small windows (720px). Adapts column count downwards if window narrows.
   const newsPageSize = createGridPageSize({
-    track: 260,
+    track: 230,
     gap: 14,
     rowHeight: 220,
-    maxRows: () => (window.innerHeight > 820 ? 3 : 2),
+    maxRows: () => (window.innerHeight > 800 ? 3 : 2),
     maxCols: 4,
     fixedRows: true,
     debounceMs: 0,
@@ -393,25 +393,41 @@ const Home: Component = () => {
         <div class="news-modal-overlay" onClick={() => setSelectedArticle(null)}>
           <div class="news-modal" onClick={(e) => e.stopPropagation()}>
             {/* Hero banner with blurred backdrop and close button */}
-            <div class="news-modal-hero">
-              <div
-                class="news-modal-hero-bg"
-                style={`background-image:url(${selectedArticle()!.image_url})`}
-              />
-              <img
-                class="news-modal-hero-img"
-                src={selectedArticle()!.image_url}
-                alt=""
-                draggable={false}
-              />
-              <button
-                class="news-modal-close"
-                onClick={() => setSelectedArticle(null)}
-                aria-label="Close modal"
-              >
-                <IconX />
-              </button>
-            </div>
+            <Show
+              when={selectedArticle()!.image_url}
+              fallback={
+                <div style="display:flex;justify-content:flex-end;padding:12px 12px 0">
+                  <button
+                    class="news-modal-close"
+                    style="position:static"
+                    onClick={() => setSelectedArticle(null)}
+                    aria-label="Close modal"
+                  >
+                    <IconX />
+                  </button>
+                </div>
+              }
+            >
+              <div class="news-modal-hero">
+                <div
+                  class="news-modal-hero-bg"
+                  style={`background-image:url(${selectedArticle()!.image_url})`}
+                />
+                <img
+                  class="news-modal-hero-img"
+                  src={selectedArticle()!.image_url}
+                  alt=""
+                  draggable={false}
+                />
+                <button
+                  class="news-modal-close"
+                  onClick={() => setSelectedArticle(null)}
+                  aria-label="Close modal"
+                >
+                  <IconX />
+                </button>
+              </div>
+            </Show>
 
             {/* Modal Header */}
             <div class="news-modal-header">

@@ -63,7 +63,12 @@ export function createGridPageSize(opts: { track: number; gap: number; rowHeight
     ro.observe(node);
     const content = node.closest(".content");
     if (content) ro.observe(content);
-    onCleanup(() => { ro.disconnect(); if (settle !== undefined) clearTimeout(settle); });
+    window.addEventListener("resize", onResize);
+    onCleanup(() => {
+      ro.disconnect();
+      window.removeEventListener("resize", onResize);
+      if (settle !== undefined) clearTimeout(settle);
+    });
   };
 
   return { setEl, size };
