@@ -681,6 +681,10 @@ const InstanceMods: Component = () => {
 
   let searchTimeout: number | undefined;
   let pageTimeout: number | undefined;
+  onCleanup(() => {
+    if (searchTimeout) clearTimeout(searchTimeout);
+    if (pageTimeout) clearTimeout(pageTimeout);
+  });
 
   // Monotonic request token. Every doSearch call captures its own value
   // before awaiting and only commits results when the captured token still
@@ -1009,9 +1013,9 @@ const InstanceMods: Component = () => {
   /// Returns them in a stable order so a project that supports both Fabric and
   /// Quilt always renders Fabric first. Empty when no known loader is present.
   const LOADER_ORDER = ["fabric", "quilt", "forge", "neoforge", "datapack", "iris", "optifine", "vanilla"];
-  const extractLoaders = (categories: string[]): string[] => {
+  const extractLoaders = (categories?: string[]): string[] => {
     const found = new Set<string>();
-    for (const c of categories) {
+    for (const c of (categories || [])) {
       if (KNOWN_LOADERS.has(c)) found.add(c);
     }
     // For shaders on CurseForge, "vanilla" appears as a category but isn't
@@ -1024,11 +1028,12 @@ const InstanceMods: Component = () => {
   };
 
   /// Clean tags for Browse cards (loader + primary category/tag) matching reference UI
-  const extractCardTags = (categories: string[]): { loader?: string; tag?: string } => {
+  const extractCardTags = (categories?: string[]): { loader?: string; tag?: string } => {
+    const cats = categories || [];
     const instLoader = instance()?.loader.type;
-    const loaders = extractLoaders(categories);
+    const loaders = extractLoaders(cats);
     const loader = loaders.find(l => l === instLoader) || loaders[0];
-    const nonLoader = categories.find(c => !KNOWN_LOADERS.has(c));
+    const nonLoader = cats.find(c => !KNOWN_LOADERS.has(c));
     const tag = nonLoader ? nonLoader.charAt(0).toUpperCase() + nonLoader.slice(1) : undefined;
     return { loader, tag };
   };
