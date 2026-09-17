@@ -256,6 +256,9 @@ const InstanceMods: Component = () => {
   // Browse is server-paged against rate-limited APIs. Max 4 columns by 3 rows
   // (12 items per page) for a balanced, spacious card layout without cognitive overload.
   const browsePageSize = createGridPageSize({ track: 280, gap: 14, rowHeight: 200, maxRows: 3, maxCols: 4 });
+  // Installed content pagination. 4 columns by 3 rows with debounceMs: 0 for instant reflow.
+  const installedPageSize = createGridPageSize({ track: 280, gap: 14, rowHeight: 200, maxRows: 3, maxCols: 4, debounceMs: 0 });
+  const [installedPage, setInstalledPage] = createSignal(1);
   const [modSource, setModSource] = createSignal<"modrinth" | "curseforge">("modrinth");
   const [installing, setInstalling] = createSignal<string | null>(null);
   /** Browse result shown in the detail overlay, if any. */
@@ -749,10 +752,7 @@ const InstanceMods: Component = () => {
     }, 150); // Debounce rapid slider changes
   };
 
-  // ─── Installed tab: client-side filter (no pagination) ─────────────────
-  // The Installed list operates on `instance().mods` (already in memory),
-  // unlike Browse which pages a remote search. We derive the filtered +
-  // sorted list and render all of it; the grid scrolls.
+  // ─── Installed tab: client-side filter & pagination ──────────────────
   const installedFiltered = (): any[] => {
     const mods = instance()?.mods || [];
     const f = installedFilter();
@@ -771,11 +771,68 @@ const InstanceMods: Component = () => {
     return installedSort() === "newest" ? filtered.slice().reverse() : filtered;
   };
 
-  // Push pagination state into the dock when the browse tab is active and
-  // there are multiple pages. Clear it otherwise (Installed has no paging).
+  const showCompanion = (): boolean => {
+    const inst = instance();
+    if (!inst || !(inst as any).ingame_cape_supported) return false;
+    if (installedFilter() !== "all" && installedFilter() !== "mod") return false;
+    const q = installedSearch().trim().toLowerCase();
+    if (q && !"vermeil companion mod".includes(q)) return false;
+    return true;
+  };
+
+  const totalInstalledCount = () => (showCompanion() ? 1 : 0) + installedFiltered().length;
+  const installedTotalPages = () => Math.max(1, Math.ceil(totalInstalledCount() / installedPageSize.size()));
+
+  const goToInstalledPage = (page: number) => {
+    if (page < 1 || page > installedTotalPages()) return;
+    setInstalledPage(page);
+  };
+
+  // Reset to page 1 when filter, search, sort, or active instance changes
   createEffect(() => {
-    if (mainTab() === "content" && contentTab() === "browse" && totalPages() > 1) {
+    installedFilter();
+    installedSearch();
+    installedSort();
+    activeInstanceId();
+    setInstalledPage(1);
+  });
+
+  // Clamp page if item count shrinks
+  createEffect(() => {
+    const total = installedTotalPages();
+    if (installedPage() > total) {
+      setInstalledPage(total);
+    }
+  });
+
+  const pagedInstalledMods = (): any[] => {
+    const mods = installedFiltered();
+    const size = installedPageSize.size();
+    const page = installedPage();
+    const hasComp = showCompanion();
+
+    if (hasComp) {
+      if (page === 1) {
+        return mods.slice(0, Math.max(0, size - 1));
+      }
+      const start = (page - 1) * size - 1;
+      return mods.slice(start, start + size);
+    }
+
+    const start = (page - 1) * size;
+    return mods.slice(start, start + size);
+  };
+
+  // Push pagination state into the dock when Browse or Installed has multiple pages.
+  createEffect(() => {
+    if (mainTab() !== "content") {
+      setDockPagination(null);
+      return;
+    }
+    if (contentTab() === "browse" && totalPages() > 1) {
       setDockPagination({ current: currentPage(), total: totalPages(), onPageChange: goToPage });
+    } else if (contentTab() === "installed" && installedTotalPages() > 1) {
+      setDockPagination({ current: installedPage(), total: installedTotalPages(), onPageChange: goToInstalledPage });
     } else {
       setDockPagination(null);
     }
@@ -1531,6 +1588,9 @@ const InstanceMods: Component = () => {
           <Show when={(instance()?.mods.length || 0) === 0}>
             <div style="text-align:center;color:var(--muted);padding:30px;font-size:var(--fs-xs)">No content installed. Switch to "Browse mods" to find some.</div>
           </Show>
+          <Show when={(instance()?.mods.length || 0) > 0 && totalInstalledCount() === 0}>
+            <div style="text-align:center;color:var(--muted);padding:30px;font-size:var(--fs-xs)">No installed content matches your filter.</div>
+          </Show>
           <Show when={showBulkDelete()}>
             <div class="bulk-delete-confirm">
               <div style="font-size:var(--fs-xs);color:var(--danger);margin-bottom:8px">
@@ -1571,13 +1631,13 @@ const InstanceMods: Component = () => {
               </div>
             </div>
           </Show>
-          <div class="inst-card-grid">
-            {/* Managed-mod entry for the Vermeil companion mod. Shown on every
-                supported instance; the toggle here turns Vermeil's in-game
+          <div class="inst-card-grid" ref={installedPageSize.setEl}>
+            {/* Managed-mod entry for the Vermeil companion mod. Shown on page 1 of
+                supported instances; the toggle here turns Vermeil's in-game
                 features on/off for this instance (the jar is disabled in place,
                 not deleted, so re-enabling needs no re-download). The jar itself
                 is launcher-managed, so there's no delete affordance. */}
-            <Show when={(instance() as any)?.ingame_cape_supported && (installedFilter() === "all" || installedFilter() === "mod")}>
+            <Show when={showCompanion() && installedPage() === 1}>
               <div class="card card--mod" style={instance()?.companion_enabled === false ? "opacity:0.55" : ""} title="Managed by Vermeil — toggle for this instance.">
                 <div class="mod-card-header">
                   <div class="mod-card-icon" style="background:var(--accent-soft);display:flex;align-items:center;justify-content:center">
@@ -1619,7 +1679,7 @@ const InstanceMods: Component = () => {
                 </div>
               </div>
             </Show>
-            <For each={installedFiltered()}>
+            <For each={pagedInstalledMods()}>
               {(mod) => (
                 <div class="card card--mod" style={mod.enabled ? "" : "opacity:0.5"}>
                   <div class="mod-card-header">
