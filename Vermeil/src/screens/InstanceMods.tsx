@@ -1233,8 +1233,14 @@ const InstanceMods: Component = () => {
                     value={nameDraft()}
                     onInput={(e) => setNameDraft(e.currentTarget.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSaveName();
-                      if (e.key === "Escape") setNameDraft(instance()?.name ?? "");
+                      if (e.key === "Enter") {
+                        handleSaveName();
+                        e.currentTarget.blur();
+                      }
+                      if (e.key === "Escape") {
+                        setNameDraft(instance()?.name ?? "");
+                        e.currentTarget.blur();
+                      }
                     }}
                     placeholder="Instance name"
                   />
@@ -1364,89 +1370,89 @@ const InstanceMods: Component = () => {
               {/* Dynamic Allocated Display OR Manual Slider */}
               <div class="setting-row full" style="flex-direction:column;align-items:stretch;gap:10px">
                 <Show
-                  when={!isAdaptive()}
+                  when={isAdaptive()}
                   fallback={
                     <>
-                      <div style="display:flex;align-items:center;justify-content:space-between">
-                        <div class="setting-info">
-                          <span class="setting-name">Calculated allocation</span>
-                          <span class="setting-desc">Formula-derived memory footprint</span>
-                        </div>
-                        <Show when={effectiveMemory()} fallback={<span class="settings-val">—</span>}>
-                          {(em) => (
-                            <div style="text-align:right">
-                              <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--text)">
-                                {(em().value_mb / 1024).toFixed(1).replace('.0', '')} GB
-                              </div>
-                              <Show when={em().capped}>
-                                <div style="font-size:var(--fs-2xs);color:var(--warn);margin-top:2px">
-                                  capped at your max · pack suggests {(em().target_mb / 1024).toFixed(1).replace('.0', '')} GB
-                                </div>
-                              </Show>
-                              <Show when={em().value_mb > em().target_mb}>
-                                <div style="font-size:var(--fs-2xs);color:var(--muted);margin-top:2px">
-                                  raised to your {(em().min_mb / 1024).toFixed(1).replace('.0', '')} GB minimum
-                                </div>
-                              </Show>
-                            </div>
-                          )}
-                        </Show>
+                      {/* Manual slider */}
+                      <div class="setting-info" style="margin-bottom:6px">
+                        <span class="setting-name">Custom memory limit</span>
+                        <span class="setting-desc">Explicit maximum heap RAM passed via -Xmx</span>
                       </div>
-
-                      {/* Memory breakdown table */}
-                      <Show when={effectiveMemory()}>
-                        {(em) => (
-                          <div class="mem-breakdown" style="border-radius:0;box-shadow:var(--bevel);margin-bottom:0">
-                            <For each={em().breakdown}>
-                              {(row) => (
-                                <div class="mem-row">
-                                  <span class="mem-label">{row.label}</span>
-                                  <span class="mem-val">{formatBreakdownGb(row.value_mb)}</span>
-                                </div>
-                              )}
-                            </For>
-                            <div class="mem-row mem-row--total">
-                              <span class="mem-label">Pack total</span>
-                              <span class="mem-val">{formatBreakdownGb(em().target_mb)}</span>
-                            </div>
-                          </div>
-                        )}
-                      </Show>
+                      <div>
+                        <input
+                          type="range"
+                          class="slider"
+                          min={512}
+                          max={manualMax()}
+                          step={256}
+                          value={memoryValue()}
+                          style={{ "--slider-pct": `${((memoryValue() - 512) / (manualMax() - 512)) * 100}%` }}
+                          onInput={(e) => {
+                            const inst = instance();
+                            if (!inst) return;
+                            const snapped = Math.max(512, Math.round(parseInt(e.currentTarget.value) / 256) * 256);
+                            e.currentTarget.style.setProperty("--slider-pct", `${((snapped - 512) / (manualMax() - 512)) * 100}%`);
+                            setMemoryDraft(snapped);
+                            commitMemory(inst.id, snapped);
+                          }}
+                        />
+                        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px">
+                          <span>512 MB</span>
+                          <span style="color:var(--accent);font-weight:700;font-size:13px">{(memoryValue() / 1024).toFixed(1).replace('.0', '')} GB</span>
+                          <span>{Math.round(manualMax() / 1024)} GB</span>
+                        </div>
+                        <div style={`font-size:11px;font-weight:600;margin-top:6px;color:${memoryHint(memoryValue()).color}`}>
+                          {memoryHint(memoryValue()).text}
+                        </div>
+                      </div>
                     </>
                   }
                 >
-                  {/* Manual slider */}
-                  <div class="setting-info" style="margin-bottom:6px">
-                    <span class="setting-name">Custom memory limit</span>
-                    <span class="setting-desc">Explicit maximum heap RAM passed via -Xmx</span>
-                  </div>
-                  <div>
-                    <input
-                      type="range"
-                      class="slider"
-                      min={512}
-                      max={manualMax()}
-                      step={256}
-                      value={memoryValue()}
-                      style={{ "--slider-pct": `${((memoryValue() - 512) / (manualMax() - 512)) * 100}%` }}
-                      onInput={(e) => {
-                        const inst = instance();
-                        if (!inst) return;
-                        const snapped = Math.max(512, Math.round(parseInt(e.currentTarget.value) / 256) * 256);
-                        e.currentTarget.style.setProperty("--slider-pct", `${((snapped - 512) / (manualMax() - 512)) * 100}%`);
-                        setMemoryDraft(snapped);
-                        commitMemory(inst.id, snapped);
-                      }}
-                    />
-                    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px">
-                      <span>512 MB</span>
-                      <span style="color:var(--accent);font-weight:700;font-size:13px">{(memoryValue() / 1024).toFixed(1).replace('.0', '')} GB</span>
-                      <span>{Math.round(manualMax() / 1024)} GB</span>
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <div class="setting-info">
+                      <span class="setting-name">Calculated allocation</span>
+                      <span class="setting-desc">Formula-derived memory footprint</span>
                     </div>
-                    <div style={`font-size:11px;font-weight:600;margin-top:6px;color:${memoryHint(memoryValue()).color}`}>
-                      {memoryHint(memoryValue()).text}
-                    </div>
+                    <Show when={effectiveMemory()} fallback={<span class="settings-val">—</span>}>
+                      {(em) => (
+                        <div style="text-align:right">
+                          <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--text)">
+                            {(em().value_mb / 1024).toFixed(1).replace('.0', '')} GB
+                          </div>
+                          <Show when={em().capped}>
+                            <div style="font-size:var(--fs-2xs);color:var(--warn);margin-top:2px">
+                              capped at your max · pack suggests {(em().target_mb / 1024).toFixed(1).replace('.0', '')} GB
+                            </div>
+                          </Show>
+                          <Show when={em().value_mb > em().target_mb}>
+                            <div style="font-size:var(--fs-2xs);color:var(--muted);margin-top:2px">
+                              raised to your {(em().min_mb / 1024).toFixed(1).replace('.0', '')} GB minimum
+                            </div>
+                          </Show>
+                        </div>
+                      )}
+                    </Show>
                   </div>
+
+                  {/* Memory breakdown table */}
+                  <Show when={effectiveMemory()}>
+                    {(em) => (
+                      <div class="mem-breakdown" style="border-radius:0;box-shadow:var(--bevel);margin-bottom:0">
+                        <For each={em().breakdown}>
+                          {(row) => (
+                            <div class="mem-row">
+                              <span class="mem-label">{row.label}</span>
+                              <span class="mem-val">{formatBreakdownGb(row.value_mb)}</span>
+                            </div>
+                          )}
+                        </For>
+                        <div class="mem-row mem-row--total">
+                          <span class="mem-label">Pack total</span>
+                          <span class="mem-val">{formatBreakdownGb(em().target_mb)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </Show>
                 </Show>
               </div>
             </div>
