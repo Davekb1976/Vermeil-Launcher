@@ -26,6 +26,17 @@ fn class_id_for(project_type: &str) -> u32 {
     }
 }
 
+pub fn project_type_from_class_id(class_id: Option<u32>) -> Option<String> {
+    match class_id {
+        Some(6) => Some("mod".to_string()),
+        Some(12) => Some("resourcepack".to_string()),
+        Some(6552) => Some("shader".to_string()),
+        Some(4471) => Some("modpack".to_string()),
+        Some(6945) => Some("datapack".to_string()),
+        _ => None,
+    }
+}
+
 /// Map our loader name to CurseForge's modLoaderType enum.
 fn loader_type_id(loader: &str) -> Option<u32> {
     match loader {
@@ -78,6 +89,8 @@ struct CfPagination {
 #[derive(Debug, Deserialize)]
 struct CfMod {
     id: u64,
+    #[serde(rename = "classId")]
+    class_id: Option<u32>,
     name: String,
     slug: String,
     summary: String,
@@ -158,6 +171,7 @@ pub struct CfHit {
     pub version_name: Option<String>,
     /// Primary author display name (first entry in CurseForge's authors array).
     pub author: Option<String>,
+    pub project_type: Option<String>,
 }
 
 pub struct CfSearchResult {
@@ -188,13 +202,20 @@ pub async fn search(
         return Err("CurseForge API key not configured. Add it in Settings.".to_string());
     }
 
-    let class_id = class_id_for(project_type);
     let sort_field = sort_field_id(sort);
 
-    let mut url = format!(
-        "{}/mods/search?gameId={}&classId={}&index={}&pageSize={}&sortField={}&sortOrder=desc",
-        CF_BASE, MINECRAFT_GAME_ID, class_id, offset, limit.min(50), sort_field
-    );
+    let mut url = if project_type == "all" || project_type.is_empty() {
+        format!(
+            "{}/mods/search?gameId={}&index={}&pageSize={}&sortField={}&sortOrder=desc",
+            CF_BASE, MINECRAFT_GAME_ID, offset, limit.min(50), sort_field
+        )
+    } else {
+        let class_id = class_id_for(project_type);
+        format!(
+            "{}/mods/search?gameId={}&classId={}&index={}&pageSize={}&sortField={}&sortOrder=desc",
+            CF_BASE, MINECRAFT_GAME_ID, class_id, offset, limit.min(50), sort_field
+        )
+    };
 
     if !query.is_empty() {
         url.push_str(&format!("&searchFilter={}", urlencoding::encode(query)));
@@ -310,6 +331,7 @@ pub async fn search(
             latest_version,
             version_name,
             author: m.authors.into_iter().next().map(|a| a.name),
+            project_type: project_type_from_class_id(m.class_id),
         }
     }).collect();
 

@@ -33,6 +33,7 @@ pub struct ModHit {
     /// CurseForge: first entry of `authors[]`. None when the source doesn't
     /// expose an author (rare).
     pub author: Option<String>,
+    pub project_type: Option<String>,
 }
 
 #[tauri::command]
@@ -83,6 +84,7 @@ pub async fn search_mods(
                 latest_version: h.latest_version,
                 version_name: h.version_name,
                 author: h.author,
+                project_type: Some(h.project_type),
             })
             .collect(),
     })
@@ -126,6 +128,7 @@ pub async fn search_modpacks(
                 latest_version: h.latest_version,
                 version_name: h.version_name,
                 author: h.author,
+                project_type: Some(h.project_type),
             })
             .collect(),
     })
@@ -184,6 +187,7 @@ pub async fn search_curseforge(
                 latest_version: h.latest_version,
                 version_name: h.version_name,
                 author: h.author,
+                project_type: h.project_type,
             })
             .collect(),
     })

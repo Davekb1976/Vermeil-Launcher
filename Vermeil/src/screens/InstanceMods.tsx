@@ -40,26 +40,19 @@ function resolveIconUrl(item: { local_icon_path?: string | null; icon_url?: stri
 }
 
 /**
- * Whether a content category is usable on a given loader. Vanilla (no
- * loader) can only use resource packs and data packs. Mods and shaders
- * both require a loader (mods need Fabric/Forge/etc., shaders need
- * Iris or OptiFine which are themselves mods).
+ * Detect the target install category for a search hit when browsing with the
+ * "all" filter active. Checks the explicit `project_type` returned by Modrinth
+ * / CurseForge, falling back to category keywords in the hit's metadata.
  */
-function isCategoryAvailable(category: string, loader: string): boolean {
-  if (loader !== "vanilla") return true;
-  return category === "resourcepack" || category === "datapack";
-}
-
-/**
- * First category in the standard tab order that's available for the given
- * loader. Used to auto-select a usable category when the current selection
- * becomes invalid (e.g. user opens Browse on a vanilla instance — "mod" is
- * grayed out, so we land on "resourcepack" instead).
- */
-function firstAvailableCategory(loader: string): "mod" | "resourcepack" | "shader" | "datapack" {
-  const order: ("mod" | "resourcepack" | "shader" | "datapack")[] =
-    ["mod", "resourcepack", "shader", "datapack"];
-  return order.find((c) => isCategoryAvailable(c, loader)) ?? "resourcepack";
+function detectCategory(mod: ModHit): "mod" | "resourcepack" | "shader" | "datapack" {
+  if (mod.project_type === "resourcepack" || mod.project_type === "shader" || mod.project_type === "datapack" || mod.project_type === "mod") {
+    return mod.project_type;
+  }
+  const cats = mod.categories || [];
+  if (cats.some(c => c.toLowerCase().includes("shader"))) return "shader";
+  if (cats.some(c => c.toLowerCase().includes("resource") || c.toLowerCase().includes("texture"))) return "resourcepack";
+  if (cats.some(c => c.toLowerCase().includes("data") || c.toLowerCase().includes("datapack"))) return "datapack";
+  return "mod";
 }
 
 const InstanceMods: Component = () => {
@@ -252,7 +245,7 @@ const InstanceMods: Component = () => {
       setCheckingUpdates(false);
     }
   };
-  const [browseFilter, setBrowseFilter] = createSignal<"mod" | "resourcepack" | "shader" | "datapack">("mod");
+  const [browseFilter, setBrowseFilter] = createSignal<"all" | "mod" | "resourcepack" | "shader" | "datapack">("all");
   const [browseVersion, setBrowseVersion] = createSignal<string>("");
   const [searchQuery, setSearchQuery] = createSignal("");
   const [searchResults, setSearchResults] = createSignal<ModHit[]>([]);
@@ -615,37 +608,7 @@ const InstanceMods: Component = () => {
     });
   });
 
-  /**
-   * Auto-correct the browse category when entering Browse mode on a loader
-   * that doesn't support the current selection. Triggered when the user:
-   *   • opens Browse on a vanilla instance for the first time (default
-   *     `browseFilter` is "mod" but mods are unavailable on vanilla)
-   *   • switches to an instance whose loader can't run the previously
-   *     selected category
-   * Runs whenever any of those signals change.
-   */
-  createEffect(() => {
-    const inst = instance();
-    if (!inst) return;
-    if (mainTab() !== "content" || contentTab() !== "browse") return;
-    if (!isCategoryAvailable(browseFilter(), inst.loader.type)) {
-      setBrowseFilter(firstAvailableCategory(inst.loader.type));
-    }
-  });
 
-  /**
-   * Same auto-correction for the Installed-tab filter — keeps users on a
-   * usable category when they switch instances.
-   */
-  createEffect(() => {
-    const inst = instance();
-    if (!inst) return;
-    if (mainTab() !== "content" || contentTab() !== "installed") return;
-    const f = installedFilter();
-    if (f !== "all" && !isCategoryAvailable(f, inst.loader.type)) {
-      setInstalledFilter("all");
-    }
-  });
 
   const loadFiles = async () => {
     const inst = instance();
@@ -829,7 +792,8 @@ const InstanceMods: Component = () => {
     const inst = instance();
     if (!inst) return;
     setInstalling(mod.project_id);
-    const dlId = trackDownload(mod.title, browseFilter(), {
+    const cat = browseFilter() === "all" ? detectCategory(mod) : browseFilter();
+    const dlId = trackDownload(mod.title, cat, {
       iconUrl: mod.icon_url,
       loader: inst.loader.type,
       gameVersion: inst.game_version,
@@ -837,8 +801,8 @@ const InstanceMods: Component = () => {
     });
     try {
       const resultJson = modSource() === "curseforge"
-        ? await installCfModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, browseFilter(), versionId)
-        : await installModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, browseFilter(), versionId);
+        ? await installCfModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId)
+        : await installModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId);
       setLocalInstalled(prev => { const s = new Set(prev); s.add(mod.project_id); return s; });
       try {
         const result = JSON.parse(resultJson);
@@ -885,7 +849,8 @@ const InstanceMods: Component = () => {
     if (map.has(mod.project_id)) {
       map.delete(mod.project_id);
     } else {
-      map.set(mod.project_id, { mod, category: browseFilter() });
+      const cat = browseFilter() === "all" ? detectCategory(mod) : browseFilter();
+      map.set(mod.project_id, { mod, category: cat });
     }
     setSelectedItems(map);
   };
@@ -1473,29 +1438,11 @@ const InstanceMods: Component = () => {
         <Show when={contentTab() === "installed"}>
           <div class="inst-category-nav inst-category-nav--installed">
             <div class="inst-category-links">
-              {(() => {
-                const loader = () => instance()?.loader.type ?? "vanilla";
-                const filter = (cat: "all" | "mod" | "resourcepack" | "shader" | "datapack", label: string) => {
-                  if (cat !== "all" && !isCategoryAvailable(cat, loader())) return null;
-                  return (
-                    <button
-                      class={`inst-category-item ${installedFilter() === cat ? "active" : ""}`}
-                      onClick={() => setInstalledFilter(cat)}
-                    >
-                      {label}
-                    </button>
-                  );
-                };
-                return (
-                  <>
-                    {filter("all", "All")}
-                    {filter("mod", "Mods")}
-                    {filter("resourcepack", "Resources")}
-                    {filter("shader", "Shaders")}
-                    {filter("datapack", "Datapacks")}
-                  </>
-                );
-              })()}
+              <button class={`inst-category-item ${installedFilter() === "all" ? "active" : ""}`} onClick={() => setInstalledFilter("all")}>All</button>
+              <button class={`inst-category-item ${installedFilter() === "mod" ? "active" : ""}`} onClick={() => setInstalledFilter("mod")}>Mods</button>
+              <button class={`inst-category-item ${installedFilter() === "resourcepack" ? "active" : ""}`} onClick={() => setInstalledFilter("resourcepack")}>Resources</button>
+              <button class={`inst-category-item ${installedFilter() === "shader" ? "active" : ""}`} onClick={() => setInstalledFilter("shader")}>Shaders</button>
+              <button class={`inst-category-item ${installedFilter() === "datapack" ? "active" : ""}`} onClick={() => setInstalledFilter("datapack")}>Datapacks</button>
             </div>
             {/* Bulk-delete button — scope follows the active filter. "All" wipes
                 everything, otherwise only the matching category. */}
@@ -1512,8 +1459,16 @@ const InstanceMods: Component = () => {
               <IconTrash />
             </button>
           </div>
-          {/* Search + sort row — applies on top of the category filter above. */}
-          <div class="inst-installed-controls-row">
+          {/* Row 1: Open Folder · Search Input · Check Updates */}
+          <div class="inst-search-bar">
+            <button
+              class="btn tip-below"
+              onClick={() => { if (instance()) openInstanceFolder(instance()!.id); }}
+              data-tip="Open instance folder"
+              style="height:36px;padding:0 10px;flex-shrink:0"
+            >
+              <span class="side-icon" style="display:flex;align-items:center;justify-content:center"><IconFolderOpen /></span>
+            </button>
             <div class="inst-search-input-wrap">
               <span class="inst-search-icon"><IconSearch /></span>
               <input
@@ -1528,59 +1483,46 @@ const InstanceMods: Component = () => {
                 </button>
               </Show>
             </div>
-            <span class="inst-meta-count" style="white-space:nowrap;font-size:12px">{installedActiveCount() || "—"} installed</span>
-            <Dropdown
-              value={installedSort()}
-              options={[
-                { value: "newest", label: "Newest first" },
-                { value: "oldest", label: "Oldest first" },
-              ]}
-              onChange={(val) => setInstalledSort(val as "newest" | "oldest")}
-            />
-            {/* Manual refresh — the auto-check runs on tab activation but the
-                user may want to re-check after publishing schedules they know
-                about (e.g. Sodium just dropped a release). Spinner during the
-                check; does nothing while one is already in flight. */}
-            {/* Fixed width so the "Checking..." label can't shrink the button.
-                The row's .search-field is flex:1, so any width change here
-                would drag the count badge and sort dropdown sideways. */}
             <button
-              class="btn btn--fixed"
-              style="white-space:nowrap;--btn-fixed-width:120px;height:36px"
+              class="btn inst-select-btn tip-below"
+              style="min-width:110px"
               disabled={checkingUpdates() || (instance()?.mods.length ?? 0) === 0}
               onClick={() => refreshUpdates(true)}
-              title="Check Modrinth and CurseForge for newer versions of every installed item"
+              data-tip="Check Modrinth and CurseForge for newer versions"
             >
               {checkingUpdates() ? "Checking..." : "Check updates"}
             </button>
+          </div>
+          {/* Row 2: Status Metadata on left · Sort Dropdown on right */}
+          <div class="inst-browse-meta-row">
+            <div class="inst-browse-meta-left">
+              Showing installed for <strong class="inst-meta-highlight">{instance()?.loader.type}</strong> <span class="inst-meta-sep">·</span> <strong class="inst-meta-highlight">{instance()?.game_version}</strong>
+              <span class="inst-meta-sep">—</span>
+              <span class="inst-meta-count">{installedActiveCount() || "0"} installed</span>
+            </div>
+            <div class="inst-browse-sort-wrap">
+              <span class="inst-browse-sort-label">Sort:</span>
+              <Dropdown
+                value={installedSort()}
+                options={[
+                  { value: "newest", label: "Newest first" },
+                  { value: "oldest", label: "Oldest first" },
+                ]}
+                onChange={(val) => setInstalledSort(val as "newest" | "oldest")}
+              />
+            </div>
           </div>
         </Show>
         <Show when={contentTab() === "browse"}>
           {/* Browse category tabs. Clean text links with active underline */}
           <div class="inst-category-nav">
-            {(() => {
-              const loader = () => instance()?.loader.type ?? "vanilla";
-              const tab = (cat: "mod" | "resourcepack" | "shader" | "datapack", label: string) => {
-                if (!isCategoryAvailable(cat, loader())) return null;
-                const active = () => browseFilter() === cat;
-                return (
-                  <button
-                    class={`inst-category-item ${active() ? "active" : ""}`}
-                    onClick={() => setBrowseFilter(cat)}
-                  >
-                    {label}
-                  </button>
-                );
-              };
-              return (
-                <>
-                  {tab("mod", "Mods")}
-                  {tab("resourcepack", "Resources")}
-                  {tab("shader", "Shaders")}
-                  {tab("datapack", "Datapacks")}
-                </>
-              );
-            })()}
+            <div class="inst-category-links">
+              <button class={`inst-category-item ${browseFilter() === "all" ? "active" : ""}`} onClick={() => setBrowseFilter("all")}>All</button>
+              <button class={`inst-category-item ${browseFilter() === "mod" ? "active" : ""}`} onClick={() => setBrowseFilter("mod")}>Mods</button>
+              <button class={`inst-category-item ${browseFilter() === "resourcepack" ? "active" : ""}`} onClick={() => setBrowseFilter("resourcepack")}>Resources</button>
+              <button class={`inst-category-item ${browseFilter() === "shader" ? "active" : ""}`} onClick={() => setBrowseFilter("shader")}>Shaders</button>
+              <button class={`inst-category-item ${browseFilter() === "datapack" ? "active" : ""}`} onClick={() => setBrowseFilter("datapack")}>Datapacks</button>
+            </div>
           </div>
         </Show>
 
@@ -1908,7 +1850,7 @@ const InstanceMods: Component = () => {
                  label a version compatible that the installer then resolved
                  differently — or, on CurseForge, silently substituted. */
               gameVersion={instance()?.game_version ?? ""}
-              category={browseFilter()}
+              category={browseFilter() === "all" ? (detailMod() ? detectCategory(detailMod()!) : "mod") : browseFilter()}
               loaders={detailMod() ? extractLoaders(detailMod()!.categories) : []}
               installedVersionId={instance()?.mods.find(m => m.project_id === detailMod()?.project_id)?.version_id}
               busy={installing() === detailMod()?.project_id}

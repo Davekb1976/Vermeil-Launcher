@@ -94,13 +94,26 @@ pub async fn search_mods(
     sort: &str,
     project_type: &str,
 ) -> Result<ModrinthSearchResult, String> {
-    // Only include loader facet for mods — resource packs/shaders/datapacks are loader-agnostic
-    // If game_version is empty, don't filter by version (show all versions)
-    let facets = if project_type == "mod" {
-        format!(
-            "[[\"categories:{}\"], [\"versions:{}\"], [\"project_type:{}\"]]",
-            loader, game_version, project_type
-        )
+    // When project_type is "all", we don't filter by project_type or loader so
+    // that mods, resource packs, shaders, and datapacks are all returned.
+    let facets = if project_type == "all" || project_type.is_empty() {
+        if game_version.is_empty() {
+            "[]".to_string()
+        } else {
+            format!("[[\"versions:{}\"]]", game_version)
+        }
+    } else if project_type == "mod" {
+        if game_version.is_empty() {
+            format!(
+                "[[\"categories:{}\"], [\"project_type:{}\"]]",
+                loader, project_type
+            )
+        } else {
+            format!(
+                "[[\"categories:{}\"], [\"versions:{}\"], [\"project_type:{}\"]]",
+                loader, game_version, project_type
+            )
+        }
     } else if game_version.is_empty() {
         format!(
             "[[\"project_type:{}\"]]",

@@ -86,6 +86,8 @@ export interface ModHit {
   /** Primary author display name. Modrinth: search hit's `author`.
    *  CurseForge: first entry of the project's `authors[]` array. */
   author?: string | null;
+  /** Content category/project type (e.g. "mod", "resourcepack", "shader", "datapack"). */
+  project_type?: string | null;
 }
 
 export interface ModSearchResult {
