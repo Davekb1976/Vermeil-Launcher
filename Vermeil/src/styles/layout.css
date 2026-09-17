@@ -45,6 +45,32 @@
 .tip-right[data-tip]::after { left: auto; right: 0; transform: translateY(3px); white-space: normal; max-width: 280px; }
 .tip-right[data-tip]:hover::after { transform: translateY(0); }
 
+/* Left-anchored bottom tooltip — pins left edge to button to prevent left clipping */
+.tip-below.tip-left[data-tip]::after {
+  bottom: auto;
+  top: calc(100% + 8px);
+  left: 0;
+  right: auto;
+  transform: translateY(-3px);
+  white-space: nowrap;
+}
+.tip-below.tip-left[data-tip]:hover::after {
+  transform: translateY(0);
+}
+
+/* Right-anchored bottom tooltip — pins right edge to button to prevent right clipping */
+.tip-below.tip-right[data-tip]::after {
+  bottom: auto;
+  top: calc(100% + 8px);
+  left: auto;
+  right: 0;
+  transform: translateY(-3px);
+  white-space: nowrap;
+}
+.tip-below.tip-right[data-tip]:hover::after {
+  transform: translateY(0);
+}
+
 /* Main area — fills the window now that the sidebar is gone. The warm
    radial vignette gives the app depth (a lit scene, not a flat fill). */
 .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--vignette); min-width: 0; }

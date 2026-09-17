@@ -10,6 +10,7 @@ interface DropdownProps {
   options: DropdownOption[];
   value: string;
   onChange: (value: string) => void;
+  prefix?: string;
   /** Optional width constraint */
   width?: string;
   /** When true, the control is greyed out and can't be opened. */
@@ -44,7 +45,7 @@ const Dropdown: Component<DropdownProps> = (props) => {
         class="custom-dropdown-selected"
         onClick={() => { if (!props.disabled) setOpen(!open()); }}
       >
-        <span>{selectedLabel()}</span>
+        <span>{props.prefix ? props.prefix : ""}{selectedLabel()}</span>
         <span class="custom-dropdown-arrow" classList={{ open: open() }}><IconChevronDown /></span>
       </div>
       <Show when={open() && !props.disabled}>

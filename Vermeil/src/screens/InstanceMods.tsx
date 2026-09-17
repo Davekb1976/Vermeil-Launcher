@@ -1459,57 +1459,58 @@ const InstanceMods: Component = () => {
               <IconTrash />
             </button>
           </div>
-          {/* Row 1: Open Folder · Search Input · Check Updates */}
-          <div class="inst-search-bar">
-            <button
-              class="btn tip-below"
-              onClick={() => { if (instance()) openInstanceFolder(instance()!.id); }}
-              data-tip="Open instance folder"
-              style="height:36px;padding:0 10px;flex-shrink:0"
-            >
-              <span class="side-icon" style="display:flex;align-items:center;justify-content:center"><IconFolderOpen /></span>
-            </button>
-            <div class="inst-search-input-wrap">
-              <span class="inst-search-icon"><IconSearch /></span>
-              <input
-                class="field-control inst-search-input"
-                placeholder="Search installed content..."
-                value={installedSearch()}
-                onInput={(e) => setInstalledSearch(e.currentTarget.value)}
-              />
-              <Show when={installedSearch().length > 0}>
-                <button class="inst-search-clear" onClick={() => setInstalledSearch("")} title="Clear search">
-                  <IconX />
-                </button>
-              </Show>
+          {/* Unified Search & Filter Panel Box (Image 3 Reference) */}
+          <div class="inst-search-panel">
+            {/* Row 1: Open Folder · Search Input · Check Updates */}
+            <div class="inst-search-row">
+              <button
+                class="btn inst-panel-btn tip-below tip-left"
+                onClick={() => { if (instance()) openInstanceFolder(instance()!.id); }}
+                data-tip="Open instance folder"
+              >
+                <IconFolderOpen />
+              </button>
+              <div class="inst-search-input-wrap">
+                <span class="inst-search-icon"><IconSearch /></span>
+                <input
+                  class="field-control inst-search-input"
+                  placeholder="Search installed content..."
+                  value={installedSearch()}
+                  onInput={(e) => setInstalledSearch(e.currentTarget.value)}
+                />
+                <Show when={installedSearch().length > 0}>
+                  <button class="inst-search-clear" onClick={() => setInstalledSearch("")} title="Clear search">
+                    <IconX />
+                  </button>
+                </Show>
+              </div>
+              <button
+                class="btn inst-panel-btn inst-action-btn tip-below tip-right"
+                disabled={checkingUpdates() || (instance()?.mods.length ?? 0) === 0}
+                onClick={() => refreshUpdates(true)}
+                data-tip="Check for newer versions"
+              >
+                {checkingUpdates() ? "Checking..." : "Check updates"}
+              </button>
             </div>
-            <button
-              class="btn inst-select-btn tip-below"
-              style="min-width:110px"
-              disabled={checkingUpdates() || (instance()?.mods.length ?? 0) === 0}
-              onClick={() => refreshUpdates(true)}
-              data-tip="Check Modrinth and CurseForge for newer versions"
-            >
-              {checkingUpdates() ? "Checking..." : "Check updates"}
-            </button>
-          </div>
-          {/* Row 2: Status Metadata on left · Sort Dropdown on right */}
-          <div class="inst-browse-meta-row">
-            <div class="inst-browse-meta-left">
-              Showing installed for <strong class="inst-meta-highlight">{instance()?.loader.type}</strong> <span class="inst-meta-sep">·</span> <strong class="inst-meta-highlight">{instance()?.game_version}</strong>
-              <span class="inst-meta-sep">—</span>
-              <span class="inst-meta-count">{installedActiveCount() || "0"} installed</span>
-            </div>
-            <div class="inst-browse-sort-wrap">
-              <span class="inst-browse-sort-label">Sort:</span>
-              <Dropdown
-                value={installedSort()}
-                options={[
-                  { value: "newest", label: "Newest first" },
-                  { value: "oldest", label: "Oldest first" },
-                ]}
-                onChange={(val) => setInstalledSort(val as "newest" | "oldest")}
-              />
+            {/* Row 2: Status Metadata on left · Sort Dropdown on right */}
+            <div class="inst-meta-row">
+              <div class="inst-meta-left">
+                Showing installed for <strong class="inst-meta-highlight">{instance()?.loader.type}</strong> <span class="inst-meta-sep">·</span> <strong class="inst-meta-highlight">{instance()?.game_version}</strong>
+                <span class="inst-meta-sep">—</span>
+                <span class="inst-meta-count">{installedActiveCount() || "0"} installed</span>
+              </div>
+              <div class="inst-meta-sort-wrap">
+                <Dropdown
+                  prefix="Sort: "
+                  value={installedSort()}
+                  options={[
+                    { value: "newest", label: "Newest first" },
+                    { value: "oldest", label: "Oldest first" },
+                  ]}
+                  onChange={(val) => setInstalledSort(val as "newest" | "oldest")}
+                />
+              </div>
             </div>
           </div>
         </Show>
@@ -1708,55 +1709,57 @@ const InstanceMods: Component = () => {
 
         <Show when={contentTab() === "browse"}>
           <div class="browse-wrapper">
-            <div class="inst-search-bar">
-              <button
-                class="btn mod-source-toggle tip-below"
-                onClick={handleSourceToggle}
-                data-tip={modSource() === "modrinth" ? "Source: Modrinth (click to switch to CurseForge)" : "Source: CurseForge (click to switch to Modrinth)"}
-                style="height:36px;padding:0 10px;flex-shrink:0"
-              >
-                <Show when={modSource() === "modrinth"} fallback={
-                  <span class="mod-source-badge cf"><IconCurseForge /></span>
-                }>
-                  <span class="mod-source-badge mr"><IconModrinth /></span>
-                </Show>
-              </button>
-              <div class="inst-search-input-wrap">
-                <span class="inst-search-icon"><IconSearch /></span>
-                <input
-                  class="field-control inst-search-input"
-                  placeholder={modSource() === "modrinth" ? "Search Modrinth..." : "Search CurseForge..."}
-                  value={searchQuery()}
-                  onInput={(e) => handleSearch(e.currentTarget.value)}
-                />
-                <Show when={searchQuery().length > 0}>
-                  <button class="inst-search-clear" onClick={() => handleSearch("")} title="Clear search">
-                    <IconX />
-                  </button>
-                </Show>
+            {/* Unified Search & Filter Panel Box (Image 3 Reference) */}
+            <div class="inst-search-panel">
+              {/* Row 1: Source Toggle · Search Input · Select */}
+              <div class="inst-search-row">
+                <button
+                  class={`btn inst-panel-btn mod-source-toggle ${modSource() === "modrinth" ? "mr" : "cf"} tip-below tip-left`}
+                  onClick={handleSourceToggle}
+                  data-tip={modSource() === "modrinth" ? "Source: Modrinth (click for CurseForge)" : "Source: CurseForge (click for Modrinth)"}
+                >
+                  <Show when={modSource() === "modrinth"} fallback={<IconCurseForge />}>
+                    <IconModrinth />
+                  </Show>
+                </button>
+                <div class="inst-search-input-wrap">
+                  <span class="inst-search-icon"><IconSearch /></span>
+                  <input
+                    class="field-control inst-search-input"
+                    placeholder={modSource() === "modrinth" ? "Search Modrinth..." : "Search CurseForge..."}
+                    value={searchQuery()}
+                    onInput={(e) => handleSearch(e.currentTarget.value)}
+                  />
+                  <Show when={searchQuery().length > 0}>
+                    <button class="inst-search-clear" onClick={() => handleSearch("")} title="Clear search">
+                      <IconX />
+                    </button>
+                  </Show>
+                </div>
+                <button
+                  class={`btn inst-panel-btn inst-action-btn tip-below tip-right ${selectMode() ? "active" : ""}`}
+                  data-tip="Bulk install"
+                  onClick={() => { setSelectMode(!selectMode()); if (selectMode()) setSelectedItems(new Map()); }}
+                >
+                  {selectMode() ? `Cancel (${selectedItems().size})` : "Select"}
+                </button>
               </div>
-              <button class={`btn inst-select-btn tip-below ${selectMode() ? "btn--primary" : ""}`}
-                data-tip="Bulk install"
-                onClick={() => { setSelectMode(!selectMode()); if (selectMode()) setSelectedItems(new Map()); }}>
-                {selectMode() ? `Cancel (${selectedItems().size})` : "Select"}
-              </button>
-            </div>
-            {/* Context + controls on one subtle metadata bar */}
-            <div class="inst-browse-meta-row">
-              <div class="inst-browse-meta-left">
-                <Show when={browseFilter() === "resourcepack" || browseFilter() === "shader"} fallback={
-                  <>Showing results for <strong class="inst-meta-highlight">{instance()?.loader.type}</strong> <span class="inst-meta-sep">·</span> <strong class="inst-meta-highlight">{instance()?.game_version}</strong></>
-                }>
-                  <>Showing results for <strong class="inst-meta-highlight">{instance()?.game_version}</strong> <span class="inst-meta-sep">·</span> Version override: <input class="field-control inst-version-override" placeholder="any" value={browseVersion()} onInput={(e) => { setBrowseVersion(e.currentTarget.value); setCurrentPage(1); clearTimeout(searchTimeout); searchTimeout = window.setTimeout(() => doSearch(1), 400); }} /> <span style="color:var(--muted);font-size:var(--fs-2xs)">(any if empty)</span></>
-                </Show>
-                <Show when={totalHits() > 0}>
-                  <span class="inst-meta-sep">—</span>
-                  <span class="inst-meta-count">{totalHits().toLocaleString()} results</span>
-                </Show>
-              </div>
-              <div class="inst-browse-sort-wrap">
-                <span class="inst-browse-sort-label">Sort:</span>
-                <Dropdown value={sortBy()} options={SORT_OPTIONS} onChange={handleSortChange} />
+              {/* Row 2: Status Metadata on left · Sort Dropdown on right */}
+              <div class="inst-meta-row">
+                <div class="inst-meta-left">
+                  <Show when={browseFilter() === "resourcepack" || browseFilter() === "shader"} fallback={
+                    <>Showing results for <strong class="inst-meta-highlight">{instance()?.loader.type}</strong> <span class="inst-meta-sep">·</span> <strong class="inst-meta-highlight">{instance()?.game_version}</strong></>
+                  }>
+                    <>Showing results for <strong class="inst-meta-highlight">{instance()?.game_version}</strong> <span class="inst-meta-sep">·</span> Version override: <input class="field-control inst-version-override" placeholder="any" value={browseVersion()} onInput={(e) => { setBrowseVersion(e.currentTarget.value); setCurrentPage(1); clearTimeout(searchTimeout); searchTimeout = window.setTimeout(() => doSearch(1), 400); }} /> <span class="inst-meta-sub">(any if empty)</span></>
+                  </Show>
+                  <Show when={totalHits() > 0}>
+                    <span class="inst-meta-sep">—</span>
+                    <span class="inst-meta-count">{totalHits().toLocaleString()} results</span>
+                  </Show>
+                </div>
+                <div class="inst-meta-sort-wrap">
+                  <Dropdown prefix="Sort: " value={sortBy()} options={SORT_OPTIONS} onChange={handleSortChange} />
+                </div>
               </div>
             </div>
             <div class="browse-results">

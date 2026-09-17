@@ -1432,41 +1432,36 @@
 
 
 /* Mod source toggle button — switches between Modrinth and CurseForge
-   in the Browse tab search bar. The button itself carries the brand tint
-   so the icon can fill the space without a constraining inner badge. */
+   in the Browse tab search bar. Tactile 36x36 bevel button with brand icon. */
 .mod-source-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border-radius: var(--radius-md);
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  padding: 0 !important;
+  border-radius: var(--radius-xs);
   flex-shrink: 0;
-  transition: background 0.12s, transform 0.12s, border-color 0.12s;
+  transition: background 0.12s, transform 0.12s, border-color 0.12s, box-shadow 0.12s;
 }
-.mod-source-toggle:hover {
-  transform: scale(1.05);
+.mod-source-toggle svg {
+  width: 18px;
+  height: 18px;
 }
-.mod-source-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  border-radius: var(--radius-md);
-}
-.mod-source-badge svg {
-  width: 22px;
-  height: 22px;
-}
-.mod-source-badge.mr {
+.mod-source-toggle.mr {
   color: #1bd96a;
-  background: rgba(27, 217, 106, 0.15);
 }
-.mod-source-badge.cf {
+.mod-source-toggle.mr:hover {
+  background: #17241e;
+  border-color: rgba(27, 217, 106, 0.4);
+}
+.mod-source-toggle.cf {
   color: #f16436;
-  background: rgba(241, 100, 54, 0.15);
+}
+.mod-source-toggle.cf:hover {
+  background: #271816;
+  border-color: rgba(241, 100, 54, 0.4);
 }
 
 
