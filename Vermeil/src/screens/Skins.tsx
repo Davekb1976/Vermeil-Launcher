@@ -23,7 +23,19 @@ import {
 } from "../ipc/commands";
 import { SkinViewer, IdleAnimation, PlayerObject } from "skinview3d";
 import { CylinderGeometry, MeshBasicMaterial, Mesh, Group } from "three";
-import { IconUpload, IconReload, IconTrash2, IconPlus, IconMinus, IconEdit } from "../components/Icons";
+import {
+  IconUpload,
+  IconReload,
+  IconTrash2,
+  IconPlus,
+  IconMinus,
+  IconEdit,
+  IconX,
+  IconCheck,
+  IconRotateCcw,
+  IconMaximize2,
+  IconMinimize2,
+} from "../components/Icons";
 import CapeChipThumb from "../components/CapeChipThumb";
 import SkinAvatar from "../components/SkinAvatar";
 import CustomCapeEditor from "../modals/CustomCapeEditor";
@@ -163,19 +175,8 @@ const Skins: Component = () => {
     return a?.texture;
   };
 
-  // Idle / chrome auto-hide. Any mousemove on the hero resets the timer;
-  // 1.5 s without movement → fade chrome to invisible, leaving just the
-  // model on screen. Any subsequent move brings everything back.
-  const [idle, setIdle] = createSignal(false);
-  let idleTimer: number | undefined;
-  const wakeChrome = () => {
-    if (idle()) setIdle(false);
-    if (idleTimer !== undefined) window.clearTimeout(idleTimer);
-    idleTimer = window.setTimeout(() => setIdle(true), 1500);
-  };
-  onCleanup(() => {
-    if (idleTimer !== undefined) window.clearTimeout(idleTimer);
-  });
+  // Zen mode: hides side panels for an unobstructed character showcase view.
+  const [zenMode, setZenMode] = createSignal(false);
 
   // Canvas crossfade flag — toggles a brief opacity drop while a new texture
   // loads so the swap reads as a soft transition, not a hard cut.
@@ -184,7 +185,6 @@ const Skins: Component = () => {
   let fileInputRef: HTMLInputElement | undefined;
   let viewerCanvas: HTMLCanvasElement | undefined;
   let viewer: SkinViewer | undefined;
-  let heroEl: HTMLDivElement | undefined;
   let stageEl: HTMLDivElement | undefined;
 
   // Manual zoom for the player model. skinview3d's `zoom` is a camera-distance
@@ -201,10 +201,10 @@ const Skins: Component = () => {
     const clamped = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
     setZoomLevel(clamped);
     if (viewer) viewer.zoom = clamped;
-    wakeChrome();
   };
   const zoomIn = () => applyZoom(zoomLevel() + ZOOM_STEP);
   const zoomOut = () => applyZoom(zoomLevel() - ZOOM_STEP);
+  const resetZoom = () => applyZoom(ZOOM_DEFAULT);
   const onStageWheel = (e: WheelEvent) => {
     e.preventDefault();
     // deltaY > 0 = scroll down = zoom out. Scale by a small factor for a
@@ -324,9 +324,6 @@ const Skins: Component = () => {
     const ro = new ResizeObserver(computeCanvasSize);
     if (stageEl) ro.observe(stageEl);
     onCleanup(() => ro.disconnect());
-
-    // Prime the idle timer so chrome shows on first paint then settles.
-    wakeChrome();
   });
 
   onCleanup(() => {
@@ -775,142 +772,187 @@ const Skins: Component = () => {
           onChange={handleFileSelected}
         />
 
-        <div
-          class={`skins-hero ${idle() ? "idle" : ""}`}
-          ref={heroEl}
-          onMouseMove={wakeChrome}
-        >
-          {/* Top floating toolbar — variant + actions + elytra. */}
-          <div class="skins-floating skins-toolbar-floating">
-            <div class="skins-toolbar-group">
+        <div class="skins-studio" classList={{ "zen-mode": zenMode() }}>
+          {/* Left Panel: Wardrobe & Local Skins */}
+          <div class="skins-panel skins-panel-wardrobe">
+            <div class="skins-panel-header">
+              <div class="skins-panel-title-wrap">
+                <span class="card-section-tag tag-settings-skins">WARDROBE</span>
+                <span class="skins-panel-title">Skin Library</span>
+                <span class="skins-count-badge">{(localSkins() ?? []).length}</span>
+              </div>
               <button
-                class={`skins-toolbar-btn ${variant() === "CLASSIC" ? "active" : ""}`}
+                class="skins-mini-btn tip-left"
+                data-tip="Import skin PNG file"
+                onClick={handleUpload}
                 disabled={busy() !== null}
-                onClick={() => handleVariantSwitch("CLASSIC")}
-                title="Classic — 4px arms"
               >
-                Classic
-              </button>
-              <button
-                class={`skins-toolbar-btn ${variant() === "SLIM" ? "active" : ""}`}
-                disabled={busy() !== null}
-                onClick={() => handleVariantSwitch("SLIM")}
-                title="Slim — 3px arms"
-              >
-                Slim
+                <IconUpload />
+                <span>{busy() === "upload" ? "Importing…" : "Import"}</span>
               </button>
             </div>
 
-            <div class="skins-toolbar-divider" />
-
-            <button
-              class={`skins-toolbar-btn ${showElytra() ? "active" : ""}`}
-              onClick={() => setShowElytra(!showElytra())}
-              title={showElytra() ? "Show as cape" : "Show as elytra"}
-            >
-              {showElytra() ? "Elytra" : "Cape"}
-            </button>
-
-            <div class="skins-toolbar-divider" />
-
-            <button
-              class="skins-toolbar-btn skins-toolbar-btn--primary"
-              onClick={handleUpload}
-              disabled={busy() !== null}
-            >
-              <IconUpload />
-              <span>{busy() === "upload" ? "Uploading…" : "Upload"}</span>
-            </button>
-            <button
-              class="skins-toolbar-btn"
-              onClick={handleReset}
-              disabled={busy() !== null}
-              title="Reset to Mojang default"
-            >
-              <IconReload />
-            </button>
-            <button
-              class="skins-toolbar-btn"
-              onClick={handleRefresh}
-              disabled={busy() !== null}
-              title="Refresh from Mojang"
-            >
-              Refresh
-            </button>
-          </div>
-
-          {/* Beta flag — Mojang's profile API isn't a stable public contract,
-              so we flag the feature to set expectations. Floats in the hero's
-              top-left and fades out with the rest of the chrome when idle. */}
-          <div class="skins-floating skins-beta-floating">
-            <span class="beta-pill">Beta</span>
-          </div>
-
-          {/* Flex row: left dock | model stage | right dock. Layout flow,
-              not absolute positioning, so docks sit immediately next to the
-              canvas regardless of window size. */}
-          <div class="skins-hero-row">
-            {/* Left side dock — saved skins library. */}
-            <div class="skins-fade-on-idle skins-dock-side">
+            <div class="skins-panel-body">
               <Show
                 when={(localSkins() ?? []).length > 0}
                 fallback={
-                  <div class="skins-dock-empty">
-                    Skins you upload save here.
+                  <div class="skins-empty-wardrobe">
+                    <div class="skins-empty-wardrobe-title">No skins saved</div>
+                    <div class="skins-empty-wardrobe-text">
+                      Import a .png skin to build your saved wardrobe.
+                    </div>
+                    <button
+                      class="skins-action-btn skins-action-btn--primary"
+                      onClick={handleUpload}
+                      disabled={busy() !== null}
+                    >
+                      <IconUpload />
+                      <span>Import Skin</span>
+                    </button>
                   </div>
                 }
               >
-                <For each={localSkins()}>
-                  {(skin) => {
-                    const isActive = () => {
-                      const p = profile();
-                      const a = p?.skins.find((s) => s.state === "ACTIVE") ?? p?.skins[0];
-                      return a?.texture === skin.texture;
-                    };
-                    return (
-                      <div
-                        class={`skins-lib-chip ${isActive() ? "active" : ""}`}
-                        title={`${skin.name} — ${skin.variant === "SLIM" ? "Slim" : "Classic"}`}
-                      >
-                        <button
-                          class="skins-lib-chip-equip"
+                <div class="skins-lib-list">
+                  <For each={localSkins() ?? []}>
+                    {(skin) => {
+                      const isActive = () => {
+                        const p = profile();
+                        const a = p?.skins.find((s) => s.state === "ACTIVE") ?? p?.skins[0];
+                        return a?.texture === skin.texture;
+                      };
+                      return (
+                        <div
+                          class="skins-lib-card"
+                          classList={{ active: isActive() }}
                           onClick={() => handleEquipLocal(skin)}
-                          disabled={busy() !== null}
                         >
-                          <SkinAvatar
-                            texture={skin.texture}
-                            variant={skin.variant as "CLASSIC" | "SLIM" | "Unknown"}
-                            size={64}
-                          />
-                        </button>
-                        <button
-                          class="skins-lib-chip-remove"
-                          onClick={() => handleRemoveLocal(skin)}
-                          disabled={busy() !== null}
-                          title="Remove from library"
-                        >
-                          <IconTrash2 />
-                        </button>
-                      </div>
-                    );
-                  }}
-                </For>
+                          <div class="skins-lib-card-preview">
+                            <SkinAvatar
+                              texture={skin.texture}
+                              variant={skin.variant as "CLASSIC" | "SLIM" | "Unknown"}
+                              size={48}
+                            />
+                          </div>
+                          <div class="skins-lib-card-info">
+                            <div class="skins-lib-card-name" title={skin.name}>
+                              {skin.name}
+                            </div>
+                            <div class="skins-lib-card-meta">
+                              <span class="skins-variant-pill">
+                                {skin.variant === "SLIM" ? "Slim 3px" : "Classic 4px"}
+                              </span>
+                              <Show when={isActive()}>
+                                <span class="skins-active-indicator">
+                                  <IconCheck /> Active
+                                </span>
+                              </Show>
+                            </div>
+                          </div>
+                          <div class="skins-lib-card-actions">
+                            <button
+                              class="skins-lib-btn-delete tip-left"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveLocal(skin);
+                              }}
+                              disabled={busy() !== null}
+                              data-tip="Delete from library"
+                            >
+                              <IconTrash2 />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  </For>
+                </div>
               </Show>
             </div>
+          </div>
 
-            {/* Model stage — flex middle, holds the canvas. */}
+          {/* Center: Figurine Studio Stage */}
+          <div class="skins-stage-container">
+            {/* Top Studio Bar */}
+            <div class="skins-stage-topbar">
+              <div class="skins-topbar-left">
+                <div class="skins-studio-identity">
+                  <span>Character Studio</span>
+                  <span class="beta-pill">Beta</span>
+                </div>
+              </div>
+
+              <div class="skins-topbar-center">
+                <div class="skins-segmented-switch">
+                  <button
+                    class="skins-segment-btn tip-below"
+                    classList={{ active: variant() === "CLASSIC" }}
+                    disabled={busy() !== null}
+                    onClick={() => handleVariantSwitch("CLASSIC")}
+                    data-tip="Classic model (4px arm thickness)"
+                  >
+                    Classic
+                  </button>
+                  <button
+                    class="skins-segment-btn tip-below"
+                    classList={{ active: variant() === "SLIM" }}
+                    disabled={busy() !== null}
+                    onClick={() => handleVariantSwitch("SLIM")}
+                    data-tip="Slim model (3px arm thickness)"
+                  >
+                    Slim
+                  </button>
+                </div>
+              </div>
+
+              <div class="skins-topbar-right">
+                <button
+                  class="skins-studio-btn tip-below"
+                  onClick={handleReset}
+                  disabled={busy() !== null}
+                  data-tip="Reset skin to Mojang default"
+                >
+                  <IconRotateCcw />
+                  <span>Reset</span>
+                </button>
+                <button
+                  class="skins-studio-btn tip-below"
+                  onClick={handleRefresh}
+                  disabled={busy() !== null}
+                  data-tip="Refresh skin & capes from Mojang"
+                >
+                  <IconReload />
+                  <span>Refresh</span>
+                </button>
+                <button
+                  class="skins-studio-btn skins-zen-btn tip-below"
+                  classList={{ active: zenMode() }}
+                  onClick={() => setZenMode(!zenMode())}
+                  data-tip={zenMode() ? "Exit Zen Mode (Show Panels)" : "Zen Mode (Inspect Model)"}
+                >
+                  {zenMode() ? <IconMinimize2 /> : <IconMaximize2 />}
+                  <span>{zenMode() ? "Exit Zen" : "Zen"}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3D Canvas Stage */}
             <div class="skins-stage" ref={stageEl} onWheel={onStageWheel}>
               <canvas
                 ref={viewerCanvas}
-                class={`skins-hero-canvas ${canvasFading() ? "fading" : ""}`}
+                class="skins-hero-canvas"
+                classList={{ fading: canvasFading() }}
               />
-              {/* Zoom controls — scroll the model or use the buttons. */}
-              <div class="skins-zoom skins-fade-on-idle">
+            </div>
+
+            {/* Bottom Stage Footer */}
+            <div class="skins-stage-footer">
+              <span class="skins-stage-hint">Drag to rotate · Scroll to zoom</span>
+              <div class="skins-zoom-cluster">
                 <button
                   class="skins-zoom-btn"
                   onClick={zoomIn}
                   disabled={zoomLevel() >= ZOOM_MAX}
-                  title="Zoom in"
+                  data-tip="Zoom in"
                 >
                   <IconPlus />
                 </button>
@@ -918,90 +960,189 @@ const Skins: Component = () => {
                   class="skins-zoom-btn"
                   onClick={zoomOut}
                   disabled={zoomLevel() <= ZOOM_MIN}
-                  title="Zoom out"
+                  data-tip="Zoom out"
                 >
                   <IconMinus />
+                </button>
+                <button
+                  class="skins-zoom-btn"
+                  onClick={resetZoom}
+                  data-tip="Reset view zoom"
+                >
+                  <IconRotateCcw />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel: Equipment & Capes */}
+          <div class="skins-panel skins-panel-equipment">
+            <div class="skins-panel-header">
+              <div class="skins-panel-title-wrap">
+                <span class="card-section-tag tag-settings-video">EQUIPMENT</span>
+                <span class="skins-panel-title">Capes & Wings</span>
+              </div>
+              <div class="skins-segmented-switch skins-segmented-switch--sm">
+                <button
+                  class="skins-segment-btn tip-below"
+                  classList={{ active: !showElytra() }}
+                  onClick={() => setShowElytra(false)}
+                  data-tip="Display back-equipment as Cape"
+                >
+                  Cape
+                </button>
+                <button
+                  class="skins-segment-btn tip-below"
+                  classList={{ active: showElytra() }}
+                  onClick={() => setShowElytra(true)}
+                  data-tip="Display back-equipment as Elytra wings"
+                >
+                  Elytra
                 </button>
               </div>
             </div>
 
-            {/* Right side dock — capes (Mojang + local custom). */}
-            <div class="skins-fade-on-idle skins-dock-side">
-              {/* No cape */}
-              <button
-                class={`skins-cape-chip ${
-                  !activeCustomCapeId() && !profile()?.capes.some((c) => c.state === "ACTIVE")
-                    ? "active"
-                    : ""
-                }`}
-                onClick={() => handleEquipCape(null)}
-                disabled={busy() !== null}
-                title="No cape"
-              >
-                <span class="skins-cape-empty-glyph">×</span>
-              </button>
-
-              {/* Mojang-granted capes */}
-              <For each={profile()?.capes ?? []}>
-                {(cape) => (
+            <div class="skins-panel-body">
+              {/* Mojang Capes */}
+              <div class="skins-equipment-section">
+                <div class="skins-section-subhead">Mojang Capes</div>
+                <div class="skins-cape-grid">
+                  {/* No cape */}
                   <button
-                    class={`skins-cape-chip ${
-                      !activeCustomCapeId() && cape.state === "ACTIVE" ? "active" : ""
-                    }`}
-                    onClick={() => handleEquipCape(cape.id)}
+                    class="skins-cape-tile tip-below"
+                    classList={{
+                      active:
+                        !activeCustomCapeId() &&
+                        !profile()?.capes.some((c) => c.state === "ACTIVE"),
+                    }}
+                    onClick={() => handleEquipCape(null)}
                     disabled={busy() !== null}
-                    title={cape.alias}
+                    data-tip="No cape"
                   >
-                    <CapeChipThumb texture={cape.texture} withElytra={true} />
+                    <div class="skins-cape-none-icon">
+                      <IconX />
+                    </div>
+                    <span class="skins-cape-label">None</span>
                   </button>
-                )}
-              </For>
 
-              {/* Local custom capes */}
-              <For each={customCapes() ?? []}>
-                {(cape) => (
-                  <div
-                    class={`skins-cape-chip skins-cape-chip--custom ${
-                      activeCustomCapeId() === cape.id ? "active" : ""
-                    }`}
-                    title={cape.name}
-                  >
-                    <button
-                      class="skins-cape-chip-equip"
-                      onClick={() => handleEquipCustomCape(cape.id)}
-                      disabled={busy() !== null || ingameBusy()}
-                    >
-                      <CapeChipThumb texture={cape.texture} />
-                    </button>
-                    <button
-                      class="skins-cape-chip-edit"
-                      onClick={() => openEditCape(cape)}
-                      disabled={busy() !== null}
-                      title="Edit cape"
-                    >
-                      <IconEdit />
-                    </button>
-                    <button
-                      class="skins-cape-chip-remove"
-                      onClick={() => handleRemoveCustomCape(cape.id)}
-                      disabled={busy() !== null}
-                      title="Remove cape"
-                    >
-                      <IconTrash2 />
-                    </button>
+                  {/* Mojang-granted capes */}
+                  <For each={profile()?.capes ?? []}>
+                    {(cape) => {
+                      const isEquipped = () =>
+                        !activeCustomCapeId() && cape.state === "ACTIVE";
+                      return (
+                        <button
+                          class="skins-cape-tile tip-below"
+                          classList={{ active: isEquipped() }}
+                          onClick={() => handleEquipCape(cape.id)}
+                          disabled={busy() !== null}
+                          data-tip={cape.alias}
+                        >
+                          <div class="skins-cape-tile-thumb">
+                            <CapeChipThumb texture={cape.texture} withElytra={true} />
+                          </div>
+                          <span class="skins-cape-label">{cape.alias}</span>
+                          <Show when={isEquipped()}>
+                            <span class="skins-tile-equipped-dot" />
+                          </Show>
+                        </button>
+                      );
+                    }}
+                  </For>
+                </div>
+              </div>
+
+              {/* Custom In-Game Capes */}
+              <div class="skins-equipment-section">
+                <div class="skins-section-subhead-row">
+                  <div class="skins-section-subhead">
+                    In-Game Capes <span class="skins-subhead-badge">Companion</span>
                   </div>
-                )}
-              </For>
+                  <button
+                    class="skins-mini-btn tip-left"
+                    data-tip="Create new animated or static cape"
+                    onClick={openNewCape}
+                    disabled={busy() !== null}
+                  >
+                    <IconPlus />
+                    <span>New</span>
+                  </button>
+                </div>
 
-              {/* Create a new custom cape */}
-              <button
-                class="skins-cape-chip skins-cape-add"
-                onClick={openNewCape}
-                disabled={busy() !== null}
-                title="Create custom cape"
-              >
-                <IconPlus />
-              </button>
+                <Show
+                  when={(customCapes() ?? []).length > 0}
+                  fallback={
+                    <div class="skins-empty-capes">
+                      <p>No custom capes yet</p>
+                      <button
+                        class="skins-action-btn skins-action-btn--secondary"
+                        onClick={openNewCape}
+                        disabled={busy() !== null}
+                      >
+                        <IconPlus />
+                        <span>Create Custom Cape</span>
+                      </button>
+                    </div>
+                  }
+                >
+                  <div class="skins-custom-cape-list">
+                    <For each={customCapes() ?? []}>
+                      {(cape) => {
+                        const isEquipped = () => activeCustomCapeId() === cape.id;
+                        return (
+                          <div
+                            class="skins-custom-cape-card"
+                            classList={{ active: isEquipped() }}
+                          >
+                            <button
+                              class="skins-custom-cape-equip tip-below"
+                              onClick={() => handleEquipCustomCape(cape.id)}
+                              disabled={busy() !== null || ingameBusy()}
+                              data-tip={isEquipped() ? "Unequip cape" : "Equip in-game cape"}
+                            >
+                              <CapeChipThumb texture={cape.texture} />
+                            </button>
+                            <div
+                              class="skins-custom-cape-info"
+                              onClick={() => handleEquipCustomCape(cape.id)}
+                            >
+                              <div class="skins-custom-cape-name">{cape.name}</div>
+                              <div class="skins-custom-cape-meta">
+                                <Show when={cape.transform?.animated}>
+                                  <span class="skins-animated-badge">Animated</span>
+                                </Show>
+                                <Show when={isEquipped()}>
+                                  <span class="skins-active-indicator">
+                                    <IconCheck /> Equipped
+                                  </span>
+                                </Show>
+                              </div>
+                            </div>
+                            <div class="skins-custom-cape-actions">
+                              <button
+                                class="skins-lib-btn tip-left"
+                                onClick={() => openEditCape(cape)}
+                                disabled={busy() !== null}
+                                data-tip="Edit cape"
+                              >
+                                <IconEdit />
+                              </button>
+                              <button
+                                class="skins-lib-btn skins-lib-btn-delete tip-left"
+                                onClick={() => handleRemoveCustomCape(cape.id)}
+                                disabled={busy() !== null}
+                                data-tip="Delete cape"
+                              >
+                                <IconTrash2 />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }}
+                    </For>
+                  </div>
+                </Show>
+              </div>
             </div>
           </div>
         </div>

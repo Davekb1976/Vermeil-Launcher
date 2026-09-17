@@ -1618,6 +1618,8 @@
 .tag-settings-general,
 .tag-settings-account,
 .tag-settings-profiles,
+.tag-settings-skins,
+.settings-badge--skins,
 .settings-badge--launcher {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   color: #c4b5fd;

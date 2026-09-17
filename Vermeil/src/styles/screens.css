@@ -1,270 +1,655 @@
 /* screens.css — Skins, home, account, pin instances, download history, modpack browser */
 
 /* ============================================================
-   Skins & capes screen (screens/Skins.tsx) — cinematic hero canvas.
-
-   The 3D model is the centerpiece. Variant toggle, action buttons,
-   cape gallery, and saved-skin library float as glass overlays that
-   fade after 1.5 s of mouse-idle, leaving just the model on screen.
-   Any subsequent mouse movement brings the chrome back.
+   Skins & capes screen (screens/Skins.tsx) — Character Studio.
+   Tactile 3-zone layout: Left Wardrobe Library, Center 3D Figurine
+   Stage, Right Equipment & Capes Panel.
    ============================================================ */
 
-.skins-screen { padding-bottom: 0; }
-
-/* Hero takes the full content area. Position relative so floating
-   children anchor to it. min-height covers the case where the .content
-   container is narrower than expected (e.g. small windows). */
-.skins-hero {
-  position: relative;
-  width: 100%;
+.skins-screen {
+  padding-bottom: 0;
   height: calc(100vh - 100px);
   min-height: 520px;
+  display: flex;
+  flex-direction: column;
+}
+
+.skins-studio {
+  display: grid;
+  grid-template-columns: 280px minmax(320px, 1fr) 290px;
+  gap: var(--space-3);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  position: relative;
+  transition: grid-template-columns 0.3s cubic-bezier(0.16, 1, 0.3, 1), gap 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Zen Mode: collapses side panels to give the 3D figurine stage full focus */
+.skins-studio.zen-mode {
+  grid-template-columns: 0px 1fr 0px;
+  gap: 0;
+}
+.skins-studio.zen-mode .skins-panel {
+  opacity: 0;
+  pointer-events: none;
+  border: none;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Framed Section Panel */
+.skins-panel {
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--bevel);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  transition: opacity 0.25s ease, border-color 0.15s ease;
+}
+
+.skins-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface-panel);
+  border-bottom: 1px solid var(--border);
+  min-height: 42px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.skins-panel-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.skins-panel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.skins-count-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  padding: 1px 6px;
+  border-radius: 0;
+  line-height: 1.3;
+}
+
+.skins-panel-body {
+  padding: 10px;
+  background: var(--surface-sunken);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+.skins-panel-body::-webkit-scrollbar {
+  width: 4px;
+}
+.skins-panel-body::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 0;
+}
+.skins-panel-body::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Primary and secondary tactile buttons inside panels */
+.skins-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 12px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: var(--bevel);
+  transition: background 0.12s, color 0.12s, border-color 0.12s, transform 0.12s, box-shadow 0.15s;
+}
+.skins-action-btn:hover:not(:disabled) {
+  background: var(--surface-raised);
+  border-color: var(--border-hover);
+  box-shadow: none;
+  transform: translateY(-1px);
+}
+.skins-action-btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+.skins-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.skins-action-btn--primary {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent-strong);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.3);
+}
+.skins-action-btn--primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+  color: var(--accent-contrast);
+}
+.skins-action-btn--secondary {
+  background: var(--surface-panel);
+  color: var(--text);
+  border-color: var(--border);
+}
+.skins-action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Wardrobe Cards List */
+.skins-lib-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Wardrobe skin card */
+.skins-lib-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  cursor: pointer;
+  box-shadow: var(--bevel);
+  transition: background 0.12s, border-color 0.12s, transform 0.12s, box-shadow 0.15s;
+  position: relative;
+}
+.skins-lib-card:hover {
+  background: var(--surface-raised);
+  border-color: var(--border-hover);
+  border-left-color: var(--accent);
+  transform: translateX(2px);
+}
+.skins-lib-card.active {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-panel));
+  border-color: var(--accent);
+  border-left-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-soft);
+}
+
+.skins-lib-card-preview {
+  flex-shrink: 0;
+  width: 38px;
+  height: 52px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
 }
 
-/* skinview3d canvas. setSize() drives pixel dimensions in JS; CSS
-   handles the cursor + opacity fade on swap. */
+.skins-lib-card-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.skins-lib-card-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.skins-lib-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.skins-variant-pill {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+}
+
+.skins-active-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.skins-active-indicator svg {
+  width: 10px;
+  height: 10px;
+}
+
+.skins-lib-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.skins-lib-btn-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.12s, color 0.12s, background 0.12s, border-color 0.12s;
+}
+.skins-lib-card:hover .skins-lib-btn-delete {
+  opacity: 1;
+}
+.skins-lib-btn-delete:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.skins-lib-btn-delete svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Empty wardrobe state */
+.skins-empty-wardrobe {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6) var(--space-3);
+  text-align: center;
+  border: 1px dashed var(--border);
+  background: var(--surface-panel);
+  gap: var(--space-2);
+}
+.skins-empty-wardrobe-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.skins-empty-wardrobe-text {
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.4;
+  margin-bottom: var(--space-2);
+}
+
+/* Center Stage Area */
+.skins-stage-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--bevel);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top Studio Toolbar */
+.skins-stage-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 8px 12px;
+  background: var(--surface-panel);
+  border-bottom: 1px solid var(--border);
+  min-height: 42px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.skins-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.skins-studio-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+
+.skins-topbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Segmented switch (SloppyKeys 3D style) */
+.skins-segmented-switch {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  padding: 2px;
+  gap: 2px;
+}
+.skins-segmented-switch--sm .skins-segment-btn {
+  padding: 3px 8px;
+  font-size: 11px;
+}
+.skins-segment-btn {
+  padding: 4px 10px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.skins-segment-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-panel);
+}
+.skins-segment-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.skins-segment-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.skins-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.skins-studio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: var(--bevel);
+  transition: background 0.12s, color 0.12s, border-color 0.12s, transform 0.12s;
+}
+.skins-studio-btn:hover:not(:disabled) {
+  background: var(--surface-raised);
+  color: var(--text);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+.skins-studio-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.skins-studio-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.skins-studio-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.skins-studio-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Stage Canvas */
+.skins-stage {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at center 60%, rgba(139, 92, 246, 0.06) 0%, transparent 70%), var(--surface-sunken);
+}
+
 .skins-hero-canvas {
   display: block;
   cursor: grab;
   transition: opacity 0.25s ease, filter 0.25s ease;
 }
-.skins-hero-canvas:active { cursor: grabbing; }
+.skins-hero-canvas:active {
+  cursor: grabbing;
+}
 .skins-hero-canvas.fading {
   opacity: 0.35;
   filter: blur(2px);
 }
 
-/* Shared base for every overlay so the auto-hide transition is uniform. */
-.skins-floating {
-  position: absolute;
-  z-index: 5;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-.skins-hero.idle .skins-floating {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Top action toolbar — variant toggle, elytra/cape, upload, reset, refresh. */
-.skins-toolbar-floating {
-  top: var(--space-1);
-  left: 50%;
-  transform: translateX(-50%);
+/* Bottom Stage Footer / Controls */
+.skins-stage-footer {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  background: var(--surface-glass);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid var(--border);
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.4),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.25);
-  white-space: nowrap;
-}
-.skins-hero.idle .skins-toolbar-floating {
-  transform: translate(-50%, -8px);
-}
-
-/* Beta flag — pinned to the hero's top-left corner. Inherits the shared
-   .skins-floating idle fade. The pill's own left margin (meant for sitting
-   next to a label) is zeroed since it stands alone here. */
-.skins-beta-floating {
-  top: var(--space-2);
-  left: var(--space-2);
-}
-.skins-beta-floating .beta-pill {
-  margin-left: 0;
-}
-.skins-toolbar-group {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-.skins-toolbar-divider {
-  width: 1px;
-  height: 18px;
-  background: var(--border-strong);
-  margin: 0 var(--space-2);
-}
-.skins-toolbar-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 6px 12px;
-  font-family: var(--font);
-  font-size: 12px;
-  font-weight: 500;
-  background: var(--surface-panel);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  cursor: pointer;
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
-  transition: background 0.12s, color 0.12s, border-color 0.12s,
-              box-shadow 0.15s, transform 0.12s;
-}
-.skins-toolbar-btn:hover:not(:disabled) {
-  background: var(--surface-raised);
-  color: var(--text);
-  border-color: var(--border-hover);
-  box-shadow: none;
-  transform: translateY(-2px) scale(1.03);
-}
-.skins-toolbar-btn:active:not(:disabled) {
-  transform: translateY(1px) scale(0.97);
-  box-shadow: none;
-}
-.skins-toolbar-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.skins-toolbar-btn.active {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: var(--accent);
-}
-.skins-toolbar-btn--primary {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  border-color: var(--accent-strong);
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.30);
-}
-.skins-toolbar-btn--primary:hover:not(:disabled) {
-  background: var(--accent-strong);
-  color: var(--accent-contrast);
-  box-shadow: none;
-  transform: translateY(-2px) scale(1.03);
-}
-.skins-toolbar-btn svg { width: 14px; height: 14px; }
-
-/* Hero is the relative anchor for the absolutely-positioned toolbar. The
-   inner row uses flex layout so the side docks sit immediately next to
-   the canvas with a small gap, regardless of window size. */
-.skins-hero-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: var(--space-2);
-  width: 100%;
-  height: 100%;
-  padding: 0 var(--space-4);
+  padding: 6px 12px;
+  background: var(--surface-panel);
+  border-top: 1px solid var(--border);
+  min-height: 36px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
-/* Middle stage holds the skinview3d canvas. The canvas itself is sized
-   portrait in JS (computeCanvasSize) to fit the tall model; this element
-   just gives it room and stays centered. max-width keeps the docks from
-   being pushed to the screen edges on very wide windows. */
-.skins-stage {
-  flex: 1 1 auto;
-  max-width: 620px;
-  min-width: 0;
-  height: 100%;
+.skins-stage-hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  user-select: none;
+}
+
+.skins-zoom-cluster {
   display: flex;
   align-items: center;
-  justify-content: center;
-  position: relative;
+  gap: 4px;
 }
 
-/* Zoom controls — stacked +/- buttons anchored bottom-right of the stage,
-   fading out with the rest of the chrome when the hero is idle. */
-.skins-zoom {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  z-index: 2;
-}
 .skins-zoom-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 0;
   border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
+  background: var(--surface-panel);
+  color: var(--text-muted);
   cursor: pointer;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  box-shadow: var(--bevel);
+  transition: background 0.12s, color 0.12s, border-color 0.12s, transform 0.12s;
 }
 .skins-zoom-btn:hover:not(:disabled) {
   background: var(--surface-raised);
   color: var(--text);
   border-color: var(--border-hover);
+  transform: translateY(-1px);
 }
-.skins-zoom-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.skins-zoom-btn svg { width: 15px; height: 15px; }
-
-/* Generic fade-on-idle helper. Any element with this class fades to
-   invisible when .skins-hero is idle. Distinct from .skins-floating so
-   layout-flow elements (like the side docks in the flex row) can opt in
-   without inheriting position: absolute. */
-.skins-fade-on-idle {
-  transition: opacity 0.3s ease;
+.skins-zoom-btn:active:not(:disabled) {
+  transform: translateY(1px);
 }
-.skins-hero.idle .skins-fade-on-idle {
-  opacity: 0;
-  pointer-events: none;
+.skins-zoom-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.skins-zoom-btn svg {
+  width: 13px;
+  height: 13px;
 }
 
-/* Side docks — vertical columns flanking the model in the flex row. Saved
-   skins on the left, capes on the right. Each dock scrolls vertically when
-   there are more chips than the viewport height accommodates. */
-.skins-dock-side {
-  flex-shrink: 0;
-  width: 104px;
-  max-height: 100%;
-  background: var(--surface-glass);
-  backdrop-filter: blur(16px) saturate(140%);
-  -webkit-backdrop-filter: blur(16px) saturate(140%);
-  border: 1px solid var(--border);
-  padding: var(--space-2);
+/* Equipment / Capes & Wings Panel */
+.skins-equipment-section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  overflow-y: auto;
-  scrollbar-width: none;
-  align-items: center;
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.4),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.25);
-}
-.skins-dock-side::-webkit-scrollbar { display: none; }
-.skins-dock-empty {
-  font-size: 10px;
-  color: var(--text-muted);
-  text-align: center;
-  padding: var(--space-3) var(--space-1);
-  font-style: italic;
-  line-height: 1.4;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
-/* Cape chip — small square thumb. */
-.skins-cape-chip {
-  width: 56px;
-  height: 56px;
-  flex-shrink: 0;
-  background: var(--surface-sunken);
+.skins-section-subhead-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.skins-section-subhead {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.skins-subhead-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  background: rgba(139, 92, 246, 0.15);
+  color: #c4b5fd;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+}
+
+.skins-mini-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: var(--bevel);
+  transition: background 0.12s, color 0.12s, border-color 0.12s, transform 0.12s;
+}
+.skins-mini-btn:hover:not(:disabled) {
+  background: var(--surface-raised);
+  color: var(--text);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+.skins-mini-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.skins-mini-btn svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* Capes Grid */
+.skins-cape-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+/* Cape Tile */
+.skins-cape-tile {
+  aspect-ratio: 1;
+  background: var(--surface-panel);
   border: 1px solid var(--border);
   cursor: pointer;
-  padding: 0;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--bevel);
+  transition: border-color 0.12s, background 0.12s, transform 0.12s;
+}
+.skins-cape-tile:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  background: var(--surface-raised);
+  transform: translateY(-1px);
+}
+.skins-cape-tile.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-panel));
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.skins-cape-tile:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.skins-cape-tile-thumb {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: border-color 0.12s;
-  position: relative;
   overflow: hidden;
 }
-.skins-cape-chip:hover:not(:disabled) { border-color: var(--border-hover); }
-.skins-cape-chip.active {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-.skins-cape-chip:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .skins-cape-chip-thumb {
   width: 100%;
   height: 100%;
@@ -272,75 +657,188 @@
   background-position: center;
   image-rendering: pixelated;
 }
-/* Rendered 3D-model thumbnail (cape/elytra) — show the whole model, centered,
-   not cropped like the raw UV swatch. The render is transparent so the chip
-   background shows behind the model's silhouette. */
 .skins-cape-chip-thumb--model {
   background-size: contain;
   background-repeat: no-repeat;
 }
-.skins-cape-empty-glyph {
-  font-size: 18px;
-  color: var(--text-faint);
-  font-weight: 700;
-}
 
-/* Saved skin chip — avatar + hover-revealed remove button. */
-.skins-lib-chip {
-  flex-shrink: 0;
-  position: relative;
-  background: var(--surface-sunken);
-  border: 1px solid var(--border);
-  transition: border-color 0.12s;
-}
-.skins-lib-chip:hover { border-color: var(--border-hover); }
-.skins-lib-chip.active {
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-.skins-lib-chip-equip {
-  background: transparent;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
+.skins-cape-none-icon {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--text-faint);
+  flex: 1;
 }
-.skins-lib-chip-equip:disabled { opacity: 0.5; cursor: not-allowed; }
-.skins-lib-chip-remove {
-  position: absolute;
-  top: 2px;
-  right: 2px;
+.skins-cape-none-icon svg {
   width: 18px;
   height: 18px;
-  background: var(--surface-panel);
-  border: 1px solid var(--border-strong);
+}
+
+.skins-cape-label {
+  font-size: 9px;
+  font-weight: 600;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  margin-top: 2px;
+}
+.skins-cape-tile.active .skins-cape-label {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.skins-tile-equipped-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 4px var(--accent);
+}
+
+/* Custom Capes List */
+.skins-custom-cape-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skins-custom-cape-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
+  box-shadow: var(--bevel);
+  transition: background 0.12s, border-color 0.12s, transform 0.12s;
+  position: relative;
+}
+.skins-custom-cape-card:hover {
+  background: var(--surface-raised);
+  border-color: var(--border-hover);
+}
+.skins-custom-cape-card.active {
+  border-color: var(--accent);
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-panel));
+}
+
+.skins-custom-cape-equip {
+  width: 34px;
+  height: 38px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
   cursor: pointer;
-  display: none;
+  padding: 2px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  transition: background 0.12s, color 0.12s;
+  flex-shrink: 0;
+  transition: border-color 0.12s;
 }
-.skins-lib-chip:hover .skins-lib-chip-remove { display: flex; }
-.skins-lib-chip-remove:hover {
-  background: var(--danger-soft);
-  color: var(--danger);
+.skins-custom-cape-equip:hover:not(:disabled) {
+  border-color: var(--accent);
 }
-.skins-lib-chip-remove svg { width: 11px; height: 11px; }
+.skins-custom-cape-equip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
-/* Empty state for offline accounts — kept from the old layout. */
+.skins-custom-cape-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  cursor: pointer;
+}
+
+.skins-custom-cape-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.skins-custom-cape-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.skins-animated-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 0 4px;
+  text-transform: uppercase;
+}
+
+.skins-custom-cape-actions {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.skins-lib-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+}
+.skins-lib-btn:hover:not(:disabled) {
+  background: var(--surface-raised);
+  color: var(--text);
+  border-color: var(--border-hover);
+}
+.skins-lib-btn svg {
+  width: 11px;
+  height: 11px;
+}
+
+.skins-empty-capes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-4) var(--space-2);
+  text-align: center;
+  border: 1px dashed var(--border);
+  background: var(--surface-panel);
+  gap: var(--space-2);
+}
+.skins-empty-capes p {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin: 0;
+}
+
+/* Empty state for offline accounts */
 .skins-empty {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 .skins-empty-card {
-  background: var(--bg3);
+  background: var(--surface-panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  box-shadow: var(--bevel);
   padding: var(--space-6);
   max-width: 540px;
 }
@@ -352,7 +850,7 @@
 }
 .skins-empty-body {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--text-muted);
   line-height: 1.55;
 }
 
