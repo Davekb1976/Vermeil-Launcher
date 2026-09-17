@@ -1383,35 +1383,35 @@ const Settings: Component = () => {
                           return (
                             <Show when={!isSearching() || isInstancesSection() || matches(inst.name, inst.game_version, inst.loader.type)}>
                               <div class="card card--inst" style="cursor:pointer" onClick={() => openInstanceOptions(inst.id)}>
-                                <div class="card-body">
-                                  <div class={`inst-card-icon ${colorClass}`}>
-                                    <Show when={iconUrl} fallback={
-                                      <span class="inst-card-icon-letter">{inst.name.trim().charAt(0).toUpperCase() || "?"}</span>
-                                    }>
-                                      <img src={iconUrl!} alt="" draggable={false} />
+                                <div class={`inst-card-thumb inst-card-icon ${colorClass}`}>
+                                  <Show when={iconUrl} fallback={
+                                    <span class="inst-card-thumb-letter">{inst.name.trim().charAt(0).toUpperCase() || "?"}</span>
+                                  }>
+                                    <img src={iconUrl!} alt="" draggable={false} />
+                                  </Show>
+                                </div>
+                                <div class="inst-card-body">
+                                  <div class="inst-card-title" title={inst.name}>{inst.name}</div>
+                                  <div class="inst-card-sub">
+                                    {inst.game_version} · {inst.mods.length} {inst.mods.length === 1 ? "mod" : "mods"} · {inst.window.width}x{inst.window.height}
+                                  </div>
+                                  <div class="inst-card-badges">
+                                    <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>{loaderLabel(inst.loader.type)}</span>
+                                    <Show when={(inst.source_platforms || []).includes("modrinth")}>
+                                      <span class="badge badge--source badge--modrinth" title="Available on Modrinth"><IconModrinth /></span>
+                                    </Show>
+                                    <Show when={(inst.source_platforms || []).includes("curseforge")}>
+                                      <span class="badge badge--source badge--curseforge" title="Available on CurseForge"><IconCurseForge /></span>
+                                    </Show>
+                                    <Show when={inst.ingame_cape_supported}>
+                                      <span class="badge badge--companion" title="Vermeil companion mod supported">
+                                        <img src="/logo.png" alt="Vermeil" draggable={false} />
+                                      </span>
                                     </Show>
                                   </div>
-                                  <div class="inst-card-content">
-                                    <div class="card-title">{inst.name}</div>
-                                    <div class="card-sub">
-                                      {inst.game_version} · {inst.mods.length} mods · {inst.window.width}x{inst.window.height}
-                                    </div>
-                                    <div class="inst-card-badges">
-                                      <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>{loaderLabel(inst.loader.type)}</span>
-                                      <Show when={(inst.source_platforms || []).includes("modrinth")}>
-                                        <span class="badge badge--source badge--modrinth"><IconModrinth /></span>
-                                      </Show>
-                                      <Show when={(inst.source_platforms || []).includes("curseforge")}>
-                                        <span class="badge badge--source badge--curseforge"><IconCurseForge /></span>
-                                      </Show>
-                                      <Show when={inst.ingame_cape_supported}>
-                                        <span class="badge badge--companion" title="Vermeil companion mod supported">
-                                          <img src="/logo.png" alt="Vermeil" draggable={false} />
-                                        </span>
-                                      </Show>
-                                    </div>
-                                  </div>
-                                  <span class="side-icon" style="color:var(--muted)"><IconChevronRight /></span>
+                                </div>
+                                <div class="inst-card-arrow">
+                                  <IconChevronRight />
                                 </div>
                               </div>
                             </Show>

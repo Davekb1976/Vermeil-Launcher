@@ -594,31 +594,29 @@ const CreateCustom: Component = () => {
               <div class="card-section-body" style="gap: 12px;">
                 {/* Instance Card Preview */}
                 <div class="card card--inst create-preview-card">
-                  <div class="card-body">
-                    <div class={`inst-card-icon ${loaderBannerColor(loader())}`}>
-                      <span class="inst-card-icon-letter">
-                        {(name().trim() || suggestedName() || "?").charAt(0).toUpperCase()}
-                      </span>
+                  <div class={`inst-card-thumb inst-card-icon ${loaderBannerColor(loader())}`}>
+                    <span class="inst-card-thumb-letter">
+                      {(name().trim() || suggestedName() || "?").charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div class="inst-card-body">
+                    <div class="inst-card-title">
+                      {name().trim() || suggestedName() || "New Instance"}
                     </div>
-                    <div class="inst-card-content">
-                      <div class="card-title">
-                        {name().trim() || suggestedName() || "New Instance"}
-                      </div>
-                      <div class="card-sub">
-                        0 mods · Just created
-                      </div>
-                      <div class="inst-card-badges">
-                        <span class="badge badge--version">{selectedGameVersion() || "..."}</span>
-                        <span class={`badge badge--loader ${loaderBadgeClass(loader())}`}>
-                          {loaderLabel(loader())}
+                    <div class="inst-card-sub">
+                      0 mods · Just created
+                    </div>
+                    <div class="inst-card-badges">
+                      <span class="badge badge--version">{selectedGameVersion() || "..."}</span>
+                      <span class={`badge badge--loader ${loaderBadgeClass(loader())}`}>
+                        {loaderLabel(loader())}
+                      </span>
+                      <Show when={loader() !== "vanilla" && loaderVersion()}>
+                        <span class="badge badge--vnum">
+                          {loader() === "fabric" && isLegacyVersion() ? "Legacy " : ""}
+                          {formatLoaderVersionDisplay(loaderVersion()!)}
                         </span>
-                        <Show when={loader() !== "vanilla" && loaderVersion()}>
-                          <span class="badge badge--vnum">
-                            {loader() === "fabric" && isLegacyVersion() ? "Legacy " : ""}
-                            {formatLoaderVersionDisplay(loaderVersion()!)}
-                          </span>
-                        </Show>
-                      </div>
+                      </Show>
                     </div>
                   </div>
                 </div>

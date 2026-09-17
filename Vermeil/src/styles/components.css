@@ -169,6 +169,28 @@
   flex-shrink: 0;
 }
 
+/* Arrow indicator for navigation-oriented instance cards (e.g. Settings instance list) */
+.inst-card-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-right: 14px;
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.inst-card-arrow svg {
+  width: 14px;
+  height: 14px;
+}
+
+.card--inst:hover .inst-card-arrow,
+.card.card--inst:hover .inst-card-arrow {
+  color: var(--accent);
+  transform: translateX(2px);
+}
+
 /* Add instance card — mirrors 82px height and flush left square thumb */
 .add-card {
   display: flex;
