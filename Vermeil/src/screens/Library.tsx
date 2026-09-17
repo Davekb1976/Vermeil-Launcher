@@ -1,6 +1,6 @@
 import { Component, For, Show, createSignal, createMemo, onMount, onCleanup } from "solid-js";
 import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, instances, refetchInstances, refreshPinnedInstanceIds, pinnedInstanceIds } from "../App";
-import { Instance, deleteInstance, renameInstance, getSettings } from "../ipc/commands";
+import { Instance, deleteInstance, getSettings } from "../ipc/commands";
 import { IconPlus, IconModrinth, IconCurseForge, IconX } from "../components/Icons";
 import Dropdown from "../components/Dropdown";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
@@ -75,8 +75,6 @@ const Library: Component = () => {
   onMount(() => document.addEventListener("keydown", handleKey));
   onCleanup(() => document.removeEventListener("keydown", handleKey));
   const [deleteInput, setDeleteInput] = createSignal("");
-  const [renamingId, setRenamingId] = createSignal<string | null>(null);
-  const [renameValue, setRenameValue] = createSignal("");
 
   // Sort mode, seeded from localStorage so it persists across sessions.
   const storedSort = (typeof localStorage !== "undefined" && localStorage.getItem(SORT_STORAGE_KEY)) as LibrarySort | null;
@@ -250,41 +248,9 @@ const Library: Component = () => {
 
                 {/* Right Content Area: Title, Subtitle, Badges */}
                 <div class="inst-card-body">
-                  <Show when={renamingId() === inst.id} fallback={
-                    <div
-                      class="inst-card-title"
-                      title={inst.name}
-                      onClick={(e: MouseEvent) => { if (!selectMode()) e.stopImmediatePropagation(); }}
-                      onDblClick={(e) => {
-                        if (!selectMode()) {
-                          e.stopImmediatePropagation();
-                          setRenamingId(inst.id);
-                          setRenameValue(inst.name);
-                        }
-                      }}
-                    >
-                      {inst.name}
-                    </div>
-                  }>
-                    <input
-                      class="field-control field-control--text inst-card-rename-input"
-                      value={renameValue()}
-                      onInput={(e) => setRenameValue(e.currentTarget.value)}
-                      onBlur={async () => {
-                        if (renameValue().trim()) {
-                          await renameInstance(inst.id, renameValue());
-                          refetchInstances();
-                        }
-                        setRenamingId(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") (e.target as HTMLElement).blur();
-                        if (e.key === "Escape") setRenamingId(null);
-                      }}
-                      ref={(el) => setTimeout(() => { el.focus(); el.select(); }, 10)}
-                      onClick={(e: MouseEvent) => { if (!selectMode()) e.stopImmediatePropagation(); }}
-                    />
-                  </Show>
+                  <div class="inst-card-title" title={inst.name}>
+                    {inst.name}
+                  </div>
                   <div class="inst-card-sub">
                     {inst.mods.length} {inst.mods.length === 1 ? "mod" : "mods"} · {timeAgo(inst.last_played)}
                   </div>

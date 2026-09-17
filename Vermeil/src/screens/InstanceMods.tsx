@@ -8,7 +8,7 @@ import { createGridPageSize } from "../lib/gridPageSize";
 import Dropdown from "../components/Dropdown";
 import ModDetailModal from "../modals/ModDetailModal";
 import { formatDownloads, formatSize, formatVersionRange } from "../lib/format";
-import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled } from "../ipc/commands";
+import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled } from "../ipc/commands";
 import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconFolderOpen, IconChevronDown } from "../components/Icons";
 
 const SORT_OPTIONS = [
@@ -413,6 +413,40 @@ const InstanceMods: Component = () => {
     onCleanup(() => window.removeEventListener("vermeil-gc-preset-changed", onGcChange));
   });
   let gutterRef: HTMLDivElement | undefined;
+
+  // Instance name editing in settings tab
+  const [nameDraft, setNameDraft] = createSignal("");
+  const [renaming, setRenaming] = createSignal(false);
+
+  createEffect(() => {
+    const inst = instance();
+    if (inst) setNameDraft(inst.name);
+  });
+
+  const handleSaveName = async () => {
+    const inst = instance();
+    const trimmed = nameDraft().trim();
+    if (!inst || !trimmed || trimmed === inst.name) return;
+    setRenaming(true);
+    try {
+      await renameInstance(inst.id, trimmed);
+      await refetchInstances();
+      showToast({
+        title: "Instance renamed",
+        message: `Updated name to "${trimmed}".`,
+        type: "success",
+        autoCloseMs: 2500,
+      });
+    } catch (e: any) {
+      showToast({
+        title: "Failed to rename",
+        message: typeof e === "string" ? e : (e as Error).message ?? "Unknown error",
+        type: "error",
+      });
+    } finally {
+      setRenaming(false);
+    }
+  };
 
   /** Display label for a preset ID — matches the strings in Settings.tsx. */
   const presetLabel = (id: string): string => {
@@ -1174,311 +1208,400 @@ const InstanceMods: Component = () => {
         </div>
       </div>
 
-      {/* Instance Settings Tab */}
+      {/* ═══ INSTANCE SETTINGS TAB ═══ */}
       <Show when={mainTab() === "settings"}>
-        <div>
-          <div class="section-label">Instance Options</div>
-
-          {/* Icon picker. Lets the user replace the auto-fetched modpack
-              icon (or default placeholder) with their own image. The
-              file dialog is filtered to common raster image types. The
-              reset button only shows when there's something to reset to —
-              if the instance is on the default `"cube"` sentinel, the
-              "Reset" affordance would be a no-op so we hide it. */}
-          <div class="settings-group" style="margin-bottom:16px">
-            <div class="settings-row">
-              <div style="display:flex;gap:14px;align-items:center;flex:1;min-width:0">
-                <div class="instance-icon-preview">
-                  <Show
-                    when={instance() && instance()!.icon !== "cube"}
-                    fallback={<span class="instance-icon-placeholder">{(instance()?.name ?? "?").trim().charAt(0).toUpperCase() || "?"}</span>}
-                  >
-                    <img
-                      src={instance()!.icon}
-                      alt=""
-                      draggable={false}
-                    />
-                  </Show>
+        <div class="cards-container" style="padding-bottom:var(--space-6)">
+          {/* Section 1: Identity & Display */}
+          <div class="card-gamemode-section">
+            <div class="card-section-header">
+              <span class="card-section-tag tag-settings-profiles">PROFILE</span>
+              <span class="card-section-label">Identity & Display</span>
+              <span class="card-section-desc">Instance name, custom icon, and identity</span>
+            </div>
+            <div class="card-section-body">
+              {/* Row 1: Instance Name */}
+              <div class="setting-row full">
+                <div class="setting-info">
+                  <span class="setting-name">Instance name</span>
+                  <span class="setting-desc">The display name of this instance shown in your Library and quick-launch menus</span>
                 </div>
-                <div style="min-width:0">
-                  <div class="settings-key">Instance icon</div>
-                  <div class="settings-val">PNG, JPG, or WebP. Shown on Library cards and sidebar pins.</div>
+                <div class="setting-control" style="display:flex;gap:8px;align-items:center">
+                  <input
+                    type="text"
+                    class="field-control field-control--text"
+                    style="width:240px;font-weight:600"
+                    value={nameDraft()}
+                    onInput={(e) => setNameDraft(e.currentTarget.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveName();
+                      if (e.key === "Escape") setNameDraft(instance()?.name ?? "");
+                    }}
+                    placeholder="Instance name"
+                  />
+                  <button
+                    class="btn btn--primary btn--sm"
+                    disabled={renaming() || !nameDraft().trim() || nameDraft().trim() === instance()?.name}
+                    onClick={handleSaveName}
+                  >
+                    {renaming() ? "Saving..." : "Save"}
+                  </button>
                 </div>
               </div>
-              <div style="display:flex;gap:8px;flex-shrink:0">
-                <button
-                  class="btn"
-                  style="font-size:var(--fs-xs)"
-                  onClick={async () => {
-                    const inst = instance();
-                    if (!inst) return;
-                    const picked = await openDialog({
-                      multiple: false,
-                      directory: false,
-                      filters: [{ name: "Image", extensions: ["png", "jpg", "jpeg", "webp", "gif"] }],
-                    });
-                    if (!picked || typeof picked !== "string") return;
-                    try {
-                      await setInstanceIcon(inst.id, picked);
-                      await refetchInstances();
-                      showToast({ title: "Icon updated", message: "", type: "success", autoCloseMs: 2000 });
-                    } catch (e) {
-                      showToast({ title: "Couldn't set icon", message: String(e), type: "error" });
-                    }
-                  }}
-                >
-                  Change icon
-                </button>
-                <Show when={instance() && instance()!.icon !== "cube"}>
+
+              {/* Row 2: Instance Icon */}
+              <div class="setting-row full">
+                <div style="display:flex;gap:14px;align-items:center;flex:1;min-width:0">
+                  <div class="instance-icon-preview">
+                    <Show
+                      when={instance() && instance()!.icon !== "cube"}
+                      fallback={<span class="instance-icon-placeholder">{(instance()?.name ?? "?").trim().charAt(0).toUpperCase() || "?"}</span>}
+                    >
+                      <img
+                        src={instance()!.icon}
+                        alt=""
+                        draggable={false}
+                      />
+                    </Show>
+                  </div>
+                  <div class="setting-info">
+                    <span class="setting-name">Instance icon</span>
+                    <span class="setting-desc">Custom PNG, JPG, or WebP graphic. Shown on Library cards, dock pins, and detail headers.</span>
+                  </div>
+                </div>
+                <div class="setting-control" style="display:flex;gap:8px;align-items:center">
                   <button
-                    class="btn btn--ghost"
-                  style="font-size:var(--fs-xs)"
-                  onClick={async () => {
-                    const inst = instance();
-                    if (!inst) return;
-                    try {
-                        await clearInstanceIcon(inst.id);
+                    class="btn btn--sm"
+                    onClick={async () => {
+                      const inst = instance();
+                      if (!inst) return;
+                      const picked = await openDialog({
+                        multiple: false,
+                        directory: false,
+                        filters: [{ name: "Image", extensions: ["png", "jpg", "jpeg", "webp", "gif"] }],
+                      });
+                      if (!picked || typeof picked !== "string") return;
+                      try {
+                        await setInstanceIcon(inst.id, picked);
                         await refetchInstances();
-                        showToast({ title: "Icon reset", message: "", type: "info", autoCloseMs: 2000 });
+                        showToast({ title: "Icon updated", message: "", type: "success", autoCloseMs: 2000 });
                       } catch (e) {
-                        showToast({ title: "Couldn't reset icon", message: String(e), type: "error" });
+                        showToast({ title: "Couldn't set icon", message: String(e), type: "error" });
                       }
                     }}
                   >
-                    Reset
+                    Change icon
                   </button>
+                  <Show when={instance() && instance()!.icon !== "cube"}>
+                    <button
+                      class="btn btn--ghost btn--sm"
+                      onClick={async () => {
+                        const inst = instance();
+                        if (!inst) return;
+                        try {
+                          await clearInstanceIcon(inst.id);
+                          await refetchInstances();
+                          showToast({ title: "Icon reset", message: "", type: "info", autoCloseMs: 2000 });
+                        } catch (e) {
+                          showToast({ title: "Couldn't reset icon", message: String(e), type: "error" });
+                        }
+                      }}
+                    >
+                      Reset
+                    </button>
+                  </Show>
+                </div>
+              </div>
+
+              {/* Row 3: Installation Details & Folder */}
+              <div class="setting-row full">
+                <div class="setting-info">
+                  <span class="setting-name">Installation files</span>
+                  <span class="setting-desc">
+                    {loaderLabel(instance()?.loader.type || "")} {instance()?.loader.version || ""} · Minecraft {instance()?.game_version} · {instance()?.mods.length || 0} {instance()?.mods.length === 1 ? "mod" : "mods"} installed
+                  </span>
+                </div>
+                <div class="setting-control">
+                  <button
+                    class="btn btn--sm"
+                    onClick={() => {
+                      const inst = instance();
+                      if (inst) openInstanceFolder(inst.id);
+                    }}
+                  >
+                    <IconFolderOpen /> Open folder
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Memory Allocation */}
+          <div class="card-gamemode-section">
+            <div class="card-section-header">
+              <span class="card-section-tag tag-settings-performance">MEMORY</span>
+              <span class="card-section-label">Memory Allocation</span>
+              <span class="card-section-desc">Manage heap RAM for this Minecraft instance</span>
+            </div>
+            <div class="card-section-body">
+              {/* Automatic toggle row */}
+              <div class="setting-row full">
+                <div class="setting-info">
+                  <span class="setting-name">Automatic memory allocation</span>
+                  <span class="setting-desc">Dynamically calculate RAM based on installed mods, loader overhead, and system memory</span>
+                </div>
+                <div class="setting-control">
+                  <label class="check check--lg">
+                    <input
+                      type="checkbox"
+                      checked={isAdaptive()}
+                      onChange={toggleAdaptive}
+                    />
+                    <span class="check-box"></span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Dynamic Allocated Display OR Manual Slider */}
+              <div class="setting-row full" style="flex-direction:column;align-items:stretch;gap:10px">
+                <Show
+                  when={!isAdaptive()}
+                  fallback={
+                    <>
+                      <div style="display:flex;align-items:center;justify-content:space-between">
+                        <div class="setting-info">
+                          <span class="setting-name">Calculated allocation</span>
+                          <span class="setting-desc">Formula-derived memory footprint</span>
+                        </div>
+                        <Show when={effectiveMemory()} fallback={<span class="settings-val">—</span>}>
+                          {(em) => (
+                            <div style="text-align:right">
+                              <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--text)">
+                                {(em().value_mb / 1024).toFixed(1).replace('.0', '')} GB
+                              </div>
+                              <Show when={em().capped}>
+                                <div style="font-size:var(--fs-2xs);color:var(--warn);margin-top:2px">
+                                  capped at your max · pack suggests {(em().target_mb / 1024).toFixed(1).replace('.0', '')} GB
+                                </div>
+                              </Show>
+                              <Show when={em().value_mb > em().target_mb}>
+                                <div style="font-size:var(--fs-2xs);color:var(--muted);margin-top:2px">
+                                  raised to your {(em().min_mb / 1024).toFixed(1).replace('.0', '')} GB minimum
+                                </div>
+                              </Show>
+                            </div>
+                          )}
+                        </Show>
+                      </div>
+
+                      {/* Memory breakdown table */}
+                      <Show when={effectiveMemory()}>
+                        {(em) => (
+                          <div class="mem-breakdown" style="border-radius:0;box-shadow:var(--bevel);margin-bottom:0">
+                            <For each={em().breakdown}>
+                              {(row) => (
+                                <div class="mem-row">
+                                  <span class="mem-label">{row.label}</span>
+                                  <span class="mem-val">{formatBreakdownGb(row.value_mb)}</span>
+                                </div>
+                              )}
+                            </For>
+                            <div class="mem-row mem-row--total">
+                              <span class="mem-label">Pack total</span>
+                              <span class="mem-val">{formatBreakdownGb(em().target_mb)}</span>
+                            </div>
+                          </div>
+                        )}
+                      </Show>
+                    </>
+                  }
+                >
+                  {/* Manual slider */}
+                  <div class="setting-info" style="margin-bottom:6px">
+                    <span class="setting-name">Custom memory limit</span>
+                    <span class="setting-desc">Explicit maximum heap RAM passed via -Xmx</span>
+                  </div>
+                  <div>
+                    <input
+                      type="range"
+                      class="slider"
+                      min={512}
+                      max={manualMax()}
+                      step={256}
+                      value={memoryValue()}
+                      style={{ "--slider-pct": `${((memoryValue() - 512) / (manualMax() - 512)) * 100}%` }}
+                      onInput={(e) => {
+                        const inst = instance();
+                        if (!inst) return;
+                        const snapped = Math.max(512, Math.round(parseInt(e.currentTarget.value) / 256) * 256);
+                        e.currentTarget.style.setProperty("--slider-pct", `${((snapped - 512) / (manualMax() - 512)) * 100}%`);
+                        setMemoryDraft(snapped);
+                        commitMemory(inst.id, snapped);
+                      }}
+                    />
+                    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px">
+                      <span>512 MB</span>
+                      <span style="color:var(--accent);font-weight:700;font-size:13px">{(memoryValue() / 1024).toFixed(1).replace('.0', '')} GB</span>
+                      <span>{Math.round(manualMax() / 1024)} GB</span>
+                    </div>
+                    <div style={`font-size:11px;font-weight:600;margin-top:6px;color:${memoryHint(memoryValue()).color}`}>
+                      {memoryHint(memoryValue()).text}
+                    </div>
+                  </div>
                 </Show>
               </div>
             </div>
           </div>
 
-          {/* Memory — automatic by default (formula-derived, clamped to the
-              global Maximum RAM in Settings → Resources). Turn "Automatic" off
-              to set this instance's RAM manually. */}
-          <div class="settings-group" style="margin-bottom:16px">
-            <div class="settings-row">
-              <div>
-                <div class="settings-key">Automatic memory</div>
-                <div class="settings-val">Allocate RAM automatically based on this pack</div>
-              </div>
-              <div
-                class={`toggle ${isAdaptive() ? "on" : ""}`}
-                style="transform:scale(0.8)"
-                onClick={toggleAdaptive}
-              />
+          {/* Section 3: Java & JVM Arguments */}
+          <div class="card-gamemode-section">
+            <div class="card-section-header">
+              <span class="card-section-tag tag-settings-java">JAVA</span>
+              <span class="card-section-label">Java & JVM Arguments</span>
+              <span class="card-section-desc">Runtime flags passed to the JVM on game launch</span>
             </div>
-            <Show
-              when={!isAdaptive()}
-              fallback={
-                <>
-                  <div class="settings-row" style="margin-top:10px">
-                    <div class="settings-val">Allocated</div>
-                    <Show when={effectiveMemory()} fallback={<span class="settings-val">—</span>}>
-                      {(em) => (
-                        <div style="text-align:right">
-                          <div style="font-family:var(--font-mono);font-size:var(--fs-lg);color:var(--text)">
-                            {(em().value_mb / 1024).toFixed(1).replace('.0', '')} GB
-                          </div>
-                          <Show when={em().capped}>
-                            <div style="font-size:var(--fs-2xs);color:var(--warn);margin-top:2px">
-                              capped at your max · pack suggests {(em().target_mb / 1024).toFixed(1).replace('.0', '')} GB
-                            </div>
-                          </Show>
-                          {/* The floor can also push the value *above* the
-                              formula's target, which would otherwise make the
-                              breakdown below look like it doesn't add up. */}
-                          <Show when={em().value_mb > em().target_mb}>
-                            <div style="font-size:var(--fs-2xs);color:var(--muted);margin-top:2px">
-                              raised to your {(em().min_mb / 1024).toFixed(1).replace('.0', '')} GB minimum
-                            </div>
-                          </Show>
-                        </div>
-                      )}
-                    </Show>
+            <div class="card-section-body">
+              <div class="setting-row full" style="flex-direction:column;align-items:stretch;gap:8px">
+                <div class="java-args-panel" style="border-radius:0;box-shadow:var(--bevel)">
+                  <div class="java-args-panel-header" style="display:flex;align-items:center;gap:8px">
+                    <span>JVM flags (one per line · space = new line)</span>
+                    <span style="margin-left:auto;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:500;font-size:var(--fs-2xs);color:var(--muted)">
+                      <span>Active preset:</span>
+                      <strong style="color:var(--text);font-weight:600">{presetLabel(globalPreset())}</strong>
+                      <Show when={!isCurrentlyPreset()}>
+                        <span style="color:var(--accent);font-weight:600">· custom</span>
+                      </Show>
+                    </span>
                   </div>
-
-                  {/* Why this value — the formula's per-component contributions.
-                      The total row is always present, so the well is never
-                      rendered empty. */}
-                  <Show when={effectiveMemory()}>
-                    {(em) => (
-                      <div class="mem-breakdown">
-                        <For each={em().breakdown}>
-                          {(row) => (
-                            <div class="mem-row">
-                              <span class="mem-label">{row.label}</span>
-                              <span class="mem-val">{formatBreakdownGb(row.value_mb)}</span>
-                            </div>
-                          )}
-                        </For>
-                        <div class="mem-row mem-row--total">
-                          <span class="mem-label">Pack total</span>
-                          <span class="mem-val">{formatBreakdownGb(em().target_mb)}</span>
-                        </div>
-                      </div>
-                    )}
-                  </Show>
-                </>
-              }
-            >
-              {/* Manual slider — shown only when this instance opted out. */}
-              <div style="margin-top:12px">
-                <input
-                  type="range"
-                  class="slider"
-                  min={512}
-                  max={manualMax()}
-                  step={256}
-                  value={memoryValue()}
-                  style={{ "--slider-pct": `${((memoryValue() - 512) / (manualMax() - 512)) * 100}%` }}
-                  onInput={(e) => {
-                    const inst = instance();
-                    if (!inst) return;
-                    const snapped = Math.max(512, Math.round(parseInt(e.currentTarget.value) / 256) * 256);
-                    e.currentTarget.style.setProperty("--slider-pct", `${((snapped - 512) / (manualMax() - 512)) * 100}%`);
-                    setMemoryDraft(snapped);
-                    commitMemory(inst.id, snapped);
-                  }}
-                />
-                <div style="display:flex;justify-content:space-between;font-size:var(--fs-2xs);color:var(--muted);margin-top:4px">
-                  <span>512 MB</span>
-                  <span style="color:var(--accent);font-weight:600">{(memoryValue() / 1024).toFixed(1).replace('.0', '')} GB</span>
-                  <span>{Math.round(manualMax() / 1024)} GB</span>
+                  <div class="code-editor">
+                    <div class="code-editor-gutter" ref={(el) => (gutterRef = el)}>
+                      <For each={lineNumbers()}>
+                        {(n) => <span>{n}</span>}
+                      </For>
+                    </div>
+                    <textarea
+                      class="code-editor-input"
+                      spellcheck={false}
+                      placeholder={"Flags from your GC preset will appear here.\nEdit freely — these are what's passed at launch."}
+                      value={extraArgsText()}
+                      onInput={(e) => setExtraArgsText(e.currentTarget.value)}
+                      onKeyDown={handleArgsKeyDown}
+                      onBlur={handleArgsBlur}
+                      onScroll={(e) => {
+                        if (gutterRef) gutterRef.scrollTop = e.currentTarget.scrollTop;
+                      }}
+                    />
+                  </div>
                 </div>
-                <div style={`font-size:var(--fs-2xs);font-weight:500;margin-top:6px;color:${memoryHint(memoryValue()).color}`}>
-                  {memoryHint(memoryValue()).text}
+                <div class="setting-desc" style="font-size:11px">
+                  Pre-filled from your GC preset. Edit, add, or remove any flag — what's here is passed directly to the JVM (heap memory is managed by the memory settings above).
                 </div>
               </div>
-            </Show>
+            </div>
           </div>
 
-          {/* Java arguments — single editable code-editor panel.
-              Shows the GC preset flags pre-filled (editable). Whatever is
-              in here at blur time is saved and used at launch — the user
-              can delete, modify, or add any flag. Memory args (-Xmx/-Xms)
-              are excluded since the slider handles those. */}
-          <div class="settings-group" style="margin-bottom:16px">
-            <div class="settings-row" style="flex-direction:column;align-items:stretch;gap:6px">
-              <div class="settings-key">Java arguments</div>
-              <div class="java-args-panel">
-                <div class="java-args-panel-header" style="display:flex;align-items:center;gap:8px">
-                  <span>JVM flags (one per line · space = new line)</span>
-                  {/* Active preset indicator. Reads the global GC preset from
-                      Settings and labels it the same way the dropdown there
-                      does, so users always know which preset is feeding the
-                      flags below. When the user edits the flags into a
-                      genuinely-custom set, an extra "custom" tag flips on
-                      so the indicator doesn't lie about what's launching. */}
-                  <span style="margin-left:auto;display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:500;font-size:var(--fs-2xs);color:var(--muted)">
-                    <span>Active preset:</span>
-                    <strong style="color:var(--text);font-weight:600">{presetLabel(globalPreset())}</strong>
-                    <Show when={!isCurrentlyPreset()}>
-                      <span style="color:var(--accent);font-weight:600">· custom</span>
-                    </Show>
-                  </span>
+          {/* Section 4: Instance Actions & Danger Zone */}
+          <div class="card-gamemode-section">
+            <div class="card-section-header">
+              <span class="card-section-tag tag-settings-instances">ACTIONS</span>
+              <span class="card-section-label">Instance Actions & Maintenance</span>
+              <span class="card-section-desc">Duplication and lifecycle controls</span>
+            </div>
+            <div class="card-section-body">
+              {/* Clone Instance Row */}
+              <div class="setting-row full">
+                <div class="setting-info">
+                  <span class="setting-name">Clone instance</span>
+                  <span class="setting-desc">Make an exact copy with the same loader, mods, configs, and worlds. Useful for testing without risking your save files.</span>
                 </div>
-                <div class="code-editor">
-                  <div class="code-editor-gutter" ref={(el) => (gutterRef = el)}>
-                    <For each={lineNumbers()}>
-                      {(n) => <span>{n}</span>}
-                    </For>
-                  </div>
-                  <textarea
-                    class="code-editor-input"
-                    spellcheck={false}
-                    placeholder={"Flags from your GC preset will appear here.\nEdit freely — these are what's passed at launch."}
-                    value={extraArgsText()}
-                    onInput={(e) => setExtraArgsText(e.currentTarget.value)}
-                    onKeyDown={handleArgsKeyDown}
-                    onBlur={handleArgsBlur}
-                    onScroll={(e) => {
-                      if (gutterRef) gutterRef.scrollTop = e.currentTarget.scrollTop;
+                <div class="setting-control">
+                  <button
+                    class="btn btn--primary btn--sm"
+                    disabled={cloning()}
+                    onClick={async () => {
+                      const inst = instance();
+                      if (!inst) return;
+                      setCloning(true);
+                      try {
+                        const cloned = await cloneInstance(inst.id);
+                        await refetchInstances();
+                        showToast({
+                          title: "Instance cloned",
+                          message: `Created "${cloned.name}".`,
+                          type: "success",
+                          autoCloseMs: 3500,
+                        });
+                      } catch (e: any) {
+                        showToast({
+                          title: "Clone failed",
+                          message: typeof e === "string" ? e : (e as Error).message ?? "Unknown error",
+                          type: "error",
+                          autoCloseMs: 6000,
+                        });
+                      } finally {
+                        setCloning(false);
+                      }
                     }}
-                  />
+                  >
+                    {cloning() ? "Cloning..." : "Clone"}
+                  </button>
                 </div>
               </div>
-              <div class="settings-val">
-                Pre-filled from your GC preset. Edit, add, or remove any flag — what's here is exactly what's passed to the JVM (memory comes from the slider above).
-              </div>
-            </div>
-          </div>
 
-          {/* Clone — duplicate the entire instance (mods, configs, worlds)
-              into a new entry. Sits above the Danger Zone since it's a safe
-              action; uses an accent button so it reads as "do something". */}
-          <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
-            <div class="section-label">Clone instance</div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <span style="font-size:var(--fs-xs);color:var(--muted);flex:1">
-                Make a copy with the same loader, mods, configs, and worlds. Useful for testing changes without breaking your main setup.
-              </span>
-              <button
-                class="btn btn--primary"
-                style="font-size:var(--fs-xs);white-space:nowrap"
-                disabled={cloning()}
-                onClick={async () => {
-                  const inst = instance();
-                  if (!inst) return;
-                  setCloning(true);
-                  try {
-                    const cloned = await cloneInstance(inst.id);
-                    await refetchInstances();
-                    showToast({
-                      title: "Instance cloned",
-                      message: `Created "${cloned.name}".`,
-                      type: "success",
-                      autoCloseMs: 3500,
-                    });
-                  } catch (e: any) {
-                    showToast({
-                      title: "Clone failed",
-                      message: typeof e === "string" ? e : (e as Error).message ?? "Unknown error",
-                      type: "error",
-                      autoCloseMs: 6000,
-                    });
-                  } finally {
-                    setCloning(false);
-                  }
-                }}
-              >
-                {cloning() ? "Cloning..." : "Clone"}
-              </button>
-            </div>
-          </div>
-
-          {/* Danger zone */}
-          <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
-            <div class="section-label" style="color:var(--danger)">Danger Zone</div>
-            <Show when={!deleteConfirm()} fallback={
-              <div style="display:flex;flex-direction:column;gap:8px">
-                <span style="font-size:var(--fs-xs);color:var(--danger)">Type <strong>Confirm</strong> to delete this instance permanently.</span>
-                <div style="display:flex;gap:8px;align-items:center">
-                  <input class="field-control field-control--text" style="max-width:160px;border-color:var(--danger)" placeholder="Type Confirm"
-                    onInput={(e) => setDeleteCountdown(e.currentTarget.value === "Confirm" ? 0 : 1)} />
-                  <button class="btn btn--danger btn--sm" disabled={deleteCountdown() !== 0}
-                    onClick={async () => { const inst = instance(); if (!inst) return; await deleteInstance(inst.id); await refetchInstances(); refreshPinnedInstanceIds().catch(() => {}); setActiveScreen("library"); }}>Delete</button>
-                  <button class="btn btn--ghost btn--sm" onClick={() => setDeleteConfirm(false)}>Cancel</button>
+              {/* Danger Row: Delete Instance */}
+              <div class="setting-row full" style="border-left-color:var(--danger)">
+                <div class="setting-info">
+                  <span class="setting-name" style="color:var(--danger)">Delete instance</span>
+                  <span class="setting-desc">Permanently remove this instance, including all mods, config files, world saves, and screenshots. This action cannot be undone.</span>
+                </div>
+                <div class="setting-control">
+                  <Show when={!deleteConfirm()} fallback={
+                    <div style="display:flex;gap:8px;align-items:center">
+                      <input
+                        class="field-control field-control--text"
+                        style="max-width:140px;border-color:var(--danger)"
+                        placeholder="Type Confirm"
+                        onInput={(e) => setDeleteCountdown(e.currentTarget.value === "Confirm" ? 0 : 1)}
+                      />
+                      <button
+                        class="btn btn--danger btn--sm"
+                        disabled={deleteCountdown() !== 0}
+                        onClick={async () => {
+                          const inst = instance();
+                          if (!inst) return;
+                          await deleteInstance(inst.id);
+                          await refetchInstances();
+                          refreshPinnedInstanceIds().catch(() => {});
+                          setActiveScreen("library");
+                        }}
+                      >
+                        Delete
+                      </button>
+                      <button class="btn btn--ghost btn--sm" onClick={() => setDeleteConfirm(false)}>Cancel</button>
+                    </div>
+                  }>
+                    <button
+                      class="btn btn--danger btn--sm"
+                      onClick={async () => {
+                        const settings = await getSettings();
+                        if (settings.force_delete) {
+                          const inst = instance();
+                          if (!inst) return;
+                          await deleteInstance(inst.id);
+                          await refetchInstances();
+                          refreshPinnedInstanceIds().catch(() => {});
+                          setActiveScreen("library");
+                        } else {
+                          setDeleteConfirm(true);
+                          setDeleteCountdown(1);
+                        }
+                      }}
+                    >
+                      Delete Instance
+                    </button>
+                  </Show>
                 </div>
               </div>
-            }>
-              <button class="btn btn--danger btn--sm"
-                onClick={async () => {
-                  const settings = await getSettings();
-                  if (settings.force_delete) {
-                    const inst = instance();
-                    if (!inst) return;
-                    await deleteInstance(inst.id);
-                    await refetchInstances();
-                    refreshPinnedInstanceIds().catch(() => {});
-                    setActiveScreen("library");
-                  } else {
-                    setDeleteConfirm(true);
-                    setDeleteCountdown(1);
-                  }
-                }}>
-                Delete Instance
-              </button>
-            </Show>
+            </div>
           </div>
         </div>
       </Show>
