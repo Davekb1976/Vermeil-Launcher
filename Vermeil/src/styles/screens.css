@@ -1283,7 +1283,15 @@
 }
 
 .dl-card {
+  height: auto;
+  min-height: 64px;
   transition: border-color .15s ease, transform .1s ease;
+}
+.dl-card > .card-body {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
 }
 .dl-card:hover {
   border-color: var(--accent);
