@@ -1140,7 +1140,7 @@ const InstanceMods: Component = () => {
       {/* Context bar */}
       <div class="inst-context-bar">
         <div class="inst-context-identity">
-          <button class="inst-back-btn" onClick={() => setActiveScreen("library")} title="Back to library">
+          <button class="inst-back-btn tip-below tip-left" onClick={() => setActiveScreen("library")} data-tip="Back to library">
             <IconArrowLeft />
           </button>
           <span class="inst-context-title">{instance()?.name}</span>
@@ -1153,9 +1153,9 @@ const InstanceMods: Component = () => {
           {/* Quick instance switcher dropdown */}
           <div class="inst-switcher-wrap" ref={switcherRef}>
             <button
-              class={`inst-switcher-btn ${switcherOpen() ? "active" : ""}`}
+              class={`inst-switcher-btn tip-below ${switcherOpen() ? "active" : ""}`}
               onClick={() => setSwitcherOpen(!switcherOpen())}
-              title="Switch active instance"
+              data-tip={switcherOpen() ? undefined : "Switch active instance"}
             >
               <IconChevronDown />
             </button>
@@ -1179,13 +1179,13 @@ const InstanceMods: Component = () => {
             </Show>
           </div>
           <Show when={(instance()?.source_platforms || []).includes("modrinth")}>
-            <span class="badge badge--source badge--modrinth" title="Available on Modrinth"><IconModrinth /></span>
+            <span class="badge badge--source badge--modrinth tip-below" data-tip="Available on Modrinth"><IconModrinth /></span>
           </Show>
           <Show when={(instance()?.source_platforms || []).includes("curseforge")}>
-            <span class="badge badge--source badge--curseforge" title="Available on CurseForge"><IconCurseForge /></span>
+            <span class="badge badge--source badge--curseforge tip-below" data-tip="Available on CurseForge"><IconCurseForge /></span>
           </Show>
           <Show when={instance()?.ingame_cape_supported}>
-            <span class="badge badge--companion" title="Vermeil companion mod supported">
+            <span class="badge badge--companion tip-below" data-tip="Vermeil companion mod supported">
               <img src="/logo.png" alt="Vermeil" draggable={false} />
             </span>
           </Show>
@@ -1199,9 +1199,9 @@ const InstanceMods: Component = () => {
             <button class={`inst-view-tab ${mainTab() === "logs" ? "active" : ""}`} onClick={() => setMainTab("logs")}>Logs</button>
           </div>
           <button
-            class={`inst-gear-btn ${mainTab() === "settings" ? "active" : ""}`}
+            class={`inst-gear-btn tip-below tip-right ${mainTab() === "settings" ? "active" : ""}`}
             onClick={() => setMainTab(mainTab() === "settings" ? "content" : "settings")}
-            title="Instance settings"
+            data-tip="Instance settings"
           >
             <IconSettings />
           </button>
@@ -1665,7 +1665,7 @@ const InstanceMods: Component = () => {
                   onInput={(e) => setInstalledSearch(e.currentTarget.value)}
                 />
                 <Show when={installedSearch().length > 0}>
-                  <button class="inst-search-clear" onClick={() => setInstalledSearch("")} title="Clear search">
+                  <button class="inst-search-clear" onClick={() => setInstalledSearch("")} aria-label="Clear search">
                     <IconX />
                   </button>
                 </Show>
@@ -1767,7 +1767,7 @@ const InstanceMods: Component = () => {
                 not deleted, so re-enabling needs no re-download). The jar itself
                 is launcher-managed, so there's no delete affordance. */}
             <Show when={showCompanion() && installedPage() === 1}>
-              <div class="card card--mod" style={instance()?.companion_enabled === false ? "opacity:0.55" : ""} title="Managed by Vermeil — toggle for this instance.">
+              <div class="card card--mod" style={instance()?.companion_enabled === false ? "opacity:0.55" : ""}>
                 <div class="mod-card-header">
                   <div class="mod-card-icon" style="background:var(--accent-soft);display:flex;align-items:center;justify-content:center">
                     <img src="/logo.png" alt="" draggable={false} style="width:24px;height:24px;object-fit:contain" />
@@ -1791,7 +1791,9 @@ const InstanceMods: Component = () => {
                   <div class="mod-card-actions">
                     <div
                       class={`toggle ${(instance()?.companion_enabled ?? true) ? "on" : ""}`}
-                      title="Use Vermeil's features on this instance"
+                      aria-label="Toggle Vermeil features on this instance"
+                      role="switch"
+                      aria-checked={instance()?.companion_enabled ?? true}
                       onClick={async () => {
                         const inst = instance();
                         if (!inst) return;
@@ -1860,7 +1862,7 @@ const InstanceMods: Component = () => {
                         <button
                           class="mod-tag mod-tag-update"
                           disabled={updatingMod() === mod.project_id}
-                          title={`Update to ${modUpdates().get(mod.project_id)?.latest_version_number}`}
+                          data-tip={`Update to ${modUpdates().get(mod.project_id)?.latest_version_number}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleUpdateMod(mod.project_id, mod.title || mod.filename);
@@ -1920,7 +1922,7 @@ const InstanceMods: Component = () => {
                     onInput={(e) => handleSearch(e.currentTarget.value)}
                   />
                   <Show when={searchQuery().length > 0}>
-                    <button class="inst-search-clear" onClick={() => handleSearch("")} title="Clear search">
+                    <button class="inst-search-clear" onClick={() => handleSearch("")} aria-label="Clear search">
                       <IconX />
                     </button>
                   </Show>
@@ -1998,10 +2000,10 @@ const InstanceMods: Component = () => {
                         <Show when={mod.client_side || mod.server_side}>
                           {" · "}
                           <Show when={mod.client_side === "required" || mod.client_side === "optional"}>
-                            <span class="side-icon" title={`Client: ${mod.client_side}`}><IconMonitor /></span>
+                            <span class="side-icon" data-tip={`Client: ${mod.client_side}`}><IconMonitor /></span>
                           </Show>
                           <Show when={mod.server_side === "required" || mod.server_side === "optional"}>
-                            <span class="side-icon" title={`Server: ${mod.server_side}`}><IconGlobe /></span>
+                            <span class="side-icon" data-tip={`Server: ${mod.server_side}`}><IconGlobe /></span>
                           </Show>
                         </Show>
                       </div>
@@ -2189,7 +2191,7 @@ const InstanceMods: Component = () => {
                     <button
                       class="log-toolbar-search-clear"
                       onClick={() => setLogSearch("")}
-                      title="Clear search"
+                      aria-label="Clear search"
                     >
                       <span class="side-icon"><IconX /></span>
                     </button>
@@ -2197,10 +2199,10 @@ const InstanceMods: Component = () => {
                 </div>
 
                 {/* Jump-to-top / jump-to-bottom + line count on the right */}
-                <button class="log-toolbar-jump" onClick={jumpToTop} title="Jump to top">
+                <button class="log-toolbar-jump tip-below" onClick={jumpToTop} data-tip="Jump to top">
                   <IconArrowUp />
                 </button>
-                <button class="log-toolbar-jump" onClick={jumpToBottom} title="Jump to latest">
+                <button class="log-toolbar-jump tip-below" onClick={jumpToBottom} data-tip="Jump to latest">
                   <IconArrowDown />
                 </button>
                 <span class="log-toolbar-count">{filteredLogs().length} lines</span>

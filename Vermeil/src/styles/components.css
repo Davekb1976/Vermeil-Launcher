@@ -2638,6 +2638,8 @@ select.field-input[size] { appearance: none; }
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) var(--space-4);
+  position: relative;
+  z-index: 20;
 }
 .inst-context-identity {
   display: flex;
