@@ -1775,8 +1775,10 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
-.card-section-body .setting-row:focus-within,
-.settings-cell:focus-within {
+.card-section-body .setting-row:has(:focus-visible),
+.settings-cell:has(:focus-visible),
+.card-section-body .setting-row:has(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus, textarea:focus, select:focus),
+.settings-cell:has(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus, textarea:focus, select:focus) {
   border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
   border-left-color: var(--accent);
 }
