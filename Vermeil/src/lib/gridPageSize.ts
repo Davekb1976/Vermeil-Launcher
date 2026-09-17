@@ -19,9 +19,10 @@ import { createSignal, onCleanup } from "solid-js";
  *   <div class="card-grid" ref={page.setEl}>…</div>
  *   // page.size() → items to show/fetch per page
  */
-export function createGridPageSize(opts: { track: number; gap: number; rowHeight: number; maxRows: number; maxCols?: number; debounceMs?: number }) {
+export function createGridPageSize(opts: { track: number; gap: number; rowHeight: number; maxRows: number | (() => number); maxCols?: number; fixedRows?: boolean; debounceMs?: number }) {
   const debounceMs = opts.debounceMs ?? 300;
-  const [size, setSize] = createSignal((opts.maxCols ? opts.maxCols * opts.maxRows : opts.maxRows * 4) || 12);
+  const getMaxRows = () => (typeof opts.maxRows === "function" ? opts.maxRows() : opts.maxRows);
+  const [size, setSize] = createSignal((opts.maxCols ? opts.maxCols * getMaxRows() : getMaxRows() * 4) || 12);
   let el: HTMLElement | undefined;
   let settle: number | undefined;
 
@@ -31,13 +32,17 @@ export function createGridPageSize(opts: { track: number; gap: number; rowHeight
     if (w <= 0) return;
     const rawCols = Math.max(1, Math.floor((w + opts.gap) / (opts.track + opts.gap)));
     const cols = opts.maxCols ? Math.min(opts.maxCols, rawCols) : rawCols;
-    const content = el.closest(".content") as HTMLElement | null;
-    let availH = window.innerHeight;
-    if (content) {
-      const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top;
-      availH = content.clientHeight - top;
+    const maxR = getMaxRows();
+    let rows = maxR;
+    if (!opts.fixedRows) {
+      const content = el.closest(".content") as HTMLElement | null;
+      let availH = window.innerHeight;
+      if (content) {
+        const top = el.getBoundingClientRect().top - content.getBoundingClientRect().top;
+        availH = content.clientHeight - top;
+      }
+      rows = Math.min(maxR, Math.max(1, Math.ceil(availH / (opts.rowHeight + opts.gap))));
     }
-    const rows = Math.min(opts.maxRows, Math.max(1, Math.ceil(availH / (opts.rowHeight + opts.gap))));
     setSize(cols * rows); // multiple of cols → trailing row is always full
   };
 

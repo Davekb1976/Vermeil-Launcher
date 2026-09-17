@@ -3,7 +3,7 @@ import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, setGameLau
 import { launchInstance, listInstanceWorlds, getJavaNews, getArticleBody, NewsArticle } from "../ipc/commands";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
-import { IconPlay, IconGlobe, IconShieldCheck, IconPlus } from "../components/Icons";
+import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX } from "../components/Icons";
 import PlayerHead from "../components/PlayerHead";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
@@ -47,21 +47,79 @@ function bannerColor(loader: string): string {
   }
 }
 
+interface NewsBadgeInfo {
+  label: string;
+  tagClass: string;
+}
+
+/** Categorize a news article into a distinct tag type for the tactile badge. */
+function getNewsCategory(article: NewsArticle): NewsBadgeInfo {
+  const v = (article.version || "").toLowerCase();
+  const t = (article.title || "").toLowerCase();
+
+  if (v.includes("rc") || t.includes("release candidate")) {
+    return { label: article.version || "Release Candidate", tagClass: "tag-rc" };
+  }
+  if (v.includes("pre") || t.includes("pre-release")) {
+    return { label: article.version || "Pre-Release", tagClass: "tag-pre" };
+  }
+  if (/\d+w\d+[a-z]/.test(v) || t.includes("snapshot")) {
+    return { label: article.version || "Snapshot", tagClass: "tag-snapshot" };
+  }
+  if (v && /^\d+\.\d+(\.\d+)?$/.test(v.trim())) {
+    return { label: `Java ${article.version}`, tagClass: "tag-release" };
+  }
+  if (v) {
+    return { label: article.version, tagClass: "tag-release" };
+  }
+  return { label: "Article", tagClass: "tag-article" };
+}
+
 const Home: Component = () => {
   const [news] = createResource(getJavaNews);
   const [newsPage, setNewsPage] = createSignal(1);
-  // Column-aware news page size so each page fills complete rows when the
-  // window is maximized (shared helper — see lib/gridPageSize.ts). News uses
-  // the standard `.card-grid` (track 240, gap 12); media cards are taller.
-  const newsPageSize = createGridPageSize({ track: 240, gap: 12, rowHeight: 240, maxRows: 4, debounceMs: 0 });
+  // Fixed 4x3 (12 cards) on maximized/large windows (> 820px) and 4x2 (8 cards)
+  // on smaller windows. Adapts column count downwards if window width narrows.
+  const newsPageSize = createGridPageSize({
+    track: 260,
+    gap: 14,
+    rowHeight: 220,
+    maxRows: () => (window.innerHeight > 820 ? 3 : 2),
+    maxCols: 4,
+    fixedRows: true,
+    debounceMs: 0,
+  });
   const [selectedArticle, setSelectedArticle] = createSignal<NewsArticle | null>(null);
   const [articleBody, setArticleBody] = createSignal<string>("");
   const [loadingArticle, setLoadingArticle] = createSignal(false);
 
+  // Close the article modal on Escape without triggering parent navigation
+  createEffect(() => {
+    if (!selectedArticle()) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopImmediatePropagation();
+        setSelectedArticle(null);
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    onCleanup(() => window.removeEventListener("keydown", onKey, true));
+  });
+
+  // Intercept links inside sanitized article HTML to open via Tauri opener
+  const handleModalClick = (e: MouseEvent) => {
+    const target = e.target as HTMLElement | null;
+    const anchor = target?.closest("a") as HTMLAnchorElement | null;
+    if (anchor && anchor.href) {
+      e.preventDefault();
+      openUrl(anchor.href);
+    }
+  };
+
   const openArticle = async (article: NewsArticle) => {
-    // Every article opens the in-app reader for a consistent experience.
+    // Every article opens the modal reader for a consistent experience.
     // Patch notes (with a contentPath `body`) fetch their full HTML; general
-    // news has no in-app body, so the reader shows the excerpt plus a
+    // news has no in-app body, so the modal shows the excerpt plus a
     // "Read on minecraft.net" button (its `url` is the canonical article link).
     setSelectedArticle(article);
     setArticleBody("");
@@ -174,55 +232,9 @@ const Home: Component = () => {
 
   return (
     <div class="screen-enter">
-      {/* Article detail view */}
-      <Show when={selectedArticle()}>
-        <div class="article-detail">
-          <button class="btn btn--ghost" style="margin-bottom:12px" onClick={() => setSelectedArticle(null)}>← Back to News</button>
-          <div class="article-header">
-            <div class="article-hero-wrap">
-              {/* Blurred backdrop fills the wide banner; the sharp copy sits
-                  centred and only ever downscales, so low-res feed images stay
-                  crisp and uncropped. */}
-              <div class="article-hero-bg" style={`background-image:url(${selectedArticle()!.image_url})`} />
-              <img class="article-hero-img" src={selectedArticle()!.image_url} />
-            </div>
-            <div class="article-title-section">
-              <h2 class="article-title">{selectedArticle()!.title}</h2>
-              <span class="article-version">
-                {[selectedArticle()!.version, formatArticleDate(selectedArticle()!.date)].filter(Boolean).join(" · ")}
-              </span>
-            </div>
-          </div>
-          {/* Patch notes have a full in-app HTML body; general news only has a
-              short excerpt + an external link. */}
-          <Show
-            when={selectedArticle()!.body}
-            fallback={
-              <div class="article-body">
-                {/* Escaped text — never innerHTML for feed-supplied excerpts. */}
-                <p>{selectedArticle()!.excerpt || "Read the full article on minecraft.net."}</p>
-              </div>
-            }
-          >
-            {/* innerHTML is safe here: the article body is sanitized server-side
-                with ammonia::clean() in get_article_body (strips <script>/<iframe>/
-                on*= handlers/javascript: URLs) before it crosses IPC. Only ever
-                feed this element already-sanitized HTML — never raw remote content. */}
-            <div class="article-body" innerHTML={articleBody() || (loadingArticle() ? "<p style='color:var(--muted)'>Loading article...</p>" : "<p style='color:var(--muted)'>No content available.</p>")} />
-          </Show>
-          <Show when={selectedArticle()!.url}>
-            <button class="btn" style="margin-top:12px" onClick={() => openUrl(selectedArticle()!.url)}>
-              Read on minecraft.net ↗
-            </button>
-          </Show>
-        </div>
-      </Show>
-
-      {/* Main home content */}
-      <Show when={!selectedArticle()}>
-        {/* Greeting — personalizes the empty space at the top of Home and
-            grounds the page so it feels less like a bare news feed. */}
-        <div class="home-greeting panel--bracketed">
+      {/* Greeting — personalizes the empty space at the top of Home and
+          grounds the page so it feels less like a bare news feed. */}
+      <div class="home-greeting panel--bracketed">
           <PlayerHead
             skinUrl={activeSkinUrl()}
             name={displayName()}
@@ -346,22 +358,117 @@ const Home: Component = () => {
             Loading news...
           </div>
         }>
-          <div class="card-grid" ref={newsPageSize.setEl}>
+          <div class="news-grid" ref={newsPageSize.setEl}>
             <For each={visibleNews()}>
-              {(article) => (
-                <div class="card card--media" style="cursor:pointer" onClick={() => openArticle(article)}>
-                  <div class="news-thumb" style={`background-image:url(${article.image_url})`} />
-                  <div class="card-body">
-                    <div class="card-title">{article.title}</div>
-                    <div class="card-sub">
-                      {[article.version, formatArticleDate(article.date)].filter(Boolean).join(" · ")}
+              {(article) => {
+                const category = getNewsCategory(article);
+                return (
+                  <div class="news-card" onClick={() => openArticle(article)}>
+                    <div class="news-card-thumb-wrap">
+                      <img src={article.image_url} alt="" draggable={false} />
+                      <span class={`news-card-tag ${category.tagClass}`}>
+                        {category.label}
+                      </span>
+                    </div>
+                    <div class="news-card-body">
+                      <div class="news-card-title">{article.title}</div>
+                      <div class="news-card-meta">
+                        <div class="news-card-meta-left">
+                          <Show when={formatArticleDate(article.date)}>
+                            <span class="news-card-date">{formatArticleDate(article.date)}</span>
+                          </Show>
+                        </div>
+                        <span class="news-card-read">Read ↗</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                );
+              }}
             </For>
           </div>
         </Show>
+
+      {/* News Detail Modal */}
+      <Show when={selectedArticle()}>
+        <div class="news-modal-overlay" onClick={() => setSelectedArticle(null)}>
+          <div class="news-modal" onClick={(e) => e.stopPropagation()}>
+            {/* Hero banner with blurred backdrop and close button */}
+            <div class="news-modal-hero">
+              <div
+                class="news-modal-hero-bg"
+                style={`background-image:url(${selectedArticle()!.image_url})`}
+              />
+              <img
+                class="news-modal-hero-img"
+                src={selectedArticle()!.image_url}
+                alt=""
+                draggable={false}
+              />
+              <button
+                class="news-modal-close"
+                onClick={() => setSelectedArticle(null)}
+                aria-label="Close modal"
+              >
+                <IconX />
+              </button>
+            </div>
+
+            {/* Modal Header */}
+            <div class="news-modal-header">
+              <h2 class="news-modal-title">{selectedArticle()!.title}</h2>
+              <div class="news-modal-badges">
+                <span class={`news-card-tag ${getNewsCategory(selectedArticle()!).tagClass}`}>
+                  {getNewsCategory(selectedArticle()!).label}
+                </span>
+                <Show when={formatArticleDate(selectedArticle()!.date)}>
+                  <span class="news-card-date">
+                    {formatArticleDate(selectedArticle()!.date)}
+                  </span>
+                </Show>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div class="news-modal-body" onClick={handleModalClick}>
+              <Show
+                when={selectedArticle()!.body}
+                fallback={
+                  <p>{selectedArticle()!.excerpt || "Read the full article on minecraft.net."}</p>
+                }
+              >
+                <div
+                  innerHTML={
+                    articleBody() ||
+                    (loadingArticle()
+                      ? "<p style='color:var(--muted)'>Loading article...</p>"
+                      : "<p style='color:var(--muted)'>No content available.</p>")
+                  }
+                />
+              </Show>
+            </div>
+
+            {/* Modal Footer */}
+            <div class="news-modal-footer">
+              <Show
+                when={selectedArticle()!.url}
+                fallback={<div />}
+              >
+                <button
+                  class="btn btn--sm"
+                  onClick={() => openUrl(selectedArticle()!.url)}
+                >
+                  Read on minecraft.net ↗
+                </button>
+              </Show>
+              <button
+                class="btn btn--primary btn--sm"
+                onClick={() => setSelectedArticle(null)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       </Show>
     </div>
   );
