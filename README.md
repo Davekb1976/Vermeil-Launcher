@@ -43,6 +43,8 @@
 
 ## Screenshots
 
+> Screenshots are from the upcoming **v0.9.0** release. The current stable release is **v0.8.5**.
+
 <p align="center">
   <img src="docs/images/screenshots/browse-mods.png" alt="Vermeil Instance & Content Browser" width="100%" />
 </p>
