@@ -607,16 +607,18 @@ const CreateCustom: Component = () => {
                       0 mods · Just created
                     </div>
                     <div class="inst-card-badges">
-                      <span class="badge badge--version">{selectedGameVersion() || "..."}</span>
-                      <span class={`badge badge--loader ${loaderBadgeClass(loader())}`}>
-                        {loaderLabel(loader())}
-                      </span>
-                      <Show when={loader() !== "vanilla" && loaderVersion()}>
-                        <span class="badge badge--vnum">
-                          {loader() === "fabric" && isLegacyVersion() ? "Legacy " : ""}
-                          {formatLoaderVersionDisplay(loaderVersion()!)}
+                      <div class="inst-card-badges-track">
+                        <span class="badge badge--version">{selectedGameVersion() || "..."}</span>
+                        <span class={`badge badge--loader ${loaderBadgeClass(loader())}`}>
+                          {loaderLabel(loader())}
                         </span>
-                      </Show>
+                        <Show when={loader() !== "vanilla" && loaderVersion()}>
+                          <span class="badge badge--vnum">
+                            {loader() === "fabric" && isLegacyVersion() ? "Legacy " : ""}
+                            {formatLoaderVersionDisplay(loaderVersion()!)}
+                          </span>
+                        </Show>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -164,17 +164,11 @@
   align-items: center;
   margin-top: 2px;
   width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
+  overflow: hidden;
   /* Right-edge soft fade mask at rest indicating more content */
-  mask-image: linear-gradient(to right, black calc(100% - 16px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 16px), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 18px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 18px), transparent 100%);
   transition: mask-image 0.25s ease, -webkit-mask-image 0.25s ease;
-}
-
-.inst-card-badges::-webkit-scrollbar {
-  display: none;
 }
 
 .inst-card-badges-track {
@@ -213,9 +207,9 @@
 
 .card--inst:hover .inst-card-badges,
 .card.card--inst:hover .inst-card-badges {
-  /* Softly feather both edges on hover as items slide in and out */
-  mask-image: linear-gradient(to right, transparent 0, black 12px, black calc(100% - 14px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0, black 12px, black calc(100% - 14px), transparent 100%);
+  /* Soften right-edge mask on hover so the end badges remain crisp */
+  mask-image: linear-gradient(to right, black calc(100% - 6px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 6px), transparent 100%);
 }
 
 .card--inst:hover .inst-card-badges-track,
