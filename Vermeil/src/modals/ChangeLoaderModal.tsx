@@ -221,11 +221,30 @@ const ChangeLoaderModal: Component = () => {
   const isIncompatibleCross = () =>
     !isSameLoader() && !isVanillaToModded() && !isModdedToVanilla() && !isFabricQuiltCross();
 
-  // Close version dropdown on outside click or Escape
+  const formatLoaderVersionDisplay = (ver: string) => {
+    const l = selectedLoader();
+    const gv = inst()?.game_version || "";
+    if (l === "forge" && gv && ver.startsWith(`${gv}-`)) {
+      let clean = ver.slice(gv.length + 1);
+      if (clean.endsWith(`-${gv}`)) {
+        clean = clean.slice(0, clean.length - gv.length - 1);
+      }
+      return clean;
+    }
+    return ver;
+  };
+
+  // Close version dropdown or modal on Escape
   createEffect(() => {
-    if (!versionDropOpen()) return;
+    if (!open()) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setVersionDropOpen(false);
+      if (e.key === "Escape" && !changing()) {
+        if (versionDropOpen()) {
+          setVersionDropOpen(false);
+        } else {
+          closeChangeLoaderModal();
+        }
+      }
     };
     document.addEventListener("keydown", onKey);
     onCleanup(() => document.removeEventListener("keydown", onKey));
@@ -375,7 +394,7 @@ const ChangeLoaderModal: Component = () => {
                     disabled={isVersionLoading() || availableLoaderVersions().length === 0}
                     onClick={() => setVersionDropOpen(!versionDropOpen())}
                   >
-                    <span>{selectedVersion() || (isVersionLoading() ? "Loading..." : "None")}</span>
+                    <span>{selectedVersion() ? formatLoaderVersionDisplay(selectedVersion()!) : (isVersionLoading() ? "Loading..." : "None")}</span>
                     <IconChevronDown />
                   </button>
 
@@ -390,12 +409,13 @@ const ChangeLoaderModal: Component = () => {
                           <div
                             class="custom-select-option"
                             style={`padding: 6px 10px; font-size: 12px; font-family: var(--font-mono); cursor: pointer; display: flex; align-items: center; justify-content: space-between; ${selectedVersion() === v.version ? "background: rgba(139,92,246,0.15); color: var(--accent);" : "color: var(--text);"}`}
+                            title={v.version}
                             onClick={() => {
                               setSelectedVersion(v.version);
                               setVersionDropOpen(false);
                             }}
                           >
-                            <span>{v.version}</span>
+                            <span>{formatLoaderVersionDisplay(v.version)}</span>
                             <Show when={v.stable}>
                               <span style="font-size: 9px; padding: 1px 4px; background: rgba(34,197,94,0.15); color: var(--success); text-transform: uppercase;">stable</span>
                             </Show>
@@ -439,16 +459,24 @@ const ChangeLoaderModal: Component = () => {
 
               {/* Scenario 4: Modded -> Vanilla */}
               <Show when={isModdedToVanilla()}>
-                <div style="padding: 12px; background: rgba(245,158,11,0.08); border: 1px solid var(--border); border-left: 3px solid var(--warn); box-shadow: var(--bevel);">
-                  <div style="display: flex; gap: 8px; align-items: flex-start;">
-                    <div style="color: var(--warn); margin-top: 1px;"><IconAlertTriangle /></div>
-                    <div style="flex: 1; font-size: 12px;">
-                      <div style="font-weight: 700; color: var(--warn); margin-bottom: 3px;">Vanilla Does Not Run Mods</div>
-                      <div style="color: var(--text); line-height: 1.4;">
-                        You have <strong>{activeMods().length} active mod{activeMods().length === 1 ? "" : "s"}</strong>. Vanilla Minecraft will not load them, and worlds saved with modded items may have missing blocks.
-                      </div>
+                <Show
+                  when={activeMods().length > 0}
+                  fallback={
+                    <div style="padding: 10px 12px; background: rgba(34,197,94,0.06); border: 1px solid var(--border); border-left: 3px solid var(--success); font-size: 12px; color: var(--text); box-shadow: var(--bevel);">
+                      <div style="font-weight: 600; color: var(--success); margin-bottom: 2px;">Switching to Vanilla</div>
+                      <div>No mods are currently active on this instance. Switching to Vanilla is completely safe.</div>
+                    </div>
+                  }
+                >
+                  <div style="padding: 12px; background: rgba(245,158,11,0.08); border: 1px solid var(--border); border-left: 3px solid var(--warn); box-shadow: var(--bevel);">
+                    <div style="display: flex; gap: 8px; align-items: flex-start;">
+                      <div style="color: var(--warn); margin-top: 1px;"><IconAlertTriangle /></div>
+                      <div style="flex: 1; font-size: 12px;">
+                        <div style="font-weight: 700; color: var(--warn); margin-bottom: 3px;">Vanilla Does Not Run Mods</div>
+                        <div style="color: var(--text); line-height: 1.4;">
+                          You have <strong>{activeMods().length} active mod{activeMods().length === 1 ? "" : "s"}</strong>. Vanilla Minecraft will not load them, and worlds saved with modded items may have missing blocks.
+                        </div>
 
-                      <Show when={activeMods().length > 0}>
                         <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
                           <label class="check check--lg" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                             <input
@@ -462,10 +490,10 @@ const ChangeLoaderModal: Component = () => {
                             </span>
                           </label>
                         </div>
-                      </Show>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Show>
               </Show>
 
               {/* Scenario 5: Fabric <-> Quilt */}
@@ -482,19 +510,27 @@ const ChangeLoaderModal: Component = () => {
 
               {/* Scenario 6: Incompatible Loader Architecture (e.g. Fabric <-> Forge/NeoForge) */}
               <Show when={isIncompatibleCross()}>
-                <div style="padding: 12px; background: rgba(239,68,68,0.08); border: 1px solid var(--border); border-left: 3px solid var(--danger); box-shadow: var(--bevel);">
-                  <div style="display: flex; gap: 8px; align-items: flex-start;">
-                    <div style="color: var(--danger); margin-top: 2px;"><IconAlertTriangle /></div>
-                    <div style="flex: 1; font-size: 12px;">
-                      <div style="font-weight: 700; color: var(--danger); margin-bottom: 4px;">
-                        Incompatible Mod Architecture
-                      </div>
-                      <div style="color: var(--text); line-height: 1.4;">
-                        You have <strong>{activeMods().length} active mod{activeMods().length === 1 ? "" : "s"}</strong> installed for <strong>{loaderLabel(inst()!.loader.type)}</strong>.
-                        Mods built for {loaderLabel(inst()!.loader.type)} are <span style="color: var(--danger); font-weight: 700;">completely incompatible</span> with {loaderLabel(selectedLoader())} and will cause Minecraft to crash on launch.
-                      </div>
+                <Show
+                  when={activeMods().length > 0}
+                  fallback={
+                    <div style="padding: 10px 12px; background: rgba(34,197,94,0.06); border: 1px solid var(--border); border-left: 3px solid var(--success); font-size: 12px; color: var(--text); box-shadow: var(--bevel);">
+                      <div style="font-weight: 600; color: var(--success); margin-bottom: 2px;">Safe Loader Switch</div>
+                      <div>No mods are currently active on this instance. Switching to {loaderLabel(selectedLoader())} is completely safe.</div>
+                    </div>
+                  }
+                >
+                  <div style="padding: 12px; background: rgba(239,68,68,0.08); border: 1px solid var(--border); border-left: 3px solid var(--danger); box-shadow: var(--bevel);">
+                    <div style="display: flex; gap: 8px; align-items: flex-start;">
+                      <div style="color: var(--danger); margin-top: 2px;"><IconAlertTriangle /></div>
+                      <div style="flex: 1; font-size: 12px;">
+                        <div style="font-weight: 700; color: var(--danger); margin-bottom: 4px;">
+                          Incompatible Mod Architecture
+                        </div>
+                        <div style="color: var(--text); line-height: 1.4;">
+                          You have <strong>{activeMods().length} active mod{activeMods().length === 1 ? "" : "s"}</strong> installed for <strong>{loaderLabel(inst()!.loader.type)}</strong>.
+                          Mods built for {loaderLabel(inst()!.loader.type)} are <span style="color: var(--danger); font-weight: 700;">completely incompatible</span> with {loaderLabel(selectedLoader())} and will cause Minecraft to crash on launch.
+                        </div>
 
-                      <Show when={activeMods().length > 0}>
                         <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
                           <label class="check check--lg" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                             <input
@@ -511,10 +547,10 @@ const ChangeLoaderModal: Component = () => {
                             Renames active jars to <code style="font-family:var(--font-mono);color:var(--text)">.disabled</code>. Your mods are safely kept in your Library and can be re-enabled if you switch back.
                           </div>
                         </div>
-                      </Show>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Show>
               </Show>
             </div>
           </div>
@@ -529,8 +565,13 @@ const ChangeLoaderModal: Component = () => {
               Cancel
             </button>
             <button
-              class={`btn btn--sm ${isIncompatibleCross() && !disableMods() ? "btn--danger" : "btn--primary"}`}
-              disabled={isNoChange() || !isLoaderCompatible(selectedLoader()) || changing()}
+              class={`btn btn--sm ${isIncompatibleCross() && activeMods().length > 0 && !disableMods() ? "btn--danger" : "btn--primary"}`}
+              disabled={
+                isNoChange() ||
+                !isLoaderCompatible(selectedLoader()) ||
+                changing() ||
+                (selectedLoader() !== "vanilla" && (!selectedVersion() || isVersionLoading()))
+              }
               onClick={handleApply}
             >
               <Show

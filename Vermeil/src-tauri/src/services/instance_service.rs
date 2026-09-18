@@ -266,9 +266,27 @@ pub async fn change_loader(
         }
     }
 
+    // Validate loader version
+    let cleaned_version = match loader_type {
+        LoaderType::Vanilla => None,
+        _ => {
+            let ver = loader_version.as_deref().map(str::trim).filter(|s| !s.is_empty());
+            match ver {
+                Some(v) => Some(v.to_string()),
+                None => {
+                    return Err(format!(
+                        "A valid loader version is required when switching to {}",
+                        loader_type.as_str()
+                    )
+                    .into());
+                }
+            }
+        }
+    };
+
     // Update loader config
     instance.loader.loader_type = loader_type;
-    instance.loader.version = loader_version;
+    instance.loader.version = cleaned_version;
 
     // Atomic write
     let json = serde_json::to_string_pretty(&instance)?;
