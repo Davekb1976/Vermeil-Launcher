@@ -30,7 +30,12 @@ import {
   IconX,
 } from "./Icons";
 import { launchInstance, stopInstance } from "../ipc/commands";
-import { openPinInstancesModal, MAX_PINS } from "../modals/PinInstancesModal";
+import {
+  openPinInstancesModal,
+  closePinInstancesModal,
+  pinInstancesModalOpen,
+  MAX_PINS,
+} from "../modals/PinInstancesModal";
 
 /**
  * Bottom-centered floating dock — single unified pill with a FAB-style
@@ -59,6 +64,8 @@ const FloatingDock: Component = () => {
     const onMouseDown = (e: MouseEvent) => {
       // Only dismiss on left-click (button 0) — ignore right-click, middle-click, and side buttons (Mouse4/5)
       if (e.button !== 0) return;
+      // Do not auto-dismiss the pin dock while managing pins in the modal
+      if (pinInstancesModalOpen()) return;
       if (dockEl && !dockEl.contains(e.target as Node)) {
         setPinSelectorOpen(false);
       }
@@ -115,6 +122,7 @@ const FloatingDock: Component = () => {
   };
 
   const openPinned = (id: string) => {
+    closePinInstancesModal();
     setActiveInstanceId(id);
     setInitialInstanceTab("content");
     setActiveScreen("mods");
@@ -410,7 +418,6 @@ const FloatingDock: Component = () => {
                   class="dock-pin-tile dock-pin-tile-manage"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    setPinSelectorOpen(false);
                     openPinInstancesModal();
                   }}
                   data-tooltip="Manage pins"
@@ -425,7 +432,10 @@ const FloatingDock: Component = () => {
                   type="button"
                   class="dock-pin-tile dock-pin-tile-close"
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => setPinSelectorOpen(false)}
+                  onClick={() => {
+                    closePinInstancesModal();
+                    setPinSelectorOpen(false);
+                  }}
                   data-tooltip="Close pins (Esc)"
                 >
                   <div class="dock-pin-tile-img">

@@ -553,12 +553,12 @@ const App: Component = () => {
       // user-rebindable because users expect Escape to "back out" of UI
       // and remapping it would brick recovery from a stuck modal.
       if (e.key === "Escape") {
-        if (pinSelectorOpen()) {
-          setPinSelectorOpen(false);
-          return;
-        }
         if (pinInstancesModalOpen()) {
           closePinInstancesModal();
+          return;
+        }
+        if (pinSelectorOpen()) {
+          setPinSelectorOpen(false);
           return;
         }
         const screen = activeScreen();
