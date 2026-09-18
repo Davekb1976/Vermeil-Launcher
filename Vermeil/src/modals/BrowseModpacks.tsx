@@ -251,80 +251,116 @@ const BrowseModpacks: Component = () => {
         </div>
       </div>
 
-      {/* Toolbar: Source toggle + Search input + Filters */}
-      <div class="modpack-toolbar">
-        {/* Source Toggle */}
-        <div class="modpack-source-switch">
-          <button
-            type="button"
-            class={`modpack-source-tab tab-mr ${modSource() === "modrinth" ? "active" : ""}`}
-            onClick={() => handleSourceSelect("modrinth")}
-            title="Browse Modrinth community packs"
-          >
-            <IconModrinth />
-            <span>Modrinth</span>
-          </button>
-          <button
-            type="button"
-            class={`modpack-source-tab tab-cf ${modSource() === "curseforge" ? "active" : ""}`}
-            onClick={() => handleSourceSelect("curseforge")}
-            title="Browse CurseForge modpacks"
-          >
-            <IconCurseForge />
-            <span>CurseForge</span>
-          </button>
-        </div>
-
-        {/* Search input field */}
-        <div class="modpack-search-box">
-          <span class="modpack-search-icon">
-            <IconSearch />
-          </span>
-          <input
-            type="text"
-            class="modpack-search-input"
-            placeholder={
-              modSource() === "modrinth"
-                ? "Search Modrinth modpacks by name, category, or author..."
-                : "Search CurseForge modpacks..."
-            }
-            value={query()}
-            onInput={(e) => handleSearchInput(e.currentTarget.value)}
-          />
-          <Show when={query().length > 0}>
+      {/* Chunky 2-Row Control Panel (Matching Installed Content View) */}
+      <div class="inst-search-panel">
+        {/* Row 1: Source Toggle Tabs + Full-width Search Input + Optional Reset */}
+        <div class="inst-search-row">
+          <div class="modpack-source-tabs">
             <button
               type="button"
-              class="modpack-search-clear"
-              onClick={clearSearch}
-              title="Clear search query"
+              class={`modpack-source-tab tab-mr ${modSource() === "modrinth" ? "active" : ""}`}
+              onClick={() => handleSourceSelect("modrinth")}
+              title="Browse Modrinth community packs"
             >
-              <IconX />
+              <IconModrinth />
+              <span>Modrinth</span>
+            </button>
+            <button
+              type="button"
+              class={`modpack-source-tab tab-cf ${modSource() === "curseforge" ? "active" : ""}`}
+              onClick={() => handleSourceSelect("curseforge")}
+              title="Browse CurseForge modpacks"
+            >
+              <IconCurseForge />
+              <span>CurseForge</span>
+            </button>
+          </div>
+
+          <div class="inst-search-input-wrap">
+            <span class="inst-search-icon">
+              <IconSearch />
+            </span>
+            <input
+              type="text"
+              class="field-control inst-search-input"
+              placeholder={
+                modSource() === "modrinth"
+                  ? "Search Modrinth modpacks by name, category, or author..."
+                  : "Search CurseForge modpacks..."
+              }
+              value={query()}
+              onInput={(e) => handleSearchInput(e.currentTarget.value)}
+            />
+            <Show when={query().length > 0}>
+              <button
+                type="button"
+                class="inst-search-clear"
+                onClick={clearSearch}
+                title="Clear search query"
+              >
+                <IconX />
+              </button>
+            </Show>
+          </div>
+
+          <Show when={query() || loaderFilter() || sortBy() !== "relevance"}>
+            <button
+              type="button"
+              class="btn inst-panel-btn inst-action-btn tip-right"
+              onClick={() => {
+                setQuery("");
+                setLoaderFilter("");
+                setSortBy("relevance");
+                handleFilterChange();
+              }}
+              data-tip="Reset search and filters"
+            >
+              Reset
             </button>
           </Show>
         </div>
 
-        {/* Dropdowns */}
-        <div class="modpack-filters-group">
-          <Dropdown
-            prefix="Sort: "
-            value={sortBy()}
-            options={SORT_OPTIONS}
-            onChange={(v) => {
-              setSortBy(v);
-              handleFilterChange();
-            }}
-            width="170px"
-          />
-          <Dropdown
-            prefix="Loader: "
-            value={loaderFilter()}
-            options={LOADER_OPTIONS}
-            onChange={(v) => {
-              setLoaderFilter(v);
-              handleFilterChange();
-            }}
-            width="145px"
-          />
+        {/* Row 2: Status Metadata on left · Loader & Sort Dropdowns on right */}
+        <div class="inst-meta-row">
+          <div class="inst-meta-left">
+            Showing modpacks for{" "}
+            <strong class="inst-meta-highlight">
+              {modSource() === "curseforge" ? "CurseForge" : "Modrinth"}
+            </strong>
+            <span class="inst-meta-sep">·</span>
+            <strong class="inst-meta-highlight">
+              {loaderFilter()
+                ? loaderFilter().charAt(0).toUpperCase() + loaderFilter().slice(1)
+                : "All Loaders"}
+            </strong>
+            <Show when={totalHits() > 0}>
+              <span class="inst-meta-sep">—</span>
+              <span class="inst-meta-count">{totalHits().toLocaleString()} available</span>
+            </Show>
+          </div>
+
+          <div class="inst-meta-sort-wrap" style="gap: 8px">
+            <Dropdown
+              prefix="Loader: "
+              value={loaderFilter()}
+              options={LOADER_OPTIONS}
+              onChange={(v) => {
+                setLoaderFilter(v);
+                handleFilterChange();
+              }}
+              width="145px"
+            />
+            <Dropdown
+              prefix="Sort: "
+              value={sortBy()}
+              options={SORT_OPTIONS}
+              onChange={(v) => {
+                setSortBy(v);
+                handleFilterChange();
+              }}
+              width="160px"
+            />
+          </div>
         </div>
       </div>
 
