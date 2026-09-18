@@ -134,14 +134,21 @@ function initStageParticles(canvas: HTMLCanvasElement, container: HTMLElement): 
   let raf = 0;
   const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
-  const COUNT = 40;
-  const COLS = [
+  const COUNT = 85;
+  const PURPLE_COLS = [
     "139, 92, 246", // Vermeil violet
     "168, 85, 247", // Accent purple
     "192, 132, 252", // Lilac glow
     "124, 77, 222",  // Deep purple
+    "167, 139, 250", // Soft violet
   ];
-  const EMBER_COL = "251, 191, 36"; // Amber spark
+  const GOLD_COLS = [
+    "250, 204, 21",  // Warm bright gold
+    "251, 191, 36",  // Radiant amber
+    "245, 158, 11",  // Deep honey amber
+    "253, 224, 71",  // Incandescent yellow spark
+    "254, 240, 138", // White-gold shimmer
+  ];
 
   interface VoxelEmber {
     x: number;
@@ -154,7 +161,19 @@ function initStageParticles(canvas: HTMLCanvasElement, container: HTMLElement): 
     baseAlpha: number;
     layer: number;
     col: string;
+    isGold: boolean;
+    flickerPhase: number;
+    flickerSpeed: number;
   }
+
+  const pickColor = (): { col: string; isGold: boolean } => {
+    // 32% warm gold/amber embers, 68% purple/violet embers for a balanced, vibrant mix
+    const isGold = Math.random() < 0.32;
+    const col = isGold
+      ? GOLD_COLS[Math.floor(Math.random() * GOLD_COLS.length)]
+      : PURPLE_COLS[Math.floor(Math.random() * PURPLE_COLS.length)];
+    return { col, isGold };
+  };
 
   const makePt = (initial = false): VoxelEmber => {
     // 3 depth layers: 0 (distant), 1 (midground), 2 (foreground)
@@ -171,17 +190,21 @@ function initStageParticles(canvas: HTMLCanvasElement, container: HTMLElement): 
       sz = 2;
       vy = rnd(-0.10, -0.22);
       vx = rnd(-0.05, 0.05);
-      baseAlpha = rnd(0.18, 0.35);
-    } else if (roll > 0.80) {
+      baseAlpha = rnd(0.20, 0.38);
+    } else if (roll > 0.78) {
       // Foreground layer: larger, faster, bolder
       layer = 2;
       sz = Math.random() > 0.5 ? 4 : 5;
-      vy = rnd(-0.38, -0.62);
+      vy = rnd(-0.38, -0.65);
       vx = rnd(-0.12, 0.12);
-      baseAlpha = rnd(0.50, 0.75);
+      baseAlpha = rnd(0.55, 0.80);
     }
 
-    const col = Math.random() < 0.08 ? EMBER_COL : COLS[Math.floor(Math.random() * COLS.length)];
+    const { col, isGold } = pickColor();
+    // Warm gold embers receive a slight brightness boost to read as incandescent sparks
+    if (isGold) {
+      baseAlpha = Math.min(0.88, baseAlpha * 1.2);
+    }
 
     return {
       x: rnd(0, W || 400),
@@ -194,6 +217,9 @@ function initStageParticles(canvas: HTMLCanvasElement, container: HTMLElement): 
       baseAlpha,
       layer,
       col,
+      isGold,
+      flickerPhase: rnd(0, Math.PI * 2),
+      flickerSpeed: rnd(0.02, 0.06),
     };
   };
 
@@ -233,8 +259,8 @@ function initStageParticles(canvas: HTMLCanvasElement, container: HTMLElement): 
   ro.observe(container);
 
   // Mouse repulsion
-  const REPEL_RADIUS = 120;
-  const REPEL_FORCE = 0.85;
+  const REPEL_RADIUS = 125;
+  const REPEL_FORCE = 0.88;
   let mouseX = -9999;
   let mouseY = -9999;
   let mouseActive = false;
@@ -286,6 +312,10 @@ function initStageParticles(canvas: HTMLCanvasElement, container: HTMLElement): 
       if (p.y < -12) {
         p.y = H + rnd(4, 16);
         p.x = rnd(0, W);
+        // Refresh color choice on re-wrap to maintain even, dynamic distribution
+        const fresh = pickColor();
+        p.col = fresh.col;
+        p.isGold = fresh.isGold;
       }
       if (p.x < -12) p.x = W + 12;
       if (p.x > W + 12) p.x = -12;
@@ -298,7 +328,10 @@ function initStageParticles(canvas: HTMLCanvasElement, container: HTMLElement): 
         edgeFade = Math.max(0, p.y / 50);
       }
 
-      const alpha = p.baseAlpha * edgeFade;
+      // Subtle atmospheric shimmer
+      p.flickerPhase += p.flickerSpeed;
+      const shimmer = 1 + Math.sin(p.flickerPhase) * 0.14;
+      const alpha = Math.min(1, Math.max(0, p.baseAlpha * edgeFade * shimmer));
       if (alpha <= 0.01) continue;
 
       const sz = p.sz;
