@@ -634,6 +634,7 @@ async fn install_one(
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ProjectType {
     Mod,
+    Modpack,
     ResourcePack,
     Shader,
     DataPack,
@@ -645,12 +646,13 @@ impl ProjectType {
             "resourcepack" => ProjectType::ResourcePack,
             "shader" => ProjectType::Shader,
             "datapack" => ProjectType::DataPack,
+            "modpack" => ProjectType::Modpack,
             _ => ProjectType::Mod,
         }
     }
 
     /// Whether the loader filter applies. Modrinth only enforces the loader
-    /// check on mods; everything else is loader-agnostic.
+    /// check on mods; modpacks and asset packs are loader-agnostic / standalone.
     fn checks_loader(&self) -> bool {
         matches!(self, ProjectType::Mod)
     }
@@ -679,7 +681,7 @@ pub(crate) fn is_version_compatible(
     {
         return false;
     }
-    if !project_type.checks_loader() {
+    if !project_type.checks_loader() || loader.is_empty() {
         return true;
     }
     v.loaders.iter().any(|l| l == loader || l == "datapack")
@@ -724,8 +726,12 @@ pub(crate) fn find_preferred_version<'a>(
     game_version: &str,
 ) -> Option<&'a ModrinthVersion> {
     let loader_ok = |v: &ModrinthVersion| {
-        !project_type.checks_loader() || v.loaders.iter().any(|l| l == loader)
+        !project_type.checks_loader() || loader.is_empty() || v.loaders.iter().any(|l| l == loader)
     };
+
+    if game_version.is_empty() {
+        return pick_preferring_stable(versions, |v| loader_ok(v));
+    }
 
     // Pass 1 — strict: exact game_version + exact loader.
     let strict = pick_preferring_stable(versions, |v| {
