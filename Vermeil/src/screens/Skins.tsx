@@ -118,6 +118,222 @@ const [ingameCapeId, setIngameCapeId] = createSignal<string | null>(null);
 const [ingameEnabled, setIngameEnabled] = createSignal(false);
 let ingameStateLoaded = false;
 
+/**
+ * High-performance square voxel ember particle background for the Character Studio.
+ * Features 3 depth parallax tiers, vertical edge fading, and responsive cursor repulsion.
+ */
+function initStageParticles(canvas: HTMLCanvasElement, container: HTMLElement): () => void {
+  const reduceMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion) return () => {};
+
+  const ctx = canvas.getContext("2d", { alpha: true });
+  if (!ctx) return () => {};
+
+  let W = 0;
+  let H = 0;
+  let raf = 0;
+  const rnd = (a: number, b: number) => a + Math.random() * (b - a);
+
+  const COUNT = 40;
+  const COLS = [
+    "139, 92, 246", // Vermeil violet
+    "168, 85, 247", // Accent purple
+    "192, 132, 252", // Lilac glow
+    "124, 77, 222",  // Deep purple
+  ];
+  const EMBER_COL = "251, 191, 36"; // Amber spark
+
+  interface VoxelEmber {
+    x: number;
+    y: number;
+    sz: number;
+    vx: number;
+    vy: number;
+    bvx: number;
+    bvy: number;
+    baseAlpha: number;
+    layer: number;
+    col: string;
+  }
+
+  const makePt = (initial = false): VoxelEmber => {
+    // 3 depth layers: 0 (distant), 1 (midground), 2 (foreground)
+    const roll = Math.random();
+    let layer = 1;
+    let sz = 3;
+    let vy = rnd(-0.20, -0.38);
+    let vx = rnd(-0.08, 0.08);
+    let baseAlpha = rnd(0.35, 0.55);
+
+    if (roll < 0.45) {
+      // Distant layer: smaller, slower, softer
+      layer = 0;
+      sz = 2;
+      vy = rnd(-0.10, -0.22);
+      vx = rnd(-0.05, 0.05);
+      baseAlpha = rnd(0.18, 0.35);
+    } else if (roll > 0.80) {
+      // Foreground layer: larger, faster, bolder
+      layer = 2;
+      sz = Math.random() > 0.5 ? 4 : 5;
+      vy = rnd(-0.38, -0.62);
+      vx = rnd(-0.12, 0.12);
+      baseAlpha = rnd(0.50, 0.75);
+    }
+
+    const col = Math.random() < 0.08 ? EMBER_COL : COLS[Math.floor(Math.random() * COLS.length)];
+
+    return {
+      x: rnd(0, W || 400),
+      y: initial ? rnd(0, H || 500) : (H || 500) + rnd(4, 20),
+      sz,
+      vx,
+      vy,
+      bvx: vx,
+      bvy: vy,
+      baseAlpha,
+      layer,
+      col,
+    };
+  };
+
+  const pts: VoxelEmber[] = [];
+
+  const resize = () => {
+    const rect = container.getBoundingClientRect();
+    const oldW = W;
+    const oldH = H;
+    W = rect.width;
+    H = rect.height;
+    if (W <= 0 || H <= 0) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = `${W}px`;
+    canvas.style.height = `${H}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // If particles were initialized before layout measurement, distribute across canvas
+    if (oldW <= 0 || oldH <= 0) {
+      for (const p of pts) {
+        p.x = rnd(0, W);
+        p.y = rnd(0, H);
+      }
+    }
+  };
+
+  resize();
+  for (let i = 0; i < COUNT; i++) {
+    pts.push(makePt(true));
+  }
+
+  const ro = new ResizeObserver(() => {
+    resize();
+  });
+  ro.observe(container);
+
+  // Mouse repulsion
+  const REPEL_RADIUS = 120;
+  const REPEL_FORCE = 0.85;
+  let mouseX = -9999;
+  let mouseY = -9999;
+  let mouseActive = false;
+
+  const onPointerMove = (e: PointerEvent) => {
+    if (e.pointerType === "touch") return;
+    const rect = container.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+    mouseActive = true;
+  };
+
+  const onPointerLeave = () => {
+    mouseActive = false;
+  };
+
+  container.addEventListener("pointermove", onPointerMove, { passive: true });
+  container.addEventListener("pointerleave", onPointerLeave, { passive: true });
+
+  const frame = () => {
+    if (W <= 0 || H <= 0) {
+      raf = requestAnimationFrame(frame);
+      return;
+    }
+
+    ctx.clearRect(0, 0, W, H);
+
+    for (const p of pts) {
+      if (mouseActive) {
+        const dx = p.x - mouseX;
+        const dy = p.y - mouseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < REPEL_RADIUS && dist > 0.01) {
+          const layerMultiplier = 0.75 + p.layer * 0.35;
+          const push = (1 - dist / REPEL_RADIUS) * REPEL_FORCE * layerMultiplier;
+          p.vx += (dx / dist) * push;
+          p.vy += (dy / dist) * push;
+        }
+      }
+
+      // Ease back toward base lazy drift
+      p.vx += (p.bvx - p.vx) * 0.035;
+      p.vy += (p.bvy - p.vy) * 0.035;
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Wrap-around
+      if (p.y < -12) {
+        p.y = H + rnd(4, 16);
+        p.x = rnd(0, W);
+      }
+      if (p.x < -12) p.x = W + 12;
+      if (p.x > W + 12) p.x = -12;
+
+      // Edge fading: fade in smoothly near bottom, fade out near top
+      let edgeFade = 1;
+      if (p.y > H - 50) {
+        edgeFade = Math.max(0, (H - p.y) / 50);
+      } else if (p.y < 50) {
+        edgeFade = Math.max(0, p.y / 50);
+      }
+
+      const alpha = p.baseAlpha * edgeFade;
+      if (alpha <= 0.01) continue;
+
+      const sz = p.sz;
+      // Snapped to integer pixels for crisp square voxel edges
+      const px = Math.round(p.x - sz / 2);
+      const py = Math.round(p.y - sz / 2);
+
+      ctx.fillStyle = `rgba(${p.col},${alpha.toFixed(3)})`;
+      ctx.fillRect(px, py, sz, sz);
+    }
+
+    raf = requestAnimationFrame(frame);
+  };
+
+  raf = requestAnimationFrame(frame);
+
+  const onVisibilityChange = () => {
+    if (document.hidden) {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    } else if (!raf) {
+      raf = requestAnimationFrame(frame);
+    }
+  };
+  document.addEventListener("visibilitychange", onVisibilityChange);
+
+  return () => {
+    if (raf) cancelAnimationFrame(raf);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    ro.disconnect();
+    container.removeEventListener("pointermove", onPointerMove);
+    container.removeEventListener("pointerleave", onPointerLeave);
+  };
+}
+
 const Skins: Component = () => {
   const [profile, { refetch: refetchProfile }] = createResource<PlayerProfile | null>(async () => {
     if (!account() || account()!.is_offline) return null;
@@ -184,6 +400,7 @@ const Skins: Component = () => {
 
   let fileInputRef: HTMLInputElement | undefined;
   let viewerCanvas: HTMLCanvasElement | undefined;
+  let particleCanvas: HTMLCanvasElement | undefined;
   let viewer: SkinViewer | undefined;
   let stageEl: HTMLDivElement | undefined;
 
@@ -324,6 +541,11 @@ const Skins: Component = () => {
     const ro = new ResizeObserver(computeCanvasSize);
     if (stageEl) ro.observe(stageEl);
     onCleanup(() => ro.disconnect());
+
+    if (particleCanvas && stageEl) {
+      const destroyParticles = initStageParticles(particleCanvas, stageEl);
+      onCleanup(destroyParticles);
+    }
   });
 
   // Auto-hide the floating dock while on the Skins screen so the Character Studio
@@ -945,6 +1167,11 @@ const Skins: Component = () => {
 
             {/* 3D Canvas Stage */}
             <div class="skins-stage" ref={stageEl} onWheel={onStageWheel}>
+              <canvas
+                ref={particleCanvas}
+                class="skins-particle-canvas"
+                aria-hidden="true"
+              />
               <canvas
                 ref={viewerCanvas}
                 class="skins-hero-canvas"
