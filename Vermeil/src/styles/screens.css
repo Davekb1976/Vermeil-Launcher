@@ -4134,10 +4134,25 @@
   color: var(--text-muted);
 }
 
+.modpack-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .modpack-total-pill {
   font-size: 11px;
   font-family: var(--font-mono);
   color: var(--text-muted);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+}
+
+.modpack-page-pill {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--accent);
   background: var(--surface-sunken);
   border: 1px solid var(--border);
   padding: 4px 10px;
@@ -4419,55 +4434,7 @@
 .modpack-empty-desc { margin: 0 0 16px; font-size: 12px; color: var(--text-muted); max-width: 420px; line-height: 1.5; }
 .modpack-empty-reset { padding: 6px 14px; font-size: 12px; }
 
-/* Pagination bar */
-.modpack-pagination-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--surface-panel);
-  border: 1px solid var(--border);
-  box-shadow: var(--bevel);
-  margin-top: 8px;
-}
-.modpack-pagination-info { font-size: 12px; color: var(--text-muted); }
-.modpack-pagination-info strong { color: var(--text); }
-.modpack-pagination-nav { display: flex; align-items: center; gap: 6px; }
-.modpack-page-nav-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 10px;
-  font-size: 11.5px;
-  font-weight: 600;
-  background: var(--surface-sunken);
-  border: 1px solid var(--border);
-  color: var(--text);
-  cursor: pointer;
-  transition: transform 0.1s ease, border-color 0.15s ease;
-}
-.modpack-page-nav-btn svg { width: 13px; height: 13px; }
-.modpack-page-nav-btn:hover:not(:disabled) { border-color: var(--accent); transform: translateY(-1px); }
-.modpack-page-nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.modpack-page-numbers { display: flex; align-items: center; gap: 4px; }
-.modpack-page-num {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--surface-sunken);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-}
-.modpack-page-num:hover:not(.active) { color: var(--text); border-color: var(--text-muted); }
-.modpack-page-num.active { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
-.modpack-page-ellipsis { padding: 0 4px; color: var(--text-muted); font-size: 12px; }
 
 /* ============================================================
    Modpack Detail Modal — SloppyKeys 3D Tactile Dialog

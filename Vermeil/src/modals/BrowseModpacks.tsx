@@ -27,8 +27,6 @@ import {
   IconArrowLeft,
   IconSearch,
   IconX,
-  IconChevronLeft,
-  IconChevronRight,
   IconCheck,
 } from "../components/Icons";
 import { formatDownloads, formatVersionRange } from "../lib/format";
@@ -40,19 +38,6 @@ const LOADER_ORDER = ["fabric", "quilt", "neoforge", "forge"];
 function extractLoaders(hit: ModHit): string[] {
   const cats = hit.categories ?? [];
   return LOADER_ORDER.filter((l) => cats.includes(l));
-}
-
-function getVisiblePages(current: number, total: number): (number | "...")[] {
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-  if (current <= 4) {
-    return [1, 2, 3, 4, 5, "...", total];
-  }
-  if (current >= total - 3) {
-    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
-  }
-  return [1, "...", current - 1, current, current + 1, "...", total];
 }
 
 const SORT_OPTIONS = [
@@ -137,10 +122,17 @@ const BrowseModpacks: Component = () => {
     doSearch("", 1);
   };
 
+  let pageTimeout: number | undefined;
+
   const goPage = (p: number) => {
     if (p < 1 || p > totalPages() || p === page()) return;
     setPage(p);
-    doSearch(query(), p);
+    clearTimeout(pageTimeout);
+    pageTimeout = window.setTimeout(() => {
+      doSearch(query(), p);
+      const contentEl = document.querySelector(".content");
+      if (contentEl) contentEl.scrollTo({ top: 0, behavior: "smooth" });
+    }, 150);
   };
 
   const handleFilterChange = () => {
@@ -164,6 +156,7 @@ const BrowseModpacks: Component = () => {
   onCleanup(() => {
     setDockPagination(null);
     clearTimeout(searchTimeout);
+    clearTimeout(pageTimeout);
   });
 
   const getInstalledInstances = (projectId: string) =>
@@ -244,9 +237,16 @@ const BrowseModpacks: Component = () => {
 
         <div class="modpack-header-right">
           <Show when={totalHits() > 0}>
-            <span class="modpack-total-pill">
-              {totalHits().toLocaleString()} {totalHits() === 1 ? "pack" : "packs"} available
-            </span>
+            <div class="modpack-header-badges">
+              <span class="modpack-total-pill">
+                {totalHits().toLocaleString()} {totalHits() === 1 ? "pack" : "packs"} available
+              </span>
+              <Show when={totalPages() > 1}>
+                <span class="modpack-page-pill">
+                  Page {page()} of {totalPages()}
+                </span>
+              </Show>
+            </div>
           </Show>
         </div>
       </div>
@@ -518,60 +518,6 @@ const BrowseModpacks: Component = () => {
           </div>
         </Show>
       </div>
-
-      {/* Pagination Controls Bar */}
-      <Show when={totalHits() > 0}>
-        <div class="modpack-pagination-bar">
-          <div class="modpack-pagination-info">
-            Showing{" "}
-            <strong>
-              {(page() - 1) * PAGE_SIZE + 1}–{Math.min(totalHits(), page() * PAGE_SIZE)}
-            </strong>{" "}
-            of <strong>{totalHits().toLocaleString()}</strong> modpacks
-          </div>
-
-          <div class="modpack-pagination-nav">
-            <button
-              type="button"
-              class="btn modpack-page-nav-btn"
-              disabled={page() <= 1}
-              onClick={() => goPage(page() - 1)}
-              title="Previous page"
-            >
-              <IconChevronLeft /> Prev
-            </button>
-
-            <div class="modpack-page-numbers">
-              <For each={getVisiblePages(page(), totalPages())}>
-                {(item) => {
-                  if (item === "...") {
-                    return <span class="modpack-page-ellipsis">…</span>;
-                  }
-                  return (
-                    <button
-                      type="button"
-                      class={`modpack-page-num ${page() === item ? "active" : ""}`}
-                      onClick={() => goPage(item as number)}
-                    >
-                      {item}
-                    </button>
-                  );
-                }}
-              </For>
-            </div>
-
-            <button
-              type="button"
-              class="btn modpack-page-nav-btn"
-              disabled={page() >= totalPages()}
-              onClick={() => goPage(page() + 1)}
-              title="Next page"
-            >
-              Next <IconChevronRight />
-            </button>
-          </div>
-        </div>
-      </Show>
 
       {/* Expanded Modpack Detail Modal */}
       <ModpackDetailModal
