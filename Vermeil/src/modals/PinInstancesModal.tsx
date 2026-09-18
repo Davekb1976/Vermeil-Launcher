@@ -1,16 +1,13 @@
 import { Component, createSignal, Show, For, onMount } from "solid-js";
 import { instances, showToast, refreshPinnedInstanceIds } from "../App";
 import { getSettings, saveSettings } from "../ipc/commands";
+import { IconCheck, IconSearch } from "../components/Icons";
 
 /**
- * Sidebar pin manager. Lets the user pick up to 5 instances to surface as
- * quick-launch icons in the sidebar, between Skins and the manage button.
+ * Dock pin manager. Lets the user pick up to 6 instances to surface as
+ * quick-launch icons in the floating dock.
  *
- * Mounted at App level. Open via the exported `openPinInstancesModal()`
- * helper — usually triggered from the sidebar's plus / minus button.
- *
- * The picker shows every existing instance. Selected rows are highlighted
- * with the accent tint; clicking past the limit is rejected with a toast.
+ * Mounted at App level. Open via the exported `openPinInstancesModal()` helper.
  */
 export const MAX_PINS = 6;
 
@@ -19,8 +16,7 @@ const [pinned, setPinned] = createSignal<string[]>([]);
 
 /** Open the picker. Loads the current pin list from settings on every open
  *  so the modal always reflects what's actually saved. Filters out any IDs
- *  pointing at instances that no longer exist so the count and UI don't lie
- *  about how many real pins there are. */
+ *  pointing at instances that no longer exist. */
 export function openPinInstancesModal() {
   getSettings()
     .then((s) => {
@@ -44,8 +40,7 @@ export function closePinInstancesModal() {
 
 const PinInstancesModal: Component = () => {
   const [saving, setSaving] = createSignal(false);
-  const [page, setPage] = createSignal(0);
-  const PAGE_SIZE = 5;
+  const [search, setSearch] = createSignal("");
 
   onMount(() => {
     if (open() && pinned().length === 0) {
@@ -54,8 +49,16 @@ const PinInstancesModal: Component = () => {
   });
 
   const allInstances = () => instances() ?? [];
-  const totalPages = () => Math.max(1, Math.ceil(allInstances().length / PAGE_SIZE));
-  const pagedInstances = () => allInstances().slice(page() * PAGE_SIZE, (page() + 1) * PAGE_SIZE);
+  const filteredInstances = () => {
+    const q = search().trim().toLowerCase();
+    const all = allInstances();
+    if (!q) return all;
+    return all.filter((inst) =>
+      inst.name.toLowerCase().includes(q) ||
+      inst.game_version.toLowerCase().includes(q) ||
+      inst.loader.type.toLowerCase().includes(q)
+    );
+  };
 
   const toggle = (id: string) => {
     const current = pinned();
@@ -77,7 +80,7 @@ const PinInstancesModal: Component = () => {
 
   const close = () => {
     setOpen(false);
-    setPage(0);
+    setSearch("");
   };
 
   const save = async () => {
@@ -88,21 +91,11 @@ const PinInstancesModal: Component = () => {
       await saveSettings(s);
       await refreshPinnedInstanceIds();
       setOpen(false);
-      setPage(0);
+      setSearch("");
     } catch (e) {
       showToast({ title: "Couldn't save pins", message: String(e), type: "error" });
     } finally {
       setSaving(false);
-    }
-  };
-
-  const loaderColor = (type: string) => {
-    switch (type) {
-      case "fabric": return "#dbb587";
-      case "forge": return "#3e5494";
-      case "neoforge": return "#f08a22";
-      case "quilt": return "#c796f0";
-      default: return "var(--muted)";
     }
   };
 
@@ -111,83 +104,99 @@ const PinInstancesModal: Component = () => {
       <div class="modal-overlay" onClick={close}>
         <div class="modal pin-instances-modal panel panel--bracketed" onClick={(e) => e.stopPropagation()}>
           <div class="modal-header">
-            <span class="modal-title">Pin instances to sidebar</span>
-            <button class="modal-close" onClick={close}>✕</button>
+            <span class="modal-title">Manage Pinned Instances</span>
           </div>
           <div class="modal-body">
             <div class="pin-instances-help">
-              Pick up to {MAX_PINS} instances to show as quick-launch icons in the sidebar.
-              Click an icon there to jump straight into that instance.
+              Pin up to {MAX_PINS} favorite instances to the floating dock for quick launching from anywhere in the launcher.
             </div>
+
+            <Show when={allInstances().length > 0}>
+              <div class="pin-instances-search-bar">
+                <IconSearch />
+                <input
+                  type="text"
+                  class="pin-instances-search-input"
+                  placeholder="Search instances by name, version, or loader..."
+                  value={search()}
+                  onInput={(e) => setSearch(e.currentTarget.value)}
+                />
+              </div>
+            </Show>
+
             <Show
               when={allInstances().length > 0}
               fallback={
                 <div class="pin-instances-empty">
-                  No instances yet. Create one from the Library tab to pin it.
+                  No instances yet. Create one from the Library to pin it here.
                 </div>
               }
             >
-              <div class="pin-instances-list">
-                <For each={pagedInstances()}>
-                  {(inst) => {
-                    const checked = () => pinned().includes(inst.id);
-                    return (
-                      <div
-                        class={`pin-instance-card ${checked() ? "checked" : ""}`}
-                        onClick={() => toggle(inst.id)}
-                      >
-                        <div class="pin-instance-icon">
-                          <Show when={inst.icon && inst.icon !== "cube"} fallback={
-                            <div class="pin-instance-icon-placeholder">
-                              {inst.name.trim().charAt(0).toUpperCase() || "?"}
-                            </div>
-                          }>
-                            <img src={inst.icon} alt="" />
-                          </Show>
-                        </div>
-                        <div class="pin-instance-info">
-                          <span class="pin-instance-name">{inst.name}</span>
-                          <span class="pin-instance-meta">
-                            <span class="pin-instance-version">{inst.game_version}</span>
-                            <span class="pin-instance-loader" style={`color:${loaderColor(inst.loader.type)}`}>{inst.loader.type}</span>
-                            <span class="pin-instance-ram">{inst.java.memory_max_mb}MB</span>
-                            <Show when={inst.mods.length > 0}>
-                              <span class="pin-instance-mods">{inst.mods.length} mods</span>
+              <Show
+                when={filteredInstances().length > 0}
+                fallback={
+                  <div class="pin-instances-empty">
+                    No instances match "{search()}".
+                  </div>
+                }
+              >
+                <div class="pin-instances-list">
+                  <For each={filteredInstances()}>
+                    {(inst) => {
+                      const checked = () => pinned().includes(inst.id);
+                      return (
+                        <div
+                          class={`pin-instance-card ${checked() ? "checked" : ""}`}
+                          onClick={() => toggle(inst.id)}
+                        >
+                          <div class={`pin-instance-check ${checked() ? "checked" : ""}`}>
+                            <Show when={checked()}>
+                              <IconCheck />
                             </Show>
-                          </span>
+                          </div>
+                          <div class="pin-instance-icon">
+                            <Show when={inst.icon && inst.icon !== "cube"} fallback={
+                              <div class="pin-instance-icon-placeholder">
+                                {inst.name.trim().charAt(0).toUpperCase() || "?"}
+                              </div>
+                            }>
+                              <img src={inst.icon} alt="" draggable={false} />
+                            </Show>
+                          </div>
+                          <div class="pin-instance-info">
+                            <span class="pin-instance-name">{inst.name}</span>
+                            <div class="pin-instance-meta">
+                              <span class="pin-badge pin-badge-version">{inst.game_version}</span>
+                              <span class={`pin-badge pin-badge-loader pin-badge-loader-${inst.loader.type}`}>
+                                {inst.loader.type}
+                              </span>
+                              <span class="pin-badge pin-badge-ram">{inst.java.memory_max_mb} MB</span>
+                              <Show when={inst.mods.length > 0}>
+                                <span class="pin-badge pin-badge-mods">{inst.mods.length} mods</span>
+                              </Show>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  }}
-                </For>
-              </div>
-              <Show when={totalPages() > 1}>
-                <div class="pin-instances-pager">
-                  <button
-                    class="btn btn--neutral"
-                    style="font-size:10px;padding:3px 8px"
-                    disabled={page() === 0}
-                    onClick={() => setPage(page() - 1)}
-                  >‹</button>
-                  <span style="font-size:10px;color:var(--muted)">{page() + 1} / {totalPages()}</span>
-                  <button
-                    class="btn btn--neutral"
-                    style="font-size:10px;padding:3px 8px"
-                    disabled={page() >= totalPages() - 1}
-                    onClick={() => setPage(page() + 1)}
-                  >›</button>
+                      );
+                    }}
+                  </For>
                 </div>
               </Show>
             </Show>
-            <div class="pin-instances-count">
-              {pinned().length} / {MAX_PINS} pinned
-            </div>
           </div>
+
           <div class="modal-footer">
-            <button class="btn btn--ghost" onClick={close}>Cancel</button>
-            <button class="btn btn--primary" onClick={save} disabled={saving()}>
-              {saving() ? "Saving..." : "Save"}
-            </button>
+            <div class="pin-instances-footer">
+              <span class={`pin-instances-counter ${pinned().length >= MAX_PINS ? "full" : ""}`}>
+                {pinned().length} / {MAX_PINS} slots used
+              </span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="btn btn--neutral" onClick={close}>Cancel</button>
+                <button class="btn btn--primary" onClick={save} disabled={saving()}>
+                  {saving() ? "Saving..." : "Save Pins"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

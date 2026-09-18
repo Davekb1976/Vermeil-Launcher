@@ -1631,124 +1631,225 @@
 
 
 /* ============================================================
-   Pin-instances modal — sidebar quick-launch picker.
-   The user picks up to 3 instances to pin as sidebar icons.
-   List is scrollable; selected rows get an accent-tint glow.
+   Pin instances modal — SloppyKeys 3D tactile dialog.
+   Allows picking up to 6 instances to pin to the floating dock.
    ============================================================ */
 .pin-instances-modal {
-  width: 480px;
-  max-width: calc(100vw - 80px);
+  width: 520px;
+  max-width: calc(100vw - 40px);
 }
+
 .pin-instances-help {
-  font-size: 11px;
-  color: var(--muted);
+  font-size: 12px;
+  color: var(--text-muted);
   line-height: 1.5;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
 }
+
+.pin-instances-search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  margin-bottom: var(--space-3);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.pin-instances-search-bar svg {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.pin-instances-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font);
+  font-size: 12px;
+  color: var(--text);
+}
+.pin-instances-search-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
 .pin-instances-empty {
-  font-size: 11px;
-  color: var(--muted);
+  font-size: 12px;
+  color: var(--text-muted);
   text-align: center;
   padding: var(--space-6) var(--space-3);
-  background: var(--bg3);
+  background: var(--surface-sunken);
   border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
+
 .pin-instances-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 6px;
   max-height: 340px;
   overflow-y: auto;
-  padding-right: var(--space-1);
+  padding-right: 4px;
 }
-.pin-instances-list::-webkit-scrollbar { width: 4px; }
-.pin-instances-list::-webkit-scrollbar-thumb { background: var(--accent); border-radius: var(--radius-xs); }
-.pin-instances-list::-webkit-scrollbar-track { background: transparent; }
+.pin-instances-list::-webkit-scrollbar { width: 5px; }
+.pin-instances-list::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 0;
+}
+.pin-instances-list::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+.pin-instances-list::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+
 .pin-instance-card {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 0;
   border: 1px solid var(--border);
+  background: var(--surface-raised);
+  box-shadow: var(--bevel);
   cursor: pointer;
-  transition: border-color 0.12s, background 0.12s;
+  user-select: none;
+  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
 }
-.pin-instance-card:hover { background: var(--bg4); }
+.pin-instance-card:hover {
+  transform: translateY(-1px);
+  border-color: var(--border-hover);
+  box-shadow: var(--bevel-strong), 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+.pin-instance-card:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
 .pin-instance-card.checked {
   border-color: var(--accent);
-  background: var(--accent-tint);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-raised));
+  border-left: 3px solid var(--accent);
 }
+
+/* Square tactile checkbox */
+.pin-instance-check {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-sunken);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #ffffff;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.pin-instance-card:hover .pin-instance-check {
+  border-color: var(--border-hover);
+}
+.pin-instance-check.checked {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: var(--bevel);
+}
+.pin-instance-check svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5;
+}
+
 .pin-instance-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
+  width: 36px;
+  height: 36px;
+  border-radius: 0;
+  border: 1px solid var(--border);
+  box-shadow: var(--bevel);
   overflow: hidden;
   flex-shrink: 0;
-  background: var(--bg4);
+  background: var(--surface-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .pin-instance-icon img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  -webkit-user-drag: none;
 }
 .pin-instance-icon-placeholder {
   width: 100%;
   height: 100%;
-  background: var(--bg4);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.85);
-  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  font-family: var(--font);
 }
+
 .pin-instance-info {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 4px;
 }
 .pin-instance-name {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 .pin-instance-meta {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+/* Meta badges */
+.pin-badge {
   font-size: 10px;
-  color: var(--muted);
+  font-weight: 600;
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
 }
-.pin-instance-loader {
-  text-transform: capitalize;
-  font-weight: 500;
-}
-.pin-instance-ram {
-  opacity: 0.8;
-}
-.pin-instance-mods {
-  opacity: 0.8;
-}
-.pin-instances-pager {
+.pin-badge-loader-vanilla  { border-color: rgba(16, 185, 129, 0.4); color: #10b981; }
+.pin-badge-loader-fabric   { border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; }
+.pin-badge-loader-quilt    { border-color: rgba(168, 85, 247, 0.4); color: #a855f7; }
+.pin-badge-loader-forge    { border-color: rgba(249, 115, 22, 0.4); color: #f97316; }
+.pin-badge-loader-neoforge { border-color: rgba(245, 158, 11, 0.4); color: #f59e0b; }
+
+/* Modal footer layout with slot badge */
+.pin-instances-footer {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
+  justify-content: space-between;
+  width: 100%;
 }
-.pin-instances-count {
-  font-size: 10px;
-  color: var(--muted);
-  text-align: right;
-  margin-top: var(--space-3);
+.pin-instances-counter {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 3px 8px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  letter-spacing: 0.02em;
+}
+.pin-instances-counter.full {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 /* ============================================================
