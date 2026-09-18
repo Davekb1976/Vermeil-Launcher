@@ -255,31 +255,33 @@ const Library: Component = () => {
                     {inst.mods.length} {inst.mods.length === 1 ? "mod" : "mods"} · {timeAgo(inst.last_played)}
                   </div>
                   <div class="inst-card-badges">
-                    <span class="badge badge--version">{inst.game_version}</span>
-                    <Show when={inst.source_project_id && inst.source_version}>
-                      <span class="badge badge--vnum" title={`Modpack version ${inst.source_version}`}>
-                        {inst.source_version}
+                    <div class="inst-card-badges-track">
+                      <span class="badge badge--version">{inst.game_version}</span>
+                      <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>
+                        {loaderLabel(inst.loader.type)}
                       </span>
-                    </Show>
-                    <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>
-                      {loaderLabel(inst.loader.type)}
-                    </span>
-                    <span class="badge badge--ram">{inst.java.memory_max_mb} MB</span>
-                    <Show when={(inst.source_platforms || []).includes("modrinth")}>
-                      <span class="badge badge--source badge--modrinth" title="Available on Modrinth">
-                        <IconModrinth />
-                      </span>
-                    </Show>
-                    <Show when={(inst.source_platforms || []).includes("curseforge")}>
-                      <span class="badge badge--source badge--curseforge" title="Available on CurseForge">
-                        <IconCurseForge />
-                      </span>
-                    </Show>
-                    <Show when={inst.ingame_cape_supported}>
-                      <span class="badge badge--companion" title="Vermeil companion mod supported">
-                        <img src="/logo.png" alt="Vermeil" draggable={false} />
-                      </span>
-                    </Show>
+                      <Show when={inst.source_project_id && inst.source_version}>
+                        <span class="badge badge--vnum" title={`Modpack version ${inst.source_version}`}>
+                          {inst.source_version}
+                        </span>
+                      </Show>
+                      <span class="badge badge--ram">{inst.java.memory_max_mb} MB</span>
+                      <Show when={(inst.source_platforms || []).includes("modrinth")}>
+                        <span class="badge badge--source badge--modrinth" title="Available on Modrinth">
+                          <IconModrinth />
+                        </span>
+                      </Show>
+                      <Show when={(inst.source_platforms || []).includes("curseforge")}>
+                        <span class="badge badge--source badge--curseforge" title="Available on CurseForge">
+                          <IconCurseForge />
+                        </span>
+                      </Show>
+                      <Show when={inst.ingame_cape_supported}>
+                        <span class="badge badge--companion" title="Vermeil companion mod supported">
+                          <img src="/logo.png" alt="Vermeil" draggable={false} />
+                        </span>
+                      </Show>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -157,16 +157,77 @@
 }
 
 .inst-card-badges {
+  position: relative;
+  container-type: inline-size;
+  container-name: card-badges;
   display: flex;
   align-items: center;
-  gap: 4px;
   margin-top: 2px;
-  flex-wrap: nowrap;
-  overflow: hidden;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  /* Right-edge soft fade mask at rest indicating more content */
+  mask-image: linear-gradient(to right, black calc(100% - 16px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 16px), transparent 100%);
+  transition: mask-image 0.25s ease, -webkit-mask-image 0.25s ease;
 }
 
-.inst-card-badges > * {
+.inst-card-badges::-webkit-scrollbar {
+  display: none;
+}
+
+.inst-card-badges-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
   flex-shrink: 0;
+  transition: transform 0.35s cubic-bezier(0.2, 0, 0, 1);
+  will-change: transform;
+}
+
+.inst-card-badges > *,
+.inst-card-badges-track > * {
+  flex-shrink: 0;
+}
+
+.inst-card-badges .badge--vnum {
+  max-width: 110px;
+}
+
+/* Hover-triggered ping-pong marquee animation:
+   min(0px, calc(100cqw - 100% - 2px)) translates by the exact overflow distance.
+   If badges fit in the card, this evaluates to 0px and never shifts. */
+@keyframes inst-badge-marquee {
+  0%, 16% {
+    transform: translateX(0);
+  }
+  48%, 76% {
+    transform: translateX(min(0px, calc(100cqw - 100% - 2px)));
+  }
+  92%, 100% {
+    transform: translateX(0);
+  }
+}
+
+.card--inst:hover .inst-card-badges,
+.card.card--inst:hover .inst-card-badges {
+  /* Softly feather both edges on hover as items slide in and out */
+  mask-image: linear-gradient(to right, transparent 0, black 12px, black calc(100% - 14px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 12px, black calc(100% - 14px), transparent 100%);
+}
+
+.card--inst:hover .inst-card-badges-track,
+.card.card--inst:hover .inst-card-badges-track {
+  animation: inst-badge-marquee 5.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card--inst:hover .inst-card-badges-track,
+  .card.card--inst:hover .inst-card-badges-track {
+    animation: none !important;
+  }
 }
 
 /* Arrow indicator for navigation-oriented instance cards (e.g. Settings instance list) */
