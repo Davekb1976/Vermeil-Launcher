@@ -1146,7 +1146,7 @@ const Skins: Component = () => {
                                 <IconEdit />
                               </button>
                               <button
-                                class="skins-lib-btn skins-lib-btn-delete tip-right"
+                                class="skins-lib-btn-delete tip-right"
                                 onClick={() => handleRemoveCustomCape(cape.id)}
                                 disabled={busy() !== null}
                                 data-tip="Delete cape"
