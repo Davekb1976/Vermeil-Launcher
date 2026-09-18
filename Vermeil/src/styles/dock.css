@@ -36,12 +36,6 @@
   to { opacity: 1; transform: translate(-50%, 0); }
 }
 
-/* In pin mode, elevate the dock above standard modal backdrops (z-index 50)
-   so the pin shelf stays visible and accessible when configuring pins in the modal. */
-.dock-wrap.pin-mode {
-  z-index: 60;
-}
-
 /* Auto-hidden state (e.g. on the Logs tab). Slides fully off the bottom
    edge. The dock reveals itself again when the cursor nears the bottom of
    the window (handled in FloatingDock via a mousemove listener). */
