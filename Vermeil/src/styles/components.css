@@ -3578,3 +3578,319 @@ select.field-input[size] { appearance: none; }
   height: 12px;
 }
 
+/* ── Vanilla Unsupported State & Category Tag ── */
+.category-unsupported-tag {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 0;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+  vertical-align: middle;
+  line-height: 1.2;
+}
+
+.inst-meta-vanilla-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.vanilla-unsupported-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: #110f17;
+  border: 1px solid #231f30;
+  border-radius: 0;
+  padding: 44px 32px 36px;
+  max-width: 660px;
+  margin: 20px auto 40px;
+  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.45), 0 8px 32px rgba(0, 0, 0, 0.5);
+  animation: vanilla-card-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes vanilla-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.vanilla-unsupported-art-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.vanilla-unsupported-glow {
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.22) 0%, rgba(245, 158, 11, 0.08) 45%, transparent 70%);
+  pointer-events: none;
+  animation: vanilla-glow-pulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes vanilla-glow-pulse {
+  from {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+.vanilla-unsupported-art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: vanilla-float 4s ease-in-out infinite;
+}
+
+@keyframes vanilla-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.vanilla-cube-graphic {
+  width: 68px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #221e30, #14121d);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.55), 0 6px 20px rgba(0, 0, 0, 0.45);
+  color: #c4b5fd;
+}
+
+.vanilla-cube-graphic svg {
+  width: 36px;
+  height: 36px;
+}
+
+.vanilla-badge-slash {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #dc2626;
+  border: 2px solid #110f17;
+  border-radius: 0;
+  box-shadow: 0 3px 10px rgba(220, 38, 38, 0.55);
+  color: #ffffff;
+  animation: vanilla-badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes vanilla-badge-pop {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.vanilla-badge-slash svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.4;
+}
+
+.vanilla-unsupported-header {
+  margin-bottom: 24px;
+}
+
+.vanilla-unsupported-pill {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 3px 9px;
+  border-radius: 0;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.32);
+  color: #f87171;
+  margin-bottom: 10px;
+}
+
+.vanilla-unsupported-title {
+  font-size: 19px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 10px;
+  letter-spacing: -0.2px;
+}
+
+.vanilla-unsupported-desc {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-muted);
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.vanilla-unsupported-desc strong {
+  color: #ffffff;
+}
+
+.vanilla-unsupported-guide {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.vanilla-guide-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: #0d0c13;
+  border: 1px solid #1f1b2c;
+  border-left: 3px solid #36304b;
+  border-radius: 0;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+}
+
+.vanilla-guide-card:hover {
+  background: #14121d;
+  border-left-color: var(--accent);
+}
+
+.vanilla-guide-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: #161421;
+  border: 1px solid #282438;
+  color: #c4b5fd;
+  flex-shrink: 0;
+}
+
+.vanilla-guide-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.vanilla-guide-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.vanilla-guide-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 2px;
+}
+
+.vanilla-guide-text {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.vanilla-guide-btn {
+  flex-shrink: 0;
+  border-radius: 0 !important;
+  font-size: 12px !important;
+  padding: 6px 14px !important;
+  font-weight: 600 !important;
+}
+
+/* ── Browse Status Loading / Empty Pane ── */
+.browse-status-pane {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 20px;
+  min-height: 260px;
+}
+
+.browse-loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(168, 85, 247, 0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: browse-spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes browse-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.browse-status-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #13111c;
+  border: 1px solid #231f30;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.browse-status-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.browse-status-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 6px;
+}
+
+.browse-status-text {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+

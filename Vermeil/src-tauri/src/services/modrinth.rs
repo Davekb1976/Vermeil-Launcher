@@ -94,10 +94,30 @@ pub async fn search_mods(
     sort: &str,
     project_type: &str,
 ) -> Result<ModrinthSearchResult, String> {
+    if loader == "vanilla" && project_type == "mod" {
+        return Ok(ModrinthSearchResult {
+            hits: vec![],
+            offset,
+            limit,
+            total_hits: 0,
+        });
+    }
+
     // When project_type is "all", we don't filter by project_type or loader so
     // that mods, resource packs, shaders, and datapacks are all returned.
+    // However, on vanilla instances, mods cannot run, so we limit "all" to
+    // resource packs and datapacks.
     let facets = if project_type == "all" || project_type.is_empty() {
-        if game_version.is_empty() {
+        if loader == "vanilla" {
+            if game_version.is_empty() {
+                "[[\"project_type:resourcepack\", \"project_type:datapack\"]]".to_string()
+            } else {
+                format!(
+                    "[[\"project_type:resourcepack\", \"project_type:datapack\"], [\"versions:{}\"]]",
+                    game_version
+                )
+            }
+        } else if game_version.is_empty() {
             "[]".to_string()
         } else {
             format!("[[\"versions:{}\"]]", game_version)

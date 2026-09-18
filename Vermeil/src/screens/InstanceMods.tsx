@@ -9,7 +9,7 @@ import Dropdown from "../components/Dropdown";
 import ModDetailModal from "../modals/ModDetailModal";
 import { formatDownloads, formatSize, formatVersionRange } from "../lib/format";
 import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled } from "../ipc/commands";
-import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconFolderOpen, IconChevronDown } from "../components/Icons";
+import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconFolderOpen, IconChevronDown, IconImage } from "../components/Icons";
 
 const SORT_OPTIONS = [
   { value: "relevance", label: "Relevance" },
@@ -249,7 +249,17 @@ const InstanceMods: Component = () => {
   const [browseVersion, setBrowseVersion] = createSignal<string>("");
   const [searchQuery, setSearchQuery] = createSignal("");
   const [searchResults, setSearchResults] = createSignal<ModHit[]>([]);
-  const [, setSearching] = createSignal(false);
+  const [searching, setSearching] = createSignal(false);
+  const displayBrowseResults = createMemo(() => {
+    const list = searchResults();
+    if (instance()?.loader.type === "vanilla") {
+      return list.filter((m) => {
+        const cat = detectCategory(m);
+        return cat !== "mod" && m.project_type !== "mod";
+      });
+    }
+    return list;
+  });
   const [totalHits, setTotalHits] = createSignal(0);
   const [currentPage, setCurrentPage] = createSignal(1);
   const [sortBy, setSortBy] = createSignal("relevance");
@@ -699,6 +709,14 @@ const InstanceMods: Component = () => {
   const doSearch = async (page?: number) => {
     const inst = instance();
     if (!inst) return;
+
+    if (inst.loader.type === "vanilla" && browseFilter() === "mod") {
+      setSearchResults([]);
+      setTotalHits(0);
+      setSearching(false);
+      return;
+    }
+
     const p = page || currentPage();
     const offset = (p - 1) * browsePageSize.size();
     const token = ++searchToken;
@@ -864,7 +882,11 @@ const InstanceMods: Component = () => {
       return;
     }
     if (contentTab() === "browse" && totalPages() > 1) {
-      setDockPagination({ current: currentPage(), total: totalPages(), onPageChange: goToPage });
+      if (instance()?.loader.type === "vanilla" && browseFilter() === "mod") {
+        setDockPagination(null);
+      } else {
+        setDockPagination({ current: currentPage(), total: totalPages(), onPageChange: goToPage });
+      }
     } else if (contentTab() === "installed" && installedTotalPages() > 1) {
       setDockPagination({ current: installedPage(), total: installedTotalPages(), onPageChange: goToInstalledPage });
     } else {
@@ -1705,7 +1727,12 @@ const InstanceMods: Component = () => {
           <div class="inst-category-nav">
             <div class="inst-category-links">
               <button class={`inst-category-item ${browseFilter() === "all" ? "active" : ""}`} onClick={() => setBrowseFilter("all")}>All</button>
-              <button class={`inst-category-item ${browseFilter() === "mod" ? "active" : ""}`} onClick={() => setBrowseFilter("mod")}>Mods</button>
+              <button class={`inst-category-item ${browseFilter() === "mod" ? "active" : ""}`} onClick={() => setBrowseFilter("mod")}>
+                Mods
+                <Show when={instance()?.loader.type === "vanilla"}>
+                  <span class="category-unsupported-tag">unsupported</span>
+                </Show>
+              </button>
               <button class={`inst-category-item ${browseFilter() === "resourcepack" ? "active" : ""}`} onClick={() => setBrowseFilter("resourcepack")}>Resources</button>
               <button class={`inst-category-item ${browseFilter() === "shader" ? "active" : ""}`} onClick={() => setBrowseFilter("shader")}>Shaders</button>
               <button class={`inst-category-item ${browseFilter() === "datapack" ? "active" : ""}`} onClick={() => setBrowseFilter("datapack")}>Datapacks</button>
@@ -1938,24 +1965,113 @@ const InstanceMods: Component = () => {
               {/* Row 2: Status Metadata on left · Sort Dropdown on right */}
               <div class="inst-meta-row">
                 <div class="inst-meta-left">
-                  <Show when={browseFilter() === "resourcepack" || browseFilter() === "shader"} fallback={
-                    <>Showing results for <strong class="inst-meta-highlight">{instance()?.loader.type}</strong> <span class="inst-meta-sep">·</span> <strong class="inst-meta-highlight">{instance()?.game_version}</strong></>
+                  <Show when={instance()?.loader.type === "vanilla" && browseFilter() === "mod"} fallback={
+                    <>
+                      <Show when={browseFilter() === "resourcepack" || browseFilter() === "shader"} fallback={
+                        <>Showing results for <strong class="inst-meta-highlight">{instance()?.loader.type}</strong> <span class="inst-meta-sep">·</span> <strong class="inst-meta-highlight">{instance()?.game_version}</strong></>
+                      }>
+                        <>Showing results for <strong class="inst-meta-highlight">{instance()?.game_version}</strong> <span class="inst-meta-sep">·</span> Version override: <input class="field-control inst-version-override" placeholder="any" value={browseVersion()} onInput={(e) => { setBrowseVersion(e.currentTarget.value); setCurrentPage(1); clearTimeout(searchTimeout); searchTimeout = window.setTimeout(() => doSearch(1), 400); }} /> <span class="inst-meta-sub">(any if empty)</span></>
+                      </Show>
+                      <Show when={totalHits() > 0}>
+                        <span class="inst-meta-sep">—</span>
+                        <span class="inst-meta-count">{totalHits().toLocaleString()} results</span>
+                      </Show>
+                    </>
                   }>
-                    <>Showing results for <strong class="inst-meta-highlight">{instance()?.game_version}</strong> <span class="inst-meta-sep">·</span> Version override: <input class="field-control inst-version-override" placeholder="any" value={browseVersion()} onInput={(e) => { setBrowseVersion(e.currentTarget.value); setCurrentPage(1); clearTimeout(searchTimeout); searchTimeout = window.setTimeout(() => doSearch(1), 400); }} /> <span class="inst-meta-sub">(any if empty)</span></>
-                  </Show>
-                  <Show when={totalHits() > 0}>
-                    <span class="inst-meta-sep">—</span>
-                    <span class="inst-meta-count">{totalHits().toLocaleString()} results</span>
+                    <span class="inst-meta-vanilla-badge">Vanilla Instance</span>
+                    <span class="inst-meta-sep">·</span>
+                    <span class="inst-meta-sub">Mods are not supported on vanilla</span>
                   </Show>
                 </div>
-                <div class="inst-meta-sort-wrap">
-                  <Dropdown prefix="Sort: " value={sortBy()} options={SORT_OPTIONS} onChange={handleSortChange} />
-                </div>
+                <Show when={!(instance()?.loader.type === "vanilla" && browseFilter() === "mod")}>
+                  <div class="inst-meta-sort-wrap">
+                    <Dropdown prefix="Sort: " value={sortBy()} options={SORT_OPTIONS} onChange={handleSortChange} />
+                  </div>
+                </Show>
               </div>
             </div>
-            <div class="browse-results">
-              <div class="inst-card-grid" ref={browsePageSize.setEl}>
-              <For each={searchResults()}>
+            <div class="browse-results" ref={browsePageSize.setEl}>
+              <Show when={instance()?.loader.type === "vanilla" && browseFilter() === "mod"}>
+                <div class="vanilla-unsupported-panel">
+                  <div class="vanilla-unsupported-art-wrap">
+                    <div class="vanilla-unsupported-glow" />
+                    <div class="vanilla-unsupported-art">
+                      <div class="vanilla-cube-graphic">
+                        <IconCube />
+                      </div>
+                      <div class="vanilla-badge-slash" data-tip="Mods unsupported on Vanilla">
+                        <IconX />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="vanilla-unsupported-header">
+                    <span class="vanilla-unsupported-pill">Vanilla Loader Active</span>
+                    <h3 class="vanilla-unsupported-title">Mods Are Unsupported on Vanilla</h3>
+                    <p class="vanilla-unsupported-desc">
+                      This instance is running vanilla Minecraft. The official game engine cannot load or run code mods (.jar) without a modding loader such as <strong>Fabric</strong>, <strong>NeoForge</strong>, <strong>Forge</strong>, or <strong>Quilt</strong>.
+                    </p>
+                  </div>
+
+                  <div class="vanilla-unsupported-guide">
+                    <div class="vanilla-guide-card">
+                      <div class="vanilla-guide-icon"><IconSettings /></div>
+                      <div class="vanilla-guide-info">
+                        <div class="vanilla-guide-title">Want to use mods?</div>
+                        <div class="vanilla-guide-text">Change this instance's loader to Fabric, NeoForge, or Forge in settings.</div>
+                      </div>
+                      <button class="btn btn--primary btn--sm vanilla-guide-btn" onClick={() => setMainTab("settings")}>
+                        Change Loader
+                      </button>
+                    </div>
+
+                    <div class="vanilla-guide-card">
+                      <div class="vanilla-guide-icon"><IconImage /></div>
+                      <div class="vanilla-guide-info">
+                        <div class="vanilla-guide-title">Looking for visuals?</div>
+                        <div class="vanilla-guide-text">Vanilla supports custom textures, models, and audio packs without mods.</div>
+                      </div>
+                      <button class="btn btn--outline btn--sm vanilla-guide-btn" onClick={() => setBrowseFilter("resourcepack")}>
+                        Browse Resources
+                      </button>
+                    </div>
+
+                    <div class="vanilla-guide-card">
+                      <div class="vanilla-guide-icon"><IconWand /></div>
+                      <div class="vanilla-guide-info">
+                        <div class="vanilla-guide-title">Custom mechanics?</div>
+                        <div class="vanilla-guide-text">Vanilla supports Datapacks for custom loot tables, recipes, and advancements.</div>
+                      </div>
+                      <button class="btn btn--outline btn--sm vanilla-guide-btn" onClick={() => setBrowseFilter("datapack")}>
+                        Browse Datapacks
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </Show>
+
+              <Show when={!(instance()?.loader.type === "vanilla" && browseFilter() === "mod") && searching()}>
+                <div class="browse-status-pane">
+                  <div class="browse-loading-spinner" />
+                  <div class="browse-status-text">Searching {modSource() === "curseforge" ? "CurseForge" : "Modrinth"}...</div>
+                </div>
+              </Show>
+
+              <Show when={!(instance()?.loader.type === "vanilla" && browseFilter() === "mod") && !searching() && displayBrowseResults().length === 0}>
+                <div class="browse-status-pane">
+                  <div class="browse-status-icon"><IconSearch /></div>
+                  <div class="browse-status-title">No results found</div>
+                  <div class="browse-status-text">
+                    {searchQuery()
+                      ? `No items matching "${searchQuery()}" were found.`
+                      : "No compatible content found for this filter."}
+                  </div>
+                </div>
+              </Show>
+
+              <Show when={!(instance()?.loader.type === "vanilla" && browseFilter() === "mod") && !searching() && displayBrowseResults().length > 0}>
+                <div class="inst-card-grid">
+                <For each={displayBrowseResults()}>
                 {(mod) => (
                   <div class={`card card--mod ${selectMode() && selectedItems().has(mod.project_id) ? "mod-item-selected" : ""}`}
                     onClick={() => handleCardClick(mod)}
@@ -2030,6 +2146,7 @@ const InstanceMods: Component = () => {
                 )}
               </For>
               </div>
+              </Show>
             </div>
             {/* Detail overlay. Outside the grid, so opening it can't reflow the
                 results behind it. */}

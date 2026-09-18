@@ -202,6 +202,15 @@ pub async fn search(
         return Err("CurseForge API key not configured. Add it in Settings.".to_string());
     }
 
+    if loader == "vanilla" && project_type == "mod" {
+        return Ok(CfSearchResult {
+            hits: vec![],
+            total_hits: 0,
+            offset,
+            limit,
+        });
+    }
+
     let sort_field = sort_field_id(sort);
 
     let mut url = if project_type == "all" || project_type.is_empty() {
@@ -247,7 +256,14 @@ pub async fn search(
         .await
         .map_err(|e| format!("CurseForge parse error: {}", e))?;
 
-    let hits: Vec<CfHit> = cf.data.into_iter().map(|m| {
+    let hits: Vec<CfHit> = cf.data.into_iter().filter(|m| {
+        if loader == "vanilla" && (project_type == "all" || project_type == "mod" || project_type.is_empty()) {
+            // Class 6 is Minecraft Mods
+            m.class_id != Some(6)
+        } else {
+            true
+        }
+    }).map(|m| {
         // Collect unique game versions from the latest files index
         let mut versions: Vec<String> = m.latest_files_indexes
             .iter()
