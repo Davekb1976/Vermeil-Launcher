@@ -200,3 +200,80 @@ fn copy_dir_all(
     }
     Ok(())
 }
+
+/// Change an instance's mod loader and/or loader version.
+///
+/// If `disable_mods` is true, all active entries in `instance.mods` where `category == "mod"`
+/// are renamed from `*.jar` to `*.jar.disabled` on disk and marked `enabled = false` in `instance.json`.
+/// Non-mod content (resourcepacks, shaders, datapacks) is kept intact since those formats
+/// are loader-independent. Any loose unrecorded `.jar` files in `.minecraft/mods` are also
+/// renamed to `.jar.disabled` so incompatible jars cannot crash the newly selected loader.
+pub async fn change_loader(
+    id: &str,
+    loader_type: LoaderType,
+    loader_version: Option<String>,
+    disable_mods: bool,
+) -> Result<Instance, Box<dyn std::error::Error + Send + Sync>> {
+    let instance_dir = paths::instances_dir().join(id);
+    let meta_path = instance_dir.join("instance.json");
+
+    if !meta_path.exists() {
+        return Err(format!("Instance '{}' not found", id).into());
+    }
+
+    let content = fs::read_to_string(&meta_path)?;
+    let mut instance: Instance = serde_json::from_str(&content)?;
+
+    if disable_mods {
+        let mods_dir = instance_dir.join(".minecraft").join("mods");
+        if mods_dir.exists() {
+            // 1. Disable tracked mod entries
+            for entry in &mut instance.mods {
+                if entry.category == "mod" && entry.enabled {
+                    let current_path = mods_dir.join(&entry.filename);
+                    let new_name = if entry.filename.ends_with(".disabled") {
+                        entry.filename.clone()
+                    } else {
+                        format!("{}.disabled", entry.filename)
+                    };
+                    let new_path = mods_dir.join(&new_name);
+                    if current_path.exists() && current_path != new_path {
+                        let _ = fs::rename(&current_path, &new_path);
+                    }
+                    entry.filename = new_name;
+                    entry.enabled = false;
+                }
+            }
+
+            // 2. Also check for any loose *.jar files in mods_dir that aren't yet disabled
+            if let Ok(dir_entries) = fs::read_dir(&mods_dir) {
+                for dir_entry in dir_entries.flatten() {
+                    let p = dir_entry.path();
+                    if p.is_file() {
+                        if let Some(ext) = p.extension() {
+                            if ext == "jar" {
+                                let file_name_lossy = p.file_name().unwrap_or_default().to_string_lossy();
+                                // Ignore Vermeil companion mod jar
+                                if !file_name_lossy.starts_with("vermeil-") {
+                                    let new_path = mods_dir.join(format!("{}.disabled", file_name_lossy));
+                                    let _ = fs::rename(&p, &new_path);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Update loader config
+    instance.loader.loader_type = loader_type;
+    instance.loader.version = loader_version;
+
+    // Atomic write
+    let json = serde_json::to_string_pretty(&instance)?;
+    paths::atomic_write(&meta_path, json.as_bytes())?;
+
+    Ok(instance)
+}
+

@@ -3,10 +3,11 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { setActiveScreen, instances, activeInstanceId, setActiveInstanceId, refetchInstances, refreshPinnedInstanceIds, initialInstanceTab, gameRunning, trackDownload, completeDownload, failDownload, startBulkBatch, endBulkBatch, showToast, gameLogsFor, setDockHidden, setDockPagination, logsPoppedOut } from "../App";
 import { reportDependencyIssues, DependencyIssue } from "../components/DependencyIssuesModal";
 import { contentVersion } from "../lib/contentVersion";
-import { loaderLabel } from "../lib/loader";
+import { loaderLabel, loaderBadgeClass } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
 import Dropdown from "../components/Dropdown";
 import ModDetailModal from "../modals/ModDetailModal";
+import ChangeLoaderModal, { openChangeLoaderModal } from "../modals/ChangeLoaderModal";
 import { formatDownloads, formatSize, formatVersionRange } from "../lib/format";
 import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled } from "../ipc/commands";
 import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconFolderOpen, IconChevronDown, IconImage } from "../components/Icons";
@@ -1340,7 +1341,35 @@ const InstanceMods: Component = () => {
                 </div>
               </div>
 
-              {/* Row 3: Installation Details & Folder */}
+              {/* Row 3: Mod Loader */}
+              <div class="setting-row full">
+                <div class="setting-info">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span class="setting-name">Mod loader</span>
+                    <span class={`badge badge--loader ${loaderBadgeClass(instance()?.loader?.type || "")}`}>
+                      {loaderLabel(instance()?.loader?.type || "")} {instance()?.loader?.version || ""}
+                    </span>
+                  </div>
+                  <span class="setting-desc">
+                    Runtime modding environment (Vanilla, Fabric, NeoForge, Forge, Quilt). You can switch loaders or update the loader version.
+                  </span>
+                </div>
+                <div class="setting-control">
+                  <button
+                    class="btn btn--sm"
+                    disabled={gameRunning()}
+                    onClick={() => {
+                      const inst = instance();
+                      if (inst) openChangeLoaderModal(inst.id);
+                    }}
+                    data-tip={gameRunning() ? "Cannot change loader while game is running" : "Change mod loader or version"}
+                  >
+                    <IconWand /> Change loader
+                  </button>
+                </div>
+              </div>
+
+              {/* Row 4: Installation Details & Folder */}
               <div class="setting-row full">
                 <div class="setting-info">
                   <span class="setting-name">Installation files</span>
@@ -2407,6 +2436,8 @@ const InstanceMods: Component = () => {
       </Show>
 
       </Show>
+
+      <ChangeLoaderModal />
     </div>
   );
 };

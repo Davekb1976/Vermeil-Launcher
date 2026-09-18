@@ -180,6 +180,28 @@ pub async fn rename_instance(id: String, new_name: String) -> Result<(), String>
     Ok(())
 }
 
+#[tauri::command]
+pub async fn change_instance_loader(
+    id: String,
+    loader_type: String,
+    loader_version: Option<String>,
+    disable_mods: bool,
+) -> Result<crate::models::instance::Instance, String> {
+    let parsed_loader = match loader_type.to_lowercase().as_str() {
+        "fabric" => crate::models::instance::LoaderType::Fabric,
+        "forge" => crate::models::instance::LoaderType::Forge,
+        "neoforge" => crate::models::instance::LoaderType::Neoforge,
+        "quilt" => crate::models::instance::LoaderType::Quilt,
+        "vanilla" => crate::models::instance::LoaderType::Vanilla,
+        other => return Err(format!("Unknown loader type '{}'", other)),
+    };
+
+    instance_service::change_loader(&id, parsed_loader, loader_version, disable_mods)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+
 /// Set a user-supplied image as the instance's tile icon.
 ///
 /// `source_path` is an absolute path to a local image file picked by the

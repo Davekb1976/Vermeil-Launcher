@@ -210,6 +210,7 @@ pub fn run() {
             instances::update_instance_memory,
             instances::update_instance_options,
             instances::rename_instance,
+            instances::change_instance_loader,
             instances::set_instance_icon,
             instances::clear_instance_icon,
             instances::clone_instance,

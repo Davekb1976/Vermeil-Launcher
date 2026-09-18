@@ -209,6 +209,12 @@ export const updateInstanceMemory = (id: string, memoryMaxMb: number) => invoke<
 export const updateInstanceOptions = (id: string, opts: { memoryMaxMb?: number; width?: number; height?: number; extraArgs?: string[]; adaptiveOverride?: boolean }) =>
   invoke<void>("update_instance_options", { id, ...opts });
 export const renameInstance = (id: string, newName: string) => invoke<void>("rename_instance", { id, newName });
+export const changeInstanceLoader = (
+  id: string,
+  loaderType: string,
+  loaderVersion: string | null,
+  disableMods: boolean,
+) => invoke<Instance>("change_instance_loader", { id, loaderType, loaderVersion, disableMods });
 export const setInstanceIcon = (id: string, sourcePath: string) =>
   invoke<string>("set_instance_icon", { id, sourcePath });
 export const clearInstanceIcon = (id: string) => invoke<void>("clear_instance_icon", { id });
