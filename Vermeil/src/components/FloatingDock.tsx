@@ -380,6 +380,7 @@ const FloatingDock: Component = () => {
                           type="button"
                           class={`dock-pin-tile loader-${inst.loader.type === "neoforge" ? "neoforge" : inst.loader.type}`}
                           style={`animation-delay:${i() * 30}ms`}
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => openPinned(inst.id)}
                           data-tooltip={tooltip}
                         >
@@ -407,6 +408,7 @@ const FloatingDock: Component = () => {
                 <button
                   type="button"
                   class="dock-pin-tile dock-pin-tile-manage"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                     setPinSelectorOpen(false);
                     openPinInstancesModal();
@@ -422,6 +424,7 @@ const FloatingDock: Component = () => {
                 <button
                   type="button"
                   class="dock-pin-tile dock-pin-tile-close"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setPinSelectorOpen(false)}
                   data-tooltip="Close pins (Esc)"
                 >

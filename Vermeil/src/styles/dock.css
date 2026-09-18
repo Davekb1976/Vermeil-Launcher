@@ -341,10 +341,10 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .dock-pin-tile:hover {
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.04);
 }
 .dock-pin-tile:active {
-  transform: translateY(1px);
+  transform: translateY(1px) scale(0.97);
 }
 
 .dock-pin-tile-img {
@@ -365,16 +365,16 @@
   user-select: none;
   transition:
     border-color 0.15s ease,
-    box-shadow 0.15s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.12s cubic-bezier(0.2, 0, 0, 1),
     background 0.15s ease,
     color 0.15s ease;
 }
 .dock-pin-tile:hover .dock-pin-tile-img {
   border-color: var(--border-hover);
-  box-shadow: var(--bevel-strong), 0 4px 12px rgba(0, 0, 0, 0.45);
+  box-shadow: none;
 }
 .dock-pin-tile:active .dock-pin-tile-img {
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: none;
 }
 .dock-pin-tile-img img {
   width: 100%;
@@ -432,8 +432,18 @@
 .dock-pin-tile-manage .dock-pin-tile-img svg { width: 18px; height: 18px; }
 .dock-pin-tile-manage:hover .dock-pin-tile-img {
   border-color: var(--accent);
+  color: #ffffff;
+  background: color-mix(in srgb, var(--accent) 18%, var(--surface-raised));
+  box-shadow: none;
+}
+.dock-pin-tile-manage:active .dock-pin-tile-img {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: var(--accent-contrast);
+  box-shadow: none;
+}
+.dock-pin-tile-manage:hover .dock-pin-tile-name {
   color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface-raised));
 }
 
 /* Close action tile */
@@ -445,8 +455,18 @@
 .dock-pin-tile-close .dock-pin-tile-img svg { width: 17px; height: 17px; }
 .dock-pin-tile-close:hover .dock-pin-tile-img {
   border-color: #ef4444;
+  color: #ffffff;
+  background: rgba(239, 68, 68, 0.18);
+  box-shadow: none;
+}
+.dock-pin-tile-close:active .dock-pin-tile-img {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #ffffff;
+  box-shadow: none;
+}
+.dock-pin-tile-close:hover .dock-pin-tile-name {
   color: #ef4444;
-  background: rgba(239, 68, 68, 0.12);
 }
 
 /* ============================================================
