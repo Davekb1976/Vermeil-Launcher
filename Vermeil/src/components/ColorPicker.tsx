@@ -93,6 +93,7 @@ const ColorPicker: Component<Props> = (props) => {
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        e.stopPropagation();
         setOpen(false);
         triggerEl?.focus();
       }

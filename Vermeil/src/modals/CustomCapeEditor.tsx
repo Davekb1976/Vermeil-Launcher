@@ -533,7 +533,20 @@ const CustomCapeEditor: Component<Props> = (props) => {
     refresh();
   });
 
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Escape") return;
+    // If an inner popover (like the color picker) is open, let it handle Escape first
+    if (document.querySelector(".color-picker-panel")) return;
+    if (saving()) return;
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    props.onClose();
+  };
+
+  window.addEventListener("keydown", onKeyDown, true);
+
   onCleanup(() => {
+    window.removeEventListener("keydown", onKeyDown, true);
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerUp);
     if (previewRaf) cancelAnimationFrame(previewRaf);
@@ -544,7 +557,14 @@ const CustomCapeEditor: Component<Props> = (props) => {
   });
 
   return (
-    <div class="modal-overlay cape-editor-overlay">
+    <div
+      class="modal-overlay cape-editor-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !saving()) {
+          props.onClose();
+        }
+      }}
+    >
       <div class="modal cape-editor-modal">
         {/* Header */}
         <div class="cape-editor-header">
