@@ -1,4 +1,4 @@
-import { Component, createSignal, createEffect, onCleanup, For, Show } from "solid-js";
+import { Component, createSignal, createEffect, onMount, onCleanup, For, Show } from "solid-js";
 import {
   setActiveScreen,
   refetchInstances,
@@ -149,8 +149,8 @@ const BrowseModpacks: Component = () => {
   };
 
   // Initial load
-  createEffect(() => {
-    doSearch(query(), 1);
+  onMount(() => {
+    doSearch("", 1);
   });
 
   // Sync dock pagination
