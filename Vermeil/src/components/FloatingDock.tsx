@@ -1,4 +1,4 @@
-import { Component, Show, For, createMemo, createSignal, onMount, onCleanup } from "solid-js";
+import { Component, Show, For, createMemo, createSignal, createEffect, onMount, onCleanup } from "solid-js";
 import {
   activeScreen,
   setActiveScreen,
@@ -27,6 +27,7 @@ import {
   IconPlus,
   IconPlay,
   IconDownload,
+  IconX,
 } from "./Icons";
 import { launchInstance, stopInstance } from "../ipc/commands";
 import { openPinInstancesModal, MAX_PINS } from "../modals/PinInstancesModal";
@@ -40,6 +41,7 @@ import { openPinInstancesModal, MAX_PINS } from "../modals/PinInstancesModal";
  */
 
 const FloatingDock: Component = () => {
+  let dockEl: HTMLDivElement | undefined;
   const isActive = (screens: Screen[]) => screens.includes(activeScreen());
 
   const [nearBottom, setNearBottom] = createSignal(false);
@@ -49,6 +51,18 @@ const FloatingDock: Component = () => {
     };
     window.addEventListener("mousemove", handler);
     onCleanup(() => window.removeEventListener("mousemove", handler));
+  });
+
+  // Auto-dismiss pin selector when clicking outside the dock pill
+  createEffect(() => {
+    if (!pinSelectorOpen()) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (dockEl && !dockEl.contains(e.target as Node)) {
+        setPinSelectorOpen(false);
+      }
+    };
+    window.addEventListener("mousedown", onMouseDown);
+    onCleanup(() => window.removeEventListener("mousedown", onMouseDown));
   });
 
   const hidden = () => dockHidden() && !nearBottom() && !pinSelectorOpen();
@@ -70,6 +84,17 @@ const FloatingDock: Component = () => {
     </div>
   );
 
+  const loaderLabel = (t: string) => {
+    switch (t) {
+      case "neoforge": return "NeoForge";
+      case "forge": return "Forge";
+      case "fabric": return "Fabric";
+      case "quilt": return "Quilt";
+      case "vanilla": return "Vanilla";
+      default: return t;
+    }
+  };
+
   const pinnedInstances = () => {
     const list = instances();
     if (!list) return [];
@@ -86,9 +111,8 @@ const FloatingDock: Component = () => {
     setPinSelectorOpen(false);
   };
 
-  type CenterMode = "close" | "stop" | "play" | "create";
+  type CenterMode = "stop" | "play" | "create";
   const centerMode = createMemo<CenterMode>(() => {
-    if (pinSelectorOpen()) return "close";
     if (gameRunning()) return "stop";
     if (activeScreen() === "mods" && activeInstanceId()) return "play";
     return "create";
@@ -113,7 +137,6 @@ const FloatingDock: Component = () => {
 
   const centerLabel = () => {
     switch (centerMode()) {
-      case "close": return "Close pin selector";
       case "stop": return "Stop game";
       case "play":
         const inst = instances()?.find((i) => i.id === activeInstanceId());
@@ -124,10 +147,6 @@ const FloatingDock: Component = () => {
 
   const handleCenterClick = async () => {
     const mode = centerMode();
-    if (mode === "close") {
-      setPinSelectorOpen(false);
-      return;
-    }
     if (mode === "create") {
       setActiveScreen("create-choose");
       return;
@@ -282,7 +301,7 @@ const FloatingDock: Component = () => {
         })()}
       </Show>
 
-      <div class="dock">
+      <div class="dock" ref={dockEl}>
         {/* NAV MODE */}
         <Show when={!pinSelectorOpen()}>
           <div class="dock-row">
@@ -330,32 +349,29 @@ const FloatingDock: Component = () => {
         {/* PIN SELECTOR MODE */}
         <Show when={pinSelectorOpen()}>
           <div class="dock-pin-carousel">
-            {/* Pinned tiles fill the left, ordered left-to-right; the Manage
-                action sits at the right end. When nothing is pinned yet, a
-                centered hint explains the feature and the pin cap. The carousel
-                keeps a fixed width so the pill never resizes between states. */}
             <div class="dock-pin-track">
-              <div class="dock-pin-items">
-                <Show
-                  when={pinnedInstances().length > 0}
-                  fallback={
-                    <div class="dock-pin-hint">
-                      <span class="dock-pin-hint-title">Pin up to {MAX_PINS} instances</span>
-                      <span class="dock-pin-hint-sub">Quick-launch your favourites straight from the dock</span>
-                    </div>
-                  }
-                >
+              <Show
+                when={pinnedInstances().length > 0}
+                fallback={
+                  <div class="dock-pin-hint">
+                    <span class="dock-pin-hint-title">Pin up to {MAX_PINS} instances</span>
+                    <span class="dock-pin-hint-sub">Quick-launch favourites straight from the dock</span>
+                  </div>
+                }
+              >
+                <div class="dock-pin-items">
                   <For each={pinnedInstances()}>
                     {(inst, i) => {
                       const iconSrc = () =>
                         inst.icon && inst.icon !== "cube" ? inst.icon : undefined;
+                      const tooltip = `${inst.name} · ${inst.game_version} ${loaderLabel(inst.loader.type)}`;
                       return (
                         <button
                           type="button"
                           class={`dock-pin-tile loader-${inst.loader.type === "neoforge" ? "neoforge" : inst.loader.type}`}
-                          style={`animation-delay:${i() * 35}ms`}
+                          style={`animation-delay:${i() * 30}ms`}
                           onClick={() => openPinned(inst.id)}
-                          title={inst.name}
+                          data-tooltip={tooltip}
                         >
                           <div class="dock-pin-tile-img">
                             <Show
@@ -374,38 +390,39 @@ const FloatingDock: Component = () => {
                       );
                     }}
                   </For>
-                </Show>
-              </div>
-
-              <button
-                type="button"
-                class="dock-pin-tile dock-pin-tile-manage"
-                onClick={() => {
-                  setPinSelectorOpen(false);
-                  openPinInstancesModal();
-                }}
-                title="Manage pinned instances"
-              >
-                <div class="dock-pin-tile-img">
-                  <IconPlus />
                 </div>
-                <span class="dock-pin-tile-name">Manage</span>
-              </button>
+              </Show>
+
+              <div class="dock-pin-actions">
+                <button
+                  type="button"
+                  class="dock-pin-tile dock-pin-tile-manage"
+                  onClick={() => {
+                    setPinSelectorOpen(false);
+                    openPinInstancesModal();
+                  }}
+                  data-tooltip="Manage pins"
+                >
+                  <div class="dock-pin-tile-img">
+                    <IconPlus />
+                  </div>
+                  <span class="dock-pin-tile-name">Manage</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="dock-pin-tile dock-pin-tile-close"
+                  onClick={() => setPinSelectorOpen(false)}
+                  data-tooltip="Close pins (Esc)"
+                >
+                  <div class="dock-pin-tile-img">
+                    <IconX />
+                  </div>
+                  <span class="dock-pin-tile-name">Close</span>
+                </button>
+              </div>
             </div>
           </div>
-
-          <button
-            type="button"
-            class="dock-pin-close-btn"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={handleCenterClick}
-            data-tooltip="Close pin selector"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-              <line x1="6" y1="6" x2="18" y2="18" />
-              <line x1="18" y1="6" x2="6" y2="18" />
-            </svg>
-          </button>
         </Show>
       </div>
     </div>

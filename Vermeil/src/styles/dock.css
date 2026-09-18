@@ -68,7 +68,7 @@
 /* When pin selector is open, give the pill more breathing room to
    accommodate the carousel and use a slightly different surface tint. */
 .dock-wrap.pin-mode .dock {
-  padding: var(--space-2) var(--space-3);
+  padding: 10px 14px;
   background: var(--surface-glass-strong);
 }
 
@@ -256,94 +256,48 @@
   z-index: 5;
 }
 
-/* Close button for pin selector mode */
-.dock-pin-close-btn {
-  position: absolute;
-  top: -22px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 42px;
-  height: 42px;
-  border: 1px solid var(--border);
-  border-radius: 0;
-  background: var(--surface-raised);
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow:
-    var(--bevel-strong),
-    0 8px 20px rgba(0, 0, 0, 0.5);
-  transition:
-    transform 0.12s cubic-bezier(0.2, 0, 0, 1),
-    box-shadow 0.12s cubic-bezier(0.2, 0, 0, 1),
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
-  z-index: 10;
-}
-.dock-pin-close-btn:hover {
-  transform: translateX(-50%) translateY(-2px) scale(1.04);
-  color: #ffffff;
-  background: var(--surface-panel);
-  border-color: var(--border-hover);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-  z-index: 11;
-}
-.dock-pin-close-btn:active {
-  transform: translateX(-50%) translateY(1px) scale(0.97);
-  background: var(--surface-panel);
-  box-shadow: none;
-  z-index: 11;
-}
-
 /* ============================================================
-   Pin selector mode — scrollable carousel inside the dock pill.
-   PlayStation-style horizontal tile list.
+   Pin selector mode — tactile quick-launch shelf inside the dock pill.
    ============================================================ */
 .dock-pin-carousel {
   display: flex;
   align-items: center;
-  /* Fixed width so the pill stays a consistent size regardless of pin count.
-     Pins fill from the left with the Manage tile as the trailing "next slot"
-     right after them; any leftover space sits to the right. */
-  width: min(540px, calc(100vw - 80px));
-  animation: pinCarouselIn 0.25s ease-out;
+  justify-content: center;
+  width: max-content;
+  max-width: min(640px, calc(100vw - 32px));
+  animation: pinCarouselIn 0.25s cubic-bezier(0.2, 0, 0, 1);
 }
 @keyframes pinCarouselIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: scale(0.96) translateY(2px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
-/* Pin selector row: the Manage tile is anchored on the left, the pin tiles
-   (or the empty-state hint) fill the centre, and a right-side spacer mirrors
-   the Manage tile so that centre stays truly centred. No horizontal scroll or
-   edge-fade — the pin count is capped low enough to always fit, and the FAB
-   sits above the pill (see .dock-wrap.pin-mode .dock-center) so the row needs
-   no center gap. */
-/* Pin selector row: pinned tiles ordered left-to-right, with the Manage tile
-   as the trailing "next slot" immediately after them. Fills the fixed-width
-   carousel; any leftover space falls to the right. */
 .dock-pin-track {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  justify-content: center;
+  gap: 10px;
   width: 100%;
 }
 
-/* Pinned tiles, ordered left-to-right. Sizes to content so the Manage tile
-   sits right after the last pin rather than being pushed to the far edge. */
 .dock-pin-items {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: var(--space-2);
+  justify-content: center;
+  gap: 10px;
   min-width: 0;
 }
 
-/* Empty-state guidance shown when nothing is pinned yet — states what pinning
-   does and the maximum number of pins. */
+/* Action keycaps (Manage & Close) */
+.dock-pin-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-left: 1px solid var(--border);
+  padding-left: 10px;
+}
+
+/* Empty-state guidance shown when nothing is pinned yet */
 .dock-pin-hint {
   display: flex;
   flex-direction: column;
@@ -351,7 +305,7 @@
   justify-content: center;
   gap: 2px;
   text-align: center;
-  padding: 0 var(--space-2);
+  padding: 0 var(--space-3);
   user-select: none;
 }
 .dock-pin-hint-title {
@@ -364,54 +318,69 @@
   color: var(--muted);
 }
 
-/* Tiles in the carousel — compact with name visible. */
+/* Tiles in the carousel — chunky SloppyKeys tactile keycaps with bevel */
 .dock-pin-tile {
+  position: relative;
   flex-shrink: 0;
-  width: 64px;
+  width: 54px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1);
+  gap: 4px;
+  padding: 2px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-  animation: pinTileIn 0.3s ease-out both;
+  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1);
+  animation: pinTileIn 0.25s cubic-bezier(0.2, 0, 0, 1) both;
   font-family: var(--font);
 }
 @keyframes pinTileIn {
-  from { opacity: 0; transform: translateY(10px) scale(0.85); }
+  from { opacity: 0; transform: translateY(6px) scale(0.9); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .dock-pin-tile:hover {
-  transform: translateY(-3px);
-  border-color: var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  transform: translateY(-2px);
 }
-.dock-pin-tile:active { transform: translateY(0) scale(0.97); }
+.dock-pin-tile:active {
+  transform: translateY(1px);
+}
 
 .dock-pin-tile-img {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-lg);
+  width: 44px;
+  height: 44px;
+  border-radius: 0;
+  border: 1px solid var(--border);
+  background: var(--surface-sunken);
+  box-shadow: var(--bevel);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   color: var(--text);
   user-select: none;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s cubic-bezier(0.2, 0, 0, 1),
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.dock-pin-tile:hover .dock-pin-tile-img {
+  border-color: var(--border-hover);
+  box-shadow: var(--bevel-strong), 0 4px 12px rgba(0, 0, 0, 0.45);
+}
+.dock-pin-tile:active .dock-pin-tile-img {
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 .dock-pin-tile-img img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   -webkit-user-drag: none;
   pointer-events: none;
 }
@@ -421,38 +390,63 @@
   justify-content: center;
   width: 100%;
   height: 100%;
+  font-family: var(--font);
+  letter-spacing: 0.02em;
 }
 .dock-pin-tile-name {
-  font-size: 9px;
-  color: var(--text-secondary, var(--muted));
+  font-size: 10px;
+  color: var(--text-muted);
   text-align: center;
-  max-width: 60px;
+  max-width: 54px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  transition: color 0.12s ease;
 }
 .dock-pin-tile:hover .dock-pin-tile-name {
   color: var(--text);
 }
 
-/* Loader-tinted backgrounds for tiles. */
+/* Loader-tinted backgrounds & hover borders for tiles */
 .dock-pin-tile.loader-vanilla .dock-pin-tile-img { background: var(--grad-loader-vanilla); }
 .dock-pin-tile.loader-fabric  .dock-pin-tile-img { background: var(--grad-loader-fabric); }
 .dock-pin-tile.loader-quilt   .dock-pin-tile-img { background: var(--grad-loader-quilt); }
 .dock-pin-tile.loader-forge   .dock-pin-tile-img { background: var(--grad-loader-forge); }
 .dock-pin-tile.loader-neoforge .dock-pin-tile-img { background: var(--grad-loader-neoforge); }
 
-/* Manage tile — slightly different so it reads as "secondary action". */
+.dock-pin-tile.loader-vanilla:hover .dock-pin-tile-img  { border-color: #10b981; }
+.dock-pin-tile.loader-fabric:hover .dock-pin-tile-img   { border-color: #38bdf8; }
+.dock-pin-tile.loader-quilt:hover .dock-pin-tile-img    { border-color: #a855f7; }
+.dock-pin-tile.loader-forge:hover .dock-pin-tile-img    { border-color: #f97316; }
+.dock-pin-tile.loader-neoforge:hover .dock-pin-tile-img { border-color: #f59e0b; }
+
+/* Manage action tile */
 .dock-pin-tile-manage .dock-pin-tile-img {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1.5px dashed var(--border);
-  color: var(--muted);
+  background: var(--surface-raised);
+  border: 1px dashed var(--border-strong);
+  color: var(--text-muted);
 }
 .dock-pin-tile-manage .dock-pin-tile-img svg { width: 18px; height: 18px; }
 .dock-pin-tile-manage:hover .dock-pin-tile-img {
   border-color: var(--accent);
   color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-raised));
+}
+
+/* Close action tile */
+.dock-pin-tile-close .dock-pin-tile-img {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.dock-pin-tile-close .dock-pin-tile-img svg { width: 17px; height: 17px; }
+.dock-pin-tile-close:hover .dock-pin-tile-img {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
 }
 
 /* ============================================================
@@ -585,7 +579,7 @@
    Tooltips for dock buttons — appear ABOVE with sharp accent tag.
    ============================================================ */
 .dock-btn[data-tooltip]::before,
-.dock-pin-close-btn[data-tooltip]::before {
+.dock-pin-tile[data-tooltip]::before {
   content: attr(data-tooltip);
   position: absolute;
   bottom: calc(100% + 10px);
@@ -610,7 +604,7 @@
     0 1px 3px rgba(0, 0, 0, 0.4);
 }
 .dock-btn[data-tooltip]:hover::before,
-.dock-pin-close-btn[data-tooltip]:hover::before {
+.dock-pin-tile[data-tooltip]:hover::before {
   opacity: 1;
   transform: translateX(-50%) translateY(-2px);
 }
