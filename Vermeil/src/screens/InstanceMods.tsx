@@ -1437,7 +1437,7 @@ const InstanceMods: Component = () => {
                           max={manualMax()}
                           step={256}
                           value={memoryValue()}
-                          style={{ "--slider-pct": `${((memoryValue() - 512) / (manualMax() - 512)) * 100}%` }}
+                          style={`--slider-pct: ${((memoryValue() - 512) / (manualMax() - 512)) * 100}%`}
                           onInput={(e) => {
                             const inst = instance();
                             if (!inst) return;
