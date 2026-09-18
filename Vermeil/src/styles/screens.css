@@ -4446,8 +4446,9 @@
 /* ============================================================
    Modpack Detail Modal — SloppyKeys 3D Tactile Dialog
    ============================================================ */
+.modal.modpack-detail-modal,
 .modpack-detail-modal {
-  width: 680px;
+  width: 720px;
   max-width: calc(100vw - 40px);
   max-height: calc(100vh - 80px);
   background: #110f17;
@@ -4562,8 +4563,13 @@
 
 .modpack-detail-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
+}
+@media (max-width: 760px) {
+  .modpack-detail-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .modpack-detail-stat {
   display: flex;
@@ -4574,6 +4580,8 @@
   border-radius: 0;
   padding: 12px 14px;
   box-shadow: var(--bevel);
+  min-width: 0;
+  overflow: hidden;
 }
 .modpack-detail-stat-label {
   font-size: 10.5px;
