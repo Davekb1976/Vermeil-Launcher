@@ -119,7 +119,11 @@ export function matchesKeybind(e: KeyboardEvent | MouseEvent, binding: string): 
   if (e.metaKey !== parsed.meta) return false;
 
   if ("key" in e) {
-    return e.key.toLowerCase() === parsed.key;
+    const keyMatch = e.key.toLowerCase() === parsed.key;
+    const code = (e as KeyboardEvent).code;
+    const codeMatch =
+      typeof code === "string" && code.toLowerCase() === `key${parsed.key}`;
+    return keyMatch || codeMatch;
   }
   if ("button" in e) {
     const mouseKey = mouseButtonToKey(e.button);

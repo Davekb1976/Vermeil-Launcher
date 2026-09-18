@@ -538,7 +538,10 @@ const App: Component = () => {
         setActiveScreen("settings");
         return;
       }
-      if (matchesKeybind(e, resolveBinding("toggle_pin_selector", userBindings))) {
+      if (
+        matchesKeybind(e, resolveBinding("toggle_pin_selector", userBindings)) ||
+        matchesKeybind(e, "Ctrl+P")
+      ) {
         e.preventDefault();
         setPinSelectorOpen((v) => !v);
         return;

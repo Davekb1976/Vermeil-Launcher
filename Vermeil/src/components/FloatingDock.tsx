@@ -57,12 +57,22 @@ const FloatingDock: Component = () => {
   createEffect(() => {
     if (!pinSelectorOpen()) return;
     const onMouseDown = (e: MouseEvent) => {
+      // Only dismiss on left-click (button 0) — ignore right-click, middle-click, and side buttons (Mouse4/5)
+      if (e.button !== 0) return;
       if (dockEl && !dockEl.contains(e.target as Node)) {
         setPinSelectorOpen(false);
       }
     };
-    window.addEventListener("mousedown", onMouseDown);
-    onCleanup(() => window.removeEventListener("mousedown", onMouseDown));
+    // Defer listener attachment so the event that opened pin selector (e.g. Mouse4/mouse side button)
+    // finishes bubbling without immediately triggering dismissal.
+    let timer: number | undefined = window.setTimeout(() => {
+      window.addEventListener("mousedown", onMouseDown);
+    }, 50);
+
+    onCleanup(() => {
+      if (timer !== undefined) window.clearTimeout(timer);
+      window.removeEventListener("mousedown", onMouseDown);
+    });
   });
 
   const hidden = () => dockHidden() && !nearBottom() && !pinSelectorOpen();
