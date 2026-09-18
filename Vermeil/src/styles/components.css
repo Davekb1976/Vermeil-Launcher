@@ -807,13 +807,18 @@
   gap: var(--space-2);
   background: var(--surface-panel);
   border: 1px solid var(--border);
-  box-shadow: var(--bevel);
+  border-radius: 0;
+  box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.4);
   transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
 }
 .card--mod:hover {
   border-color: var(--accent);
-  box-shadow: var(--bevel-strong);
+  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.55);
   transform: translateY(-2px);
+}
+.card--mod:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 .card--mod.mod-item-selected {
   border-color: var(--accent);
@@ -836,11 +841,16 @@
 }
 .mod-detail-overlay { animation: fadeIn 0.14s ease; }
 .mod-detail-modal {
-  width: 620px;
-  /* Bounded, not fixed. A hard height left dead space between the last control
-     and the footer whenever the content was shorter than the box; the base
-     `.modal` max-height already keeps a tall one inside the viewport and scrolls
-     the body. */
+  width: 680px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 80px);
+  background: #110f17;
+  border: 1px solid #231f30;
+  border-radius: 0;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   animation: mod-detail-in 0.18s cubic-bezier(0.2, 0.9, 0.25, 1);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -848,197 +858,409 @@
   .mod-detail-modal { animation: none; }
 }
 
-/* Header carries the identity block, so it needs the icon + two-line title
-   rather than the shell's single centered title. */
-.mod-detail-header { align-items: flex-start; gap: var(--space-3); }
-.mod-detail-identity { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
-.mod-detail-names { display: flex; flex-direction: column; gap: var(--space-0); min-width: 0; }
-.mod-detail-names .modal-title {
+.mod-detail-header {
+  padding: 18px 22px;
+  background: #110f17;
+  border-bottom: 1px solid #1e1a2b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.mod-detail-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.mod-detail-icon {
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 0;
+  background: #1c1b26;
+  border: 1px solid #282536;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.mod-detail-icon svg { width: 28px; height: 28px; color: var(--text-muted); }
+.mod-detail-icon-img { width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
+
+/* Chunky tactile red close button in modal header */
+.mod-detail-modal .modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+  border-radius: 0;
+  box-shadow: var(--bevel);
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.1s ease, box-shadow 0.12s ease;
+}
+.mod-detail-modal .modal-close svg {
+  width: 16px;
+  height: 16px;
+}
+.mod-detail-modal .modal-close:hover {
+  background: #dc2626;
+  border-color: #ef4444;
+  color: #ffffff;
+  box-shadow: var(--bevel-strong);
+  transform: translateY(-1px) scale(1.04);
+}
+.mod-detail-modal .modal-close:active {
+  transform: translateY(1px) scale(0.96);
+  box-shadow: none;
+}
+
+.mod-detail-names { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mod-detail-title-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mod-detail-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.mod-detail-author { font-size: var(--fs-xs); color: var(--text-muted); }
 
-.mod-detail-body { display: flex; flex-direction: column; gap: var(--space-4); }
+/* Square badge for source */
+.mod-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.mod-source-badge svg { width: 11px; height: 11px; }
+.mod-source-badge.source-mr { background: rgba(0, 175, 92, 0.15); border: 1px solid rgba(0, 175, 92, 0.4); color: #10b981; }
+.mod-source-badge.source-cf { background: rgba(241, 100, 54, 0.15); border: 1px solid rgba(241, 100, 54, 0.4); color: #f97316; }
+
+.mod-detail-author { font-size: 12px; color: var(--muted); }
+.mod-detail-author strong { color: var(--text); }
+
+/* Proper vertical flow and generous spacing for the modal body */
+.mod-detail-body {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: #110f17;
+  overflow-y: auto;
+}
+
 .mod-detail-summary {
   margin: 0;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-  line-height: 1.55;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.6;
+  background: #0b0a10;
+  border: 1px solid #1f1b2c;
+  border-radius: 0;
+  padding: 14px 16px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
-/* Fixed two-column stat grid. The first pass listed every supported game
-   version inline, which for a project like Fabric API ran to hundreds of
-   entries and buried the controls underneath. Facts summarize; per-version
-   detail belongs in the picker, next to the version it describes. */
 .mod-detail-stats {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3) var(--space-4);
-  padding: var(--space-3);
-  border: 1px solid var(--border);
-  background: var(--surface-sunken);
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
 }
-.mod-detail-stat { display: flex; flex-direction: column; gap: var(--space-0); min-width: 0; }
+.mod-detail-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #13121b;
+  border: 1px solid #23212f;
+  border-radius: 0;
+  padding: 12px 14px;
+  box-shadow: var(--bevel);
+}
 .mod-detail-stat-label {
-  font-size: var(--fs-2xs);
-  color: var(--text-faint);
-  font-weight: var(--fw-semibold);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mod-detail-stat-label svg { width: 12px; height: 12px; }
+.mod-detail-stat-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: var(--font-mono);
+}
+.mod-detail-stat-sub { font-size: 10.5px; color: var(--muted); font-family: var(--font); }
+.mod-detail-loaders-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.mod-detail-loaders-list .badge { border-radius: 0; }
+
+.mod-existing-notice {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-left: 3px solid #10b981;
+  border-radius: 0;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mod-existing-heading { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #10b981; }
+.mod-existing-heading svg { width: 14px; height: 14px; }
+
+.mod-versions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+.mod-versions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #1e1a2b;
+  padding-bottom: 10px;
+}
+.mod-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-.mod-detail-stat-value {
-  font-size: var(--fs-xs);
-  color: var(--text);
+
+.mod-version-filters { display: flex; align-items: center; gap: 10px; }
+
+/* Square channel toggle buttons */
+.mod-channel-pills {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  min-width: 0;
+  background: #0b0a10;
+  border: 1px solid #1f1b2c;
+  border-radius: 0;
+  padding: 2px;
+  gap: 2px;
 }
-.mod-detail-stat-note { font-size: var(--fs-2xs); color: var(--text-faint); white-space: nowrap; }
-
-.mod-detail-loaders { display: flex; flex-direction: column; gap: var(--space-2); }
-
-/* ── Version picker ───────────────────────────────────────── */
-.version-picker { display: flex; flex-direction: column; gap: var(--space-2); }
-.version-picker-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-
-/* Trigger and Install button share one control height so they line up. Both are
-   pinned to the same token rather than inheriting from .btn size variants, which
-   is what left them visibly mismatched. */
-.version-picker-row { display: flex; align-items: stretch; gap: var(--space-2); }
-.version-picker-trigger,
-.version-picker-install {
-  height: var(--control-height-md);
-  flex-shrink: 0;
+.mod-channel-pill {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
 }
-.version-picker-trigger {
-  flex: 1;
-  min-width: 0;
+.mod-channel-pill:hover { color: var(--text); }
+.mod-channel-pill.active { background: var(--accent); color: var(--accent-contrast); }
+
+.mod-filter-toggle {
+  font-size: 11px !important;
+  height: 26px !important;
+  padding: 0 8px !important;
+  border-radius: 0 !important;
+}
+.mod-filter-toggle.active {
+  background: var(--surface-active) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+
+.mod-version-search {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  background: var(--surface-panel);
-  border: 1px solid var(--border);
+  gap: 6px;
+  background: #0b0a10;
+  border: 1px solid #1f1b2c;
   border-radius: 0;
-  padding: 0 var(--space-3);
+  padding: 4px 10px;
+}
+.mod-version-search svg { width: 12px; height: 12px; color: #635d75; }
+.mod-version-search input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font);
+  font-size: 11px;
   color: var(--text);
-  cursor: pointer;
-  text-align: left;
-  transition: border-color .15s;
+  width: 120px;
+  border-radius: 0;
 }
-.version-picker-trigger:hover,
-.version-picker-trigger.open { border-color: var(--accent); }
-.version-picker-trigger-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-}
-.version-picker-caret {
-  display: inline-flex;
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
-  color: var(--muted);
-  transition: transform .15s;
-}
-.version-picker-caret svg { width: 100%; height: 100%; }
-.version-picker-caret.open { transform: rotate(180deg); }
 
-.version-picker-status { font-size: var(--fs-2xs); color: var(--text-muted); }
-.version-picker-status.is-error { color: var(--danger); }
-.version-picker-warn { font-size: var(--fs-2xs); color: var(--warn); line-height: 1.45; }
+.mod-version-warning {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-left: 3px solid #f59e0b;
+  border-radius: 0;
+  padding: 8px 12px;
+  font-size: 11.5px;
+  color: #fbbf24;
+  line-height: 1.45;
+}
 
-/* Inline list — no portal, no fixed positioning. Bounded height so a project
-   with hundreds of versions scrolls here instead of stretching the dialog. */
-.version-list {
+.mod-versions-list {
+  max-height: 270px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border);
-  background: var(--surface-sunken);
-  max-height: 240px;
-  overflow: hidden;
-}
-.version-list-search {
-  flex-shrink: 0;
-  width: 100%;
-  box-sizing: border-box;
-  background: var(--surface-raised);
-  border: none;
-  border-bottom: 1px solid var(--border);
-  color: var(--text);
-  font-family: var(--font);
-  font-size: var(--fs-2xs);
-  padding: var(--space-2) var(--space-3);
-  outline: none;
-}
-.version-list-search::placeholder { color: var(--muted); }
-.version-list-scroll { overflow-y: auto; min-height: 0; }
-.version-list-empty {
-  padding: var(--space-3);
-  font-size: var(--fs-2xs);
-  color: var(--muted);
-  text-align: center;
+  gap: 8px;
+  background: #0b0a10;
+  border: 1px solid #1f1b2c;
+  border-radius: 0;
+  padding: 10px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
-.version-option {
-  width: 100%;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: none;
-  border: none;
-  border-radius: 0;
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
-  transition: background .1s;
+.mod-versions-loading,
+.mod-versions-empty,
+.mod-versions-error {
+  padding: 32px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
 }
-.version-option:hover { background: var(--surface-raised); }
-.version-option.selected { background: var(--accent-tint); color: var(--accent); }
-.version-option-name {
-  font-family: var(--font-mono);
-  font-size: var(--fs-2xs);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.version-option-tags { display: flex; align-items: center; gap: var(--space-1); flex-shrink: 0; }
-.version-option-meta {
+.mod-versions-loading { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.mod-versions-error { color: #ef4444; }
+
+.mod-version-row {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--fs-2xs);
-  color: var(--text-faint);
-  white-space: nowrap;
-  flex-shrink: 0;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 14px;
+  background: #13121b;
+  border: 1px solid #23212f;
+  border-radius: 0;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
 }
-/* Still selectable — a user may deliberately want an off-version build — but
-   visibly marked so it can't be picked by accident. */
-.version-option.is-incompatible .version-option-name { color: var(--text-muted); }
+.mod-version-row:hover {
+  border-color: var(--accent);
+  background: #1c1926;
+  transform: translateX(2px);
+}
+.mod-version-row.selected {
+  border-color: var(--accent);
+  background: rgba(168, 85, 247, 0.12);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
 
-.version-tag {
-  font-size: var(--fs-2xs);
-  font-weight: var(--fw-semibold);
-  line-height: 1;
-  padding: 2px var(--space-1);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  white-space: nowrap;
+.mod-vrow-left { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.mod-vrow-title-row { display: flex; align-items: center; gap: 8px; }
+.mod-vrow-name { font-size: 13px; font-weight: 700; color: #ffffff; }
+
+/* Square badges for version channels */
+.mod-vrow-channel {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 7px;
+  border-radius: 0;
 }
-.version-tag--release { border-color: var(--success); color: var(--success); }
-.version-tag--beta { border-color: var(--warn); color: var(--warn); }
-.version-tag--alpha { border-color: var(--danger); color: var(--danger); }
-.version-tag--rec { border-color: var(--accent); color: var(--accent); }
-.version-tag--installed { border-color: var(--info); color: var(--info); }
-.version-tag--warn { border-color: var(--warn); color: var(--warn); }
+.mod-vrow-channel.channel-release { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981; }
+.mod-vrow-channel.channel-beta { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b; }
+.mod-vrow-channel.channel-alpha { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #ef4444; }
+
+.mod-vrow-recommended {
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 0;
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: #c084fc;
+}
+
+.mod-vrow-installed {
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 0;
+  background: rgba(74, 222, 128, 0.15);
+  border: 1px solid rgba(74, 222, 128, 0.4);
+  color: #4ade80;
+}
+
+.mod-vrow-warn {
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 0;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.mod-vrow-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+.mod-vrow-sep { opacity: 0.4; }
+
+.mod-vrow-right { flex-shrink: 0; }
+.mod-vrow-install {
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 0;
+}
+
+.mod-detail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px;
+  border-top: 1px solid #1e1a2b;
+  background: #110f17;
+}
+.mod-footer-left { font-size: 12px; color: var(--muted); display: flex; align-items: center; }
+.mod-selected-indicator { display: flex; align-items: center; gap: 8px; }
+.mod-selected-indicator strong { color: var(--accent); }
+.mod-footer-actions { display: flex; align-items: center; gap: 8px; }
+.mod-footer-actions .btn { border-radius: 0; }
+
+/* Chunky tactile red close/cancel button in modal footer */
+.mod-footer-close-btn {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  box-shadow: var(--bevel);
+  font-weight: 600;
+  border-radius: 0;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.1s ease, box-shadow 0.12s ease;
+}
+.mod-footer-close-btn:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #ef4444;
+  color: #ffffff;
+  box-shadow: var(--bevel-strong);
+  transform: translateY(-2px) scale(1.03);
+}
+.mod-footer-close-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: none;
+}
 
 /* Variant — media card: media region sits flush at the top edge, body below.
    Base .card is already a column, so this variant needs no declarations of its
@@ -2168,9 +2390,10 @@
 /* Bulk select */
 .mod-item-selected { border-color: var(--accent) !important; background: var(--accent-tint); }
 .select-check {
-  width: 22px; height: 22px; border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+  width: 22px; height: 22px; border-radius: 0; border: 1.5px solid var(--border);
   display: flex; align-items: center; justify-content: center; font-size: 12px;
   color: transparent; transition: all .12s; flex-shrink: 0;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 .select-check.checked { border-color: var(--accent); background: var(--accent); color: var(--text); }
 .btn-active { background: var(--accent) !important; border-color: var(--accent) !important; color: var(--text) !important; }
@@ -2182,9 +2405,9 @@
   width: 360px;
   background: var(--bg2);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: 0;
   padding: var(--space-3) var(--space-4);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--bevel), 0 12px 36px rgba(0, 0, 0, 0.6);
   z-index: 60;
   animation: fadeIn .15s ease;
   display: flex;
@@ -3218,15 +3441,21 @@ select.field-input[size] { appearance: none; }
 .inst-card-grid .card--mod {
   background: #13121b;
   border: 1px solid #23212f;
-  border-radius: 8px;
+  border-radius: 0;
   padding: 14px 16px;
   min-height: 155px;
   box-sizing: border-box;
+  box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
 }
 .inst-card-grid .card--mod:hover {
   border-color: var(--accent);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.45), 0 8px 24px rgba(0, 0, 0, 0.55);
   transform: translateY(-2px);
+}
+.inst-card-grid .card--mod:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 .inst-card-grid .mod-card-header {
   display: flex;
@@ -3236,9 +3465,10 @@ select.field-input[size] { appearance: none; }
 .inst-card-grid .mod-card-icon {
   width: 44px;
   height: 44px;
-  border-radius: 6px;
+  border-radius: 0;
   background: #1c1b26;
   border: 1px solid #282536;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 .inst-card-grid .mod-card-name {
   font-size: 14px;
@@ -3266,17 +3496,19 @@ select.field-input[size] { appearance: none; }
   font-size: 11px;
   font-weight: 600;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: 0;
   background: #1c1b26;
   border: 1px solid #2d2a3b;
   color: #a1a1aa;
 }
 .inst-card-grid .mod-tag-loader {
+  border-radius: 0;
   background: rgba(168, 85, 247, 0.12);
   border-color: rgba(168, 85, 247, 0.3);
   color: #c084fc;
 }
 .inst-card-grid .mod-tag-version {
+  border-radius: 0;
   background: #1c1b26;
   border-color: #2d2a3b;
   color: #a1a1aa;
@@ -3287,6 +3519,7 @@ select.field-input[size] { appearance: none; }
   background: rgba(74, 222, 128, 0.12) !important;
   color: var(--success) !important;
   border: 1px solid rgba(74, 222, 128, 0.35) !important;
+  border-radius: 0 !important;
   pointer-events: none;
   display: inline-flex;
   align-items: center;
