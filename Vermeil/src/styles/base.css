@@ -316,9 +316,8 @@ body {
    doesn't recognize is invalid, so WebView2 (Chromium) drops the WHOLE
    rule over `::-moz-range-thumb` and WebKitGTK drops it over the
    `-webkit-` one — silently killing every override here. Slider thumbs
-   are squared at their own per-vendor rules instead (slider in
-   components.css, concurrency-slider in notifications.css, cape slider
-   in screens.css).
+   are squared at their own per-vendor rules instead (slider and
+   concurrency-slider in components.css, cape slider in screens.css).
    ===================================================================== */
 .win-btn,
 .dot-green,

@@ -2169,31 +2169,46 @@
   max-width: 440px;
 }
 
-/* Concurrency slider & number input pair */
+/* Concurrency slider & number input pair (Performance / Resource settings) */
 .concurrency-control {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  width: 220px;
+  max-width: 100%;
+  flex-shrink: 0;
 }
 .concurrency-slider {
-  width: 100px;
+  flex: 1;
+  min-width: 0;
 }
 .concurrency-number {
   width: 44px;
   height: 24px;
   background: var(--surface-sunken);
   border: 1px solid var(--border);
-  color: var(--teal);
+  color: var(--text);
   font-family: var(--font-mono);
   font-weight: 700;
   font-size: 11px;
   text-align: center;
   border-radius: 0;
   outline: none;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  transition: border-color 0.12s, box-shadow 0.12s, color 0.12s;
+}
+.concurrency-number::-webkit-outer-spin-button,
+.concurrency-number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 .concurrency-number:focus {
   border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
+
 
 /* Java Slots Grid & Card Plates */
 .java-slots {
@@ -2368,6 +2383,7 @@
   flex-shrink: 0;
 }
 .vs-slider { flex: 1; min-width: 0; }
+.setting-control .vs-slider { width: 180px; max-width: 100%; }
 .vs-val {
   font-size: 9px;
   color: var(--muted);
@@ -2756,14 +2772,16 @@ select.field-input[size] { appearance: none; }
 .control-group { display: flex; align-items: center; gap: var(--space-2); }
 .control-label { font-size: var(--fs-xs); color: var(--muted); font-weight: 500; }
 
-/* Generic range-slider styling, composed as `slider vs-slider` by the
-   video-settings sliders. */
-.slider {
+/* Generic tactile range-slider styling matching the skin modal / SloppyKeys design language.
+   Composed as `slider vs-slider` by video/audio settings, `slider` by the memory slider,
+   and `concurrency-slider` by resource concurrency controls. */
+.slider,
+.concurrency-slider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 6px;
-  border-radius: var(--radius-xs);
+  height: 4px;
+  border-radius: 0;
   outline: none;
   cursor: pointer;
   position: relative;
@@ -2773,11 +2791,14 @@ select.field-input[size] { appearance: none; }
     to right,
     var(--accent) 0%,
     var(--accent) var(--slider-pct, 50%),
-    var(--bg) var(--slider-pct, 50%),
-    var(--bg) 100%
+    var(--surface-sunken) var(--slider-pct, 50%),
+    var(--surface-sunken) 100%
   );
 }
-.slider::-webkit-slider-thumb {
+
+/* WebKit / Chromium range thumb (must remain a standalone rule) */
+.slider::-webkit-slider-thumb,
+.concurrency-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 14px;
@@ -2786,21 +2807,56 @@ select.field-input[size] { appearance: none; }
   border: none;
   border-radius: 0;
   cursor: pointer;
-  transition: transform 0.12s;
-  box-shadow: 0 0 0 3px var(--bg2);
+  transition: transform 0.1s ease, filter 0.1s ease;
+  box-shadow: 0 0 0 2px var(--surface-panel), var(--bevel);
   margin-top: 0;
 }
-.slider::-webkit-slider-thumb:hover {
-  transform: scale(1.25);
+.slider::-webkit-slider-thumb:hover,
+.concurrency-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  filter: brightness(1.1);
 }
-.slider::-moz-range-thumb {
-  border: none;
+.slider::-webkit-slider-thumb:active,
+.concurrency-slider::-webkit-slider-thumb:active {
+  transform: scale(1.05);
+}
+
+/* Firefox / WebKitGTK range thumb (must remain a standalone rule) */
+.slider::-moz-range-thumb,
+.concurrency-slider::-moz-range-thumb {
   width: 14px;
   height: 14px;
   background: var(--accent);
+  border: none;
   border-radius: 0;
   cursor: pointer;
+  transition: transform 0.1s ease, filter 0.1s ease;
+  box-shadow: 0 0 0 2px var(--surface-panel), var(--bevel);
 }
+.slider::-moz-range-thumb:hover,
+.concurrency-slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+  filter: brightness(1.1);
+}
+.slider::-moz-range-thumb:active,
+.concurrency-slider::-moz-range-thumb:active {
+  transform: scale(1.05);
+}
+
+/* Synchronize 2px thumb gap with setting row hover */
+.card-section-body .setting-row:hover .slider::-webkit-slider-thumb,
+.card-section-body .setting-row:hover .concurrency-slider::-webkit-slider-thumb,
+.settings-cell:hover .slider::-webkit-slider-thumb,
+.settings-cell:hover .concurrency-slider::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px var(--surface-raised), var(--bevel);
+}
+.card-section-body .setting-row:hover .slider::-moz-range-thumb,
+.card-section-body .setting-row:hover .concurrency-slider::-moz-range-thumb,
+.settings-cell:hover .slider::-moz-range-thumb,
+.settings-cell:hover .concurrency-slider::-moz-range-thumb {
+  box-shadow: 0 0 0 2px var(--surface-raised), var(--bevel);
+}
+
 
 .control-total {
   margin-left: auto; font-size: 11px; color: var(--muted); font-family: var(--font-mono);
