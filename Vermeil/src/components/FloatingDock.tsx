@@ -43,7 +43,139 @@ import {
  *
  * When pagination is active a second mini floating pill appears above the
  * dock with ‹ page/total › controls.
+/**
+ * Standalone pagination island — iOS-style dot indicator above the dock.
+ * Safely guards all pagination signals to prevent any exceptions when
+ * dockPagination() changes or resets to null.
  */
+const DockPaginationIsland: Component = () => {
+  const [holding, setHolding] = createSignal(false);
+  const [inputValue, setInputValue] = createSignal("");
+  const [scrolling, setScrolling] = createSignal(false);
+  let scrollResetTimer: number | undefined;
+  const flashScroll = () => {
+    setScrolling(true);
+    if (scrollResetTimer !== undefined) window.clearTimeout(scrollResetTimer);
+    scrollResetTimer = window.setTimeout(() => setScrolling(false), 600);
+  };
+  onCleanup(() => {
+    if (scrollResetTimer !== undefined) window.clearTimeout(scrollResetTimer);
+  });
+  let holdTimer: number | undefined;
+  let islandEl: HTMLDivElement | undefined;
+
+  const startHold = () => {
+    const pag = dockPagination();
+    if (!pag) return;
+    holdTimer = window.setTimeout(() => {
+      setHolding(true);
+      setInputValue((dockPagination()?.current ?? 1).toString());
+      setTimeout(() => {
+        const input = islandEl?.querySelector<HTMLInputElement>(".dock-page-input");
+        if (input) { input.focus(); input.select(); }
+      }, 20);
+    }, 500);
+  };
+  const cancelHold = () => {
+    if (holdTimer !== undefined) clearTimeout(holdTimer);
+  };
+  const submitInput = () => {
+    const val = parseInt(inputValue());
+    const pag = dockPagination();
+    if (pag && !isNaN(val) && val >= 1 && val <= pag.total) {
+      pag.onPageChange(val);
+    }
+    setHolding(false);
+  };
+
+  const MAX_DOTS = 7;
+  const dots = () => {
+    const pag = dockPagination();
+    if (!pag) return [];
+    const total = pag.total;
+    const current = pag.current;
+    const count = Math.min(MAX_DOTS, total);
+    let start = Math.max(1, current - Math.floor(count / 2));
+    if (start + count - 1 > total) start = Math.max(1, total - count + 1);
+    const arr: number[] = [];
+    for (let i = start; i < start + count; i++) arr.push(i);
+    return arr;
+  };
+
+  return (
+    <div
+      class={`dock-page-island ${holding() ? "holding" : ""}`}
+      ref={(el) => {
+        islandEl = el;
+        const handler = (e: WheelEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const pag = dockPagination();
+          if (!pag) return;
+          flashScroll();
+          if (e.deltaY < 0 && pag.current < pag.total) {
+            pag.onPageChange(pag.current + 1);
+            if (holding()) setInputValue((pag.current + 1).toString());
+          } else if (e.deltaY > 0 && pag.current > 1) {
+            pag.onPageChange(pag.current - 1);
+            if (holding()) setInputValue((pag.current - 1).toString());
+          }
+        };
+        el.addEventListener("wheel", handler, { passive: false });
+      }}
+      onMouseDown={startHold}
+      onMouseUp={cancelHold}
+      onMouseLeave={cancelHold}
+    >
+      <Show when={!holding()}>
+        <div class="dock-page-dots">
+          <For each={dots()}>
+            {(page) => {
+              const isActive = () => {
+                const pag = dockPagination();
+                return pag ? page === pag.current : false;
+              };
+              const dist = () => {
+                const pag = dockPagination();
+                return pag ? Math.abs(page - pag.current) : 0;
+              };
+              return (
+                <div
+                  class={`dock-dot ${isActive() ? "active" : ""} ${isActive() && scrolling() ? "expanded" : ""}`}
+                  style={`opacity: ${Math.max(0.2, 1 - dist() * 0.2)}; transform: scale(${isActive() ? 1 : Math.max(0.5, 1 - dist() * 0.15)})`}
+                  onClick={() => {
+                    const pag = dockPagination();
+                    if (pag) {
+                      pag.onPageChange(page);
+                      flashScroll();
+                    }
+                  }}
+                >
+                  <Show when={isActive() && scrolling()}>
+                    <span class="dock-dot-num">{page}</span>
+                  </Show>
+                </div>
+              );
+            }}
+          </For>
+        </div>
+      </Show>
+      <Show when={holding()}>
+        <div class="dock-page-hold-input">
+          <input
+            class="dock-page-input"
+            type="text"
+            value={inputValue()}
+            onInput={(e) => setInputValue(e.currentTarget.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") submitInput(); if (e.key === "Escape") setHolding(false); }}
+            onBlur={submitInput}
+          />
+          <span class="dock-page-total">/ {dockPagination()?.total ?? 1}</span>
+        </div>
+      </Show>
+    </div>
+  );
+};
 
 const FloatingDock: Component = () => {
   let dockEl: HTMLDivElement | undefined;
@@ -193,130 +325,8 @@ const FloatingDock: Component = () => {
 
   return (
     <div class={`dock-wrap ${pinSelectorOpen() ? "pin-mode" : ""} ${hidden() ? "dock-hidden" : ""}`}>
-      {/* Pagination island — iOS-style dot indicator.
-          Shows a window of dots; current is bright/large, neighbors fade.
-          Scroll wheel navigates. Hold to type a page number. */}
-      <Show when={dockPagination() && !pinSelectorOpen()}>
-        {(() => {
-          const [holding, setHolding] = createSignal(false);
-          const [inputValue, setInputValue] = createSignal("");
-          // Wheel-on-island flash. While the user is scrolling pages, the
-          // active dot expands to reveal its page number; a 600ms idle
-          // debounce keeps it expanded during continuous scroll and only
-          // collapses once the user actually stops.
-          const [scrolling, setScrolling] = createSignal(false);
-          let scrollResetTimer: number | undefined;
-          const flashScroll = () => {
-            setScrolling(true);
-            if (scrollResetTimer !== undefined) window.clearTimeout(scrollResetTimer);
-            scrollResetTimer = window.setTimeout(() => setScrolling(false), 600);
-          };
-          onCleanup(() => {
-            if (scrollResetTimer !== undefined) window.clearTimeout(scrollResetTimer);
-          });
-          let holdTimer: number | undefined;
-          let islandEl: HTMLDivElement | undefined;
-
-          const startHold = () => {
-            holdTimer = window.setTimeout(() => {
-              setHolding(true);
-              setInputValue(dockPagination()!.current.toString());
-              setTimeout(() => {
-                const input = islandEl?.querySelector<HTMLInputElement>(".dock-page-input");
-                if (input) { input.focus(); input.select(); }
-              }, 20);
-            }, 500);
-          };
-          const cancelHold = () => {
-            clearTimeout(holdTimer);
-          };
-          const submitInput = () => {
-            const val = parseInt(inputValue());
-            const pag = dockPagination();
-            if (pag && val >= 1 && val <= pag.total) pag.onPageChange(val);
-            setHolding(false);
-          };
-
-          // Build the visible dot window (max 7 dots centered on current page).
-          const MAX_DOTS = 7;
-          const dots = () => {
-            const pag = dockPagination()!;
-            const total = pag.total;
-            const current = pag.current;
-            const count = Math.min(MAX_DOTS, total);
-            let start = Math.max(1, current - Math.floor(count / 2));
-            if (start + count - 1 > total) start = Math.max(1, total - count + 1);
-            const arr: number[] = [];
-            for (let i = start; i < start + count; i++) arr.push(i);
-            return arr;
-          };
-
-          return (
-            <div
-              class={`dock-page-island ${holding() ? "holding" : ""}`}
-              ref={(el) => {
-                islandEl = el;
-                const handler = (e: WheelEvent) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const pag = dockPagination();
-                  if (!pag) return;
-                  // Always flash on a wheel event so the user gets feedback
-                  // even when they're already at the edge and the page can't
-                  // change. Confirms "I heard you" instead of feeling dead.
-                  flashScroll();
-                  if (e.deltaY < 0 && pag.current < pag.total) {
-                    pag.onPageChange(pag.current + 1);
-                    if (holding()) setInputValue((pag.current + 1).toString());
-                  } else if (e.deltaY > 0 && pag.current > 1) {
-                    pag.onPageChange(pag.current - 1);
-                    if (holding()) setInputValue((pag.current - 1).toString());
-                  }
-                };
-                el.addEventListener("wheel", handler, { passive: false });
-              }}
-              onMouseDown={startHold}
-              onMouseUp={cancelHold}
-              onMouseLeave={cancelHold}
-            >
-              <Show when={!holding()}>
-                <div class="dock-page-dots">
-                  <For each={dots()}>
-                    {(page) => {
-                      const pag = () => dockPagination()!;
-                      const isActive = () => page === pag().current;
-                      const dist = () => Math.abs(page - pag().current);
-                      return (
-                        <div
-                          class={`dock-dot ${isActive() ? "active" : ""} ${isActive() && scrolling() ? "expanded" : ""}`}
-                          style={`opacity: ${Math.max(0.2, 1 - dist() * 0.2)}; transform: scale(${isActive() ? 1 : Math.max(0.5, 1 - dist() * 0.15)})`}
-                          onClick={() => { pag().onPageChange(page); flashScroll(); }}
-                        >
-                          <Show when={isActive() && scrolling()}>
-                            <span class="dock-dot-num">{page}</span>
-                          </Show>
-                        </div>
-                      );
-                    }}
-                  </For>
-                </div>
-              </Show>
-              <Show when={holding()}>
-                <div class="dock-page-hold-input">
-                  <input
-                    class="dock-page-input"
-                    type="text"
-                    value={inputValue()}
-                    onInput={(e) => setInputValue(e.currentTarget.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") submitInput(); if (e.key === "Escape") setHolding(false); }}
-                    onBlur={submitInput}
-                  />
-                  <span class="dock-page-total">/ {dockPagination()!.total}</span>
-                </div>
-              </Show>
-            </div>
-          );
-        })()}
+      <Show when={Boolean(dockPagination()) && !pinSelectorOpen()}>
+        <DockPaginationIsland />
       </Show>
 
       <div class="dock" ref={dockEl}>
@@ -382,11 +392,11 @@ const FloatingDock: Component = () => {
                     {(inst, i) => {
                       const iconSrc = () =>
                         inst.icon && inst.icon !== "cube" ? inst.icon : undefined;
-                      const tooltip = `${inst.name} · ${inst.game_version} ${loaderLabel(inst.loader.type)}`;
+                      const tooltip = `${inst.name} · ${inst.game_version} ${loaderLabel(inst.loader?.type || "vanilla")}`;
                       return (
                         <button
                           type="button"
-                          class={`dock-pin-tile loader-${inst.loader.type === "neoforge" ? "neoforge" : inst.loader.type}`}
+                          class={`dock-pin-tile loader-${inst.loader?.type === "neoforge" ? "neoforge" : (inst.loader?.type || "vanilla")}`}
                           style={`animation-delay:${i() * 30}ms`}
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => openPinned(inst.id)}

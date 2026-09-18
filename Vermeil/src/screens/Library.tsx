@@ -91,7 +91,7 @@ const Library: Component = () => {
     switch (sortBy()) {
       case "mostPlayed": return (b.total_play_seconds || 0) - (a.total_play_seconds || 0);
       case "created": return epoch(b.created_at) - epoch(a.created_at);
-      case "name": return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      case "name": return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
       case "played":
       default: return epoch(b.last_played) - epoch(a.last_played);
     }
@@ -229,9 +229,9 @@ const Library: Component = () => {
                 }}
               >
                 {/* Flush Left Square Thumbnail (matches .world-card-thumb) */}
-                <div class={`inst-card-thumb inst-card-icon ${bannerColor(inst.loader.type)}`}>
+                <div class={`inst-card-thumb inst-card-icon ${bannerColor(inst.loader?.type || "vanilla")}`}>
                   <Show when={instanceIconUrl(inst)} fallback={
-                    <span class="inst-card-thumb-letter">{inst.name.trim().charAt(0).toUpperCase() || "?"}</span>
+                    <span class="inst-card-thumb-letter">{(inst.name || "?").trim().charAt(0).toUpperCase() || "?"}</span>
                   }>
                     <img src={instanceIconUrl(inst)!} alt="" draggable={false} />
                   </Show>
@@ -252,20 +252,20 @@ const Library: Component = () => {
                     {inst.name}
                   </div>
                   <div class="inst-card-sub">
-                    {inst.mods.length} {inst.mods.length === 1 ? "mod" : "mods"} · {timeAgo(inst.last_played)}
+                    {(inst.mods || []).length} {(inst.mods || []).length === 1 ? "mod" : "mods"} · {timeAgo(inst.last_played)}
                   </div>
                   <div class="inst-card-badges">
                     <div class="inst-card-badges-track">
                       <span class="badge badge--version">{inst.game_version}</span>
-                      <span class={`badge badge--loader ${loaderBadgeClass(inst.loader.type)}`}>
-                        {loaderLabel(inst.loader.type)}
+                      <span class={`badge badge--loader ${loaderBadgeClass(inst.loader?.type || "vanilla")}`}>
+                        {loaderLabel(inst.loader?.type || "vanilla")}
                       </span>
                       <Show when={inst.source_project_id && inst.source_version}>
                         <span class="badge badge--vnum" title={`Modpack version ${inst.source_version}`}>
                           {inst.source_version}
                         </span>
                       </Show>
-                      <span class="badge badge--ram">{inst.java.memory_max_mb} MB</span>
+                      <span class="badge badge--ram">{inst.java?.memory_max_mb ?? 4096} MB</span>
                       <Show when={(inst.source_platforms || []).includes("modrinth")}>
                         <span class="badge badge--source badge--modrinth" title="Available on Modrinth">
                           <IconModrinth />

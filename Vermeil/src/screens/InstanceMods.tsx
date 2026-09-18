@@ -58,6 +58,13 @@ function detectCategory(mod: ModHit): "mod" | "resourcepack" | "shader" | "datap
 const InstanceMods: Component = () => {
   const [mainTab, setMainTab] = createSignal<InstanceTab>(initialInstanceTab() as InstanceTab || "content");
 
+  const instance = () => {
+    const list = instances();
+    const id = activeInstanceId();
+    if (!list || !id) return list?.[0] || null;
+    return list.find(i => i.id === id) || list[0] || null;
+  };
+
   // Per-instance memory. Adaptive by default (services/memory.rs); an instance
   // can opt out via `java.adaptive_override` and set RAM manually. `effectiveMemory`
   // holds the resolved value + formula breakdown for the read-only display; the
@@ -95,7 +102,7 @@ const InstanceMods: Component = () => {
   const formatBreakdownGb = (mb: number): string =>
     `${(mb / 1024).toFixed(2).replace(/\.?0+$/, "")} GB`;
   const [memoryDraft, setMemoryDraft] = createSignal<number | null>(null);
-  const memoryValue = (): number => memoryDraft() ?? instance()?.java.memory_max_mb ?? 4096;
+  const memoryValue = (): number => memoryDraft() ?? instance()?.java?.memory_max_mb ?? 4096;
   createEffect(() => {
     const inst = instance();
     const draft = memoryDraft();
@@ -119,7 +126,7 @@ const InstanceMods: Component = () => {
   const isAdaptive = (): boolean => {
     const opt = adaptiveOptimistic();
     if (opt !== null) return opt;
-    return !instance()?.java.adaptive_override;
+    return !instance()?.java?.adaptive_override;
   };
   // Clear the optimistic flag once the resource catches up.
   createEffect(() => {
@@ -252,7 +259,7 @@ const InstanceMods: Component = () => {
   const [searching, setSearching] = createSignal(false);
   const displayBrowseResults = createMemo(() => {
     const list = searchResults();
-    if (instance()?.loader.type === "vanilla") {
+    if (instance()?.loader?.type === "vanilla") {
       return list.filter((m) => {
         const cat = detectCategory(m);
         return cat !== "mod" && m.project_type !== "mod";
@@ -344,13 +351,6 @@ const InstanceMods: Component = () => {
 
   // Dock pagination is set up after goToPage is defined (see below).
   onCleanup(() => setDockPagination(null));
-
-  const instance = () => {
-    const list = instances();
-    const id = activeInstanceId();
-    if (!list || !id) return list?.[0] || null;
-    return list.find(i => i.id === id) || list[0] || null;
-  };
 
   // Refresh the update map whenever the Installed tab is opened or the
   // instance's mod list actually changes. We only run while the tab is visible
@@ -882,7 +882,7 @@ const InstanceMods: Component = () => {
       return;
     }
     if (contentTab() === "browse" && totalPages() > 1) {
-      if (instance()?.loader.type === "vanilla" && browseFilter() === "mod") {
+      if (instance()?.loader?.type === "vanilla" && browseFilter() === "mod") {
         setDockPagination(null);
       } else {
         setDockPagination({ current: currentPage(), total: totalPages(), onPageChange: goToPage });
@@ -1108,7 +1108,7 @@ const InstanceMods: Component = () => {
   /// Clean tags for Browse cards (loader + primary category/tag) matching reference UI
   const extractCardTags = (categories?: string[]): { loader?: string; tag?: string } => {
     const cats = categories || [];
-    const instLoader = instance()?.loader.type;
+    const instLoader = instance()?.loader?.type;
     const loaders = extractLoaders(cats);
     const loader = loaders.find(l => l === instLoader) || loaders[0];
     const nonLoader = cats.find(c => !KNOWN_LOADERS.has(c));
@@ -1345,7 +1345,7 @@ const InstanceMods: Component = () => {
                 <div class="setting-info">
                   <span class="setting-name">Installation files</span>
                   <span class="setting-desc">
-                    {loaderLabel(instance()?.loader.type || "")} {instance()?.loader.version || ""} · Minecraft {instance()?.game_version} · {instance()?.mods.length || 0} {instance()?.mods.length === 1 ? "mod" : "mods"} installed
+                    {loaderLabel(instance()?.loader?.type || "")} {instance()?.loader?.version || ""} · Minecraft {instance()?.game_version} · {(instance()?.mods || []).length} {(instance()?.mods || []).length === 1 ? "mod" : "mods"} installed
                   </span>
                 </div>
                 <div class="setting-control">
@@ -1694,7 +1694,7 @@ const InstanceMods: Component = () => {
               </div>
               <button
                 class="btn inst-panel-btn inst-action-btn tip-right"
-                disabled={checkingUpdates() || (instance()?.mods.length ?? 0) === 0}
+                disabled={checkingUpdates() || (instance()?.mods?.length ?? 0) === 0}
                 onClick={() => refreshUpdates(true)}
                 data-tip="Check for newer versions"
               >
@@ -1704,7 +1704,7 @@ const InstanceMods: Component = () => {
             {/* Row 2: Status Metadata on left · Sort Dropdown on right */}
             <div class="inst-meta-row">
               <div class="inst-meta-left">
-                Showing installed for <strong class="inst-meta-highlight">{instance()?.loader.type}</strong> <span class="inst-meta-sep">·</span> <strong class="inst-meta-highlight">{instance()?.game_version}</strong>
+                Showing installed for <strong class="inst-meta-highlight">{instance()?.loader?.type}</strong> <span class="inst-meta-sep">·</span> <strong class="inst-meta-highlight">{instance()?.game_version}</strong>
                 <span class="inst-meta-sep">—</span>
                 <span class="inst-meta-count">{installedActiveCount() || "0"} installed</span>
               </div>
@@ -1729,7 +1729,7 @@ const InstanceMods: Component = () => {
               <button class={`inst-category-item ${browseFilter() === "all" ? "active" : ""}`} onClick={() => setBrowseFilter("all")}>All</button>
               <button class={`inst-category-item ${browseFilter() === "mod" ? "active" : ""}`} onClick={() => setBrowseFilter("mod")}>
                 Mods
-                <Show when={instance()?.loader.type === "vanilla"}>
+                <Show when={instance()?.loader?.type === "vanilla"}>
                   <span class="category-unsupported-tag">unsupported</span>
                 </Show>
               </button>
@@ -1741,10 +1741,10 @@ const InstanceMods: Component = () => {
         </Show>
 
         <Show when={contentTab() === "installed"}>
-          <Show when={(instance()?.mods.length || 0) === 0}>
+          <Show when={(instance()?.mods?.length || 0) === 0}>
             <div style="text-align:center;color:var(--muted);padding:30px;font-size:var(--fs-xs)">No content installed. Switch to "Browse mods" to find some.</div>
           </Show>
-          <Show when={(instance()?.mods.length || 0) > 0 && totalInstalledCount() === 0}>
+          <Show when={(instance()?.mods?.length || 0) > 0 && totalInstalledCount() === 0}>
             <div style="text-align:center;color:var(--muted);padding:30px;font-size:var(--fs-xs)">No installed content matches your filter.</div>
           </Show>
           <Show when={showBulkDelete()}>
@@ -1965,10 +1965,10 @@ const InstanceMods: Component = () => {
               {/* Row 2: Status Metadata on left · Sort Dropdown on right */}
               <div class="inst-meta-row">
                 <div class="inst-meta-left">
-                  <Show when={instance()?.loader.type === "vanilla" && browseFilter() === "mod"} fallback={
+                  <Show when={instance()?.loader?.type === "vanilla" && browseFilter() === "mod"} fallback={
                     <>
                       <Show when={browseFilter() === "resourcepack" || browseFilter() === "shader"} fallback={
-                        <>Showing results for <strong class="inst-meta-highlight">{instance()?.loader.type}</strong> <span class="inst-meta-sep">·</span> <strong class="inst-meta-highlight">{instance()?.game_version}</strong></>
+                        <>Showing results for <strong class="inst-meta-highlight">{instance()?.loader?.type}</strong> <span class="inst-meta-sep">·</span> <strong class="inst-meta-highlight">{instance()?.game_version}</strong></>
                       }>
                         <>Showing results for <strong class="inst-meta-highlight">{instance()?.game_version}</strong> <span class="inst-meta-sep">·</span> Version override: <input class="field-control inst-version-override" placeholder="any" value={browseVersion()} onInput={(e) => { setBrowseVersion(e.currentTarget.value); setCurrentPage(1); clearTimeout(searchTimeout); searchTimeout = window.setTimeout(() => doSearch(1), 400); }} /> <span class="inst-meta-sub">(any if empty)</span></>
                       </Show>
@@ -1983,7 +1983,7 @@ const InstanceMods: Component = () => {
                     <span class="inst-meta-sub">Mods are not supported on vanilla</span>
                   </Show>
                 </div>
-                <Show when={!(instance()?.loader.type === "vanilla" && browseFilter() === "mod")}>
+                <Show when={!(instance()?.loader?.type === "vanilla" && browseFilter() === "mod")}>
                   <div class="inst-meta-sort-wrap">
                     <Dropdown prefix="Sort: " value={sortBy()} options={SORT_OPTIONS} onChange={handleSortChange} />
                   </div>
@@ -1991,7 +1991,7 @@ const InstanceMods: Component = () => {
               </div>
             </div>
             <div class="browse-results" ref={browsePageSize.setEl}>
-              <Show when={instance()?.loader.type === "vanilla" && browseFilter() === "mod"}>
+              <Show when={instance()?.loader?.type === "vanilla" && browseFilter() === "mod"}>
                 <div class="vanilla-unsupported-panel">
                   <div class="vanilla-unsupported-art-wrap">
                     <div class="vanilla-unsupported-glow" />
@@ -2050,14 +2050,14 @@ const InstanceMods: Component = () => {
                 </div>
               </Show>
 
-              <Show when={!(instance()?.loader.type === "vanilla" && browseFilter() === "mod") && searching()}>
+              <Show when={!(instance()?.loader?.type === "vanilla" && browseFilter() === "mod") && searching()}>
                 <div class="browse-status-pane">
                   <div class="browse-loading-spinner" />
                   <div class="browse-status-text">Searching {modSource() === "curseforge" ? "CurseForge" : "Modrinth"}...</div>
                 </div>
               </Show>
 
-              <Show when={!(instance()?.loader.type === "vanilla" && browseFilter() === "mod") && !searching() && displayBrowseResults().length === 0}>
+              <Show when={!(instance()?.loader?.type === "vanilla" && browseFilter() === "mod") && !searching() && displayBrowseResults().length === 0}>
                 <div class="browse-status-pane">
                   <div class="browse-status-icon"><IconSearch /></div>
                   <div class="browse-status-title">No results found</div>
@@ -2069,7 +2069,7 @@ const InstanceMods: Component = () => {
                 </div>
               </Show>
 
-              <Show when={!(instance()?.loader.type === "vanilla" && browseFilter() === "mod") && !searching() && displayBrowseResults().length > 0}>
+              <Show when={!(instance()?.loader?.type === "vanilla" && browseFilter() === "mod") && !searching() && displayBrowseResults().length > 0}>
                 <div class="inst-card-grid">
                 <For each={displayBrowseResults()}>
                 {(mod) => (
@@ -2153,7 +2153,7 @@ const InstanceMods: Component = () => {
             <ModDetailModal
               mod={detailMod()}
               source={modSource()}
-              loader={instance()?.loader.type ?? ""}
+              loader={instance()?.loader?.type ?? ""}
               /* The instance's version, deliberately NOT the free-text version
                  box. That box scopes the *search*; compatibility has to be judged
                  against the instance we'd install into, which is the version
@@ -2163,7 +2163,7 @@ const InstanceMods: Component = () => {
               gameVersion={instance()?.game_version ?? ""}
               category={browseFilter() === "all" ? (detailMod() ? detectCategory(detailMod()!) : "mod") : browseFilter()}
               loaders={detailMod() ? extractLoaders(detailMod()!.categories) : []}
-              installedVersionId={instance()?.mods.find(m => m.project_id === detailMod()?.project_id)?.version_id}
+              installedVersionId={instance()?.mods?.find(m => m.project_id === detailMod()?.project_id)?.version_id}
               busy={installing() === detailMod()?.project_id}
               onClose={() => setDetailMod(null)}
               /* Close on install. The install-progress popup and toasts sit at
