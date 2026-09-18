@@ -598,7 +598,6 @@ const CustomCapeEditor: Component<Props> = (props) => {
                     </div>
                     <span class="cape-dropzone-title">Upload Image or GIF</span>
                     <span class="cape-dropzone-sub">PNG · JPG · GIF · WEBP</span>
-                    <span class="cape-dropzone-btn">Browse Files</span>
                   </button>
                 </Show>
               </div>

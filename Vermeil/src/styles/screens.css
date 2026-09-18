@@ -2563,64 +2563,71 @@
 /* Upload dropzone in 2D workspace */
 .cape-workspace-dropzone {
   position: absolute;
-  inset: 16px;
+  width: 240px;
+  height: 360px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  background: rgba(18, 16, 24, 0.88);
+  gap: 10px;
+  background: rgba(16, 14, 22, 0.90);
   border: 1px dashed var(--accent);
   color: var(--text-muted);
   cursor: pointer;
-  box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.06);
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  box-shadow: inset 0 0 24px rgba(139, 92, 246, 0.08);
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 .cape-workspace-dropzone:hover {
-  background: rgba(26, 22, 36, 0.94);
+  background: rgba(24, 20, 36, 0.95);
   border-color: var(--accent-strong);
-  color: var(--text);
+  box-shadow: inset 0 0 32px rgba(139, 92, 246, 0.15), var(--bevel);
 }
 
 .cape-dropzone-icon {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 0;
   background: var(--surface-panel);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--accent);
   box-shadow: var(--bevel);
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.cape-workspace-dropzone:hover .cape-dropzone-icon {
+  transform: translateY(-2px);
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: var(--accent-strong);
+  box-shadow: var(--bevel-strong), 0 6px 16px rgba(139, 92, 246, 0.4);
+}
+.cape-workspace-dropzone:active .cape-dropzone-icon {
+  transform: translateY(1px);
+  box-shadow: none;
 }
 .cape-dropzone-icon svg {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
 }
 
 .cape-dropzone-title {
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
+  transition: color 0.12s;
+}
+.cape-workspace-dropzone:hover .cape-dropzone-title {
+  color: #fff;
 }
 
 .cape-dropzone-sub {
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   color: var(--text-faint);
-}
-
-.cape-dropzone-btn {
-  margin-top: 4px;
-  padding: 4px 12px;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--accent);
-  color: var(--accent-contrast);
-  box-shadow: var(--bevel);
-  border: 1px solid var(--accent-strong);
+  text-transform: uppercase;
 }
 
 /* Controls Section */
