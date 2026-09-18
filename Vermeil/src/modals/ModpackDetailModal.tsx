@@ -413,7 +413,11 @@ export const ModpackDetailModal: Component<ModpackDetailModalProps> = (props) =>
                   </Show>
                 </div>
                 <div class="modpack-footer-actions">
-                  <button type="button" class="btn btn--ghost" onClick={props.onClose}>
+                  <button
+                    type="button"
+                    class="btn modpack-footer-close-btn"
+                    onClick={props.onClose}
+                  >
                     Close
                   </button>
                   <button
