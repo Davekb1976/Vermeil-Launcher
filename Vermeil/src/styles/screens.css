@@ -3898,6 +3898,7 @@
 }
 
 .news-modal {
+  position: relative;
   width: min(720px, calc(100vw - 48px));
   max-height: calc(100vh - 90px);
   background: var(--surface-panel);
@@ -3945,6 +3946,15 @@
   object-fit: contain;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.6);
   z-index: 1;
+}
+
+.news-modal-hero .news-card-tag {
+  top: 12px;
+  left: 12px;
+  font-size: 10px;
+  padding: 4px 8px;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
 .news-modal-close {
@@ -4000,6 +4010,12 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.news-modal-badges .news-card-tag {
+  position: static;
+  top: auto;
+  left: auto;
 }
 
 .news-modal-body {

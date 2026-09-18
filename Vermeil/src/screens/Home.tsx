@@ -396,7 +396,10 @@ const Home: Component = () => {
             <Show
               when={selectedArticle()!.image_url}
               fallback={
-                <div style="display:flex;justify-content:flex-end;padding:12px 12px 0">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px 0">
+                  <span class={`news-card-tag ${getNewsCategory(selectedArticle()!).tagClass}`} style="position:static">
+                    {getNewsCategory(selectedArticle()!).label}
+                  </span>
                   <button
                     class="news-modal-close"
                     style="position:static"
@@ -419,6 +422,9 @@ const Home: Component = () => {
                   alt=""
                   draggable={false}
                 />
+                <span class={`news-card-tag ${getNewsCategory(selectedArticle()!).tagClass}`}>
+                  {getNewsCategory(selectedArticle()!).label}
+                </span>
                 <button
                   class="news-modal-close"
                   onClick={() => setSelectedArticle(null)}
@@ -432,16 +438,13 @@ const Home: Component = () => {
             {/* Modal Header */}
             <div class="news-modal-header">
               <h2 class="news-modal-title">{selectedArticle()!.title}</h2>
-              <div class="news-modal-badges">
-                <span class={`news-card-tag ${getNewsCategory(selectedArticle()!).tagClass}`}>
-                  {getNewsCategory(selectedArticle()!).label}
-                </span>
-                <Show when={formatArticleDate(selectedArticle()!.date)}>
+              <Show when={formatArticleDate(selectedArticle()!.date)}>
+                <div class="news-modal-badges">
                   <span class="news-card-date">
                     {formatArticleDate(selectedArticle()!.date)}
                   </span>
-                </Show>
-              </div>
+                </div>
+              </Show>
             </div>
 
             {/* Modal Body */}
