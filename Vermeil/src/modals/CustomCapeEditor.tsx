@@ -5,7 +5,7 @@ import { showToast } from "../App";
 import Dropdown from "../components/Dropdown";
 import ColorPicker from "../components/ColorPicker";
 import { normalizeHex } from "../lib/color";
-import { IconImage, IconRotate, IconX } from "../components/Icons";
+import { IconRotate, IconX, IconUpload, IconCheck } from "../components/Icons";
 import {
   PANEL,
   clampRes,
@@ -393,6 +393,13 @@ const CustomCapeEditor: Component<Props> = (props) => {
     window.addEventListener("pointerup", onPointerUp);
   };
 
+  const onWorkspaceWheel = (e: WheelEvent) => {
+    if (!frameSrc) return;
+    e.preventDefault();
+    const step = e.deltaY < 0 ? 0.08 : -0.08;
+    handleScale(clampScale(scale() + step));
+  };
+
   const handleScale = (v: number) => {
     setScale(v);
     refresh();
@@ -485,7 +492,7 @@ const CustomCapeEditor: Component<Props> = (props) => {
 
   onMount(async () => {
     if (previewCanvas) {
-      viewer = new SkinViewer({ canvas: previewCanvas, width: 240, height: 352 });
+      viewer = new SkinViewer({ canvas: previewCanvas, width: 240, height: 360 });
       viewer.controls.enableZoom = false;
       viewer.zoom = 0.78;
       // Rotate the body so the cape's outer face points at the camera.
@@ -537,11 +544,19 @@ const CustomCapeEditor: Component<Props> = (props) => {
   });
 
   return (
-    <div class="modal-overlay">
-      <div class="modal panel panel--bracketed cape-editor" style="width:640px">
-        <div class="modal-header">
-          <span class="modal-title">{props.editing ? "Edit custom cape" : "New custom cape"}</span>
-          <button class="modal-close" onClick={props.onClose}><IconX /></button>
+    <div class="modal-overlay cape-editor-overlay">
+      <div class="modal cape-editor-modal">
+        {/* Header */}
+        <div class="cape-editor-header">
+          <div class="cape-editor-header-left">
+            <span class="card-section-tag tag-settings-skins">CAPE STUDIO</span>
+            <span class="cape-editor-title">
+              {props.editing ? `Edit Cape: ${props.editing.name}` : "Design Custom Cape"}
+            </span>
+          </div>
+          <button class="cape-editor-close-btn" onClick={props.onClose} title="Close editor">
+            <IconX />
+          </button>
         </div>
 
         <div class="modal-body cape-editor-body">
@@ -553,147 +568,224 @@ const CustomCapeEditor: Component<Props> = (props) => {
             onChange={handleFileSelected}
           />
 
-          <div class="cape-editor-stage">
-            {/* 2D positioning workspace — cape unfolded as a cross-net. */}
-            <div class="cape-editor-workspace">
-              <div class="cape-editor-panel-label">Layout</div>
-              <canvas
-                ref={workspaceCanvas}
-                class="cape-workspace-canvas"
-                width={(PANEL.w + 2) * DISP}
-                height={(PANEL.h + 2) * DISP}
-                onPointerDown={onWorkspacePointerDown}
-                style={{ cursor: hasImage() ? "move" : "default" }}
-              />
-              <Show when={!hasImage() && !solid()}>
-                <button class="cape-workspace-empty" onClick={handleUploadClick}>
-                  <IconImage />
-                  <span>Upload an image</span>
-                </button>
-              </Show>
+          <div class="cape-editor-stage-grid">
+            {/* 2D Positioning Workspace */}
+            <div class="cape-stage-card">
+              <div class="cape-stage-header">
+                <div class="cape-stage-title-wrap">
+                  <span class="cape-stage-tag">2D CANVAS NET</span>
+                  <span class="cape-stage-hint">Drag to move · Scroll to scale</span>
+                </div>
+                <Show when={hasImage() && !solid()}>
+                  <span class="skins-count-badge">{(PANEL.w + 2)}×{(PANEL.h + 2)}</span>
+                </Show>
+              </div>
+
+              <div class="cape-stage-well cape-workspace-well">
+                <canvas
+                  ref={workspaceCanvas}
+                  class="cape-workspace-canvas"
+                  width={(PANEL.w + 2) * DISP}
+                  height={(PANEL.h + 2) * DISP}
+                  onPointerDown={onWorkspacePointerDown}
+                  onWheel={onWorkspaceWheel}
+                  style={{ cursor: hasImage() ? "move" : "default" }}
+                />
+                <Show when={!hasImage() && !solid()}>
+                  <button class="cape-workspace-dropzone" onClick={handleUploadClick}>
+                    <div class="cape-dropzone-icon">
+                      <IconUpload />
+                    </div>
+                    <span class="cape-dropzone-title">Upload Image or GIF</span>
+                    <span class="cape-dropzone-sub">PNG · JPG · GIF · WEBP</span>
+                    <span class="cape-dropzone-btn">Browse Files</span>
+                  </button>
+                </Show>
+              </div>
             </div>
 
-            {/* Live 3D preview */}
-            <div class="cape-editor-preview">
-              <div class="cape-editor-panel-label">Preview</div>
-              <canvas ref={previewCanvas} class="cape-preview-canvas" />
+            {/* Live 3D Preview */}
+            <div class="cape-stage-card">
+              <div class="cape-stage-header">
+                <div class="cape-stage-title-wrap">
+                  <span class="cape-stage-tag">3D FIGURINE PREVIEW</span>
+                  <span class="cape-stage-hint">Drag to rotate stand</span>
+                </div>
+                <Show when={isAnimated() && !solid()}>
+                  <span class="skins-animated-badge">Animated</span>
+                </Show>
+              </div>
+
+              <div class="cape-stage-well cape-preview-well">
+                <canvas ref={previewCanvas} class="cape-preview-canvas" />
+              </div>
             </div>
           </div>
 
-          {/* Controls */}
-          <div class="cape-editor-controls">
-            <label class="cape-control">
-              <span class="cape-control-label">Name</span>
-              <input
-                class="field-control field-control--text"
-                value={name()}
-                onInput={(e) => setName(e.currentTarget.value)}
-                placeholder="Custom Cape"
-              />
-            </label>
+          {/* Controls Section */}
+          <div class="cape-controls-section">
+            {/* Top Properties Bar: Name & Mode Toggle */}
+            <div class="cape-properties-bar">
+              <div class="cape-prop-group cape-name-group">
+                <label class="cape-prop-label">Cape Name</label>
+                <input
+                  class="cape-text-input"
+                  value={name()}
+                  onInput={(e) => setName(e.currentTarget.value)}
+                  placeholder="Custom Cape"
+                />
+              </div>
 
-            <div class="cape-control">
-              <span class="cape-control-label">Type</span>
-              <div style="display:flex;gap:6px;flex:1">
-                <button
-                  class={`btn ${!solid() ? "btn--primary" : ""}`}
-                  style="flex:1;font-size:11px"
-                  onClick={() => setMode(false)}
-                >
-                  Image / animated
-                </button>
-                <button
-                  class={`btn ${solid() ? "btn--primary" : ""}`}
-                  style="flex:1;font-size:11px"
-                  onClick={() => setMode(true)}
-                >
-                  Solid color
-                </button>
+              <div class="cape-prop-group cape-mode-group">
+                <label class="cape-prop-label">Cape Type</label>
+                <div class="skins-segmented-switch">
+                  <button
+                    class="skins-segment-btn"
+                    classList={{ active: !solid() }}
+                    onClick={() => setMode(false)}
+                  >
+                    Image / Animated
+                  </button>
+                  <button
+                    class="skins-segment-btn"
+                    classList={{ active: solid() }}
+                    onClick={() => setMode(true)}
+                  >
+                    Solid Color
+                  </button>
+                </div>
               </div>
             </div>
 
+            {/* Solid Color Mode Settings */}
             <Show when={solid()}>
-              <div class="cape-control">
-                <span class="cape-control-label">Color</span>
-                <ColorPicker value={bg()} onInput={handleBg} label="Cape colour" />
+              <div class="cape-solid-settings-card">
+                <div class="cape-solid-header">
+                  <span class="cape-prop-label">Fabric Color</span>
+                  <span class="cape-color-hex">{bg()}</span>
+                </div>
+                <div class="cape-color-row">
+                  <ColorPicker value={bg()} onInput={handleBg} label="Cape colour" />
+                  <div class="cape-color-hint">
+                    Choose a base tint or custom shade. Renders as a clean solid cloth in-game and on your 3D model.
+                  </div>
+                </div>
               </div>
             </Show>
 
+            {/* Image / Animated Mode Controls */}
             <Show when={!solid()}>
-              {/* Scale — the range input carries a log position, not the
-                  multiplier itself, so the ceiling can be high without losing
-                  precision near 1×. The readout shows the real value. */}
-              <label class="cape-control">
-                <span class="cape-control-label">
-                  Scale <span class="cape-control-value">{fmtScale(scale())}×</span>
-                </span>
-                <input
-                  type="range"
-                  min="0"
-                  max={SCALE_STEPS}
-                  step="1"
-                  value={scaleToPos(scale())}
-                  disabled={!hasImage()}
-                  style={`--slider-pct:${(scaleToPos(scale()) / SCALE_STEPS) * 100}%`}
-                  onInput={(e) => handleScale(posToScale(parseFloat(e.currentTarget.value)))}
-                />
-              </label>
+              {/* Action Toolbar */}
+              <div class="cape-actions-toolbar">
+                <div class="cape-toolbar-left">
+                  <button class="skins-action-btn skins-action-btn--secondary cape-tool-btn" onClick={handleUploadClick}>
+                    <IconUpload />
+                    <span>{hasImage() ? "Replace File" : "Upload File"}</span>
+                  </button>
+                  <button
+                    class="skins-action-btn skins-action-btn--secondary cape-tool-btn"
+                    onClick={rotateQuarter}
+                    disabled={!hasImage()}
+                    title="Rotate 90° clockwise"
+                  >
+                    <IconRotate />
+                    <span>Rotate 90°</span>
+                  </button>
+                  <button
+                    class="skins-action-btn skins-action-btn--secondary cape-tool-btn"
+                    onClick={handleCenter}
+                    disabled={!hasImage()}
+                    title="Center image in cape panel"
+                  >
+                    <span>Center Art</span>
+                  </button>
+                </div>
 
-              <label class="cape-control">
-                <span class="cape-control-label">
-                  Rotation <span class="cape-control-value">{Math.round(rot())}°</span>
-                </span>
-                <input
-                  type="range"
-                  min="0"
-                  max="359"
-                  step="1"
-                  value={rot()}
-                  disabled={!hasImage()}
-                  style={`--slider-pct:${(rot() / 359) * 100}%`}
-                  // Snapped, not raw: the track is ~2°/pixel, so exact quarter
-                  // turns are otherwise unhittable by dragging.
-                  onInput={(e) => handleRot(snapAngle(parseFloat(e.currentTarget.value)))}
-                />
-              </label>
-
-              <div class="cape-control">
-                <span class="cape-control-label">Resolution</span>
-                <Dropdown
-                  value={String(res())}
-                  options={resChoices()}
-                  onChange={handleRes}
-                  width="150px"
-                  openUp
-                />
+                <div class="cape-toolbar-right">
+                  <div class="cape-res-selector">
+                    <label class="cape-prop-label">Export Resolution</label>
+                    <Dropdown
+                      value={String(res())}
+                      options={resChoices()}
+                      onChange={handleRes}
+                      width="155px"
+                      openUp
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div class="cape-editor-control-btns">
-                <button class="btn" onClick={handleUploadClick}>
-                  <IconImage />
-                  <span>{hasImage() ? "Replace" : "Upload"}</span>
-                </button>
-                <button class="btn" onClick={rotateQuarter} disabled={!hasImage()} title="Rotate 90°">
-                  <IconRotate />
-                  <span>90°</span>
-                </button>
-                <button class="btn" onClick={handleCenter} disabled={!hasImage()}>
-                  Center
-                </button>
+              {/* Sliders Grid */}
+              <div class="cape-sliders-grid">
+                {/* Scale Slider Plate */}
+                <div class="cape-slider-plate" classList={{ disabled: !hasImage() }}>
+                  <div class="cape-slider-header">
+                    <span class="cape-slider-label">Scale Multiplier</span>
+                    <span class="cape-slider-readout">{fmtScale(scale())}×</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max={SCALE_STEPS}
+                    step="1"
+                    value={scaleToPos(scale())}
+                    disabled={!hasImage()}
+                    style={`--slider-pct:${(scaleToPos(scale()) / SCALE_STEPS) * 100}%`}
+                    onInput={(e) => handleScale(posToScale(parseFloat(e.currentTarget.value)))}
+                  />
+                </div>
+
+                {/* Rotation Slider Plate */}
+                <div class="cape-slider-plate" classList={{ disabled: !hasImage() }}>
+                  <div class="cape-slider-header">
+                    <span class="cape-slider-label">Rotation Angle</span>
+                    <span class="cape-slider-readout">{Math.round(rot())}°</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="359"
+                    step="1"
+                    value={rot()}
+                    disabled={!hasImage()}
+                    style={`--slider-pct:${(rot() / 359) * 100}%`}
+                    onInput={(e) => handleRot(snapAngle(parseFloat(e.currentTarget.value)))}
+                  />
+                </div>
               </div>
             </Show>
           </div>
         </div>
 
-        <div class="modal-footer">
-          <button class="btn btn--ghost" onClick={props.onClose}>Cancel</button>
-          <button
-            class="btn btn--primary"
-            onClick={handleSave}
-            disabled={(!solid() && !hasImage()) || saving()}
-          >
-            {saving() ? "Saving…" : "Save cape"}
-          </button>        </div>
+        {/* Modal Footer */}
+        <div class="cape-editor-footer">
+          <div class="cape-footer-meta">
+            <Show when={isAnimated() && !solid()}>
+              <span class="skins-animated-badge">Animated</span>
+            </Show>
+            <Show when={solid()}>
+              <span class="cape-format-pill">Solid Color</span>
+            </Show>
+            <span class="cape-format-pill">{res()}× Resolution</span>
+            <Show when={hasImage() && !solid()}>
+              <span class="cape-format-pill">{sourceMime.split("/")[1]?.toUpperCase() ?? "IMG"}</span>
+            </Show>
+          </div>
+
+          <div class="cape-footer-actions">
+            <button class="skins-action-btn skins-action-btn--secondary cape-footer-btn" onClick={props.onClose}>
+              Cancel
+            </button>
+            <button
+              class="skins-action-btn skins-action-btn--primary cape-footer-btn"
+              onClick={handleSave}
+              disabled={(!solid() && !hasImage()) || saving()}
+            >
+              <IconCheck />
+              <span>{saving() ? "Saving…" : "Save Cape"}</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

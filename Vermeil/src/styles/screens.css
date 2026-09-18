@@ -2382,97 +2382,427 @@
 
 /* ============================================================
    Custom cape editor modal (modals/CustomCapeEditor.tsx)
-
-   Two-pane stage: a 2D positioning workspace (the cape's visible back
-   panel, magnified, with a guide grid) beside a live 3D preview of the
-   baked cape on the player. Controls row underneath.
+   SloppyKeys 3D Studio redesign:
+   Deep blur overlay, framed dual-stage cards (2D net & 3D live),
+   ergonomic control plates, and tactile bevel buttons.
    ============================================================ */
-.cape-editor-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-.cape-editor-stage {
-  display: flex;
-  gap: var(--space-4);
-  justify-content: center;
-  align-items: flex-start;
-}
-.cape-editor-workspace,
-.cape-editor-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  position: relative;
-}
-.cape-editor-panel-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-}
-.cape-workspace-canvas {
-  background: repeating-conic-gradient(#2a2733 0% 25%, #211f29 0% 50%) 0 / 16px 16px;
-  border: 1px solid var(--border-strong);
-  touch-action: none;
-}
-.cape-workspace-empty {
-  position: absolute;
+
+.cape-editor-overlay {
+  position: fixed;
+  top: 38px;
   left: 0;
   right: 0;
   bottom: 0;
-  top: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 6, 14, 0.84);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+}
+
+.cape-editor-modal {
+  width: min(740px, 94vw);
+  max-height: calc(100vh - 48px);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--bevel-strong), 0 24px 60px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0;
+}
+
+.cape-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--surface-panel);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.cape-editor-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cape-editor-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.cape-editor-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: var(--bevel);
+  transition: background 0.12s, color 0.12s, border-color 0.12s, transform 0.12s;
+}
+.cape-editor-close-btn:hover {
+  background: var(--surface-raised);
+  color: var(--text);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+.cape-editor-close-btn:active {
+  transform: translateY(1px);
+}
+.cape-editor-close-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* Modal Body */
+.cape-editor-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  min-height: 0;
+  background: var(--surface-sunken);
+}
+.cape-editor-body::-webkit-scrollbar {
+  width: 4px;
+}
+.cape-editor-body::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+}
+
+/* Dual Stage Grid: Left 2D Net, Right 3D Live Figurine */
+.cape-editor-stage-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cape-stage-card {
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--bevel);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cape-stage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--surface-panel);
+  border-bottom: 1px solid var(--border);
+  min-height: 32px;
+  box-sizing: border-box;
+}
+
+.cape-stage-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cape-stage-tag {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.cape-stage-hint {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+/* Recessed wells for canvases */
+.cape-stage-well {
+  padding: 8px;
+  background: var(--surface-sunken);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 376px;
+  box-sizing: border-box;
+}
+
+.cape-workspace-canvas {
+  background: repeating-conic-gradient(#262330 0% 25%, #1d1b24 0% 50%) 0 / 16px 16px;
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  touch-action: none;
+  display: block;
+}
+
+.cape-preview-well {
+  background: radial-gradient(circle at center 60%, rgba(139, 92, 246, 0.08) 0%, transparent 70%), var(--surface-sunken);
+}
+
+.cape-preview-canvas {
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  cursor: grab;
+  display: block;
+}
+.cape-preview-canvas:active {
+  cursor: grabbing;
+}
+
+/* Upload dropzone in 2D workspace */
+.cape-workspace-dropzone {
+  position: absolute;
+  inset: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px dashed var(--border-strong);
-  color: var(--muted);
-  font-size: 11px;
+  background: rgba(18, 16, 24, 0.88);
+  border: 1px dashed var(--accent);
+  color: var(--text-muted);
   cursor: pointer;
+  box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.06);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
-.cape-workspace-empty svg { width: 28px; height: 28px; }
-.cape-workspace-empty:hover { color: var(--accent); border-color: var(--accent); }
-.cape-preview-canvas {
-  background: var(--surface-sunken);
-  border: 1px solid var(--border);
-  cursor: grab;
+.cape-workspace-dropzone:hover {
+  background: rgba(26, 22, 36, 0.94);
+  border-color: var(--accent-strong);
+  color: var(--text);
 }
-.cape-preview-canvas:active { cursor: grabbing; }
 
-.cape-editor-controls {
+.cape-dropzone-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 0;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
   display: flex;
-  align-items: flex-end;
-  gap: var(--space-3);
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  box-shadow: var(--bevel);
 }
-.cape-control {
+.cape-dropzone-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.cape-dropzone-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cape-dropzone-sub {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.cape-dropzone-btn {
+  margin-top: 4px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  box-shadow: var(--bevel);
+  border: 1px solid var(--accent-strong);
+}
+
+/* Controls Section */
+.cape-controls-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
-.cape-control-label {
-  font-size: 10px;
+
+.cape-properties-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--bevel);
+}
+
+.cape-prop-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cape-name-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.cape-prop-label {
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--muted);
+  color: var(--text-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-/* Live numeric readout beside a slider's label (scale multiplier, rotation
-   degrees). Needed because those sliders aren't linear/obvious from the thumb
-   position alone. Tabular figures so the label doesn't jitter as digits change. */
-.cape-control-value {
+
+.cape-text-input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  outline: none;
+  border-radius: 0;
+  transition: border-color 0.12s;
+}
+.cape-text-input:focus {
+  border-color: var(--accent);
+}
+
+/* Solid Color Settings Card */
+.cape-solid-settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--bevel);
+}
+
+.cape-solid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cape-color-hex {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.cape-color-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cape-color-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Actions Toolbar */
+.cape-actions-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--bevel);
+}
+
+.cape-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cape-tool-btn {
+  width: auto !important;
+  padding: 5px 10px !important;
+  font-size: 11px !important;
+}
+
+.cape-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cape-res-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Sliders Grid */
+.cape-sliders-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cape-slider-plate {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  box-shadow: var(--bevel);
+  transition: opacity 0.15s ease;
+}
+.cape-slider-plate.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.cape-slider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cape-slider-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.cape-slider-readout {
+  font-size: 11px;
+  font-weight: 700;
   color: var(--text);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  padding: 1px 6px;
 }
-/* Cape "Scale" slider — square accent thumb to match the memory/concurrency
-   sliders (the rest of the app's sharp-edge language). Native by default, so
-   it needs the full custom treatment, not just the base.css override block. */
-.cape-control input[type="range"] {
-  width: 160px;
+
+.cape-slider-plate input[type="range"] {
+  width: 100%;
   -webkit-appearance: none;
   appearance: none;
   height: 4px;
@@ -2480,13 +2810,13 @@
     to right,
     var(--accent) 0%,
     var(--accent) var(--slider-pct, 0%),
-    var(--bg) var(--slider-pct, 0%),
-    var(--bg) 100%
+    var(--surface-sunken) var(--slider-pct, 0%),
+    var(--surface-sunken) 100%
   );
   outline: none;
   cursor: pointer;
 }
-.cape-control input[type="range"]::-webkit-slider-thumb {
+.cape-slider-plate input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 14px;
@@ -2494,16 +2824,60 @@
   border: none;
   border-radius: 0;
   background: var(--accent);
-  box-shadow: 0 0 0 3px var(--bg2);
+  box-shadow: 0 0 0 2px var(--surface-panel), var(--bevel);
   cursor: pointer;
+  transition: transform 0.1s;
 }
-.cape-control input[type="range"]::-moz-range-thumb {
+.cape-slider-plate input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+.cape-slider-plate input[type="range"]::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border: none;
   border-radius: 0;
   background: var(--accent);
   cursor: pointer;
+}
+
+/* Modal Footer */
+.cape-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--surface-panel);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.cape-footer-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cape-format-pill {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-faint);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cape-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cape-footer-btn {
+  width: auto !important;
+  min-width: 90px;
+  padding: 7px 14px !important;
 }
 /* In-app colour picker (components/ColorPicker.tsx). Replaces
    <input type="color"> — its picker is host browser UI that WebView2 doesn't
@@ -2598,11 +2972,6 @@
 .color-hex input {
   flex: 1;
   min-width: 0;
-}
-.cape-editor-control-btns {
-  display: flex;
-  gap: var(--space-2);
-  margin-left: auto;
 }
 
 
