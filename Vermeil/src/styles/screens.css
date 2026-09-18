@@ -2436,33 +2436,6 @@
   letter-spacing: 0.01em;
 }
 
-.cape-editor-close-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  background: var(--surface-sunken);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  cursor: pointer;
-  box-shadow: var(--bevel);
-  transition: background 0.12s, color 0.12s, border-color 0.12s, transform 0.12s;
-}
-.cape-editor-close-btn:hover {
-  background: var(--surface-raised);
-  color: var(--text);
-  border-color: var(--border-hover);
-  transform: translateY(-1px);
-}
-.cape-editor-close-btn:active {
-  transform: translateY(1px);
-}
-.cape-editor-close-btn svg {
-  width: 13px;
-  height: 13px;
-}
-
 /* Modal Body */
 .cape-editor-body {
   padding: 12px 14px;
