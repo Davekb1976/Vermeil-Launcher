@@ -4233,14 +4233,14 @@
 @media (max-width: 880px) { .modpack-grid-4x3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 580px) { .modpack-grid-4x3 { grid-template-columns: 1fr; } }
 
-/* Modpack card — styling matching installed content view */
+/* Modpack card — styling matching installed content view with SHARP CORNERS */
 .modpack-card {
   position: relative;
   display: flex;
   flex-direction: column;
   background: #13121b;
   border: 1px solid #23212f;
-  border-radius: 8px;
+  border-radius: 0;
   padding: 14px 16px;
   min-height: 155px;
   box-sizing: border-box;
@@ -4268,7 +4268,7 @@
   width: 44px;
   height: 44px;
   flex-shrink: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: #1c1b26;
   border: 1px solid #282536;
   display: flex;
@@ -4303,7 +4303,7 @@
   font-size: 10px;
   font-weight: 600;
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: 0;
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -4338,7 +4338,7 @@
   font-size: 11px;
   font-weight: 600;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: 0;
   background: #1c1b26;
   border: 1px solid #2d2a3b;
   color: #a1a1aa;
@@ -4388,14 +4388,14 @@
   font-size: 12px;
   font-weight: 600;
   padding: 4px 12px;
-  border-radius: var(--radius-xs);
+  border-radius: 0;
 }
 
 /* Skeleton Loading Cards */
 .modpack-card-skeleton {
   background: #13121b;
   border: 1px solid #23212f;
-  border-radius: 8px;
+  border-radius: 0;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -4404,18 +4404,18 @@
   box-sizing: border-box;
 }
 .skeleton-header { display: flex; gap: 12px; align-items: center; }
-.skeleton-icon { width: 44px; height: 44px; border-radius: 6px; background: #1c1b26; flex-shrink: 0; animation: shimmer 1.5s infinite linear; }
+.skeleton-icon { width: 44px; height: 44px; border-radius: 0; background: #1c1b26; flex-shrink: 0; animation: shimmer 1.5s infinite linear; }
 .skeleton-title-wrap { flex: 1; display: flex; flex-direction: column; gap: 6px; justify-content: center; }
-.skeleton-line { height: 12px; background: #1c1b26; border-radius: 4px; animation: shimmer 1.5s infinite linear; }
+.skeleton-line { height: 12px; background: #1c1b26; border-radius: 0; animation: shimmer 1.5s infinite linear; }
 .skeleton-title { width: 70%; height: 14px; }
 .skeleton-author { width: 40%; }
 .skeleton-desc-1 { width: 100%; }
 .skeleton-desc-2 { width: 80%; }
 .skeleton-tags { display: flex; gap: 6px; }
-.skeleton-tag { width: 48px; height: 20px; border-radius: 4px; background: #1c1b26; animation: shimmer 1.5s infinite linear; }
+.skeleton-tag { width: 48px; height: 20px; border-radius: 0; background: #1c1b26; animation: shimmer 1.5s infinite linear; }
 .skeleton-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 8px; border-top: 1px solid #1e1a2b; }
-.skeleton-meta { width: 80px; height: 12px; background: #1c1b26; border-radius: 4px; animation: shimmer 1.5s infinite linear; }
-.skeleton-btn { width: 60px; height: 24px; background: #1c1b26; border-radius: 4px; animation: shimmer 1.5s infinite linear; }
+.skeleton-meta { width: 80px; height: 12px; background: #1c1b26; border-radius: 0; animation: shimmer 1.5s infinite linear; }
+.skeleton-btn { width: 60px; height: 24px; background: #1c1b26; border-radius: 0; animation: shimmer 1.5s infinite linear; }
 
 @keyframes shimmer {
   0% { opacity: 0.35; }
@@ -4433,14 +4433,12 @@
   padding: 48px 24px;
   background: #13121b;
   border: 1px dashed #23212f;
-  border-radius: 8px;
+  border-radius: 0;
 }
 .modpack-empty-icon svg { width: 36px; height: 36px; color: var(--text-muted); margin-bottom: 12px; }
 .modpack-empty-title { margin: 0 0 6px; font-size: 16px; font-weight: 700; color: var(--text); }
 .modpack-empty-desc { margin: 0 0 16px; font-size: 12px; color: var(--text-muted); max-width: 420px; line-height: 1.5; }
-.modpack-empty-reset { padding: 6px 14px; font-size: 12px; }
-
-
+.modpack-empty-reset { padding: 6px 14px; font-size: 12px; border-radius: 0; }
 
 /* ============================================================
    Modpack Detail Modal — SloppyKeys 3D Tactile Dialog
@@ -4451,30 +4449,33 @@
   max-height: calc(100vh - 80px);
   background: #110f17;
   border: 1px solid #231f30;
-  border-radius: 8px;
+  border-radius: 0;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .modpack-detail-header {
-  padding: 16px 20px;
+  padding: 18px 22px;
   background: #110f17;
   border-bottom: 1px solid #1e1a2b;
 }
 
 .modpack-detail-identity { display: flex; align-items: center; gap: 14px; }
 
+/* Unique rounded icon for the modpack hero banner */
 .modpack-detail-icon {
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   flex-shrink: 0;
-  border-radius: 6px;
+  border-radius: 10px;
   background: #1c1b26;
   border: 1px solid #282536;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
-.modpack-detail-icon svg { width: 26px; height: 26px; color: var(--text-muted); }
+.modpack-detail-icon svg { width: 28px; height: 28px; color: var(--text-muted); }
 .modpack-detail-icon-img { width: 100%; height: 100%; object-fit: cover; }
 
 .modpack-detail-names { display: flex; flex-direction: column; gap: 4px; }
@@ -4483,14 +4484,15 @@
 
 .modpack-detail-title { font-size: 16px; font-weight: 700; color: #ffffff; line-height: 1.3; }
 
+/* Unique rounded pill badge for source */
 .modpack-source-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: 10px;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -4501,29 +4503,42 @@
 .modpack-detail-author { font-size: 12px; color: var(--muted); }
 .modpack-detail-author strong { color: var(--text); }
 
-.modpack-detail-body { padding: 18px 20px; gap: 16px; background: #110f17; }
+/* Proper vertical flow and generous spacing for the modal body */
+.modpack-detail-body {
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: #110f17;
+  overflow-y: auto;
+}
 
 .modpack-detail-summary {
   margin: 0;
   font-size: 13px;
   color: var(--text);
-  line-height: 1.55;
+  line-height: 1.6;
   background: #0b0a10;
   border: 1px solid #1f1b2c;
-  border-radius: 6px;
-  padding: 12px 14px;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+  border-radius: 0;
+  padding: 14px 16px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
-.modpack-detail-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.modpack-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
 .modpack-detail-stat {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   background: #13121b;
   border: 1px solid #23212f;
-  border-radius: 6px;
-  padding: 10px 12px;
+  border-radius: 0;
+  padding: 12px 14px;
+  box-shadow: var(--bevel);
 }
 .modpack-detail-stat-label {
   font-size: 10.5px;
@@ -4539,13 +4554,16 @@
 .modpack-detail-stat-value { font-size: 13px; font-weight: 700; color: #ffffff; font-family: var(--font-mono); }
 .modpack-detail-stat-sub { font-size: 10.5px; color: var(--muted); font-family: var(--font); }
 .modpack-detail-loaders-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.modpack-detail-loaders-list .badge {
+  border-radius: 4px;
+}
 
 .modpack-existing-notice {
   background: rgba(16, 185, 129, 0.08);
   border: 1px solid rgba(16, 185, 129, 0.3);
   border-left: 3px solid #10b981;
-  border-radius: 6px;
-  padding: 10px 14px;
+  border-radius: 0;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -4555,14 +4573,19 @@
 .modpack-existing-list { display: flex; flex-wrap: wrap; gap: 8px; padding-left: 20px; }
 .modpack-existing-item { font-size: 11.5px; color: var(--text-muted); font-family: var(--font-mono); }
 
-.modpack-versions-section { display: flex; flex-direction: column; gap: 10px; }
+.modpack-versions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
 .modpack-versions-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   border-bottom: 1px solid #1e1a2b;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
 }
 .modpack-section-title {
   font-size: 13px;
@@ -4573,13 +4596,22 @@
 }
 
 .modpack-version-filters { display: flex; align-items: center; gap: 10px; }
-.modpack-channel-pills { display: flex; background: #0b0a10; border: 1px solid #1f1b2c; border-radius: 4px; padding: 2px; gap: 2px; }
+
+/* Unique rounded channel toggle pills */
+.modpack-channel-pills {
+  display: flex;
+  background: #0b0a10;
+  border: 1px solid #1f1b2c;
+  border-radius: 12px;
+  padding: 2px;
+  gap: 2px;
+}
 .modpack-channel-pill {
-  padding: 3px 8px;
+  padding: 4px 10px;
   font-size: 11px;
   font-weight: 600;
   border: none;
-  border-radius: 3px;
+  border-radius: 10px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
@@ -4595,7 +4627,7 @@
   background: #0b0a10;
   border: 1px solid #1f1b2c;
   border-radius: 4px;
-  padding: 3px 8px;
+  padding: 4px 10px;
 }
 .modpack-version-search svg { width: 12px; height: 12px; color: #635d75; }
 .modpack-version-search input {
@@ -4609,22 +4641,22 @@
 }
 
 .modpack-versions-list {
-  max-height: 260px;
+  max-height: 270px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   background: #0b0a10;
   border: 1px solid #1f1b2c;
-  border-radius: 6px;
-  padding: 8px;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+  border-radius: 0;
+  padding: 10px;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .modpack-versions-loading,
 .modpack-versions-empty,
 .modpack-versions-error {
-  padding: 28px;
+  padding: 32px;
   text-align: center;
   font-size: 12px;
   color: var(--muted);
@@ -4636,26 +4668,36 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
+  gap: 14px;
+  padding: 10px 14px;
   background: #13121b;
   border: 1px solid #23212f;
-  border-radius: 6px;
+  border-radius: 0;
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
 }
-.modpack-version-row:hover { border-color: var(--accent); background: #1c1926; }
-.modpack-version-row.selected { border-color: var(--accent); background: rgba(168, 85, 247, 0.12); }
+.modpack-version-row:hover {
+  border-color: var(--accent);
+  background: #1c1926;
+  transform: translateX(2px);
+}
+.modpack-version-row.selected {
+  border-color: var(--accent);
+  background: rgba(168, 85, 247, 0.12);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
 
-.modpack-vrow-left { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.modpack-vrow-left { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .modpack-vrow-title-row { display: flex; align-items: center; gap: 8px; }
-.modpack-vrow-name { font-size: 12.5px; font-weight: 700; color: #ffffff; }
+.modpack-vrow-name { font-size: 13px; font-weight: 700; color: #ffffff; }
+
+/* Unique rounded badges for version channels */
 .modpack-vrow-channel {
   font-size: 9.5px;
   font-weight: 700;
   text-transform: uppercase;
-  padding: 1px 6px;
-  border-radius: 3px;
+  padding: 1px 7px;
+  border-radius: 4px;
 }
 .modpack-vrow-channel.channel-release { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981; }
 .modpack-vrow-channel.channel-beta { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b; }
@@ -4664,8 +4706,8 @@
 .modpack-vrow-recommended {
   font-size: 9.5px;
   font-weight: 600;
-  padding: 1px 6px;
-  border-radius: 3px;
+  padding: 1px 7px;
+  border-radius: 4px;
   background: rgba(168, 85, 247, 0.15);
   border: 1px solid rgba(168, 85, 247, 0.4);
   color: #c084fc;
@@ -4682,16 +4724,22 @@
 .modpack-vrow-sep { opacity: 0.4; }
 
 .modpack-vrow-right { flex-shrink: 0; }
-.modpack-vrow-install { padding: 4px 10px; font-size: 11px; }
+.modpack-vrow-install {
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 4px;
+}
 
 .modpack-detail-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 14px 22px;
   border-top: 1px solid #1e1a2b;
   background: #110f17;
 }
 .modpack-footer-left { font-size: 12px; color: var(--muted); }
 .modpack-selected-indicator strong { color: var(--accent); }
 .modpack-footer-actions { display: flex; align-items: center; gap: 8px; }
+.modpack-footer-actions .btn { border-radius: 4px; }
