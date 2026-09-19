@@ -109,12 +109,6 @@ Every content addition or modification ripples through 5 connected stages. When 
 5. **No Blind API Parallelism**:
    - Modrinth and CurseForge rate-limit metadata queries.
    - Batch calls (e.g. `POST /v1/mods` for up to 50 IDs) rather than spawning unbounded HTTP requests.
-6. **Content Source Cards are Radio Tabs, NOT Checkboxes**:
-   - In modals and screens where the user chooses between Modrinth and CurseForge (e.g. `ImportInstance.tsx`), the selection cards are mutually exclusive (1-of-N).
-   - Active state is communicated via brand color border (`#1bd96a` / `#f16436`), 3px left accent border, and tinted background plate.
-   - **Never add a square checkbox (`.check`, `<IconCheck>`) to a content source selection card.** Checkboxes are strictly for multi-selection (0 to N items).
-   - Never use `position: absolute` checkmarks that overlap format badges (`.mrpack`, `.zip export`).
-   - If the entire card is clickable, do not embed redundant selection buttons.
 
 ---
 
