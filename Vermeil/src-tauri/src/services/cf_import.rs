@@ -89,6 +89,7 @@ pub async fn import_zip(
     zip_path: &str,
     api_key: &str,
     source_project_id: Option<String>,
+    project_icon: Option<String>,
     window: Option<tauri::WebviewWindow>,
 ) -> Result<Instance, String> {
     let zip_path_buf = PathBuf::from(zip_path);
@@ -136,7 +137,7 @@ pub async fn import_zip(
         format_version: 1,
         id: instance_id.clone(),
         name: instance_name,
-        icon: "cube".to_string(),
+        icon: project_icon.unwrap_or_else(|| "cube".to_string()),
         icon_custom: None,
         game_version: manifest.minecraft.version.clone(),
         loader: LoaderConfig {
@@ -516,29 +517,34 @@ async fn resolve_files(files: &[CfFile], api_key: &str) -> Result<Vec<CfFileInfo
         return resolve_files_without_api(files).await;
     }
 
-    // Use the batch files endpoint
+    // Use the batch files endpoint, chunked in batches of 200 to prevent
+    // oversized payloads or timeouts on very large modpacks.
     let file_ids: Vec<u64> = files.iter().map(|f| f.file_id).collect();
+    let mut all_infos: Vec<CfFileInfo> = Vec::with_capacity(file_ids.len());
 
-    let resp = crate::util::http::HTTP
-        .post(&format!("{}/mods/files", CF_API_BASE))
-        .header("x-api-key", api_key)
-        .header("Content-Type", "application/json")
-        .header("Accept", "application/json")
-        .json(&serde_json::json!({ "fileIds": file_ids }))
-        .send()
-        .await
-        .map_err(|e| format!("CurseForge files API failed: {}", e))?;
+    for chunk in file_ids.chunks(200) {
+        let resp = crate::util::http::HTTP
+            .post(&format!("{}/mods/files", CF_API_BASE))
+            .header("x-api-key", api_key)
+            .header("Content-Type", "application/json")
+            .header("Accept", "application/json")
+            .json(&serde_json::json!({ "fileIds": chunk }))
+            .send()
+            .await
+            .map_err(|e| format!("CurseForge files API failed: {}", e))?;
 
-    if !resp.status().is_success() {
-        let status = resp.status();
-        let text = resp.text().await.unwrap_or_default();
-        return Err(format!("CurseForge files API error ({}): {}", status, text));
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let text = resp.text().await.unwrap_or_default();
+            return Err(format!("CurseForge files API error ({}): {}", status, text));
+        }
+
+        let body: CfApiResponse<Vec<CfFileInfo>> = resp.json().await
+            .map_err(|e| format!("Parse files response: {}", e))?;
+        all_infos.extend(body.data);
     }
 
-    let body: CfApiResponse<Vec<CfFileInfo>> = resp.json().await
-        .map_err(|e| format!("Parse files response: {}", e))?;
-
-    Ok(body.data)
+    Ok(all_infos)
 }
 
 /// Without an API key there's no way to resolve a file id to its name or URL, so
@@ -580,10 +586,14 @@ async fn extract_overrides_async(
                 if let Some(parent) = dest.parent() {
                     let _ = fs::create_dir_all(parent);
                 }
-                let mut outfile = fs::File::create(&dest)
+                let outfile = fs::File::create(&dest)
                     .map_err(|e| format!("Create override file: {}", e))?;
-                std::io::copy(&mut entry, &mut outfile)
+                let mut writer = std::io::BufWriter::with_capacity(64 * 1024, outfile);
+                let mut reader = std::io::BufReader::with_capacity(64 * 1024, &mut entry);
+                std::io::copy(&mut reader, &mut writer)
                     .map_err(|e| format!("Extract override: {}", e))?;
+                use std::io::Write;
+                writer.flush().map_err(|e| format!("Flush override: {}", e))?;
             }
         }
         Ok(())

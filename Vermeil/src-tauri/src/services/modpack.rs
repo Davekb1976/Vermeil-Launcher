@@ -259,13 +259,15 @@ pub async fn install_from_mrpack_file(
                 expected_size: Some(mf.file_size),
             });
 
+            let sha1_hash = mf.hashes.sha1.clone().unwrap_or_default();
+
             // Track as content entry based on path
             if let Some(filename) = mf.path.strip_prefix("mods/") {
                 mod_entries.push(ModEntry {
                     id: filename.to_string(),
                     source: "modpack".to_string(),
                     project_id: String::new(),
-                    version_id: String::new(),
+                    version_id: sha1_hash.clone(),
                     filename: filename.to_string(),
                     version_number: None,
                     enabled: true,
@@ -282,7 +284,7 @@ pub async fn install_from_mrpack_file(
                     id: filename.to_string(),
                     source: "modpack".to_string(),
                     project_id: String::new(),
-                    version_id: String::new(),
+                    version_id: sha1_hash.clone(),
                     filename: filename.to_string(),
                     version_number: None,
                     enabled: true,
@@ -299,7 +301,7 @@ pub async fn install_from_mrpack_file(
                     id: filename.to_string(),
                     source: "modpack".to_string(),
                     project_id: String::new(),
-                    version_id: String::new(),
+                    version_id: sha1_hash.clone(),
                     filename: filename.to_string(),
                     version_number: None,
                     enabled: true,
@@ -321,7 +323,7 @@ pub async fn install_from_mrpack_file(
                     id: filename.to_string(),
                     source: "modpack".to_string(),
                     project_id: String::new(),
-                    version_id: String::new(),
+                    version_id: sha1_hash,
                     filename: filename.to_string(),
                     version_number: None,
                     enabled: true,
@@ -512,49 +514,16 @@ pub async fn enrich_mod_metadata(
         .map(|m| m.project_id.clone())
         .collect();
 
-    // Batch fetch CurseForge metadata (up to 50 per request)
+    // Batch fetch CurseForge metadata using existing helper (handles 50-chunking, logos, attachments)
     if !cf_ids.is_empty() {
-        for chunk in cf_ids.chunks(50) {
-            let body = serde_json::json!({ "modIds": chunk.iter().filter_map(|id| id.parse::<u64>().ok()).collect::<Vec<_>>() });
-            let resp = crate::util::http::HTTP
-                .post("https://api.curseforge.com/v1/mods")
-                .header("x-api-key", &api_key)
-                .json(&body)
-                .send()
-                .await;
-
-            if let Ok(resp) = resp {
-                if let Ok(v) = resp.json::<serde_json::Value>().await {
-                    if let Some(data) = v.get("data").and_then(|d| d.as_array()) {
-                        for mod_data in data {
-                            let project_id = mod_data.get("id").and_then(|i| i.as_u64()).unwrap_or(0).to_string();
-                            let title = mod_data.get("name").and_then(|n| n.as_str()).map(|s| s.to_string());
-                            let description = mod_data.get("summary").and_then(|s| s.as_str()).map(|s| s.to_string());
-                            let icon = mod_data.get("logo")
-                                .and_then(|l| {
-                                    let thumb = l.get("thumbnailUrl").and_then(|u| u.as_str()).filter(|s| !s.is_empty());
-                                    let full = l.get("url").and_then(|u| u.as_str()).filter(|s| !s.is_empty());
-                                    thumb.or(full)
-                                })
-                                .map(|s| s.to_string());
-                            let author = mod_data.get("authors")
-                                .and_then(|a| a.as_array())
-                                .and_then(|a| a.first())
-                                .and_then(|a| a.get("name"))
-                                .and_then(|n| n.as_str())
-                                .map(|s| s.to_string());
-
-                            // Write metadata only — icon caching happens in phase 2.
-                            for entry in instance.mods.iter_mut() {
-                                if entry.project_id == project_id && entry.title.is_none() {
-                                    entry.title = title.clone();
-                                    entry.icon_url = icon.clone();
-                                    entry.author = author.clone();
-                                    entry.description = description.clone();
-                                }
-                            }
-                        }
-                    }
+        let metas = crate::services::curseforge::fetch_projects_meta(&api_key, &cf_ids).await;
+        for entry in instance.mods.iter_mut() {
+            if let Some(meta) = metas.get(&entry.project_id) {
+                if entry.title.is_none() {
+                    entry.title = meta.name.clone();
+                    entry.icon_url = meta.icon_url.clone();
+                    entry.author = meta.author.clone();
+                    entry.description = meta.summary.clone();
                 }
             }
         }
@@ -562,39 +531,39 @@ pub async fn enrich_mod_metadata(
 
     // For Modrinth-sourced entries (mods, resource packs, shader packs,
     // datapacks) with filenames but no project_id, attempt hash-based lookup.
-    // The .mrpack format provides SHA-1 hashes for each file but not project
-    // IDs. We can use Modrinth's `/v2/version_files` endpoint to resolve
+    // The .mrpack format provides SHA-1 hashes for each file which we pre-store in
+    // `version_id`. We can use Modrinth's `/v2/version_files` endpoint to resolve
     // hashes → version → project. The endpoint returns the version regardless
     // of project type, so the same flow enriches every content category.
-    let modrinth_entries: Vec<(usize, String, String)> = instance.mods.iter().enumerate()
+    let modrinth_entries: Vec<(usize, String, String, String)> = instance.mods.iter().enumerate()
         .filter(|(_, m)| m.source == "modpack" && m.project_id.is_empty() && m.title.is_none())
-        .map(|(i, m)| (i, m.filename.clone(), m.category.clone()))
+        .map(|(i, m)| (i, m.filename.clone(), m.category.clone(), m.version_id.clone()))
         .collect();
 
     if !modrinth_entries.is_empty() {
-        // Compute SHA-1 hashes from the files on disk. Resolve each entry's
-        // directory from its category — non-mod content (resource packs,
-        // shaders, datapacks) lives in its own subfolder, not `mods/`. Without
-        // this, only mods would get enriched and resource packs / shaders
-        // would always render as filename-only cards.
         let minecraft_dir = paths::instances_dir().join(instance_id).join(".minecraft");
         let mut hash_to_idx: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         let mut hashes: Vec<String> = Vec::new();
 
-        for (idx, filename, category) in &modrinth_entries {
-            let subdir = match category.as_str() {
-                "resourcepack" => "resourcepacks",
-                "shader" => "shaderpacks",
-                "datapack" => "datapacks",
-                _ => "mods",
-            };
-            let file_path = minecraft_dir.join(subdir).join(filename);
-            if file_path.exists() {
-                if let Ok(bytes) = std::fs::read(&file_path) {
-                    use sha1::Digest;
-                    let hash = format!("{:x}", sha1::Sha1::digest(&bytes));
-                    hash_to_idx.insert(hash.clone(), *idx);
-                    hashes.push(hash);
+        for (idx, filename, category, sha1_from_manifest) in &modrinth_entries {
+            if !sha1_from_manifest.is_empty() {
+                hash_to_idx.insert(sha1_from_manifest.clone(), *idx);
+                hashes.push(sha1_from_manifest.clone());
+            } else {
+                let subdir = match category.as_str() {
+                    "resourcepack" => "resourcepacks",
+                    "shader" => "shaderpacks",
+                    "datapack" => "datapacks",
+                    _ => "mods",
+                };
+                let file_path = minecraft_dir.join(subdir).join(filename);
+                if file_path.exists() {
+                    if let Ok(bytes) = std::fs::read(&file_path) {
+                        use sha1::Digest;
+                        let hash = format!("{:x}", sha1::Sha1::digest(&bytes));
+                        hash_to_idx.insert(hash.clone(), *idx);
+                        hashes.push(hash);
+                    }
                 }
             }
         }
@@ -613,11 +582,9 @@ pub async fn enrich_mod_metadata(
                     // Response is a map of hash → version object
                     if let Some(obj) = v.as_object() {
                         let mut project_ids: Vec<String> = Vec::new();
-                        let mut hash_to_project: std::collections::HashMap<String, String> = std::collections::HashMap::new();
 
                         for (hash, version) in obj {
                             if let Some(pid) = version.get("project_id").and_then(|p| p.as_str()) {
-                                hash_to_project.insert(hash.clone(), pid.to_string());
                                 project_ids.push(pid.to_string());
                                 // Update the project_id on the entry
                                 if let Some(&idx) = hash_to_idx.get(hash) {
@@ -627,10 +594,12 @@ pub async fn enrich_mod_metadata(
                             }
                         }
 
-                        // Batch fetch project metadata
+                        // Batch fetch project metadata in chunks of 50
+                        // (Modrinth endpoint `/v2/projects` has a strict max limit of 100 IDs)
+                        project_ids.sort();
                         project_ids.dedup();
-                        if !project_ids.is_empty() {
-                            let ids_param = project_ids.iter()
+                        for chunk in project_ids.chunks(50) {
+                            let ids_param = chunk.iter()
                                 .map(|id| format!("\"{}\"", id))
                                 .collect::<Vec<_>>()
                                 .join(",");
@@ -892,10 +861,14 @@ async fn extract_overrides(
                     if let Some(parent) = dest.parent() {
                         let _ = fs::create_dir_all(parent);
                     }
-                    let mut outfile =
+                    let outfile =
                         fs::File::create(&dest).map_err(|e| format!("Create: {}", e))?;
-                    std::io::copy(&mut entry, &mut outfile)
+                    let mut writer = std::io::BufWriter::with_capacity(64 * 1024, outfile);
+                    let mut reader = std::io::BufReader::with_capacity(64 * 1024, &mut entry);
+                    std::io::copy(&mut reader, &mut writer)
                         .map_err(|e| format!("Extract: {}", e))?;
+                    use std::io::Write;
+                    writer.flush().map_err(|e| format!("Flush: {}", e))?;
                 }
             }
         }
@@ -1054,36 +1027,20 @@ pub async fn install_from_curseforge(
     }
 
     // Import via the existing CF import logic. Pass the CurseForge project ID
-    // through so the resulting instance is tied back to its source — this is
-    // what the modpack browser's "already installed" tracker matches on.
+    // and pre-cached icon so the instance is created atomically with its proper icon,
+    // avoiding any race condition with background metadata enrichment.
     let result =
         crate::services::cf_import::import_zip(
             temp_path.to_str().unwrap_or_default(),
             &api_key,
             Some(project_id.to_string()),
+            project_icon_path,
             window,
         )
         .await;
 
     // Cleanup temp file regardless of success/failure
     let _ = fs::remove_file(&temp_path);
-
-    // If the import succeeded and we have a cached icon, update the instance
-    // to carry it. The cf_import flow doesn't know about the project icon
-    // (it only has the zip), so we patch it after the fact.
-    if let Ok(ref instance) = result {
-        if let Some(ref icon_data_url) = project_icon_path {
-            let meta_path = paths::instances_dir().join(&instance.id).join("instance.json");
-            if let Ok(content) = fs::read_to_string(&meta_path) {
-                if let Ok(mut inst) = serde_json::from_str::<Instance>(&content) {
-                    inst.icon = icon_data_url.clone();
-                    if let Ok(json) = serde_json::to_string_pretty(&inst) {
-                        let _ = fs::write(&meta_path, json);
-                    }
-                }
-            }
-        }
-    }
 
     result
 }

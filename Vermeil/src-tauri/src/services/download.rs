@@ -353,7 +353,10 @@ pub async fn download_all(
 
     let client = crate::util::http::HTTP.clone();
 
-    let stream_limit = fetch_limit.max(write_limit);
+    // Stream concurrency is the sum of fetch and write limits so that in-flight
+    // disk writes never starve network fetches and vice versa. The individual
+    // semaphores (`fetch_sem` and `write_sem`) bound the actual concurrent load.
+    let stream_limit = fetch_limit + write_limit;
 
     let errors = Arc::new(Mutex::new(Vec::<String>::new()));
 

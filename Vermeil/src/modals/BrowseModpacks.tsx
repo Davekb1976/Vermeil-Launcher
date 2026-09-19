@@ -8,6 +8,7 @@ import {
   completeDownload,
   failDownload,
   showToast,
+  updateToast,
   setDockPagination,
 } from "../App";
 import {
@@ -183,6 +184,13 @@ const BrowseModpacks: Component = () => {
       versionNumber: pack.version_name ?? undefined,
     });
 
+    const toastId = showToast({
+      title: "Installing modpack...",
+      message: pack.title,
+      type: "loading",
+      autoCloseMs: 0,
+    });
+
     const installPromise =
       modSource() === "curseforge"
         ? installCfModpack(pack.project_id, versionId ?? pack.latest_version ?? undefined)
@@ -193,15 +201,26 @@ const BrowseModpacks: Component = () => {
         refetchInstances();
         refreshPinnedInstanceIds().catch(() => {});
         completeDownload(dlId);
+        updateToast(toastId, {
+          title: "Modpack installed",
+          message: `${pack.title} is ready to play`,
+          type: "success",
+          autoCloseMs: 4000,
+        });
       })
       .catch((e) => {
         failDownload(dlId);
         if (typeof e === "string" && e === "Install cancelled") {
-          showToast({ title: "Install cancelled", message: pack.title, type: "info", autoCloseMs: 3000 });
+          updateToast(toastId, {
+            title: "Install cancelled",
+            message: pack.title,
+            type: "info",
+            autoCloseMs: 3000,
+          });
           return;
         }
         console.error("Modpack install failed:", e);
-        showToast({
+        updateToast(toastId, {
           title: "Install failed",
           message: typeof e === "string" ? e : "Unknown error occurred during installation",
           type: "error",

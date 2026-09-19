@@ -626,6 +626,7 @@ pub struct CfFileInfo {
 #[derive(Debug, Clone, Default)]
 pub struct ProjectMeta {
     pub name: Option<String>,
+    pub summary: Option<String>,
     pub icon_url: Option<String>,
     pub author: Option<String>,
     pub class_id: Option<u32>,
@@ -634,6 +635,7 @@ pub struct ProjectMeta {
 
 fn parse_project_meta_item(item: &serde_json::Value) -> ProjectMeta {
     let name = item.get("name").and_then(|n| n.as_str()).map(str::to_string);
+    let summary = item.get("summary").and_then(|s| s.as_str()).map(str::to_string);
     let website_url = item
         .get("links")
         .and_then(|l| l.get("websiteUrl"))
@@ -661,6 +663,7 @@ fn parse_project_meta_item(item: &serde_json::Value) -> ProjectMeta {
 
     ProjectMeta {
         name,
+        summary,
         icon_url,
         author,
         class_id,

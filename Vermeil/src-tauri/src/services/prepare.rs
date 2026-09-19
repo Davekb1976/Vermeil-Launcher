@@ -249,7 +249,13 @@ pub async fn prepare_with_extras(
     // Extract Java archive if we just downloaded it
     if !java_cached && java_archive_path.exists() {
         emit("game", &instance_name, "Extracting Java", 0.97, false);
-        crate::util::platform::extract_java_archive(&java_archive_path, &install_dir)?;
+        let archive_path = java_archive_path.clone();
+        let target_dir = install_dir.clone();
+        tokio::task::spawn_blocking(move || {
+            crate::util::platform::extract_java_archive(&archive_path, &target_dir)
+        })
+        .await
+        .map_err(|e| format!("Java extraction task panicked: {}", e))??;
         let _ = fs::remove_file(&java_archive_path);
     }
 

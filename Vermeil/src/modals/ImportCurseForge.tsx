@@ -1,5 +1,5 @@
 import { Component, createSignal, Show } from "solid-js";
-import { setActiveScreen, refetchInstances, refreshPinnedInstanceIds, showToast, trackDownload, completeDownload, failDownload } from "../App";
+import { setActiveScreen, refetchInstances, refreshPinnedInstanceIds, showToast, updateToast, trackDownload, completeDownload, failDownload } from "../App";
 import { importCfZip } from "../ipc/commands";
 import { open } from "@tauri-apps/plugin-dialog";
 
@@ -20,18 +20,40 @@ const ImportCurseForge: Component = () => {
       setImporting(true);
 
       const fileName = (selected as string).split(/[\\/]/).pop() || "CurseForge pack";
-      const dlId = trackDownload(fileName.replace(/\.zip$/i, ""), "modpack");
+      const packName = fileName.replace(/\.zip$/i, "");
+      const dlId = trackDownload(packName, "modpack");
+
+      const toastId = showToast({
+        title: "Importing modpack...",
+        message: packName,
+        type: "loading",
+        autoCloseMs: 0,
+      });
 
       importCfZip(selected as string)
         .then((instance) => {
           refetchInstances();
           refreshPinnedInstanceIds().catch(() => {});
           completeDownload(dlId, instance.name);
-          showToast({ title: "Import complete", message: `${instance.name} imported successfully`, type: "success" });
+          updateToast(toastId, {
+            title: "Import complete",
+            message: `${instance.name} imported successfully`,
+            type: "success",
+            autoCloseMs: 4000,
+          });
         })
         .catch((e: any) => {
           failDownload(dlId);
-          showToast({
+          if (typeof e === "string" && e === "Install cancelled") {
+            updateToast(toastId, {
+              title: "Import cancelled",
+              message: packName,
+              type: "info",
+              autoCloseMs: 3000,
+            });
+            return;
+          }
+          updateToast(toastId, {
             title: "Import failed",
             message: typeof e === "string" ? e : e.message || "Import failed",
             type: "error",

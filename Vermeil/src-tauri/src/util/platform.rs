@@ -72,7 +72,8 @@ pub fn extract_java_archive(archive_path: &std::path::Path, dest_dir: &std::path
     if cfg!(windows) {
         // ZIP extraction
         let file = fs::File::open(archive_path).map_err(|e| e.to_string())?;
-        let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("Open zip: {}", e))?;
+        let buf_file = io::BufReader::with_capacity(64 * 1024, file);
+        let mut archive = zip::ZipArchive::new(buf_file).map_err(|e| format!("Open zip: {}", e))?;
         for i in 0..archive.len() {
             let mut entry = archive.by_index(i).map_err(|e| format!("Zip entry: {}", e))?;
             let outpath = dest_dir.join(entry.name());
@@ -82,8 +83,12 @@ pub fn extract_java_archive(archive_path: &std::path::Path, dest_dir: &std::path
                 if let Some(parent) = outpath.parent() {
                     fs::create_dir_all(parent).map_err(|e| e.to_string())?;
                 }
-                let mut outfile = fs::File::create(&outpath).map_err(|e| e.to_string())?;
-                io::copy(&mut entry, &mut outfile).map_err(|e| e.to_string())?;
+                let outfile = fs::File::create(&outpath).map_err(|e| e.to_string())?;
+                let mut writer = io::BufWriter::with_capacity(64 * 1024, outfile);
+                let mut reader = io::BufReader::with_capacity(64 * 1024, &mut entry);
+                io::copy(&mut reader, &mut writer).map_err(|e| e.to_string())?;
+                use io::Write;
+                writer.flush().map_err(|e| e.to_string())?;
             }
         }
     } else {

@@ -1,6 +1,6 @@
 import { Component, createSignal, Show, onMount, onCleanup } from "solid-js";
 import { listen } from "@tauri-apps/api/event";
-import { IconDownload, IconX } from "./Icons";
+import { IconDownload, IconX, IconCheck } from "./Icons";
 import { cancelInstall } from "../ipc/commands";
 
 interface ProgressEvent {
@@ -205,9 +205,16 @@ const InstallProgress: Component = () => {
 
   return (
     <Show when={visible()}>
-      <div class="install-progress-popup">
+      <div
+        class="install-progress-popup"
+        classList={{ "install-progress-done": done(), "install-progress-cancelling": cancelling() }}
+      >
         <div class="install-progress-header">
-          <IconDownload />
+          <div class="install-progress-icon-badge">
+            <Show when={done()} fallback={<IconDownload />}>
+              <IconCheck />
+            </Show>
+          </div>
           <span class="install-progress-title">{title()}</span>
           {/* Cancel actually stops the install; the X only hides this popup and
               leaves it running. Keeping them separate matters — an X that looks
