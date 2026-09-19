@@ -2069,9 +2069,17 @@
   }
 }
 
-@media (min-width: 1101px) {
+/* On 2-column viewports (681px - 1100px), span 2 columns so the 9th item spans the full bottom row */
+@media (max-width: 1100px) and (min-width: 681px) {
   .setting-row--span-2 {
     grid-column: span 2;
+  }
+}
+
+/* On 3-column viewports (>= 1101px), reset to 1 column so all 9 items fill a balanced 3x3 grid with no empty spaces */
+@media (min-width: 1101px) {
+  .setting-row--span-2 {
+    grid-column: auto;
   }
 }
 
