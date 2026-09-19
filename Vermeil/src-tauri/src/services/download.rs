@@ -160,12 +160,14 @@ pub fn file_valid(path: &Path, expected_sha1: &Option<String>, expected_size: &O
     }
 
     if let Some(hash) = expected_sha1 {
-        if let Ok(data) = std::fs::read(path) {
+        if let Ok(mut file) = std::fs::File::open(path) {
+            use std::io;
             let mut hasher = Sha1::new();
-            hasher.update(&data);
-            let result = format!("{:x}", hasher.finalize());
-            if result == *hash {
-                return true;
+            if io::copy(&mut file, &mut hasher).is_ok() {
+                let result = format!("{:x}", hasher.finalize());
+                if result == *hash {
+                    return true;
+                }
             }
         }
     }
@@ -181,8 +183,10 @@ pub fn file_valid(path: &Path, expected_sha1: &Option<String>, expected_size: &O
         .unwrap_or(false);
 
     if is_archive {
-        if let Ok(data) = std::fs::read(path) {
-            return is_valid_zip(&data);
+        if let Ok(file) = std::fs::File::open(path) {
+            if let Ok(archive) = zip::ZipArchive::new(file) {
+                return archive.len() > 0;
+            }
         }
     }
 

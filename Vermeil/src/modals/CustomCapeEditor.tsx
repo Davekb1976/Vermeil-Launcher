@@ -473,8 +473,8 @@ const CustomCapeEditor: Component<Props> = (props) => {
       const cape = await saveCustomCape(
         props.editing?.id ?? null,
         name().trim() || "Custom Cape",
-        Array.from(dataUrlToBytes(baked)),
-        Array.from(srcBytes),
+        baked,
+        srcBytes,
         srcMime,
         transform,
       );

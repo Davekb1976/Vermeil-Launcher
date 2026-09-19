@@ -1,4 +1,4 @@
-import { Component, createSignal, createResource, createEffect, Show, onMount, onCleanup, lazy } from "solid-js";
+import { Component, createSignal, createResource, createEffect, Show, onMount, onCleanup, lazy, untrack } from "solid-js";
 import FloatingDock from "./components/FloatingDock";
 import Titlebar from "./components/Titlebar";
 import ResizeHandles from "./components/ResizeHandles";
@@ -81,15 +81,38 @@ const [gameLogs, setGameLogs] = createSignal<Record<string, string[]>>({});
  *  popout window's identical cap. */
 const MAX_LOG_LINES = 5000;
 
-export function appendGameLog(instanceId: string, line: string) {
+// Batch incoming log lines and flush once per animation frame. Modded
+// Minecraft emits 100–500 lines/sec during boot; updating the signal per-line
+// would spread a 5,000-element array hundreds of times per second, thrashing
+// the GC and causing UI micro-stutters.
+const _logBuffer = new Map<string, string[]>();
+let _logFlushScheduled = false;
+
+function _flushLogBuffer() {
+  _logFlushScheduled = false;
+  if (_logBuffer.size === 0) return;
+  const batch = new Map(_logBuffer);
+  _logBuffer.clear();
   setGameLogs(prev => {
-    const existing = prev[instanceId] ?? [];
-    const next = [...existing, line];
-    return {
-      ...prev,
-      [instanceId]: next.length > MAX_LOG_LINES ? next.slice(next.length - MAX_LOG_LINES) : next,
-    };
+    const next = { ...prev };
+    for (const [id, lines] of batch) {
+      const existing = next[id] ?? [];
+      const merged = existing.concat(lines);
+      next[id] = merged.length > MAX_LOG_LINES
+        ? merged.slice(merged.length - MAX_LOG_LINES)
+        : merged;
+    }
+    return next;
   });
+}
+
+export function appendGameLog(instanceId: string, line: string) {
+  const buf = _logBuffer.get(instanceId);
+  if (buf) { buf.push(line); } else { _logBuffer.set(instanceId, [line]); }
+  if (!_logFlushScheduled) {
+    _logFlushScheduled = true;
+    requestAnimationFrame(_flushLogBuffer);
+  }
 }
 
 /** Clear logs for a single instance. Called at launch time so a fresh
@@ -286,7 +309,7 @@ export function completeDownload(
       return d;
     })
   );
-  persistDownloads(true);
+  persistDownloads();
 
   currentBatchCompleted++;
   if (nameOverride || finishedItem?.name) {
@@ -345,7 +368,7 @@ export function failDownload(id: string, errorMsg?: string) {
       return d;
     })
   );
-  persistDownloads(true);
+  persistDownloads();
 
   currentBatchFailed++;
 
@@ -442,7 +465,7 @@ const [account, { refetch: refetchAccount }] = createResource(getActiveAccount);
 createEffect(() => {
   const instList = instances();
   if (!instList || instList.length === 0) return;
-  const currentDownloads = downloads();
+  const currentDownloads = untrack(() => downloads());
   let changed = false;
   const updated = currentDownloads.map((d) => {
     if (d.category !== "modpack") return d;
@@ -480,7 +503,7 @@ createEffect(() => {
 
   if (changed) {
     setDownloads(updated);
-    persistDownloads(true);
+    persistDownloads();
   }
 });
 

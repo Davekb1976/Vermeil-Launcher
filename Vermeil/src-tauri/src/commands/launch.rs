@@ -107,16 +107,7 @@ pub async fn launch_instance(instance_id: String, window: tauri::WebviewWindow) 
         instance.mods.len(),
     );
 
-    // Update last_played
-    let meta_path = paths::instances_dir().join(&instance_id).join("instance.json");
-    if let Ok(content) = fs::read_to_string(&meta_path) {
-        if let Ok(mut inst) = serde_json::from_str::<crate::models::instance::Instance>(&content) {
-            inst.last_played = Some(chrono::Utc::now().to_rfc3339());
-            if let Ok(json) = serde_json::to_string_pretty(&inst) {
-                let _ = fs::write(&meta_path, json);
-            }
-        }
-    }
+
 
     Ok(pid)
 }
@@ -294,8 +285,14 @@ pub async fn get_instance_logs(instance_id: String) -> Result<Vec<String>, Strin
         return Ok(Vec::new());
     }
 
+    // Cap at the last 2,000 lines. Modded Minecraft can produce 10–50+ MB
+    // log files; reading them entirely into a Vec<String> and serializing over
+    // IPC would spike memory and freeze the WebView. The live `game-log` events
+    // provide the full stream during gameplay.
     let content = fs::read_to_string(&log_path).map_err(|e| e.to_string())?;
-    let lines: Vec<String> = content.lines().map(|l| l.to_string()).collect();
+    let all_lines: Vec<&str> = content.lines().collect();
+    let start = all_lines.len().saturating_sub(2000);
+    let lines: Vec<String> = all_lines[start..].iter().map(|l| l.to_string()).collect();
     Ok(lines)
 }
 
@@ -434,8 +431,35 @@ pub async fn read_instance_log(instance_id: String) -> Result<String, String> {
         .join(".minecraft")
         .join("logs")
         .join("latest.log");
-    match fs::read_to_string(&log_path) {
-        Ok(contents) => Ok(contents),
+    // Cap at the last 1 MB. Modded Minecraft logs can reach 10–50+ MB; sending
+    // the entire file across IPC as a single string would spike memory and
+    // freeze the WebView renderer. The popout viewer seeds with this tail, then
+    // tails live `game-log` events for the full stream.
+    const MAX_LOG_BYTES: u64 = 1_024 * 1_024;
+    match std::fs::metadata(&log_path) {
+        Ok(meta) => {
+            let len = meta.len();
+            if len == 0 {
+                return Ok(String::new());
+            }
+            if len <= MAX_LOG_BYTES {
+                return fs::read_to_string(&log_path).map_err(|e| e.to_string());
+            }
+            // Read only the tail.
+            use std::io::{Read, Seek, SeekFrom};
+            let mut file = std::fs::File::open(&log_path)
+                .map_err(|e| format!("Open log for {}: {}", instance_id, e))?;
+            file.seek(SeekFrom::End(-(MAX_LOG_BYTES as i64)))
+                .map_err(|e| format!("Seek log for {}: {}", instance_id, e))?;
+            let mut buf = String::with_capacity(MAX_LOG_BYTES as usize);
+            file.read_to_string(&mut buf)
+                .map_err(|e| format!("Read log tail for {}: {}", instance_id, e))?;
+            // Drop the first partial line (we likely seeked into the middle of one).
+            if let Some(pos) = buf.find('\n') {
+                buf.drain(..=pos);
+            }
+            Ok(buf)
+        }
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
         Err(e) => Err(format!("Failed to read log for {}: {}", instance_id, e)),
     }

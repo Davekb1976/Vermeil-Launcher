@@ -712,7 +712,7 @@ const Skins: Component = () => {
       // (variant() is null until then). In practice the profile is loaded by
       // the time the user can click Upload.
       const v = variant() ?? "CLASSIC";
-      await uploadSkin(Array.from(bytes), v, true, name);
+      await uploadSkin(bytes, v, true, name);
       await refetchLocal();
       await refetchProfile();
       await refreshActiveSkin();
@@ -805,10 +805,8 @@ const Skins: Component = () => {
     setVariant(newVariant);
     setBusy("variant");
     try {
-      const base64 = active.texture.split(",")[1];
-      const binary = atob(base64);
-      const bytes = Array.from({ length: binary.length }, (_, i) => binary.charCodeAt(i));
-      await uploadSkin(bytes, newVariant, false);
+      // active.texture is already a base64 data URL; pass it directly without decoding and re-encoding.
+      await uploadSkin(active.texture, newVariant, false);
       await refetchProfile();
       await refreshActiveSkin();
       showToast({
@@ -999,7 +997,7 @@ const Skins: Component = () => {
         res,
         solid: t.solid ?? false,
       });
-      return { png: Array.from(bake.png), frameTimeMs: bake.frames > 1 ? bake.frameTimeMs : null };
+      return { png: bake.png, frameTimeMs: bake.frames > 1 ? bake.frameTimeMs : null };
     } finally {
       src.dispose();
     }

@@ -586,8 +586,16 @@ pub async fn ensure_client_jar(version: &VersionJson) -> Result<PathBuf, String>
     Ok(jar_path)
 }
 
+/// Result of `ensure_assets` so callers don't re-read the 2–3 MB index file.
+pub struct AssetResult {
+    pub id: String,
+    /// True when the index uses `"virtual": true` or `"map_to_resources": true`
+    /// (pre-1.7.2 MC). Callers copy assets to `resources/` for legacy sound loading.
+    pub is_legacy: bool,
+}
+
 /// Download asset index and all assets
-pub async fn ensure_assets(version: &VersionJson, app: Option<tauri::AppHandle>) -> Result<String, String> {
+pub async fn ensure_assets(version: &VersionJson, app: Option<tauri::AppHandle>) -> Result<AssetResult, String> {
     let asset_info = version.asset_index.as_ref()
         .ok_or("No asset index in version JSON")?;
 
@@ -632,8 +640,10 @@ pub async fn ensure_assets(version: &VersionJson, app: Option<tauri::AppHandle>)
         download_all(tasks, app).await?;
     }
 
+    let is_legacy = index.map_to_resources || index.is_virtual;
+
     // Handle legacy/virtual asset formats (old MC versions need files at specific paths)
-    if index.map_to_resources || index.is_virtual {
+    if is_legacy {
         // Legacy: copy assets to <assets>/virtual/legacy/<path> or game dir resources/
         let virtual_dir = if index.is_virtual {
             assets_dir.join("virtual").join(&asset_info.id)
@@ -655,7 +665,7 @@ pub async fn ensure_assets(version: &VersionJson, app: Option<tauri::AppHandle>)
         }
     }
 
-    Ok(asset_info.id.clone())
+    Ok(AssetResult { id: asset_info.id.clone(), is_legacy })
 }
 
 /// Determine which Java version is needed for a Minecraft version.
@@ -933,46 +943,31 @@ pub async fn launch(instance: &Instance, username: &str, uuid: &str, access_toke
     let app_handle = window.as_ref().map(|w| w.app_handle().clone());
     let mut classpath_entries = ensure_libraries(&version, app_handle.clone()).await?;
     let client_jar = ensure_client_jar(&version).await?;
-    let assets_id = ensure_assets(&version, app_handle).await?;
+    let asset_result = ensure_assets(&version, app_handle).await?;
+    let assets_id = &asset_result.id;
     ensure_natives(&version, &instance.id).await?;
 
     // For legacy/virtual assets, copy to instance's resources/ directory
     // (old MC versions look for sounds in <gameDir>/resources/)
-    {
-        let index_path = paths::assets_dir().join("indexes").join(format!("{}.json", &assets_id));
-        if let Ok(content) = fs::read_to_string(&index_path) {
-            let is_virtual = content.contains("\"virtual\"") && content.contains("true");
-            let is_map_to_resources = content.contains("\"map_to_resources\"") && content.contains("true");
-
-            if is_virtual || is_map_to_resources {
-                // Determine where ensure_assets put the virtual files
-                let virtual_dir = if is_virtual {
-                    paths::assets_dir().join("virtual").join(&assets_id)
-                } else {
-                    // map_to_resources uses "legacy" as the virtual dir name
-                    paths::assets_dir().join("virtual").join("legacy")
-                };
-
-                if virtual_dir.exists() {
-                    let resources_dir = game_dir.join("resources");
-                    // Always copy — check individual files, not directory existence
-                    fn copy_recursive(src: &std::path::Path, dest: &std::path::Path) {
-                        if let Ok(entries) = fs::read_dir(src) {
-                            let _ = fs::create_dir_all(dest);
-                            for entry in entries.flatten() {
-                                let from = entry.path();
-                                let to = dest.join(entry.file_name());
-                                if from.is_dir() {
-                                    copy_recursive(&from, &to);
-                                } else if !to.exists() {
-                                    let _ = fs::copy(&from, &to);
-                                }
-                            }
+    if asset_result.is_legacy {
+        let virtual_dir = paths::assets_dir().join("virtual").join(assets_id);
+        if virtual_dir.exists() {
+            let resources_dir = game_dir.join("resources");
+            fn copy_recursive(src: &std::path::Path, dest: &std::path::Path) {
+                if let Ok(entries) = fs::read_dir(src) {
+                    let _ = fs::create_dir_all(dest);
+                    for entry in entries.flatten() {
+                        let from = entry.path();
+                        let to = dest.join(entry.file_name());
+                        if from.is_dir() {
+                            copy_recursive(&from, &to);
+                        } else if !to.exists() {
+                            let _ = fs::copy(&from, &to);
                         }
                     }
-                    copy_recursive(&virtual_dir, &resources_dir);
                 }
             }
+            copy_recursive(&virtual_dir, &resources_dir);
         }
     }
 
@@ -1216,20 +1211,11 @@ pub async fn launch(instance: &Instance, username: &str, uuid: &str, access_toke
     // This enables the version.json feature-gated --width/--height arguments for modern versions.
     let has_custom_resolution = true;
 
-    let assets_root = {
-        let index_path = paths::assets_dir().join("indexes").join(format!("{}.json", &assets_id));
-        let is_legacy = if let Ok(content) = fs::read_to_string(&index_path) {
-            content.contains("\"virtual\"") && content.contains("true")
-                || content.contains("\"map_to_resources\"") && content.contains("true")
-        } else {
-            false
-        };
-        if is_legacy {
-            let virtual_dir = paths::assets_dir().join("virtual").join(&assets_id);
-            if virtual_dir.exists() { virtual_dir } else { paths::assets_dir() }
-        } else {
-            paths::assets_dir()
-        }
+    let assets_root = if asset_result.is_legacy {
+        let virtual_dir = paths::assets_dir().join("virtual").join(assets_id);
+        if virtual_dir.exists() { virtual_dir } else { paths::assets_dir() }
+    } else {
+        paths::assets_dir()
     };
 
     // Resolve window dimensions from global settings, falling back to

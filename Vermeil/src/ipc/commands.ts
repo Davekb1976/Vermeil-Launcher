@@ -4,7 +4,11 @@ import { invoke } from "@tauri-apps/api/core";
 export const showWindow = () => invoke<void>("show_window");
 
 // Types
-export interface Instance {
+
+/** Lightweight instance projection returned by `listInstances`. Carries
+ *  `mod_count` instead of the full `mods[]` array so the library view doesn't
+ *  pull megabytes of mod metadata across IPC. */
+export interface InstanceSummary {
   id: string;
   name: string;
   icon: string;
@@ -25,7 +29,7 @@ export interface Instance {
     adaptive_override?: boolean;
   };
   window: { width: number; height: number };
-  mods: any[];
+  mod_count: number;
   last_played: string | null;
   total_play_seconds: number;
   created_at: string;
@@ -43,6 +47,11 @@ export interface Instance {
    *  version. Computed by the backend on list (not persisted); gates whether the
    *  managed-mod card and companion badge show at all. */
   ingame_cape_supported?: boolean;
+}
+
+/** Full instance detail with complete mod list. Returned by `getInstance`. */
+export interface Instance extends Omit<InstanceSummary, "mod_count"> {
+  mods: any[];
 }
 
 export interface CreateInstanceConfig {
@@ -206,7 +215,7 @@ export interface LauncherSettings {
 }
 
 // Instance commands
-export const listInstances = () => invoke<Instance[]>("list_instances");
+export const listInstances = () => invoke<InstanceSummary[]>("list_instances");
 export const createInstance = (config: CreateInstanceConfig) => invoke<Instance>("create_instance", { config });
 export const prepareInstance = (id: string) => invoke<void>("prepare_instance", { id });
 export const getInstance = (id: string) => invoke<Instance>("get_instance", { id });
@@ -570,15 +579,35 @@ export interface CustomCape {
   created_at: number;
 }
 
+/** Convert Uint8Array, number[] byte array, or data URL / base64 string to a base64 string
+ *  for lean IPC transfer, avoiding the 4–8× JSON array bloat. */
+export function toBase64String(data: Uint8Array | number[] | string): string {
+  if (typeof data === "string") {
+    const comma = data.indexOf(",");
+    return comma !== -1 ? data.slice(comma + 1) : data;
+  }
+  const u8 = data instanceof Uint8Array ? data : new Uint8Array(data);
+  let binary = "";
+  const len = u8.byteLength;
+  const chunkSize = 32768;
+  for (let i = 0; i < len; i += chunkSize) {
+    binary += String.fromCharCode.apply(
+      null,
+      u8.subarray(i, Math.min(i + chunkSize, len)) as unknown as number[]
+    );
+  }
+  return btoa(binary);
+}
+
 export const getSkinProfile = () => invoke<PlayerProfile>("get_skin_profile");
 export const uploadSkin = (
-  pngBytes: number[],
+  pngData: Uint8Array | number[] | string,
   variant: SkinVariant,
   saveToLibrary: boolean,
   libraryName?: string,
 ) =>
   invoke<PlayerProfile>("upload_skin", {
-    pngBytes,
+    pngBase64: toBase64String(pngData),
     variant,
     saveToLibrary,
     libraryName,
@@ -590,8 +619,12 @@ export const equipCape = (capeId: string) =>
   invoke<PlayerProfile>("equip_cape", { capeId });
 export const unequipCape = () => invoke<PlayerProfile>("unequip_cape");
 export const listLocalSkins = () => invoke<LocalSkin[]>("list_local_skins");
-export const addLocalSkin = (name: string, pngBytes: number[], variant: SkinVariant) =>
-  invoke<LocalSkin>("add_local_skin", { name, pngBytes, variant });
+export const addLocalSkin = (name: string, pngData: Uint8Array | number[] | string, variant: SkinVariant) =>
+  invoke<LocalSkin>("add_local_skin", {
+    name,
+    pngBase64: toBase64String(pngData),
+    variant,
+  });
 export const removeLocalSkin = (hash: string) =>
   invoke<void>("remove_local_skin", { hash });
 
@@ -600,16 +633,16 @@ export const listCustomCapes = () => invoke<CustomCape[]>("list_custom_capes");
 export const saveCustomCape = (
   id: string | null,
   name: string,
-  texturePng: number[],
-  sourceBytes: number[],
+  texturePng: Uint8Array | number[] | string,
+  sourceBytes: Uint8Array | number[] | string,
   sourceMime: string,
   transform: CapeTransform,
 ) =>
   invoke<CustomCape>("save_custom_cape", {
     id,
     name,
-    texturePng,
-    sourceBytes,
+    texturePngBase64: toBase64String(texturePng),
+    sourceBytesBase64: toBase64String(sourceBytes),
     sourceMime,
     transform,
   });
@@ -633,9 +666,14 @@ export interface IngameCapeState {
  *  automatically at launch — no per-instance selection. */
 export const setIngameCape = (
   capeId: string | null,
-  stripPng: number[],
+  stripPng: Uint8Array | number[] | string,
   frameTimeMs: number | null,
-) => invoke<void>("set_ingame_cape", { capeId, stripPng, frameTimeMs });
+) =>
+  invoke<void>("set_ingame_cape", {
+    capeId,
+    stripPngBase64: toBase64String(stripPng),
+    frameTimeMs,
+  });
 
 /** Toggle the in-game cape on/off without re-baking. */
 export const setIngameCapeEnabled = (enabled: boolean) =>

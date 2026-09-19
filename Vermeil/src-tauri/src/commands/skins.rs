@@ -46,13 +46,22 @@ pub async fn get_skin_profile() -> Result<PlayerProfile, String> {
     skins::fetch_profile(&account).await
 }
 
+fn decode_base64(s: &str) -> Result<Vec<u8>, String> {
+    use base64::Engine;
+    let b64 = if let Some((_, b64)) = s.split_once(',') { b64 } else { s };
+    base64::engine::general_purpose::STANDARD
+        .decode(b64.trim())
+        .map_err(|e| format!("Invalid base64 data: {}", e))
+}
+
 #[tauri::command]
 pub async fn upload_skin(
-    png_bytes: Vec<u8>,
+    png_base64: String,
     variant: SkinVariant,
     save_to_library: bool,
     library_name: Option<String>,
 ) -> Result<PlayerProfile, String> {
+    let png_bytes = decode_base64(&png_base64)?;
     let account = active_microsoft_account()?;
     if save_to_library {
         let name = library_name.unwrap_or_else(|| "Custom skin".to_string());
@@ -97,9 +106,10 @@ pub async fn list_local_skins() -> Result<Vec<LocalSkin>, String> {
 #[tauri::command]
 pub async fn add_local_skin(
     name: String,
-    png_bytes: Vec<u8>,
+    png_base64: String,
     variant: SkinVariant,
 ) -> Result<LocalSkin, String> {
+    let png_bytes = decode_base64(&png_base64)?;
     let account = active_microsoft_account()?;
     skins::add_local_skin(&account.id, &name, &png_bytes, variant)
 }
@@ -126,11 +136,13 @@ pub async fn list_custom_capes() -> Result<Vec<CustomCape>, String> {
 pub async fn save_custom_cape(
     id: Option<String>,
     name: String,
-    texture_png: Vec<u8>,
-    source_bytes: Vec<u8>,
+    texture_png_base64: String,
+    source_bytes_base64: String,
     source_mime: String,
     transform: serde_json::Value,
 ) -> Result<CustomCape, String> {
+    let texture_png = decode_base64(&texture_png_base64)?;
+    let source_bytes = decode_base64(&source_bytes_base64)?;
     let account = active_microsoft_account()?;
     skins::save_custom_cape(
         &account.id,

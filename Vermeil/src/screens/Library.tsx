@@ -1,6 +1,6 @@
 import { Component, For, Show, createSignal, createMemo, onMount, onCleanup } from "solid-js";
 import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, instances, refetchInstances, refreshPinnedInstanceIds, pinnedInstanceIds } from "../App";
-import { Instance, deleteInstance, getSettings } from "../ipc/commands";
+import { InstanceSummary, deleteInstance, getSettings } from "../ipc/commands";
 import { IconPlus, IconModrinth, IconCurseForge, IconX } from "../components/Icons";
 import Dropdown from "../components/Dropdown";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
@@ -86,7 +86,7 @@ const Library: Component = () => {
   };
 
   // Comparator for the active sort mode.
-  const compare = (a: Instance, b: Instance): number => {
+  const compare = (a: InstanceSummary, b: InstanceSummary): number => {
     switch (sortBy()) {
       case "mostPlayed": return (b.total_play_seconds || 0) - (a.total_play_seconds || 0);
       case "created": return epoch(b.created_at) - epoch(a.created_at);
@@ -141,7 +141,7 @@ const Library: Component = () => {
     refreshPinnedInstanceIds().catch(() => {});
   };
 
-  const openInstance = (inst: Instance) => {
+  const openInstance = (inst: InstanceSummary) => {
     if (selectMode()) { toggleSelect(inst.id); return; }
     setActiveInstanceId(inst.id);
     setInitialInstanceTab("content");
@@ -251,7 +251,7 @@ const Library: Component = () => {
                     {inst.name}
                   </div>
                   <div class="inst-card-sub">
-                    {(inst.mods || []).length} {(inst.mods || []).length === 1 ? "mod" : "mods"} · {timeAgo(inst.last_played)}
+                    {inst.mod_count} {inst.mod_count === 1 ? "mod" : "mods"} · {timeAgo(inst.last_played)}
                   </div>
                   <div class="inst-card-badges">
                     <div class="inst-card-badges-track">

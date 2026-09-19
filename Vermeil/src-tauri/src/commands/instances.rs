@@ -1,20 +1,17 @@
-use crate::models::instance::{Instance, CreateInstanceConfig};
+use crate::models::instance::{Instance, CreateInstanceConfig, InstanceSummary};
 use crate::services::instance_service;
 use crate::services::instance_cape;
 use crate::models::settings::IngameCapeSettings;
 use serde::Serialize;
 
-/// A library instance plus UI-only computed flags. Flattened, so the frontend
-/// `Instance` shape is unchanged apart from the extra field; the flag is never
-/// persisted (it's recomputed each list).
+/// A library instance summary plus UI-only computed flags. Uses
+/// [`InstanceSummary`] (no `mods` array) so `list_instances` doesn't push
+/// megabytes of mod metadata across IPC when the frontend only needs
+/// `mod_count` for a badge.
 #[derive(Serialize)]
 pub struct InstanceListItem {
     #[serde(flatten)]
-    instance: Instance,
-    /// Whether the Vermeil companion mod runs on this instance's (loader, MC
-    /// version). Same gate as the launch-time install (`is_supported`), so the
-    /// badge and the managed-mod card can't disagree with it. The per-instance
-    /// on/off itself is the persisted `companion_enabled` field on the instance.
+    instance: InstanceSummary,
     ingame_cape_supported: bool,
 }
 
@@ -25,9 +22,15 @@ pub async fn list_instances() -> Result<Vec<InstanceListItem>, String> {
         .map_err(|e| e.to_string())?;
     Ok(list
         .into_iter()
-        .map(|instance| InstanceListItem {
-            ingame_cape_supported: instance_cape::is_supported(&instance),
-            instance,
+        .map(|instance| {
+            let supported = instance_cape::is_supported_loader(
+                &instance.loader.loader_type,
+                &instance.game_version,
+            );
+            InstanceListItem {
+                ingame_cape_supported: supported,
+                instance: InstanceSummary::from_instance(instance),
+            }
         })
         .collect())
 }
@@ -280,11 +283,7 @@ pub async fn set_instance_icon(id: String, source_path: String) -> Result<String
     let json = serde_json::to_string_pretty(&instance).map_err(|e| e.to_string())?;
     std::fs::write(&meta_path, json).map_err(|e| e.to_string())?;
 
-    // Return a data URL so the frontend can render immediately without
-    // needing the asset protocol. Same pattern as the icon cache.
-    let bytes = std::fs::read(&dest).map_err(|e| format!("Read icon: {}", e))?;
-    let encoded = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
-    Ok(format!("data:image/png;base64,{}", encoded))
+    Ok(dest_str)
 }
 
 /// Reset an instance's tile icon back to the generic placeholder. Removes
@@ -375,9 +374,14 @@ pub async fn prepare_instance(id: String, window: tauri::WebviewWindow) -> Resul
 #[tauri::command]
 pub async fn set_ingame_cape(
     cape_id: Option<String>,
-    strip_png: Vec<u8>,
+    strip_png_base64: String,
     frame_time_ms: Option<u32>,
 ) -> Result<(), String> {
+    use base64::Engine;
+    let b64 = if let Some((_, b64)) = strip_png_base64.split_once(',') { b64 } else { &strip_png_base64 };
+    let strip_png = base64::engine::general_purpose::STANDARD
+        .decode(b64.trim())
+        .map_err(|e| format!("Invalid base64 cape: {}", e))?;
     instance_cape::set_ingame_cape(cape_id, &strip_png, frame_time_ms).await
 }
 

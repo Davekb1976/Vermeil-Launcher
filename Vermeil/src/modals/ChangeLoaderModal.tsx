@@ -203,9 +203,7 @@ const ChangeLoaderModal: Component = () => {
   });
 
   // Active mod count (only category === "mod" can crash the loader)
-  const activeMods = createMemo(() => {
-    return (inst()?.mods || []).filter((m) => m.category === "mod" && m.enabled);
-  });
+  const activeModCount = () => inst()?.mod_count || 0;
 
   // Risk & change categorizations
   const isSameLoader = () => selectedLoader() === inst()?.loader.type;
@@ -460,7 +458,7 @@ const ChangeLoaderModal: Component = () => {
               {/* Scenario 4: Modded -> Vanilla */}
               <Show when={isModdedToVanilla()}>
                 <Show
-                  when={activeMods().length > 0}
+                  when={activeModCount() > 0}
                   fallback={
                     <div style="padding: 10px 12px; background: rgba(34,197,94,0.06); border: 1px solid var(--border); border-left: 3px solid var(--success); font-size: 12px; color: var(--text); box-shadow: var(--bevel);">
                       <div style="font-weight: 600; color: var(--success); margin-bottom: 2px;">Switching to Vanilla</div>
@@ -474,7 +472,7 @@ const ChangeLoaderModal: Component = () => {
                       <div style="flex: 1; font-size: 12px;">
                         <div style="font-weight: 700; color: var(--warn); margin-bottom: 3px;">Vanilla Does Not Run Mods</div>
                         <div style="color: var(--text); line-height: 1.4;">
-                          You have <strong>{activeMods().length} active mod{activeMods().length === 1 ? "" : "s"}</strong>. Vanilla Minecraft will not load them, and worlds saved with modded items may have missing blocks.
+                          You have <strong>{activeModCount()} active mod{activeModCount() === 1 ? "" : "s"}</strong>. Vanilla Minecraft will not load them, and worlds saved with modded items may have missing blocks.
                         </div>
 
                         <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
@@ -486,7 +484,7 @@ const ChangeLoaderModal: Component = () => {
                             />
                             <span class="check-box"></span>
                             <span style="font-size: 12px; font-weight: 600; color: var(--text);">
-                              Disable {activeMods().length} installed mod{activeMods().length === 1 ? "" : "s"} (renames to .disabled)
+                              Disable {activeModCount()} installed mod{activeModCount() === 1 ? "" : "s"} (renames to .disabled)
                             </span>
                           </label>
                         </div>
@@ -511,7 +509,7 @@ const ChangeLoaderModal: Component = () => {
               {/* Scenario 6: Incompatible Loader Architecture (e.g. Fabric <-> Forge/NeoForge) */}
               <Show when={isIncompatibleCross()}>
                 <Show
-                  when={activeMods().length > 0}
+                  when={activeModCount() > 0}
                   fallback={
                     <div style="padding: 10px 12px; background: rgba(34,197,94,0.06); border: 1px solid var(--border); border-left: 3px solid var(--success); font-size: 12px; color: var(--text); box-shadow: var(--bevel);">
                       <div style="font-weight: 600; color: var(--success); margin-bottom: 2px;">Safe Loader Switch</div>
@@ -527,7 +525,7 @@ const ChangeLoaderModal: Component = () => {
                           Incompatible Mod Architecture
                         </div>
                         <div style="color: var(--text); line-height: 1.4;">
-                          You have <strong>{activeMods().length} active mod{activeMods().length === 1 ? "" : "s"}</strong> installed for <strong>{loaderLabel(inst()!.loader.type)}</strong>.
+                          You have <strong>{activeModCount()} active mod{activeModCount() === 1 ? "" : "s"}</strong> installed for <strong>{loaderLabel(inst()!.loader.type)}</strong>.
                           Mods built for {loaderLabel(inst()!.loader.type)} are <span style="color: var(--danger); font-weight: 700;">completely incompatible</span> with {loaderLabel(selectedLoader())} and will cause Minecraft to crash on launch.
                         </div>
 
@@ -540,7 +538,7 @@ const ChangeLoaderModal: Component = () => {
                             />
                             <span class="check-box"></span>
                             <span style="font-size: 12px; font-weight: 600; color: var(--text);">
-                              Disable {activeMods().length} incompatible mod{activeMods().length === 1 ? "" : "s"} (Recommended)
+                              Disable {activeModCount()} incompatible mod{activeModCount() === 1 ? "" : "s"} (Recommended)
                             </span>
                           </label>
                           <div style="font-size: 11px; color: var(--muted); margin-left: 26px; margin-top: 2px;">
@@ -565,7 +563,7 @@ const ChangeLoaderModal: Component = () => {
               Cancel
             </button>
             <button
-              class={`btn btn--sm ${isIncompatibleCross() && activeMods().length > 0 && !disableMods() ? "btn--danger" : "btn--primary"}`}
+              class={`btn btn--sm ${isIncompatibleCross() && activeModCount() > 0 && !disableMods() ? "btn--danger" : "btn--primary"}`}
               disabled={
                 isNoChange() ||
                 !isLoaderCompatible(selectedLoader()) ||

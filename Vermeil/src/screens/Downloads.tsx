@@ -1,4 +1,4 @@
-import { Component, For, Show } from "solid-js";
+import { Component, For, Show, createMemo } from "solid-js";
 import {
   downloads,
   clearDownloadHistory,
@@ -353,7 +353,7 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry; position?: number }>
     }
   };
 
-  const matchingInstance = () => {
+  const matchingInstance = createMemo(() => {
     if (dl().category !== "modpack") return undefined;
     const instList = instances() ?? [];
     if (dl().instanceId) {
@@ -366,7 +366,7 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry; position?: number }>
       const instNorm = i.name.toLowerCase().replace(/[^a-z0-9]/g, "");
       return instNorm.length > 0 && (dlNorm.includes(instNorm) || instNorm.includes(dlNorm));
     });
-  };
+  });
 
   const cardIcon = () => {
     if (dl().iconUrl) return resolveAssetUrl(dl().iconUrl);
@@ -453,7 +453,7 @@ const DownloadCard: Component<{ entry: DownloadEntry; timeAgo: (ts: number) => s
   const dl = () => props.entry;
   const failed = () => dl().status === "failed";
 
-  const matchingInstance = () => {
+  const matchingInstance = createMemo(() => {
     if (dl().category !== "modpack") return undefined;
     const instList = instances() ?? [];
     if (dl().instanceId) {
@@ -466,7 +466,7 @@ const DownloadCard: Component<{ entry: DownloadEntry; timeAgo: (ts: number) => s
       const instNorm = i.name.toLowerCase().replace(/[^a-z0-9]/g, "");
       return instNorm.length > 0 && (dlNorm.includes(instNorm) || instNorm.includes(dlNorm));
     });
-  };
+  });
 
   const cardIcon = () => {
     if (dl().iconUrl) return resolveAssetUrl(dl().iconUrl);

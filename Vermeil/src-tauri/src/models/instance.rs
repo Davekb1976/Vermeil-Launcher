@@ -167,6 +167,56 @@ pub struct Instance {
 
 fn default_true() -> bool { true }
 
+/// Lightweight projection of [`Instance`] for library listing. Carries
+/// `mod_count` instead of the full `mods: Vec<ModEntry>` so
+/// `list_instances` doesn't push megabytes of mod metadata across IPC
+/// when the frontend only needs the count for a badge.
+#[derive(Debug, Clone, Serialize)]
+pub struct InstanceSummary {
+    pub format_version: u32,
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+    pub icon_custom: Option<String>,
+    pub created_at: String,
+    pub last_played: Option<String>,
+    pub total_play_seconds: u64,
+    pub game_version: String,
+    pub loader: LoaderConfig,
+    pub java: JavaConfig,
+    pub window: WindowConfig,
+    pub mod_count: usize,
+    pub source_project_id: Option<String>,
+    pub source_platforms: Vec<String>,
+    pub source_version: Option<String>,
+    pub companion_enabled: bool,
+}
+
+impl InstanceSummary {
+    pub fn from_instance(inst: Instance) -> Self {
+        let mod_count = inst.mods.len();
+        Self {
+            format_version: inst.format_version,
+            id: inst.id,
+            name: inst.name,
+            icon: inst.icon,
+            icon_custom: inst.icon_custom,
+            created_at: inst.created_at,
+            last_played: inst.last_played,
+            total_play_seconds: inst.total_play_seconds,
+            game_version: inst.game_version,
+            loader: inst.loader,
+            java: inst.java,
+            window: inst.window,
+            mod_count,
+            source_project_id: inst.source_project_id,
+            source_platforms: inst.source_platforms,
+            source_version: inst.source_version,
+            companion_enabled: inst.companion_enabled,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateInstanceConfig {
     pub name: String,

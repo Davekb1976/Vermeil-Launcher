@@ -175,14 +175,19 @@ pub fn supported_versions_for_loader(loader: &str) -> Vec<String> {
 /// Whether the companion mod can render a cape on this instance. Support is
 /// loader-aware: the Fabric mod runs on Fabric (and Quilt, which runs Fabric
 /// mods) for the modern versions; the separate Forge build runs on 1.8.9.
-pub fn is_supported(instance: &Instance) -> bool {
-    match instance.loader.loader_type {
+pub fn is_supported_loader(loader_type: &LoaderType, game_version: &str) -> bool {
+    match loader_type {
         LoaderType::Fabric | LoaderType::Quilt => {
-            fabric_version_supported(&instance.game_version)
+            fabric_version_supported(game_version)
         }
-        LoaderType::Forge => forge_version_supported(&instance.game_version),
+        LoaderType::Forge => forge_version_supported(game_version),
         _ => false,
     }
+}
+
+/// Convenience wrapper for callers that have a full [`Instance`].
+pub fn is_supported(instance: &Instance) -> bool {
+    is_supported_loader(&instance.loader.loader_type, &instance.game_version)
 }
 
 /// The `-Dvermeil.dataDir=…` JVM argument to inject at launch, or `None` when the

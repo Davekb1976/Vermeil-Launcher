@@ -172,8 +172,8 @@ const PinInstancesModal: Component = () => {
                                 {inst.loader.type}
                               </span>
                               <span class="pin-badge pin-badge-ram">{inst.java.memory_max_mb} MB</span>
-                              <Show when={inst.mods.length > 0}>
-                                <span class="pin-badge pin-badge-mods">{inst.mods.length} mods</span>
+                              <Show when={inst.mod_count > 0}>
+                                <span class="pin-badge pin-badge-mods">{inst.mod_count} mods</span>
                               </Show>
                             </div>
                           </div>

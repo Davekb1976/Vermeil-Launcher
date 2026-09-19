@@ -12,13 +12,14 @@ import { convertFileSrc } from "@tauri-apps/api/core";
  */
 export function resolveAssetUrl(urlOrPath?: string | null): string | undefined {
   if (!urlOrPath) return undefined;
+  // Fast path: data URLs can be multi-MB; avoid .trim() allocation on them
+  if (urlOrPath.startsWith("data:")) return urlOrPath;
   const trimmed = urlOrPath.trim();
   if (!trimmed || trimmed === "cube") return undefined;
 
   if (
     trimmed.startsWith("http://") ||
     trimmed.startsWith("https://") ||
-    trimmed.startsWith("data:") ||
     trimmed.startsWith("asset:") ||
     trimmed.startsWith("https://asset.localhost")
   ) {

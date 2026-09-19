@@ -9,7 +9,7 @@ import Dropdown from "../components/Dropdown";
 import ModDetailModal from "../modals/ModDetailModal";
 import ChangeLoaderModal, { openChangeLoaderModal } from "../modals/ChangeLoaderModal";
 import { formatDownloads, formatSize, formatVersionRange } from "../lib/format";
-import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled } from "../ipc/commands";
+import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled, getInstance } from "../ipc/commands";
 import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconFolderOpen, IconChevronDown, IconImage } from "../components/Icons";
 import { enqueueInstallTask, isTaskQueuedOrActive, isTaskActive, isTaskQueued } from "../services/modpackQueue";
 
@@ -65,6 +65,19 @@ const InstanceMods: Component = () => {
     if (!list || !id) return list?.[0] || null;
     return list.find(i => i.id === id) || list[0] || null;
   };
+
+  // Full instance detail (with mods array). The global instances() resource
+  // now returns InstanceSummary (mod_count only) to keep IPC lean. This
+  // separate fetch loads the complete mod list for the active instance only.
+  const [instanceDetail, { refetch: refetchDetail }] = createResource(
+    () => activeInstanceId(),
+    async (id) => {
+      if (!id) return null;
+      try { return await getInstance(id); } catch { return null; }
+    },
+  );
+  /** Shorthand: mods from the full detail, or empty array. */
+  const instanceMods = () => instanceDetail()?.mods || [];
 
   // Per-instance memory. Adaptive by default (services/memory.rs); an instance
   // can opt out via `java.adaptive_override` and set RAM manually. `effectiveMemory`
@@ -186,9 +199,8 @@ const InstanceMods: Component = () => {
   // Without this, bulk-delete or single-remove would leave Browse-tab
   // "Installed" badges stale until the page is reloaded.
   createEffect(() => {
-    const inst = instance();
-    if (!inst) return;
-    const ids = new Set(inst.mods.map(m => m.project_id).filter(Boolean));
+    const mods = instanceMods();
+    const ids = new Set<string>(mods.map((m: any) => m.project_id).filter(Boolean));
     setLocalInstalled(ids);
   });
 
@@ -217,7 +229,7 @@ const InstanceMods: Component = () => {
   const refreshUpdates = async (interactive = false) => {
     const inst = instance();
     if (!inst) return;
-    if (inst.mods.length === 0) {
+    if (inst.mod_count === 0) {
       setModUpdates(new Map());
       return;
     }
@@ -369,7 +381,7 @@ const InstanceMods: Component = () => {
   // hits the temporal dead zone on `instance` and throws during setup.
   const updateCheckKey = createMemo(() => {
     const inst = instance();
-    return inst ? `${inst.mods.length}:${inst.id}` : "";
+    return inst ? `${inst.mod_count}:${inst.id}` : "";
   });
   createEffect(() => {
     const key = updateCheckKey();
@@ -390,7 +402,7 @@ const InstanceMods: Component = () => {
   createEffect(() => {
     const id = activeInstanceId();
     if (!id) return;
-    syncInstanceMods(id).then(() => refetchInstances()).catch(() => {});
+    syncInstanceMods(id).then(() => { refetchInstances(); refetchDetail(); }).catch(() => {});
   });
 
   // Java args editor. Displays the effective GC flags in an editable
@@ -803,11 +815,11 @@ const InstanceMods: Component = () => {
   };
 
   // ─── Installed tab: client-side filter & pagination ──────────────────
-  const installedFiltered = (): any[] => {
-    const mods = instance()?.mods || [];
+  const installedFiltered = createMemo((): any[] => {
+    const mods = instanceMods();
     const f = installedFilter();
     const q = installedSearch().trim().toLowerCase();
-    const filtered = mods.filter(m => {
+    const filtered = mods.filter((m: any) => {
       const cat = (m as any).category || "mod";
       if (f !== "all" && cat !== f) return false;
       if (q) {
@@ -819,7 +831,7 @@ const InstanceMods: Component = () => {
     // Backend pushes new mods to the end of the Vec, so the array is
     // already in install order (oldest → newest). Reverse for newest-first.
     return installedSort() === "newest" ? filtered.slice().reverse() : filtered;
-  };
+  });
 
   const showCompanion = (): boolean => {
     const inst = instance();
@@ -945,6 +957,7 @@ const InstanceMods: Component = () => {
             completeDownload(dlId);
           }
           await refetchInstances();
+          await refetchDetail();
         } catch (e: any) {
           failDownload(dlId, typeof e === "string" ? e : (e?.message || "Unknown error"));
           throw e;
@@ -998,6 +1011,7 @@ const InstanceMods: Component = () => {
             // Older command shape — ignore.
           }
           await refetchInstances();
+          await refetchDetail();
           completeDownload(dlId, modTitle);
           // Re-check in case the update introduced new mods that themselves have
           // pending updates (rare but possible with deep dep trees).
@@ -1061,6 +1075,7 @@ const InstanceMods: Component = () => {
           } finally {
             completedCount++;
             await refetchInstances();
+            await refetchDetail();
             if (completedCount >= items.length) {
               endBulkBatch();
               setBulkInstalling(false);
@@ -1079,14 +1094,14 @@ const InstanceMods: Component = () => {
   // button (`FloatingDock.tsx`). The previous inline play/stop button on
   // the instance context bar has been removed.
 
-  const isModInstalled = (projectId: string): boolean => localInstalled().has(projectId) || (instance()?.mods.some(m => m.project_id === projectId) || false);
+  const isModInstalled = (projectId: string): boolean => localInstalled().has(projectId) || (instanceMods().some((m: any) => m.project_id === projectId) || false);
 
   /// Installed-content count for the active category — shown beside the filter
   /// row (not on the buttons, so they keep a fixed width).
   const installedActiveCount = (): number => {
-    const mods = instance()?.mods || [];
+    const mods = instanceMods();
     const f = installedFilter();
-    return f === "all" ? mods.length : mods.filter(m => ((m as any).category || "mod") === f).length;
+    return f === "all" ? mods.length : mods.filter((m: any) => ((m as any).category || "mod") === f).length;
   };
 
   /// Loaders we recognize on Modrinth project `categories`. Modrinth bundles
@@ -1380,7 +1395,7 @@ const InstanceMods: Component = () => {
                 <div class="setting-info">
                   <span class="setting-name">Installation files</span>
                   <span class="setting-desc">
-                    {loaderLabel(instance()?.loader?.type || "")} {instance()?.loader?.version || ""} · Minecraft {instance()?.game_version} · {(instance()?.mods || []).length} {(instance()?.mods || []).length === 1 ? "mod" : "mods"} installed
+                    {loaderLabel(instance()?.loader?.type || "")} {instance()?.loader?.version || ""} · Minecraft {instance()?.game_version} · {instance()?.mod_count || 0} {(instance()?.mod_count || 0) === 1 ? "mod" : "mods"} installed
                   </span>
                 </div>
                 <div class="setting-control">
@@ -1673,7 +1688,7 @@ const InstanceMods: Component = () => {
       <Show when={mainTab() === "content"}>
         {/* Mode toggle */}
         <div class="inst-mode-segmented">
-          <button class={`inst-mode-tab ${contentTab() === "installed" ? "active" : ""}`} onClick={() => { setContentTab("installed"); refetchInstances(); }}>Installed</button>
+          <button class={`inst-mode-tab ${contentTab() === "installed" ? "active" : ""}`} onClick={() => { setContentTab("installed"); refetchInstances(); refetchDetail(); }}>Installed</button>
           <button class={`inst-mode-tab ${contentTab() === "browse" ? "active" : ""}`} onClick={() => setContentTab("browse")}>Browse</button>
         </div>
 
@@ -1693,9 +1708,9 @@ const InstanceMods: Component = () => {
               class="btn btn-danger-icon tip-below tip-left"
               data-tip={installedFilter() === "all" ? "Delete all content" : `Delete all ${installedFilter()}s`}
               disabled={(() => {
-                const mods = instance()?.mods || [];
+                const mods = instanceMods();
                 if (installedFilter() === "all") return mods.length === 0;
-                return mods.filter(m => ((m as any).category || "mod") === installedFilter()).length === 0;
+                return mods.filter((m: any) => ((m as any).category || "mod") === installedFilter()).length === 0;
               })()}
               onClick={() => setShowBulkDelete(true)}
             >
@@ -1728,8 +1743,8 @@ const InstanceMods: Component = () => {
                 </Show>
               </div>
               <button
-                class="btn inst-panel-btn inst-action-btn tip-right"
-                disabled={checkingUpdates() || (instance()?.mods?.length ?? 0) === 0}
+                class="btn btn--secondary btn--sm"
+                disabled={checkingUpdates() || (instance()?.mod_count ?? 0) === 0}
                 onClick={() => refreshUpdates(true)}
                 data-tip="Check for newer versions"
               >
@@ -1776,22 +1791,22 @@ const InstanceMods: Component = () => {
         </Show>
 
         <Show when={contentTab() === "installed"}>
-          <Show when={(instance()?.mods?.length || 0) === 0}>
+          <Show when={(instance()?.mod_count || 0) === 0}>
             <div style="text-align:center;color:var(--muted);padding:30px;font-size:var(--fs-xs)">No content installed. Switch to "Browse mods" to find some.</div>
           </Show>
-          <Show when={(instance()?.mods?.length || 0) > 0 && totalInstalledCount() === 0}>
-            <div style="text-align:center;color:var(--muted);padding:30px;font-size:var(--fs-xs)">No installed content matches your filter.</div>
+          <Show when={(instance()?.mod_count || 0) > 0 && totalInstalledCount() === 0}>
+            <div style="text-align:center;color:var(--muted);padding:30px;font-size:var(--fs-xs)">No installed content matches your search.</div>
           </Show>
           <Show when={showBulkDelete()}>
             <div class="bulk-delete-confirm">
               <div style="font-size:var(--fs-xs);color:var(--danger);margin-bottom:8px">
                 {(() => {
                   const f = installedFilter();
-                  const mods = instance()?.mods || [];
+                  const mods = instanceMods();
                   const count = f === "all"
                     ? mods.length
-                    : mods.filter(m => ((m as any).category || "mod") === f).length;
-                  const label = f === "all" ? "all content entries" : `all ${f}s`;
+                    : mods.filter((m: any) => ((m as any).category || "mod") === f).length;
+                  const label = f === "all" ? "All content" : f === "mod" ? "Mods" : f === "resourcepack" ? "Resource Packs" : f === "shader" ? "Shaders" : "Datapacks";
                   return `Delete ${count} ${label}? Files will be removed from disk.`;
                 })()}
               </div>
@@ -1803,6 +1818,7 @@ const InstanceMods: Component = () => {
                   try {
                     const removed = await removeAllContent(inst.id, installedFilter());
                     await refetchInstances();
+                    await refetchDetail();
                     showToast({
                       title: "Content deleted",
                       message: `Removed ${removed} ${removed === 1 ? "entry" : "entries"}`,
@@ -1863,6 +1879,7 @@ const InstanceMods: Component = () => {
                         try {
                           await setInstanceCompanionEnabled(inst.id, next);
                           await refetchInstances();
+                          await refetchDetail();
                         } catch (e) {
                           showToast({ title: "Couldn't update", message: String(e), type: "error" });
                         }
@@ -1947,12 +1964,14 @@ const InstanceMods: Component = () => {
                         if (!inst) return;
                         await toggleModInInstance(inst.id, mod.id);
                         await refetchInstances();
+                        await refetchDetail();
                       }} />
                       <button class="btn btn--danger btn--sm" onClick={async () => {
                         const inst = instance();
                         if (!inst) return;
                         await removeModFromInstance(inst.id, mod.id);
                         await refetchInstances();
+                        await refetchDetail();
                       }}><IconX /></button>
                     </div>
                   </div>
@@ -2200,7 +2219,7 @@ const InstanceMods: Component = () => {
               gameVersion={instance()?.game_version ?? ""}
               category={browseFilter() === "all" ? (detailMod() ? detectCategory(detailMod()!) : "mod") : browseFilter()}
               loaders={detailMod() ? extractLoaders(detailMod()!.categories) : []}
-              installedVersionId={instance()?.mods?.find(m => m.project_id === detailMod()?.project_id)?.version_id}
+              installedVersionId={instanceMods().find((m: any) => m.project_id === detailMod()?.project_id)?.version_id}
               busy={isTaskQueuedOrActive(detailMod()?.project_id || "", instance()?.id)}
               onClose={() => setDetailMod(null)}
               /* Close on install. The install-progress popup and toasts sit at

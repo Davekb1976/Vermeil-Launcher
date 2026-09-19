@@ -1418,7 +1418,7 @@ const Settings: Component = () => {
                                 <div class="inst-card-body">
                                   <div class="inst-card-title" title={inst.name}>{inst.name}</div>
                                   <div class="inst-card-sub">
-                                    {inst.game_version} · {inst.mods.length} {inst.mods.length === 1 ? "mod" : "mods"} · {inst.window.width}x{inst.window.height}
+                                    {inst.game_version} · {inst.mod_count} {inst.mod_count === 1 ? "mod" : "mods"} · {inst.window.width}x{inst.window.height}
                                   </div>
                                   <div class="inst-card-badges">
                                     <div class="inst-card-badges-track">
