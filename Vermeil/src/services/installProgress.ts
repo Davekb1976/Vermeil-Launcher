@@ -28,7 +28,34 @@ const [activeInstall, setActiveInstall] = createSignal<ActiveInstallState>({
   cancelling: false,
 });
 
-export { activeInstall };
+export { activeInstall, setActiveInstall };
+
+export function resetActiveInstall() {
+  if (hideTimeout) {
+    clearTimeout(hideTimeout);
+    hideTimeout = undefined;
+  }
+  if (activityTimeout) {
+    clearTimeout(activityTimeout);
+    activityTimeout = undefined;
+  }
+  if (pendingMessageTimer) {
+    clearTimeout(pendingMessageTimer);
+    pendingMessageTimer = undefined;
+  }
+  suppressUntil = 0;
+  phaseLatchUntil = 0;
+  installerActive = false;
+  lastMessageSetAt = 0;
+  setActiveInstall({
+    active: false,
+    title: "",
+    message: "",
+    fraction: 0,
+    done: false,
+    cancelling: false,
+  });
+}
 
 let hideTimeout: number | undefined;
 let activityTimeout: number | undefined;
@@ -146,19 +173,21 @@ export function initInstallProgress(): () => void {
 
     if (payload.skipped) return;
 
+    const isNewInstall = payload.title !== activeInstall().title;
+    const nextFraction = isNewInstall ? payload.fraction : Math.max(activeInstall().fraction, payload.fraction);
     setActiveInstall((prev) => ({
       ...prev,
       active: true,
       title: payload.title,
       done: false,
       cancelling: false,
-      fraction: payload.fraction > prev.fraction ? payload.fraction : prev.fraction,
+      fraction: nextFraction,
     }));
     setMessageThrottled(payload.message);
 
     if (payload.fraction >= 0.95) {
       installerActive = true;
-      phaseLatchUntil = Infinity;
+      phaseLatchUntil = Date.now() + 5000;
     } else {
       installerActive = false;
       phaseLatchUntil = Date.now() + PHASE_LATCH_MS;

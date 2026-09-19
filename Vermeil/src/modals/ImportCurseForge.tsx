@@ -1,6 +1,7 @@
 import { Component, createSignal, Show } from "solid-js";
-import { setActiveScreen, refetchInstances, refreshPinnedInstanceIds, trackDownload, completeDownload, failDownload } from "../App";
+import { setActiveScreen } from "../App";
 import { importCfZip } from "../ipc/commands";
+import { enqueueModpack } from "../services/modpackQueue";
 import { open } from "@tauri-apps/plugin-dialog";
 
 const ImportCurseForge: Component = () => {
@@ -10,33 +11,28 @@ const ImportCurseForge: Component = () => {
   const handleImportZip = async () => {
     setError(null);
     try {
+      setImporting(true);
       const selected = await open({
         multiple: false,
         filters: [{ name: "CurseForge Export", extensions: ["zip"] }],
       });
-      if (!selected) return;
+      if (!selected) {
+        setImporting(false);
+        return;
+      }
 
       setActiveScreen("library");
-      setImporting(true);
 
       const fileName = (selected as string).split(/[\\/]/).pop() || "CurseForge pack";
       const packName = fileName.replace(/\.zip$/i, "");
-      const dlId = trackDownload(packName, "modpack");
 
-      importCfZip(selected as string)
-        .then((instance) => {
-          refetchInstances();
-          refreshPinnedInstanceIds().catch(() => {});
-          completeDownload(dlId, instance.name);
-        })
-        .catch((e: any) => {
-          if (typeof e === "string" && e === "Install cancelled") {
-            failDownload(dlId, "Import cancelled");
-            return;
-          }
-          failDownload(dlId, typeof e === "string" ? e : e?.message || "Import failed");
-        })
-        .finally(() => setImporting(false));
+      enqueueModpack({
+        projectId: selected as string,
+        title: packName,
+        category: "modpack",
+        execute: () => importCfZip(selected as string),
+      });
+      setImporting(false);
     } catch (e: any) {
       setError(typeof e === "string" ? e : e.message || "Import failed");
       setImporting(false);

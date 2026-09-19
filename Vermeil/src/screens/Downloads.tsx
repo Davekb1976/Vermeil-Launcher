@@ -2,6 +2,7 @@ import { Component, For, Show } from "solid-js";
 import {
   downloads,
   clearDownloadHistory,
+  failDownload,
   DownloadEntry,
   isBulkInstall,
   bulkBatchSize,
@@ -9,6 +10,7 @@ import {
   bulkProgress,
 } from "../App";
 import { activeInstall, cancelActiveInstall } from "../services/installProgress";
+import { activeModpackTask, cancelQueuedModpack } from "../services/modpackQueue";
 import { IconCheck, IconX, IconDownload } from "../components/Icons";
 
 function getCategoryLabel(category: string): string {
@@ -26,9 +28,14 @@ const Downloads: Component = () => {
   const activeDownloads = () => downloads().filter(d => d.status === "downloading");
   const history = () => downloads().filter(d => d.status !== "downloading").slice(0, 100);
 
-  // Find the single active DownloadEntry being orchestrated by activeInstall
+  // The active orchestrator install (e.g. modpack from modpackQueue)
   const activeInstallEntry = () => {
     if (!activeInstall().active) return null;
+    const task = activeModpackTask();
+    if (task) {
+      const found = downloads().find((d) => d.id === task.id);
+      if (found) return found;
+    }
     const list = activeDownloads();
     if (list.length === 0) return null;
 
@@ -41,11 +48,7 @@ const Downloads: Component = () => {
       if (match) return match;
     }
 
-    // Fallback: the oldest modpack in activeDownloads, or the oldest active download
-    const oldestModpack = [...list].reverse().find((dl) => dl.category === "modpack");
-    if (oldestModpack) return oldestModpack;
-
-    return list[list.length - 1];
+    return null;
   };
 
   // Active content download (when not orchestrated by activeInstall)
@@ -116,12 +119,30 @@ const Downloads: Component = () => {
             <div class="dl-active-header">
               <div class="dl-active-title-row">
                 <div class="dl-active-icon-badge">
-                  <Show when={activeInstall().done} fallback={<IconDownload />}>
+                  <Show when={activeInstall().done} fallback={
+                    <Show when={activeInstallEntry()?.iconUrl} fallback={<IconDownload />}>
+                      <img src={activeInstallEntry()!.iconUrl!} alt="" draggable={false} />
+                    </Show>
+                  }>
                     <IconCheck />
                   </Show>
                 </div>
                 <div class="dl-active-title-group">
                   <span class="dl-active-name" title={activeInstall().title}>{activeInstall().title}</span>
+                  <Show when={activeInstallEntry()?.author}>
+                    <span class="dl-card-author">by {activeInstallEntry()!.author}</span>
+                  </Show>
+                  <Show when={activeInstallEntry()?.category}>
+                    <span class="badge">{getCategoryLabel(activeInstallEntry()!.category)}</span>
+                  </Show>
+                  <Show when={activeInstallEntry()?.loader}>
+                    <span class={`badge badge--loader badge--${activeInstallEntry()!.loader}`}>
+                      {activeInstallEntry()!.loader}
+                    </span>
+                  </Show>
+                  <Show when={activeInstallEntry()?.gameVersion}>
+                    <span class="badge badge--version">{activeInstallEntry()!.gameVersion}</span>
+                  </Show>
                   <span class="badge">Installing</span>
                 </div>
               </div>
@@ -280,6 +301,14 @@ const Downloads: Component = () => {
 const ActiveDownloadCard: Component<{ entry: DownloadEntry }> = (props) => {
   const dl = () => props.entry;
 
+  const handleCancel = (e: MouseEvent) => {
+    e.stopPropagation();
+    const handled = cancelQueuedModpack(dl().id);
+    if (!handled) {
+      failDownload(dl().id, "Install cancelled");
+    }
+  };
+
   return (
     <div class="card card--inst dl-card" style="border-left: 3px solid var(--border-strong);">
       <div class="card-body">
@@ -298,7 +327,18 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry }> = (props) => {
                 <span class="dl-card-author">by {dl().author}</span>
               </Show>
             </div>
-            <span class="badge" style="font-size: var(--fs-2xs);">In queue</span>
+            <div style="display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0;">
+              <span class="badge" style="font-size: var(--fs-2xs);">In queue</span>
+              <button
+                type="button"
+                class="dl-active-cancel"
+                style="padding: 2px 8px; font-size: 9px;"
+                title="Cancel this queued download"
+                onClick={handleCancel}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
           <div class="dl-card-meta">
             <span class="badge">{getCategoryLabel(dl().category)}</span>

@@ -1,15 +1,11 @@
 import { Component, createSignal, createEffect, onMount, onCleanup, For, Show } from "solid-js";
 import {
   setActiveScreen,
-  refetchInstances,
-  refreshPinnedInstanceIds,
   instances,
-  trackDownload,
-  completeDownload,
-  failDownload,
   showToast,
   setDockPagination,
 } from "../App";
+import { enqueueModpack, isModpackQueuedOrActive } from "../services/modpackQueue";
 import {
   searchModpacks,
   searchCurseforge,
@@ -60,7 +56,6 @@ const BrowseModpacks: Component = () => {
   const [query, setQuery] = createSignal("");
   const [results, setResults] = createSignal<ModHit[]>([]);
   const [searching, setSearching] = createSignal(false);
-  const [installing, setInstalling] = createSignal<string | null>(null);
   const [confirmPack, setConfirmPack] = createSignal<{ pack: ModHit; versionId?: string } | null>(null);
   const [detailPack, setDetailPack] = createSignal<ModHit | null>(null);
   const [page, setPage] = createSignal(1);
@@ -171,37 +166,25 @@ const BrowseModpacks: Component = () => {
     }
   };
 
-  const doInstall = async (pack: ModHit, versionId?: string) => {
+  const doInstall = (pack: ModHit, versionId?: string) => {
     setConfirmPack(null);
-    setInstalling(pack.project_id);
 
-    const dlId = trackDownload(pack.title, "modpack", {
-      iconUrl: pack.icon_url,
-      loader: extractLoaders(pack)[0] || "",
-      gameVersion: formatVersionRange(pack.versions),
-      versionNumber: pack.version_name ?? undefined,
+    enqueueModpack({
+      projectId: pack.project_id,
+      title: pack.title,
+      category: "modpack",
+      meta: {
+        iconUrl: pack.icon_url,
+        loader: extractLoaders(pack)[0] || "",
+        gameVersion: formatVersionRange(pack.versions),
+        versionNumber: pack.version_name ?? undefined,
+        author: pack.author,
+      },
+      execute: () =>
+        modSource() === "curseforge"
+          ? installCfModpack(pack.project_id, versionId ?? pack.latest_version ?? undefined)
+          : installModpack(pack.project_id, versionId),
     });
-
-    const installPromise =
-      modSource() === "curseforge"
-        ? installCfModpack(pack.project_id, versionId ?? pack.latest_version ?? undefined)
-        : installModpack(pack.project_id, versionId);
-
-    installPromise
-      .then(() => {
-        refetchInstances();
-        refreshPinnedInstanceIds().catch(() => {});
-        completeDownload(dlId);
-      })
-      .catch((e) => {
-        if (typeof e === "string" && e === "Install cancelled") {
-          failDownload(dlId, "Install cancelled");
-          return;
-        }
-        console.error("Modpack install failed:", e);
-        failDownload(dlId, typeof e === "string" ? e : "Installation failed");
-      })
-      .finally(() => setInstalling(null));
   };
 
   return (
@@ -529,14 +512,14 @@ const BrowseModpacks: Component = () => {
                         <button
                           type="button"
                           class="btn btn--primary btn--sm modpack-card-install-btn"
-                          disabled={installing() === pack.project_id}
+                          disabled={isModpackQueuedOrActive(pack.project_id)}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleInstallClick(pack);
                           }}
                           title="Quick-install this modpack"
                         >
-                          {installing() === pack.project_id ? "Installing..." : "Install"}
+                          {isModpackQueuedOrActive(pack.project_id) ? "Queued" : "Install"}
                         </button>
                       </div>
                     </div>
@@ -554,7 +537,7 @@ const BrowseModpacks: Component = () => {
         source={modSource()}
         installedCount={getInstallCount(detailPack()?.project_id || "")}
         installedInstances={getInstalledInstances(detailPack()?.project_id || "")}
-        installing={installing() === detailPack()?.project_id}
+        installing={Boolean(detailPack() && isModpackQueuedOrActive(detailPack()!.project_id))}
         onClose={() => setDetailPack(null)}
         onInstall={(p, vId) => {
           setDetailPack(null);
