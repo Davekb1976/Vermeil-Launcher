@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/Davekb1976/Vermeil-Launcher/releases/latest"><img src="https://img.shields.io/github/v/release/Davekb1976/Vermeil-Launcher?style=flat-square&label=release&color=8b5cf6" alt="Release" /></a>
-  <a href="https://github.com/Davekb1976/Vermeil-Launcher/releases"><img src="https://img.shields.io/github/downloads/Davekb1976/Vermeil-Launcher/total?style=flat-square&label=downloads&color=8b5cf6" alt="Downloads" /></a>
+  <a href="https://github.com/Davekb1976/Vermeil-Launcher/releases"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Davekb1976/Vermeil-Launcher/badges/download-count.json&style=flat-square" alt="Downloads" /></a>
   <a href="https://github.com/Davekb1976/Vermeil-Launcher/actions"><img src="https://img.shields.io/github/actions/workflow/status/Davekb1976/Vermeil-Launcher/release.yml?style=flat-square&label=build" alt="Build" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License" /></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational?style=flat-square" alt="Platform" />
