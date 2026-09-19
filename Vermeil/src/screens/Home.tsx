@@ -4,7 +4,7 @@ import { launchInstance, listInstanceWorlds, getJavaNews, getArticleBody, NewsAr
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
 import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX } from "../components/Icons";
-import PlayerHead from "../components/PlayerHead";
+import CharacterStage from "../components/CharacterStage";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { resolveAssetUrl } from "../lib/assets";
 
@@ -35,6 +35,17 @@ function relativePlayed(iso: string | null | undefined): string | null {
   }
   const months = Math.floor(days / 30);
   return `${months} month${months === 1 ? "" : "s"} ago`;
+}
+
+/** Format total playtime seconds into compact hours/minutes (e.g. "14h 25m"). */
+function formatPlaytime(seconds: number): string {
+  if (!seconds || seconds <= 0) return "0m";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
 }
 
 /** Loader-tinted icon-tile background class (mirrors the Library card). */
@@ -212,7 +223,7 @@ const Home: Component = () => {
     try { await launchInstance(instanceId); } catch (e) { console.error(e); }
   };
 
-  // Header summary — total instance count + most-recent play date across
+  // Header summary — total instance count, playtime, and most-recent play date across
   // all instances, formatted relatively. Memo'd so it only recomputes when
   // the instances signal changes, not on every render.
   const headerSummary = createMemo(() => {
@@ -223,9 +234,12 @@ const Home: Component = () => {
       .filter((d): d is string => Boolean(d))
       .sort()
       .pop();
+    const totalPlaySeconds = list.reduce((acc, i) => acc + (i.total_play_seconds || 0), 0);
     return {
       count: list.length,
       relative: relativePlayed(mostRecent),
+      totalPlaytime: formatPlaytime(totalPlaySeconds),
+      hasPlaytime: totalPlaySeconds > 0,
     };
   });
 
@@ -233,110 +247,197 @@ const Home: Component = () => {
 
   return (
     <div class="screen-enter">
-      {/* Greeting — personalizes the empty space at the top of Home and
-          grounds the page so it feels less like a bare news feed. */}
-      <div class="home-greeting panel--bracketed">
-          <PlayerHead
-            skinUrl={activeSkinUrl()}
-            name={displayName()}
-            size={56}
-            class="home-greeting-head"
-          />
-          <div class="home-greeting-text">
-            <div class="home-greeting-line">
-              {timeOfDayGreeting()}, <span class="home-greeting-name">{displayName()}</span>
+      {/* ═══ HERO HUB: 3D Character Stage & Continue Station ═══ */}
+      <div class="home-hero-grid">
+        {/* Left Column: 3D Character Stage (Black Box) & Telemetry (Blue Box) */}
+        <div class="home-commander-col">
+          {/* Black Box: 3D Character Stage with wave animation */}
+          <div class="home-skin-stage">
+            <CharacterStage
+              skinUrl={activeSkinUrl()}
+              name={displayName()}
+            />
+            <div class="home-skin-stage-badge">
+              <span class="home-stage-tag">OPERATOR</span>
             </div>
+          </div>
+
+          {/* Blue Box: Tactical Telemetry Base Plate */}
+          <div
+            class="home-telemetry-plate"
+            onClick={() => setActiveScreen("account")}
+            role="button"
+            tabIndex={0}
+            title="Click to manage accounts and profiles"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setActiveScreen("account");
+              }
+            }}
+          >
+            <div class="home-telemetry-header">
+              <div class="home-telemetry-user">
+                <span class="home-telemetry-salutation">{timeOfDayGreeting()},</span>
+                <span class="home-telemetry-name">{displayName()}</span>
+              </div>
+              <div
+                class={`account-badge-active ${account()?.is_offline ? "account-badge--offline" : ""}`}
+                title={account()?.is_offline ? "Offline Minecraft profile" : "Signed in with Microsoft"}
+              >
+                <span class="account-badge-dot" />
+                <span>{account()?.is_offline ? "Offline" : "Microsoft"}</span>
+              </div>
+            </div>
+
+            <div class="home-telemetry-stats">
+              <div class="home-telemetry-item">
+                <span class="telemetry-item-val">{headerSummary()?.count ?? 0}</span>
+                <span class="telemetry-item-lbl">Instances</span>
+              </div>
+              <div class="home-telemetry-item">
+                <span class="telemetry-item-val">{headerSummary()?.totalPlaytime ?? "0m"}</span>
+                <span class="telemetry-item-lbl">Playtime</span>
+              </div>
+              <div class="home-telemetry-item">
+                <span class="telemetry-item-val">{headerSummary()?.relative ?? "None"}</span>
+                <span class="telemetry-item-lbl">Last Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Gold Box - Continue Where You Left Off Station */}
+        <div class="home-continue-col">
+          <div class="section-label section-label--row">
+            <span>Continue</span>
+            <span class="continue-section-sub">Resume your recent Minecraft sessions</span>
+          </div>
+
+          <div class="continue-stack">
+            {/* Show Featured Recent World Hero Card if any exist */}
             <Show
-              when={headerSummary()}
+              when={recentWorlds() && recentWorlds()!.length > 0}
               fallback={
-                <div class="home-greeting-meta">
-                  Welcome to Vermeil. Create your first instance from the Library tab.
+                <div class="continue-empty-hero" onClick={() => setActiveScreen("library")}>
+                  <div class="continue-empty-icon"><IconPlus /></div>
+                  <div class="continue-empty-text">
+                    <span class="continue-empty-title">No recent worlds</span>
+                    <span class="continue-empty-desc">Launch an instance in your Library to play a world</span>
+                  </div>
                 </div>
               }
             >
-              <div class="home-greeting-meta">
-                {headerSummary()!.count} instance{headerSummary()!.count === 1 ? "" : "s"}
-                <Show when={headerSummary()!.relative}>
-                  {" · "}last played {headerSummary()!.relative}
-                </Show>
+              {/* Primary Featured Hero Card */}
+              {(() => {
+                const heroWorld = () => recentWorlds()![0];
+                return (
+                  <div
+                    class="continue-hero-card"
+                    onClick={() => {
+                      setActiveInstanceId(heroWorld().instanceId);
+                      setInitialInstanceTab("content");
+                      setActiveScreen("mods");
+                    }}
+                  >
+                    <div class={`continue-hero-thumb ${bannerColor(heroWorld().loader)}`}>
+                      <Show when={heroWorld().worldIcon} fallback={<span class="world-card-globe"><IconGlobe /></span>}>
+                        <img src={heroWorld().worldIcon!} alt="" draggable={false} />
+                      </Show>
+                    </div>
+
+                    <div class="continue-hero-body">
+                      <div class="continue-hero-info">
+                        <div class="continue-hero-badge-row">
+                          <span class={`badge badge--loader ${loaderBadgeClass(heroWorld().loader)}`}>
+                            {loaderLabel(heroWorld().loader)}
+                          </span>
+                          <span class="badge badge--version">{heroWorld().gameVersion}</span>
+                        </div>
+                        <div class="continue-hero-title">{heroWorld().worldName}</div>
+                        <div class="continue-hero-sub">
+                          <Show when={resolveAssetUrl(heroWorld().instanceIcon)}>
+                            <img class="world-card-inst-icon" src={resolveAssetUrl(heroWorld().instanceIcon)!} alt="" draggable={false} />
+                          </Show>
+                          <span>{heroWorld().instanceName}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        class="btn btn--primary continue-hero-play"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePlayWorld(heroWorld().instanceId);
+                        }}
+                      >
+                        <IconPlay /> Play
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Secondary World / Placeholder Row (Slots 2 & 3) */}
+              <div class="continue-sub-grid">
+                <For each={recentWorlds()!.slice(1)}>
+                  {(world) => (
+                    <div
+                      class="world-card world-card--sub"
+                      onClick={() => {
+                        setActiveInstanceId(world.instanceId);
+                        setInitialInstanceTab("content");
+                        setActiveScreen("mods");
+                      }}
+                    >
+                      <div class={`world-card-thumb ${bannerColor(world.loader)}`}>
+                        <Show when={world.worldIcon} fallback={<span class="world-card-globe"><IconGlobe /></span>}>
+                          <img src={world.worldIcon!} alt="" draggable={false} />
+                        </Show>
+                      </div>
+                      <div class="world-card-body">
+                        <div class="world-card-info">
+                          <div class="world-card-title">{world.worldName}</div>
+                          <div class="world-card-sub">
+                            <span class="world-card-inst-name">{world.instanceName}</span>
+                          </div>
+                        </div>
+                        <button
+                          class="btn btn--primary btn--sm world-card-play"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePlayWorld(world.instanceId);
+                          }}
+                        >
+                          <IconPlay />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </For>
+
+                {/* Empty placeholders for remaining slots */}
+                <For each={Array.from({ length: emptySlotCount() })}>
+                  {() => (
+                    <div
+                      class="continue-placeholder continue-placeholder--sub"
+                      onClick={() => setActiveScreen("library")}
+                      data-tip="Launch an instance in your Library to play a world"
+                    >
+                      <div class="continue-placeholder-thumb">
+                        <IconPlus />
+                      </div>
+                      <div class="continue-placeholder-body">
+                        <span class="continue-placeholder-title">Empty Slot</span>
+                        <span class="continue-placeholder-sub">Create or play a world</span>
+                      </div>
+                    </div>
+                  )}
+                </For>
               </div>
             </Show>
           </div>
         </div>
-
-        {/* Continue section */}
-        <div class="section-label">Continue</div>
-        <div class="continue-grid">
-          <For each={recentWorlds() ?? []}>
-            {(world) => (
-              <div
-                class="world-card"
-                onClick={() => {
-                  // Default click action is to open the instance
-                  setActiveInstanceId(world.instanceId);
-                  setInitialInstanceTab("content");
-                  setActiveScreen("mods");
-                }}
-              >
-                {/* World thumbnail (Pink area in Image 2) — full square PNG tile */}
-                <div class={`world-card-thumb ${bannerColor(world.loader)}`}>
-                  <Show when={world.worldIcon} fallback={<span class="world-card-globe"><IconGlobe /></span>}>
-                    <img src={world.worldIcon!} alt="" draggable={false} />
-                  </Show>
-                </div>
-
-                {/* Content & Action (Green area in Image 2) — title, instance info, badges, and Play button */}
-                <div class="world-card-body">
-                  <div class="world-card-info">
-                    <div class="world-card-title">{world.worldName}</div>
-                    <div class="world-card-sub">
-                      {/* Modpack/instance icon + name */}
-                      <Show when={resolveAssetUrl(world.instanceIcon)}>
-                        <img class="world-card-inst-icon" src={resolveAssetUrl(world.instanceIcon)!} alt="" draggable={false} />
-                      </Show>
-                      <span class="world-card-inst-name">{world.instanceName}</span>
-                    </div>
-                    <div class="world-card-badges">
-                      <span class="badge badge--version">{world.gameVersion}</span>
-                      <span class={`badge badge--loader ${loaderBadgeClass(world.loader)}`}>
-                        {loaderLabel(world.loader)}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    class="btn btn--primary btn--sm world-card-play"
-                    onClick={(e) => {
-                      // Stop the bubble so card-level navigation doesn't also fire
-                      e.stopPropagation();
-                      handlePlayWorld(world.instanceId);
-                    }}
-                  >
-                    <IconPlay /> Play
-                  </button>
-                </div>
-              </div>
-            )}
-          </For>
-
-          {/* Empty slot indicators (Image 3) — dashed onion-skin placeholder slots */}
-          <For each={Array.from({ length: emptySlotCount() })}>
-            {() => (
-              <div
-                class="continue-placeholder"
-                onClick={() => setActiveScreen("library")}
-                data-tip="Launch an instance in your Library to play a world"
-              >
-                <div class="continue-placeholder-thumb">
-                  <IconPlus />
-                </div>
-                <div class="continue-placeholder-body">
-                  <span class="continue-placeholder-title">Empty Slot</span>
-                  <span class="continue-placeholder-sub">Create or play a world in an instance</span>
-                </div>
-              </div>
-            )}
-          </For>
-        </div>
+      </div>
 
         {/* News section */}
         <div class="section-label section-label--row">

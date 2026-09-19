@@ -1044,55 +1044,436 @@
 
 
 /* ============================================================
-   Home greeting block (screens/Home.tsx).
-   Sits above the Continue / News sections and personalizes the
-   page with the active skin head, time-of-day greeting, and a
-   one-line summary of instances.
+   Home Hero Hub (screens/Home.tsx).
+   Two-column command station:
+   - Left: 3D interactive character stage (Black well) + tactical
+     telemetry plate (Blue/purple SloppyKeys bevel).
+   - Right: Dedicated "Continue" session station featuring the
+     primary recent world hero card + secondary quick-launch slots.
    ============================================================ */
-.home-greeting {
-  display: flex;
-  align-items: center;
+.home-hero-grid {
+  display: grid;
+  grid-template-columns: 290px 1fr;
   gap: var(--space-4);
-  padding: var(--space-5);
   margin-bottom: var(--space-5);
-  background: var(--surface-panel);
-  border: 1px solid var(--border);
-  border-radius: 0;
-  position: relative;
+  align-items: stretch;
 }
-.home-greeting::before {
-  content: "";
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: var(--accent);
+
+@media (max-width: 920px) {
+  .home-hero-grid {
+    grid-template-columns: 1fr;
+  }
 }
-.home-greeting-head {
-  border-radius: var(--radius-md);
-  flex-shrink: 0;
-}
-.home-greeting-text {
+
+/* --- Left Column: Commander / Character Stage & Telemetry --- */
+.home-commander-col {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 10px;
   min-width: 0;
 }
-.home-greeting-line {
-  font-size: 18px;
-  font-weight: 600;
+
+/* Black Box: 3D Character Stage Sunken Well */
+.home-skin-stage {
+  position: relative;
+  height: 240px;
+  background: #0f0e13;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.65), var(--bevel);
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+}
+.home-skin-stage:active {
+  cursor: grabbing;
+}
+
+.character-stage-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.character-stage-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+.home-skin-stage-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.home-stage-tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 0;
+}
+
+/* Blue Box: Tactical Telemetry Base Plate */
+.home-telemetry-plate {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0;
+  box-shadow: var(--bevel);
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+
+.home-telemetry-plate:hover {
+  background: var(--surface-raised);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  border-left-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.home-telemetry-plate:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.home-telemetry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.home-telemetry-user {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.home-telemetry-salutation {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.home-telemetry-name {
+  font-size: 14px;
+  font-weight: 700;
   color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   letter-spacing: -0.01em;
 }
-.home-greeting-name {
-  background: linear-gradient(135deg, #a78bfa, var(--accent));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+
+.account-badge-active.account-badge--offline {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--muted);
 }
-.home-greeting-meta {
+.account-badge-active.account-badge--offline .account-badge-dot {
+  background: var(--muted);
+  box-shadow: none;
+  animation: none;
+}
+
+.home-telemetry-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.home-telemetry-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.telemetry-item-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.telemetry-item-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* --- Right Column: Continue Session Station --- */
+.home-continue-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
+.continue-section-sub {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 8px;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.continue-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Primary Featured Recent World Card */
+.continue-hero-card {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid #f59e0b;
+  border-radius: 0;
+  box-shadow: var(--bevel);
+  overflow: hidden;
+  height: 140px;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+
+.continue-hero-card:hover {
+  border-color: rgba(245, 158, 11, 0.45);
+  border-left-color: #f59e0b;
+  background: var(--surface-raised);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.continue-hero-card:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.continue-hero-thumb {
+  width: 140px;
+  min-width: 140px;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.continue-hero-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  image-rendering: pixelated;
+  transition: transform 0.2s ease;
+}
+
+.continue-hero-card:hover .continue-hero-thumb img {
+  transform: scale(1.05);
+}
+
+.continue-hero-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  gap: 16px;
+}
+
+.continue-hero-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.continue-hero-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.continue-hero-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.continue-hero-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   font-size: 12px;
   color: var(--muted);
-  letter-spacing: 0.01em;
+}
+
+.continue-hero-play {
+  flex-shrink: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 18px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: var(--bevel-strong);
+}
+
+/* Secondary Worlds Sub-Grid */
+.continue-sub-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .continue-sub-grid {
+    grid-template-columns: 1fr;
+  }
+  .continue-hero-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .continue-hero-play {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.world-card--sub {
+  height: 74px;
+}
+.world-card--sub .world-card-thumb {
+  width: 72px;
+  min-width: 72px;
+}
+
+.continue-placeholder--sub {
+  height: 74px;
+}
+.continue-placeholder--sub .continue-placeholder-thumb {
+  width: 72px;
+  min-width: 72px;
+}
+
+/* Empty Hero Card when 0 worlds exist */
+.continue-empty-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.012);
+  border: 1.5px dashed var(--border);
+  box-sizing: border-box;
+  cursor: pointer;
+  user-select: none;
+  min-height: 224px;
+  height: 100%;
+  text-align: center;
+  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.continue-empty-hero:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  background: rgba(139, 92, 246, 0.03);
+}
+
+.continue-empty-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  transition: color 0.15s, border-color 0.15s, transform 0.12s;
+}
+
+.continue-empty-hero:hover .continue-empty-icon {
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: scale(1.06);
+}
+
+.continue-empty-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.continue-empty-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.continue-empty-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.continue-empty-desc {
+  font-size: 11px;
+  color: var(--muted);
 }
 
 
@@ -2533,12 +2914,12 @@
 
 
 /* Instance card icon & thumbnail loader-tinted backgrounds — sharp accent borders. */
-.inst-card-icon.green, .inst-card-thumb.green, .world-card-thumb.green { background: var(--grad-inst-green); }
-.inst-card-icon.fabric, .inst-card-thumb.fabric, .world-card-thumb.fabric { background: var(--grad-inst-fabric); }
-.inst-card-icon.blue, .inst-card-thumb.blue, .world-card-thumb.blue { background: var(--grad-inst-blue); }
-.inst-card-icon.orange, .inst-card-thumb.orange, .world-card-thumb.orange { background: var(--grad-inst-orange); }
-.inst-card-icon.quilt, .inst-card-thumb.quilt, .world-card-thumb.quilt { background: var(--grad-inst-quilt); }
-.inst-card-icon.purple, .inst-card-thumb.purple, .world-card-thumb.purple { background: var(--grad-inst-quilt); }
+.inst-card-icon.green, .inst-card-thumb.green, .world-card-thumb.green, .continue-hero-thumb.green { background: var(--grad-inst-green); }
+.inst-card-icon.fabric, .inst-card-thumb.fabric, .world-card-thumb.fabric, .continue-hero-thumb.fabric { background: var(--grad-inst-fabric); }
+.inst-card-icon.blue, .inst-card-thumb.blue, .world-card-thumb.blue, .continue-hero-thumb.blue { background: var(--grad-inst-blue); }
+.inst-card-icon.orange, .inst-card-thumb.orange, .world-card-thumb.orange, .continue-hero-thumb.orange { background: var(--grad-inst-orange); }
+.inst-card-icon.quilt, .inst-card-thumb.quilt, .world-card-thumb.quilt, .continue-hero-thumb.quilt { background: var(--grad-inst-quilt); }
+.inst-card-icon.purple, .inst-card-thumb.purple, .world-card-thumb.purple, .continue-hero-thumb.purple { background: var(--grad-inst-quilt); }
 
 
 /* Continue section grid — 3 columns so worlds don't stretch into massive 1-column banners */
