@@ -5,7 +5,6 @@ import { enqueueModpack } from "../services/modpackQueue";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import {
-  IconArrowLeft,
   IconModrinth,
   IconCurseForge,
   IconUpload,
@@ -180,15 +179,6 @@ const ImportInstance: Component = () => {
     <div class="screen-enter import-screen">
       {/* Top Header */}
       <div class="page-header" style="margin-bottom: var(--space-4);">
-        <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
-          <button
-            type="button"
-            class="btn btn--sm btn--ghost"
-            onClick={() => setActiveScreen("create-choose")}
-          >
-            <IconArrowLeft /> Back to Setup
-          </button>
-        </div>
         <div class="page-title-group">
           <div class="page-title">Import Instance</div>
           <div class="page-subtitle">
