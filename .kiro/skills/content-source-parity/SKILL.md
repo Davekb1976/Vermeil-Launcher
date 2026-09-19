@@ -1,133 +1,177 @@
 ---
 name: content-source-parity
-description: Implement or modify any feature that flows through both Modrinth and CurseForge (search, browse, install, update checks, metadata fetches). Use when touching services/modrinth.rs, services/curseforge.rs, services/cf_*.rs, commands/mods.rs, BrowseModpacks.tsx, or the Browse tab in InstanceMods.tsx. Documents the API differences between the two sources so features don't silently break for one of them.
+description: Implement or modify any feature that flows through content sources (Modrinth, CurseForge, local .mrpack/.zip imports) and understand their blast radius across queueing, download tracking, UI badges, icons, and instance lifecycle. Use when touching services/modrinth.rs, services/curseforge.rs, services/cf_*.rs, services/modpack.rs, commands/mods.rs, commands/instances.rs, BrowseModpacks.tsx, ImportInstance.tsx, InstanceMods.tsx, or Downloads.tsx.
 ---
 
-# Content Source Parity (Modrinth ↔ CurseForge)
+# Content Sources & Blast Radius Guide
 
-When implementing or modifying any feature that flows through both **Modrinth** and **CurseForge** (search, browse, install, update checks, metadata fetches), the two APIs are similar but never identical. Treating them as interchangeable is how features quietly break for one of the two sources.
+Vermeil ingests Minecraft content (mods, modpacks, resource packs, shaders, datapacks) through three distinct sources: **Modrinth API**, **CurseForge API**, and **Local Archive Imports** (`.mrpack`, `.zip`).
 
-This is the reference for cross-source work. Read it before touching anything in `services/modrinth.rs`, `services/curseforge.rs`, `services/cf_*.rs`, `commands/mods.rs`, `BrowseModpacks.tsx`, or the Browse tab in `InstanceMods.tsx`.
+Whenever you implement, modify, or debug any content source feature, **you must consider the entire 5-stage lifecycle pipeline and its blast radius across the launcher**. Fixing only the backend fetch without verifying download tracking, history persistence, badges, and icon resolution results in broken cards, missing icons, or unstyled badges.
 
-## The Rule
+---
 
-When you change behavior on one source, **immediately verify the equivalent behavior on the other source** before considering the change done. Concretely:
+## 1. The Three Content Sources
 
-- New filter / sort option on the Modrinth path → check that CurseForge path applies it correctly, or document why it can't.
-- New field exposed in `ModHit` → both `services/modrinth.rs` and `services/curseforge.rs` must populate it (or explicitly set `None` with a comment explaining why).
-- New search parameter → make sure both backends translate it correctly to their respective API conventions.
-- Bug fix on one source → check whether the same defect exists on the sibling source.
+| Source | Mod Types | Modpacks | File Format | Auth / Key | Primary Code Paths |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Modrinth API** | Mods, Packs, Shaders, Datapacks | Browse & Install | `.mrpack` (contains `modrinth.index.json`, direct CDN URLs) | None (Public API) | `services/modrinth.rs`, `services/mod_install.rs`, `services/modpack.rs` |
+| **CurseForge API** | Mods, Packs, Shaders, Datapacks | Browse & Install | Zip (`manifest.json`, numeric `projectID`/`fileID` pairs) | `x-api-key` required | `services/curseforge.rs`, `services/cf_mod_install.rs`, `services/cf_import.rs` |
+| **Local Archives** | N/A (Bundled in pack) | Local Import | `.mrpack` (Modrinth) or `.zip` (CurseForge) | Optional CF key for metadata | `modals/ImportInstance.tsx`, `services/modpack.rs`, `services/cf_import.rs` |
 
-If the two APIs genuinely don't support equivalent behavior, document the gap in code with a comment naming the missing capability — don't pretend the feature works for both.
+---
 
-## Known API Differences (cheat sheet)
+## 2. The 5-Stage Content Pipeline & Blast Radius Checklist
 
-This list is non-exhaustive. Update it whenever you discover a new mismatch.
+Every content addition or modification ripples through 5 connected stages. When touching any source, check off every stage:
+
+### Stage 1: Enqueueing & Initial Metadata
+- **Entry Points**: `BrowseModpacks.tsx` (`doInstall`), `InstanceMods.tsx` (`installMod`), `ImportInstance.tsx` (`handleImport`).
+- **Function**: `enqueueInstallTask` or `enqueueModpack` in `services/modpackQueue.ts`.
+- **Payload (`meta`)**:
+  - `iconUrl`: Remote CDN URL if known upfront (e.g. from search hit). Set to `undefined` for local archive imports (archive is not extracted yet).
+  - `loader`: **CRITICAL INVARIANT**: Must ONLY be a genuine Minecraft loader (`"fabric"`, `"forge"`, `"neoforge"`, `"quilt"`, `"vanilla"`, or `undefined`). **NEVER** set content platforms (`"modrinth"` / `"curseforge"`) as a loader.
+  - `gameVersion`: e.g. `"1.20.1"` or version range string.
+  - `versionNumber`: Release tag (e.g. `"v4.1.0"`, `"1.13.4"`).
+  - `author`: Primary author display name.
+- **Blast Radius Check**: Does the item appear in `queuedDownloads()` in `Downloads.tsx` with a clean title and without broken/unstyled badges?
+
+### Stage 2: In-Flight Tracking & Active UI
+- **Events**: Backend emits `"install-progress"` (`InstallProgressPayload`) and `"download-progress"` (`completed`/`total`).
+- **Active Install Card (`Downloads.tsx`)**:
+  - `activeInstallEntry()` matches the active orchestrator task by `task.id` or title.
+  - `dl-active-icon-badge` displays the pack's icon if available, falls back to `activeIcon()` (resolving dynamically from disk instance if created), or `<IconDownload />`.
+- **Dock Indicator (`FloatingDock.tsx`)**: Active download count badge increments/decrements.
+- **Toast Notifications (`updateDownloadQueueToast`)**: Displays batch status and current downloading item title.
+- **Blast Radius Check**: Does starting an install show an immediate progress indicator without freezing, and does the dock/toast counter reflect active items?
+
+### Stage 3: Backend Execution & Asset Resolution
+- **Icon Resolution Hierarchy** (in `modpack.rs` & `cf_import.rs`):
+  1. Embedded icon inside archive (`icon.png`, `pack.png`, `logo.png`, `icon.webp`, `overrides/icon.png`, etc.) cached via `icon_cache::cache_icon_bytes`.
+  2. Modrinth SHA-1 lookup: Compute archive SHA-1, query `GET /v2/version_file/{sha1}?algorithm=sha1`, resolve `project_id`, fetch project logo, cache via `icon_cache::cache_remote_icon`.
+  3. API Name Search fallback: Query Modrinth/CurseForge search by pack title to find the matching project logo.
+  4. Only fall back to `"cube"` placeholder if all resolution passes fail.
+- **Instance Metadata (`instance.json`)**:
+  - `name`: Deduplicated clean title via `unique_instance_name(&manifest.name)`.
+  - `icon`: The resolved data URL or `"cube"`.
+  - `loader`: `LoaderConfig` with actual `LoaderType`.
+  - `game_version`: Target Minecraft version.
+  - `source_project_id` & `source_platforms` & `source_version`.
+- **Auto-Pinning**: Newly created instances call `settings_service::auto_pin_instance(&instance.id)`.
+- **Blast Radius Check**: Does `instance.json` on disk contain the actual modpack logo (not `"cube"`), valid loader type, and proper source version?
+
+### Stage 4: Completion Contract & Persistence
+- **Execution Return**: `execute()` must return the newly created `Instance` (or mod result) with its `id`, `name`, `icon`, `loader`, and `game_version`.
+- **Instance Refetch**: `await refetchInstances()` and `refreshPinnedInstanceIds()` must run *before* `completeDownload()`.
+- **`completeDownload()` Contract**:
+  ```ts
+  completeDownload(
+    id: string,
+    nameOverride?: string,      // Clean instance title from result.name
+    versionNumber?: string,     // result.source_version ?? meta.versionNumber
+    metaUpdates?: {
+      iconUrl?: string | null;  // result.icon (if !== "cube") ?? meta.iconUrl
+      loader?: string;          // result.loader.type ?? meta.loader
+      gameVersion?: string;     // result.game_version ?? meta.gameVersion
+      author?: string | null;   // meta.author
+      instanceId?: string;      // result.id (CRITICAL for history linkage)
+    }
+  )
+  ```
+- **Immediate Disk Save**: `persistDownloads(true)` writes `download_history.json` immediately on completion, failure, or cancellation to avoid loss on rapid navigation.
+- **Blast Radius Check**: Does `download_history.json` receive `iconUrl`, genuine `loader`, `gameVersion`, and `instanceId`?
+
+### Stage 5: Downstream UI Surfaces
+- **Download History (`Downloads.tsx`)**:
+  - `DownloadCard` renders `cardIcon()`, `cardName()`, `cardLoader()`, `cardGameVersion()`.
+  - Must include **dynamic instance fallback** (`matchingInstance()`): if historical or imported items were saved with missing fields, dynamically resolve from `instances()` in memory so cards never display broken initials or missing badges.
+- **Auto-Healing (`App.tsx`)**: Reactive `createEffect` checks `downloads()` against `instances()` on boot, backfilling missing metadata in `download_history.json`.
+- **Library (`Library.tsx`)**: Renders tile icon (`instance.icon`), loader badge (`.badge--${instance.loader.type}`), and version pill.
+- **Installed Content (`InstanceMods.tsx`)**: Shows installed mods from `instance.mods`, and triggers background metadata enrichment (`enrich_mod_metadata`).
+- **Blast Radius Check**: Does the finished card in Download History show the icon image, `.badge--fabric` (or appropriate loader) pill, and MC version pill?
+
+---
+
+## 3. Critical Invariants & Pitfalls
+
+1. **Platforms are NOT Loaders**:
+   - Platforms: `"modrinth"`, `"curseforge"`.
+   - Loaders: `"fabric"`, `"forge"`, `"neoforge"`, `"quilt"`, `"vanilla"`.
+   - Never pass a platform name into a `loader` field or CSS class (`.badge--modrinth` does not exist).
+2. **Local Archives Have No Upfront CDN URLs**:
+   - Unlike search hits from Browse, `.mrpack` and `.zip` files selected from disk have no upfront `icon_url`.
+   - The backend must extract the icon from the archive or resolve it via API hash lookup during the install pass.
+3. **Always Forward `instanceId`**:
+   - `DownloadEntry` must store `instanceId` for modpack installs so history cards and download managers retain a hard link to the created instance.
+4. **Never Bypass CurseForge Distribution Restrictions**:
+   - When CurseForge `allowModDistribution == false`, `download_url` is `None`.
+   - Never fabricate CDN URLs to bypass this. Trigger `services::manual_download` (`manual-download-required` event) carrying the project's website URL.
+5. **No Blind API Parallelism**:
+   - Modrinth and CurseForge rate-limit metadata queries.
+   - Batch calls (e.g. `POST /v1/mods` for up to 50 IDs) rather than spawning unbounded HTTP requests.
+
+---
+
+## 4. Known API Differences (Cheat Sheet)
 
 ### Loader filtering
-
 - **Modrinth**: facets-based. Pass `categories=fabric` etc. in the `facets` array.
 - **CurseForge**: `modLoaderType` query parameter with numeric IDs (1=Forge, 4=Fabric, 5=Quilt, 6=NeoForge).
 - **Project types affected**: mods AND modpacks have a primary loader. Resource packs, shaders, and datapacks are loader-agnostic on both sources — applying a loader filter to those returns zero results on CurseForge.
 
 ### Sort fields
-
 - **Modrinth**: `relevance`, `downloads`, `follows`, `newest`, `updated`.
 - **CurseForge**: `1=Featured`, `2=Popularity`, `3=Updated`, `4=Name`, `6=Downloads`, `11=Newest`.
-- **CurseForge has no "follows"** — there's no follower count concept. We map our `follows` sort to `popularity` (id 2) since that's the closest social-proof signal.
+- **CurseForge has no "follows"**: Map `follows` sort to `popularity` (id 2) in the backend.
 
 ### Game version filtering
-
 - **Modrinth**: `versions=["1.20.1"]` facet.
 - **CurseForge**: `gameVersion=1.20.1` query param. Single value only.
 
 ### Project type / class
-
-- **Modrinth**: `project_type` facet — `"mod"`, `"modpack"`, `"resourcepack"`, `"shader"`, `"datapack"`, `"plugin"`.
+- **Modrinth**: `project_type` facet — `"mod"`, `"modpack"`, `"resourcepack"`, `"shader"`, `"datapack"`.
 - **CurseForge**: numeric `classId` — 6=Mods, 4471=Modpacks, 12=Resource Packs, 6552=Shaders, 6945=Data Packs.
 
 ### Icon / thumbnail URL
-
-- **Modrinth**: single `icon_url` field (always set when an icon exists).
-- **CurseForge**: `logo` object with `thumbnailUrl` AND `url`. Some projects only populate `url` — fall back to it when `thumbnailUrl` is empty.
+- **Modrinth**: single `icon_url` field.
+- **CurseForge**: `logo` object with `thumbnailUrl` AND `url`. Fall back to `url` when `thumbnailUrl` is empty.
 
 ### Author
-
 - **Modrinth**: search hit's `author` field directly.
-- **CurseForge**: first entry of the project's `authors[]` array (must be fetched separately on a single-project lookup; not present in search hits).
-
-### Followers / "social" counts
-
-- **Modrinth**: `follows` count.
-- **CurseForge**: `thumbsUpCount` (closest equivalent — represented as "followers" in our UI for parity).
+- **CurseForge**: first entry of `authors[]` (fetched separately on single-project lookups; not in search hits).
 
 ### Modpack file format
-
-- **Modrinth**: `.mrpack` (zip with `modrinth.index.json`). Mod files are URLs; we download them.
-- **CurseForge**: zip with `manifest.json`. Mod files are referenced by `(projectID, fileID)` pairs; we resolve each via the API.
+- **Modrinth**: `.mrpack` (ZIP with `modrinth.index.json`). Mod files are URLs.
+- **CurseForge**: `.zip` with `manifest.json`. Mod files are referenced by `(projectID, fileID)` pairs.
 
 ### Cross-CDN file hosting
-
-- **Modrinth**: `cdn.modrinth.com` (single CDN).
-- **CurseForge**: `media.forgecdn.net`, `edge.forgecdn.net`, `mediafilez.forgecdn.net` — all three serve content. Whitelist all three in CSP `img-src` and `connect-src`.
-
-### Authentication
-
-- **Modrinth**: no auth required for read-only API.
-- **CurseForge**: requires an API key in `x-api-key` header. We ship a default key; users can override.
+- **Modrinth**: `cdn.modrinth.com`.
+- **CurseForge**: `media.forgecdn.net`, `edge.forgecdn.net`, `mediafilez.forgecdn.net`. All three must be allowed in CSP.
 
 ### Per-project version list
-
-- **Modrinth**: `GET /v2/project/{id}/version`, optional `loaders` / `game_versions` filters. **`include_changelog` defaults to `true`** — always pass `include_changelog=false` unless the changelog is actually being displayed, or every call drags the full changelog of every version across a rate-limited API.
-- **CurseForge**: `GET /v1/mods/{id}/files?pageSize=50`, optional `gameVersion` / `modLoaderType`. Only the first page is fetched; no `index` paging.
-
-### Release channel
-
-- **Modrinth**: `version_type` on each version — `"release"` / `"beta"` / `"alpha"`.
-- **CurseForge**: `releaseType` on each file — `1` = Release, `2` = Beta, `3` = Alpha.
-- Both pickers prefer the stable channel and only fall back to a prerelease when nothing stable is compatible. Neither list is ordered by channel, so a plain "take the newest" hands the user an alpha whenever one was published after the latest stable.
-
-### Loader tagging on a file/version
-
-- **Modrinth**: dedicated `loaders` array on the version.
-- **CurseForge**: **no loader field.** Loader names are mixed into the same `gameVersions` string array as Minecraft versions (plus occasional `"Client"` / `"Server"` tags). `curseforge::classify_game_versions` splits them: an entry starting with a digit is an MC version, one matching a known loader name is a loader, anything else is dropped. Deliberately avoids `sortableGameVersions[].gameVersionTypeId`, whose numeric values aren't documented per game.
-- Consequence: `modLoaderType` silently **does not filter** when the loader can't be mapped to a numeric id, so the chosen file must always be re-validated client-side. Never trust the response to already be loader-correct.
-
-### File availability / distribution
-
-- **Modrinth**: no equivalent; every listed version is downloadable. `ContentVersion.downloadable` is therefore always `true` on this source.
-- **CurseForge**: `isAvailable` per file (false = not currently served) and `allowModDistribution` per project (false = author opted out of third-party downloads, and `downloadUrl` comes back **null**).
-- **A null `downloadUrl` is honored, not worked around.** It used to be replaced with a CDN URL reconstructed from the numeric file id, which downloaded the file regardless of the author's choice. That's gone. Callers now raise the manual-download dialog via `services::manual_download` (event `manual-download-required`) carrying the project's `links.websiteUrl`, and the version picker marks such entries `manual` up front.
-- Consequence to keep in mind when touching install paths: **any new CurseForge download path must handle `download_url: None`**. Silently skipping it loses a mod; fabricating a URL reintroduces the bypass. Modpack imports skip the file, install the rest, and report it — `mod_install::sync_manual_mods` then picks the jar up once the user drops it in.
+- **Modrinth**: `GET /v2/project/{id}/version`. Always pass `include_changelog=false` unless displaying changelogs.
+- **CurseForge**: `GET /v1/mods/{id}/files?pageSize=50`. Paged by file count.
 
 ### Dependency vocabulary
+- **Modrinth**: `dependency_type` (`required`, `optional`, `incompatible`, `embedded`). May carry exact `version_id` pin.
+- **CurseForge**: `relationType` (1=Embedded, 2=Optional, 3=Required, 4=Tool, 5=Incompatible, 6=Include). Carries only `modId`, never a file ID. Pinned CurseForge files must always be fetched via `curseforge::get_file(modId, fileId)`.
 
-- **Modrinth**: `dependency_type` string — `required` / `optional` / `incompatible` / `embedded`. A dep may carry an exact **`version_id` pin**, and that pin must be honored, including when the project is already installed at a different version.
-- **Resolving an exact version differs by source, and this one bites.** Modrinth's `/v2/project/{id}/version` returns the project's *complete* list, so a pinned `version_id` can safely be found by searching it. CurseForge's `/mods/{id}/files` filters `gameVersion`/`modLoaderType` server-side and pages at 50, so **which files come back depends on the filters the caller passed**. Searching that list for a pinned file id silently missed legitimately-chosen files and fell back to a different version while reporting success. **Always resolve a pinned CurseForge file with `curseforge::get_file` (`GET /mods/{modId}/files/{fileId}`)**, never by searching a list query.
-- **CurseForge**: `relationType` numeric — `1` EmbeddedLibrary, `2` Optional, `3` Required, `4` Tool, `5` Incompatible, `6` Include. Deps carry **only a `modId`, never a file id**, so a CF parent cannot pin an exact build. "Newest compatible" is the best available answer on that source.
-- Both surface `incompatible`/`5` as a `conflict` dependency issue when the named project is installed. Neither source's dependency object carries a semver **range** — the only real range lives inside the jar (`fabric.mod.json` `depends`, `mods.toml` `versionRange`), which `services/loader_scan.rs` already knows how to read.
+### Update detection
+- **Modrinth**: Compare publish dates (`date_published`).
+- **CurseForge**: Identity comparison uses numeric `file_id` (globally monotonic: update flagged only when `newest_id > current_id`).
 
-### Update detection (newest-compatible-file comparison)
+---
 
-- **Modrinth**: version list carries `date_published`. We pick the preferred version via `find_preferred_version` and confirm it's newer by comparing publish dates against the installed `version_id`.
-- **CurseForge**: files **do** carry `fileDate` (we read it into `CfFileInfo::file_date`), but identity comparison uses the numeric `file_id`, which is globally **monotonic** — an update is flagged only when the newest compatible id is strictly greater, never a downgrade.
-- Detection and install share one picker per source (`find_preferred_version` / `cf_mod_install::find_preferred_file`) so "an update is available" can never name a file an install wouldn't actually fetch.
-- Both live in `services/mod_updates.rs` (`check_modrinth_entry` / `check_curseforge_entry`); application reuses each source's install flow (`mod_install::install_mod` / `cf_mod_install::install_cf_mod`), passing the exact detected version so the two can't diverge. Entries with `ModEntry.pinned` are skipped: they're held at a version another mod requires.
+## 5. Parallel Implementation Rule Reference
 
-## Implementation Workflow
+Whenever modifying content source logic, ensure all parallel surfaces are aligned:
 
-When working on a cross-source feature, follow this sequence:
-
-1. **Identify the parallel surfaces.** What's the Modrinth code? What's the CurseForge code? They probably live in separate `services/` files or different match arms.
-2. **Check the API docs for both.** Don't assume — actually verify the parameter name, format, and capability.
-   - Modrinth: https://docs.modrinth.com/api/
-   - CurseForge: https://docs.curseforge.com/rest-api/
-3. **Implement on both sides simultaneously.** Don't ship the Modrinth half and circle back later.
-4. **Test on both.** Open the Browse tab, toggle to CurseForge, run the same search/filter you tested on Modrinth.
-5. **Update this document** if you discovered a new API difference worth recording.
-
-## Frontend rule
-
-UI controls that drive cross-source behavior (sort dropdowns, loader filters, etc.) must work on **whichever source is currently selected**. The toggle button in the Browse tab is the source-of-truth. If a control's option doesn't translate, the backend should map it to the closest equivalent — never silently fall through to a default that ignores the user's choice.
-
-If a control fundamentally can't apply to one source (e.g. "follows" sort on a source with no follower count), the backend should still produce a coherent result by mapping to a near-equivalent, AND the mapping should be documented in code.
+| Concept | Modrinth Surface | CurseForge Surface | Local Archive Surface |
+| :--- | :--- | :--- | :--- |
+| **Search / Browse** | `services/modrinth.rs` | `services/curseforge.rs` | N/A |
+| **Mod Install** | `services/mod_install.rs` | `services/cf_mod_install.rs` | N/A |
+| **Modpack Install** | `services/modpack.rs` | `services/cf_import.rs` | `modpack.rs` / `cf_import.rs` |
+| **Manual / Opt-Out** | N/A (all available) | `services/manual_download.rs` | Blocked files reported |
+| **Mod Updates** | `services/mod_updates.rs` (`check_modrinth_entry`) | `services/mod_updates.rs` (`check_curseforge_entry`) | Skipped if `source == "modpack"` |
+| **UI Switcher** | `BrowseModpacks.tsx`, `InstanceMods.tsx` | `BrowseModpacks.tsx`, `InstanceMods.tsx` | `ImportInstance.tsx` (tab toggle) |
+| **Queue & History** | `modpackQueue.ts` -> `App.tsx` | `modpackQueue.ts` -> `App.tsx` | `modpackQueue.ts` -> `App.tsx` |
