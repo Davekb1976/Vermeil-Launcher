@@ -21,6 +21,7 @@ Lazy means efficient, not careless. The best code is the code never written.
 
 - **Bug fix = root cause, not symptom:** Grep every caller of the touched function; fix the shared root once rather than patching one surface.
 - **Rules:** No unrequested abstractions. No new dependencies if avoidable. Deletion over addition. Boring over clever. Fewest files possible. Shortest working diff wins once understood.
+- **Visual & UI Restraint:** The Ponytail ladder applies equally to pixels. *Does this visual affordance need to exist at all?* If an element's state is already communicated by a colored border, background tint, or 3px left accent, do not stack redundant checkmark boxes, icons, or badges.
 - **Intentional shortcuts:** Mark with `// ponytail: <ceiling> -> <upgrade path>`.
 - **Not lazy about:** Understanding the problem and tracing real flow before editing. Input validation at trust boundaries. Data loss prevention. Security. Accessibility. Cross-platform calibration. Zero warnings. Non-trivial logic must leave one runnable check/test behind.
 
@@ -80,6 +81,13 @@ Vermeil/
 - **Events:** Listen via `listen()` from `@tauri-apps/api/event`. Always store unlisten handle and invoke in `onCleanup()`. Kebab-case naming (`download-progress`, `game-crashed`).
 - **External Links:** Never use `window.open()` or raw `<a href>`. Always use `openUrl()` from `@tauri-apps/plugin-opener`. Intercept link clicks in rendered HTML descriptions.
 - **Design System & SloppyKeys Reference:** Vermeil's tactile UI language is adopted from the creator's companion project, **SloppyKeys** (visual reference in `docs/images/sloppykeys_reference.png`). Features chunky 3D bevel buttons (`--bevel`, `--bevel-strong`, lift/scale hover, press active), framed section panels (`.card-gamemode-section`) with distinct category tag badge tints (`.tag-settings-*`), recessed sunken wells (`.card-section-body` `#0f0e13`), interactive setting plates (`.setting-row` with 3px left border), and square checkboxes (`.check.check--lg`). Reference between the creator's two projects is authorized and intentional.
+- **UI Affordances & The Necessity Test (Restraint over Clutter):**
+  - **No redundant affordances:** If an interactive card or plate already communicates its active/selected state through a colored outline, 3px left border, and background tint, **never add a floating checkbox or checkmark icon to it**. One clear affordance is superior to three stacked on top of each other.
+  - **Semantics (Radio vs Checkbox):** Mutually exclusive 1-of-N choices (e.g. Modrinth vs CurseForge import formats, loader selection) are **tab / radio cards**, NOT checkboxes. Never put a square checkbox or `<IconCheck>` on a single-select card. Checkboxes are strictly for multi-selection (0 to N items).
+  - **Buttons:** Before adding a button, ask: *is the whole card or row already clickable?* If clicking the card selects or opens it, do not embed redundant "Select" or "Choose" buttons.
+  - **Badges:** Badges are for concise, non-obvious metadata (`.mrpack`, `.zip`, `Fabric`, `1.20.1`). Never add badges that repeat what is already stated in the title or communicate state already visible from a color tint.
+  - **Spatial flow:** Never use absolute positioning (e.g. `position: absolute; top: 8px; right: 8px;`) that collides with header tags, titles, or badges. Flow items naturally with flexbox/grid and explicit `gap`.
+  - **Stay within the theme without overdoing it:** Adhere to SloppyKeys tactile tokens (`--bevel`, `--surface-panel`, `--surface-raised`, `#0f0e13` wells, hairline borders). Do not invent novel decorative doodads, corner stickers, or unneeded containers. Boring, clean, and restrained beats busy and cluttered every time.
 
 ---
 

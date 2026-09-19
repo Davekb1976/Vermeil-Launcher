@@ -79,6 +79,39 @@ Token groups (see `base.css` for values): surfaces (`--surface-*`), borders (`--
 >
 > Known duplicate: `.account-card` is defined in both `components.css` and `screens.css`; the `screens.css` copy wins on import order. Consolidate when Account is next touched.
 
+## UI Restraint & Affordance Rules: The Necessity Test
+
+Before adding, restyling, or modifying any interactive element (button, badge, tag, checkbox, or border), evaluate the **Necessity Test**:
+
+### 1. The Single Affordance Rule (No Redundant Cues)
+- **Never stack redundant affordances.** If an interactive card or plate already communicates its active/selected state through a colored outline, a 3px left border, and a tinted background plate, **do NOT add a floating checkmark icon or checkbox to it**.
+- Multiple simultaneous selection cues (e.g. colored border + colored background + corner checkmark square + active badge) look noisy, cluttered, and amateur. One clear, tactile affordance is superior.
+
+### 2. Semantic Alignment: Radio Tabs vs. Checkboxes
+- **Mutually Exclusive Choices (1-of-N)**: e.g., choosing Modrinth vs CurseForge archive import format, or choosing a loader in Create Custom.
+  - **Pattern**: Card or tab highlight (`.selected`, 3px colored left border, tinted background plate).
+  - **Rule**: **NEVER put a square checkbox (`.check`, `<IconCheck>`) on a single-select card.** Checkboxes universally signify multi-select (toggling independent options on/off). Using a checkbox on mutually exclusive options is a semantic violation that confuses users.
+- **Multi-Selection (0-to-N)**: e.g., bulk selecting mods in `InstanceMods.tsx`, selecting up to 6 pinned instances in `PinInstancesModal.tsx`.
+  - **Pattern**: Dedicated square checkbox (`.check.check--lg`), placed cleanly in an aligned column with dedicated gutter spacing away from text and badges.
+
+### 3. Buttons: The Action Test
+- **Does this button need to exist?** If clicking the card, plate, or row itself performs the selection or opens the detail, do not clutter the card with a redundant "Select" or "Choose" button.
+- Reserve buttons for explicit, divergent actions (`+ Install`, `Delete`, `Cancel`, `Open Folder`, `Save`).
+
+### 4. Badges: The Information Test
+- **Does this badge convey essential, non-redundant metadata?**
+  - Use badges for file formats (`.mrpack`, `.zip`), loaders (`Fabric`, `NeoForge`), release tags / versions (`1.20.1`), or section categories (`.tag-settings-*`).
+  - Do not add badges that repeat what is already stated in the title or subtitle.
+  - Keep badge text concise (uppercase mono, 1-2 words).
+
+### 5. Spatial Flow & Absolute Positioning Ban
+- **Never absolute-position affordances over dynamic content.** Never use `position: absolute; top: 8px; right: 8px;` inside cards whose headers use `justify-content: space-between` or dynamic text/badges. This guarantees collisions on different screen sizes or badge lengths.
+- All headers, titles, tags, and controls must participate in the natural flexbox or grid flow with explicit `gap`.
+
+### 6. Stay Within the Theme Without Overdoing It (Boring over Clever)
+- Stay strictly within the SloppyKeys palette: sharp corners (`border-radius: 0`), chunky 3D bevels (`--bevel`, `--bevel-strong`), 3px left border on active plates, and recessed `#0f0e13` wells.
+- Do not invent novel decorative doodads, corner ribbons, or extra container wrappers. Clean, tactile, and restrained beats busy and cluttered every time.
+
 ## Responsive contract
 
 `--content-min` (480px) is the minimum fully-supported content width. Card grids reflow via `.card-grid` (track narrower than 480px, so columns drop without clipping). Below 480px, `.content > *` carries `max-width:100%` + `min-width:0` and media is capped, so nothing overflows. **Don't override the grid template inline** — let `.card-grid` do the reflow.
