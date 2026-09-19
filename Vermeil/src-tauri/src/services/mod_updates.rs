@@ -67,11 +67,12 @@ pub struct ModUpdate {
 /// Returns a map keyed by project_id so the frontend can render a badge by
 /// looking up `mod.project_id` directly.
 ///
-/// Skipped: manually-added jars and `.mrpack`-installed mods, which are written
-/// with `source: "modpack"` and carry no project id, so there's nothing to
-/// compare against. Note the asymmetry — CurseForge pack imports write
-/// `source: "curseforge"` with real project ids (`cf_import.rs`), so those mods
-/// *are* update-checked individually.
+/// Skipped: manually-added jars and modpack-bundled mods (both `.mrpack` and
+/// CurseForge pack imports). Modpack mods are curated and version-locked by the
+/// pack author; updating individual jars risks breaking configs, scripts, or
+/// crashing the game. Only user-installed mods added directly via Browse (which
+/// carry a `version_number` and `source != "modpack"`) or mods in custom
+/// instances are update-checked.
 ///
 /// Network calls are issued sequentially to be polite to both APIs (Modrinth
 /// is rate-limited; CurseForge per-key limits can revoke abusive keys). This
@@ -95,6 +96,15 @@ pub async fn check_updates(instance: &Instance) -> Result<HashMap<String, ModUpd
         // Held at an exact version another installed mod requires. Updating it
         // would break that mod, so don't even offer it.
         if entry.pinned {
+            continue;
+        }
+        // Modpack-bundled mods should never be updated individually. Modpack
+        // entries have source == "modpack" or have no version_number in a
+        // modpack instance. Only mods the user explicitly installed on top of
+        // the pack (which carry a version_number) are update-checked.
+        if entry.source == "modpack"
+            || (instance.source_project_id.is_some() && entry.version_number.is_none())
+        {
             continue;
         }
         if !seen.insert(entry.project_id.clone()) {

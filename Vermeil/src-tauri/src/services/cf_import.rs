@@ -464,7 +464,7 @@ async fn build_mod_tasks(
 
         mod_entries.push(ModEntry {
             id: uuid::Uuid::new_v4().to_string(),
-            source: "curseforge".to_string(),
+            source: "modpack".to_string(),
             project_id,
             version_id: info.id.to_string(),
             filename: info.file_name.clone(),

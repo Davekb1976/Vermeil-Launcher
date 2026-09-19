@@ -508,9 +508,12 @@ pub async fn enrich_mod_metadata(
     // cards within ~1s of install completion instead of waiting for every
     // icon to round-trip serially.
 
-    // Collect CurseForge project IDs that need enrichment
+    // Collect CurseForge project IDs that need enrichment (CurseForge IDs are numeric)
     let cf_ids: Vec<String> = instance.mods.iter()
-        .filter(|m| (m.source == "curseforge" || m.source == "modpack") && !m.project_id.is_empty() && m.title.is_none())
+        .filter(|m| {
+            let is_cf_id = m.project_id.parse::<u64>().is_ok();
+            (m.source == "curseforge" || (m.source == "modpack" && is_cf_id)) && !m.project_id.is_empty() && m.title.is_none()
+        })
         .map(|m| m.project_id.clone())
         .collect();
 
@@ -530,22 +533,32 @@ pub async fn enrich_mod_metadata(
     }
 
     // For Modrinth-sourced entries (mods, resource packs, shader packs,
-    // datapacks) with filenames but no project_id, attempt hash-based lookup.
-    // The .mrpack format provides SHA-1 hashes for each file which we pre-store in
-    // `version_id`. We can use Modrinth's `/v2/version_files` endpoint to resolve
-    // hashes → version → project. The endpoint returns the version regardless
-    // of project type, so the same flow enriches every content category.
-    let modrinth_entries: Vec<(usize, String, String, String)> = instance.mods.iter().enumerate()
-        .filter(|(_, m)| m.source == "modpack" && m.project_id.is_empty() && m.title.is_none())
-        .map(|(i, m)| (i, m.filename.clone(), m.category.clone(), m.version_id.clone()))
+    // datapacks) that need metadata enrichment (title is None).
+    // An entry might already have a project_id (e.g. from an earlier hash resolution
+    // where project metadata fetch failed) or it needs hash lookup.
+    let modrinth_entries: Vec<(usize, String, String, String, String)> = instance.mods.iter().enumerate()
+        .filter(|(_, m)| {
+            let is_cf_id = m.project_id.parse::<u64>().is_ok();
+            let is_modpack_entry = m.source == "modpack"
+                || (instance.source_platforms.iter().any(|p| p == "modrinth") && m.source == "modrinth");
+            is_modpack_entry && !is_cf_id && m.title.is_none()
+        })
+        .map(|(i, m)| (i, m.filename.clone(), m.category.clone(), m.version_id.clone(), m.project_id.clone()))
         .collect();
 
     if !modrinth_entries.is_empty() {
         let minecraft_dir = paths::instances_dir().join(instance_id).join(".minecraft");
         let mut hash_to_idx: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         let mut hashes: Vec<String> = Vec::new();
+        let mut project_ids: Vec<String> = Vec::new();
 
-        for (idx, filename, category, sha1_from_manifest) in &modrinth_entries {
+        for (idx, filename, category, sha1_from_manifest, existing_pid) in &modrinth_entries {
+            // If project_id was already resolved in a prior pass, reuse it directly
+            if !existing_pid.is_empty() {
+                project_ids.push(existing_pid.clone());
+                continue;
+            }
+
             if !sha1_from_manifest.is_empty() {
                 hash_to_idx.insert(sha1_from_manifest.clone(), *idx);
                 hashes.push(sha1_from_manifest.clone());
@@ -577,53 +590,87 @@ pub async fn enrich_mod_metadata(
                 .send()
                 .await;
 
-            if let Ok(resp) = resp {
-                if let Ok(v) = resp.json::<serde_json::Value>().await {
-                    // Response is a map of hash → version object
-                    if let Some(obj) = v.as_object() {
-                        let mut project_ids: Vec<String> = Vec::new();
-
-                        for (hash, version) in obj {
-                            if let Some(pid) = version.get("project_id").and_then(|p| p.as_str()) {
-                                project_ids.push(pid.to_string());
-                                // Update the project_id on the entry
-                                if let Some(&idx) = hash_to_idx.get(hash) {
-                                    instance.mods[idx].project_id = pid.to_string();
-                                    instance.mods[idx].source = "modrinth".to_string();
-                                }
-                            }
-                        }
-
-                        // Batch fetch project metadata in chunks of 50
-                        // (Modrinth endpoint `/v2/projects` has a strict max limit of 100 IDs)
-                        project_ids.sort();
-                        project_ids.dedup();
-                        for chunk in project_ids.chunks(50) {
-                            let ids_param = chunk.iter()
-                                .map(|id| format!("\"{}\"", id))
-                                .collect::<Vec<_>>()
-                                .join(",");
-                            let url = format!("https://api.modrinth.com/v2/projects?ids=[{}]", ids_param);
-                            if let Ok(resp) = crate::util::http::HTTP.get(&url).send().await {
-                                if let Ok(projects) = resp.json::<Vec<serde_json::Value>>().await {
-                                    for project in &projects {
-                                        let pid = project.get("id").and_then(|i| i.as_str()).unwrap_or("");
-                                        let title = project.get("title").and_then(|t| t.as_str()).map(|s| s.to_string());
-                                        let description = project.get("description").and_then(|d| d.as_str()).map(|s| s.to_string());
-                                        let icon = project.get("icon_url").and_then(|u| u.as_str()).filter(|s| !s.is_empty()).map(|s| s.to_string());
-
-                                        for entry in instance.mods.iter_mut() {
-                                            if entry.project_id == pid && entry.title.is_none() {
-                                                entry.title = title.clone();
-                                                entry.icon_url = icon.clone();
-                                                entry.description = description.clone();
-                                            }
+            match resp {
+                Ok(r) if r.status().is_success() => {
+                    if let Ok(v) = r.json::<serde_json::Value>().await {
+                        // Response is a map of hash → version object
+                        if let Some(obj) = v.as_object() {
+                            for (hash, version) in obj {
+                                if let Some(pid) = version.get("project_id").and_then(|p| p.as_str()) {
+                                    project_ids.push(pid.to_string());
+                                    // Update the project_id on the entry without changing source to "modrinth"
+                                    if let Some(&idx) = hash_to_idx.get(hash) {
+                                        instance.mods[idx].project_id = pid.to_string();
+                                        if instance.source_project_id.is_some() {
+                                            instance.mods[idx].source = "modpack".to_string();
                                         }
                                     }
                                 }
                             }
                         }
                     }
+                }
+                Ok(r) => {
+                    let status = r.status();
+                    let text = r.text().await.unwrap_or_default();
+                    tracing::warn!("Modrinth /v2/version_files returned HTTP {}: {}", status, text);
+                }
+                Err(e) => {
+                    tracing::warn!("Modrinth /v2/version_files request failed: {}", e);
+                }
+            }
+        }
+
+        // Batch fetch project metadata in chunks of 50
+        // (Modrinth endpoint `/v2/projects` has a strict max limit of 100 IDs)
+        project_ids.sort();
+        project_ids.dedup();
+        for chunk in project_ids.chunks(50) {
+            let ids_json = serde_json::to_string(chunk).unwrap_or_default();
+            let resp = crate::util::http::HTTP
+                .get("https://api.modrinth.com/v2/projects")
+                .query(&[("ids", &ids_json)])
+                .send()
+                .await;
+
+            match resp {
+                Ok(r) if r.status().is_success() => {
+                    match r.json::<Vec<serde_json::Value>>().await {
+                        Ok(projects) => {
+                            for project in &projects {
+                                let pid = project.get("id").and_then(|i| i.as_str()).unwrap_or("");
+                                let title = project.get("title").and_then(|t| t.as_str()).map(|s| s.to_string());
+                                let description = project.get("description").and_then(|d| d.as_str()).map(|s| s.to_string());
+                                let icon = project.get("icon_url").and_then(|u| u.as_str()).filter(|s| !s.is_empty()).map(|s| s.to_string());
+
+                                for entry in instance.mods.iter_mut() {
+                                    if entry.project_id == pid {
+                                        if entry.title.is_none() {
+                                            entry.title = title.clone();
+                                        }
+                                        if entry.icon_url.is_none() {
+                                            entry.icon_url = icon.clone();
+                                        }
+                                        if entry.description.is_none() {
+                                            entry.description = description.clone();
+                                        }
+                                        if instance.source_project_id.is_some() && entry.version_number.is_none() {
+                                            entry.source = "modpack".to_string();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => tracing::warn!("Failed to parse Modrinth /v2/projects response: {}", e),
+                    }
+                }
+                Ok(r) => {
+                    let status = r.status();
+                    let text = r.text().await.unwrap_or_default();
+                    tracing::warn!("Modrinth /v2/projects returned HTTP {}: {}", status, text);
+                }
+                Err(e) => {
+                    tracing::warn!("Modrinth /v2/projects request failed: {}", e);
                 }
             }
         }

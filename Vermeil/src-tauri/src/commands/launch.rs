@@ -202,12 +202,34 @@ pub async fn remove_mod_from_instance(
 }
 
 /// Reconcile mod jars the user dropped into the instance's `mods/` folder by
-/// hand into the tracked list, so they show up in the Installed tab. Called by
-/// the Mods screen when an instance opens. Best-effort; launcher-managed and
-/// companion entries are left alone.
+/// hand into the tracked list, so they show up in the Installed tab. Also
+/// triggers background metadata and icon enrichment if any modpack-bundled
+/// mods are missing titles or cached local icons, automatically healing
+/// instances whose initial enrichment failed or was interrupted.
 #[tauri::command]
-pub async fn sync_instance_mods(instance_id: String) -> Result<(), String> {
-    crate::services::mod_install::sync_manual_mods(&instance_id).await
+pub async fn sync_instance_mods(
+    instance_id: String,
+    window: tauri::WebviewWindow,
+) -> Result<(), String> {
+    crate::services::mod_install::sync_manual_mods(&instance_id).await?;
+
+    let inst_id = instance_id.clone();
+    tokio::spawn(async move {
+        let meta_path = crate::util::paths::instances_dir().join(&inst_id).join("instance.json");
+        if let Ok(content) = tokio::fs::read_to_string(&meta_path).await {
+            if let Ok(instance) = serde_json::from_str::<crate::models::instance::Instance>(&content) {
+                let needs_enrichment = instance.mods.iter().any(|m| {
+                    (m.source == "modpack" && m.title.is_none())
+                        || (m.icon_url.is_some() && m.local_icon_path.is_none())
+                });
+                if needs_enrichment {
+                    let _ = crate::services::modpack::enrich_mod_metadata(&inst_id, Some(window)).await;
+                }
+            }
+        }
+    });
+
+    Ok(())
 }
 
 /// Detect available updates for every Modrinth- and CurseForge-sourced mod in
