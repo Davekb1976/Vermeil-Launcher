@@ -217,6 +217,7 @@ pub fn run() {
             instances::cancel_install,
             instances::install_modpack,
             instances::install_cf_modpack,
+            instances::import_mrpack,
             instances::prepare_instance,
             instances::set_ingame_cape,
             instances::set_ingame_cape_enabled,

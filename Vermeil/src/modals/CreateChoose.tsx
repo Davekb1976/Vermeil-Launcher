@@ -26,7 +26,7 @@ const CreateChoose: Component = () => {
           <div class="create-grid-icon" style="color:var(--warn)"><IconDownload /></div>
           <div class="create-grid-text">
             <div class="create-grid-title">Import</div>
-            <div class="create-grid-desc">Import from CurseForge (.zip export or profile code)</div>
+            <div class="create-grid-desc">Import from Modrinth (.mrpack) or CurseForge (.zip)</div>
           </div>
         </div>
       </div>

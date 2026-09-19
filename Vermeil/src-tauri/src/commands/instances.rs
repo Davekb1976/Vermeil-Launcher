@@ -128,6 +128,25 @@ pub async fn install_modpack(
     Ok(instance)
 }
 
+/// Import a Modrinth modpack from a local .mrpack file.
+#[tauri::command]
+pub async fn import_mrpack(
+    path: String,
+    window: tauri::WebviewWindow,
+) -> Result<Instance, String> {
+    let _install = crate::services::download::InstallScope::begin();
+    let path_buf = std::path::PathBuf::from(&path);
+    let instance = crate::services::modpack::install_from_mrpack_file(
+        &path_buf,
+        None,
+        None,
+        Some(window),
+    )
+    .await?;
+    crate::services::settings_service::auto_pin_instance(&instance.id).await;
+    Ok(instance)
+}
+
 #[tauri::command]
 pub async fn install_cf_modpack(
     project_id: String,

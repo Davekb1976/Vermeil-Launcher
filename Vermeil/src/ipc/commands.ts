@@ -235,6 +235,7 @@ export const cancelInstall = () => invoke<void>("cancel_install");
 export const installModpack = (projectId: string, versionId?: string) => invoke<Instance>("install_modpack", { projectId, versionId });
 export const installCfModpack = (projectId: string, fileId?: string) => invoke<Instance>("install_cf_modpack", { projectId, fileId });
 export const importCfZip = (zipPath: string) => invoke<Instance>("import_cf_zip", { zipPath });
+export const importMrpack = (path: string) => invoke<Instance>("import_mrpack", { path });
 export const importCfCode = (code: string) => invoke<Instance>("import_cf_code", { code });
 
 // Meta commands

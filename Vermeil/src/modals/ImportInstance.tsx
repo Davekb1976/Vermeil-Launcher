@@ -1,0 +1,419 @@
+import { Component, createSignal, Show, onMount, onCleanup, createMemo } from "solid-js";
+import { setActiveScreen } from "../App";
+import { importCfZip, importMrpack } from "../ipc/commands";
+import { enqueueModpack } from "../services/modpackQueue";
+import { open } from "@tauri-apps/plugin-dialog";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
+import {
+  IconArrowLeft,
+  IconModrinth,
+  IconCurseForge,
+  IconUpload,
+  IconFileText,
+  IconCheck,
+  IconX,
+  IconAlertTriangle,
+  IconInfo,
+} from "../components/Icons";
+
+type ImportPlatform = "modrinth" | "curseforge";
+
+const ImportInstance: Component = () => {
+  const [activePlatform, setActivePlatform] = createSignal<ImportPlatform>("modrinth");
+  const [selectedPath, setSelectedPath] = createSignal<string | null>(null);
+  const [isDragging, setIsDragging] = createSignal(false);
+  const [importing, setImporting] = createSignal(false);
+  const [error, setError] = createSignal<string | null>(null);
+
+  const selectedFileName = createMemo(() => {
+    const path = selectedPath();
+    if (!path) return "";
+    return path.split(/[\\/]/).pop() || "";
+  });
+
+  const selectedPackName = createMemo(() => {
+    return selectedFileName().replace(/\.(mrpack|zip)$/i, "");
+  });
+
+  const handleSelectFile = (path: string) => {
+    setError(null);
+    const lower = path.toLowerCase();
+    if (lower.endsWith(".mrpack")) {
+      setActivePlatform("modrinth");
+      setSelectedPath(path);
+    } else if (lower.endsWith(".zip")) {
+      setActivePlatform("curseforge");
+      setSelectedPath(path);
+    } else {
+      setError("Unsupported format. Please select a .mrpack (Modrinth) or .zip (CurseForge) file.");
+    }
+  };
+
+  const handleBrowse = async () => {
+    setError(null);
+    try {
+      const isModrinth = activePlatform() === "modrinth";
+      const selected = await open({
+        multiple: false,
+        filters: isModrinth
+          ? [
+              { name: "Modrinth Modpack (.mrpack)", extensions: ["mrpack"] },
+              { name: "All Supported Archives", extensions: ["mrpack", "zip"] },
+            ]
+          : [
+              { name: "CurseForge Export (.zip)", extensions: ["zip"] },
+              { name: "All Supported Archives", extensions: ["zip", "mrpack"] },
+            ],
+      });
+
+      if (selected && typeof selected === "string") {
+        handleSelectFile(selected);
+      }
+    } catch (e: any) {
+      console.error("Failed to open file picker:", e);
+      setError(typeof e === "string" ? e : e.message || "Failed to open file browser");
+    }
+  };
+
+  const handleImport = async () => {
+    const path = selectedPath();
+    if (!path) {
+      setError("Please select a file to import.");
+      return;
+    }
+
+    setError(null);
+    setImporting(true);
+
+    try {
+      const platform = activePlatform();
+      const title = selectedPackName() || (platform === "modrinth" ? "Modrinth pack" : "CurseForge pack");
+
+      setActiveScreen("library");
+
+      enqueueModpack({
+        projectId: path,
+        title,
+        category: "modpack",
+        execute: () => {
+          if (platform === "modrinth") {
+            return importMrpack(path);
+          } else {
+            return importCfZip(path);
+          }
+        },
+      });
+
+      setImporting(false);
+    } catch (e: any) {
+      console.error("Import failed:", e);
+      setError(typeof e === "string" ? e : e.message || "Failed to initiate import");
+      setImporting(false);
+    }
+  };
+
+  onMount(async () => {
+    try {
+      const unlisten = await getCurrentWebview().onDragDropEvent((event) => {
+        if (event.payload.type === "over") {
+          setIsDragging(true);
+        } else if (event.payload.type === "leave") {
+          setIsDragging(false);
+        } else if (event.payload.type === "drop") {
+          setIsDragging(false);
+          const paths = event.payload.paths;
+          if (paths && paths.length > 0) {
+            handleSelectFile(paths[0]);
+          }
+        }
+      });
+
+      onCleanup(() => {
+        unlisten();
+      });
+    } catch (e) {
+      console.warn("Drag-and-drop listener unavailable:", e);
+    }
+  });
+
+  return (
+    <div class="screen-enter import-screen">
+      {/* Top Header */}
+      <div class="page-header" style="margin-bottom: var(--space-4);">
+        <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+          <button
+            type="button"
+            class="btn btn--sm btn--ghost"
+            onClick={() => setActiveScreen("create-choose")}
+          >
+            <IconArrowLeft /> Back to Setup
+          </button>
+        </div>
+        <div class="page-title-group">
+          <div class="page-title">Import Instance</div>
+          <div class="page-subtitle">
+            Import Minecraft modpacks and profiles from Modrinth (.mrpack) or CurseForge (.zip)
+          </div>
+        </div>
+      </div>
+
+      <div class="import-layout">
+        {/* ═══ SECTION 1: PLATFORM SELECTOR ═══ */}
+        <div class="card-gamemode-section">
+          <div class="card-section-header">
+            <span class="card-section-tag tag-settings-general">SOURCE</span>
+            <span class="card-section-label">Import Platform</span>
+            <span class="card-section-desc">Choose the archive format you wish to import</span>
+          </div>
+          <div class="card-section-body">
+            <div class="import-platform-tabs">
+              {/* Modrinth Card */}
+              <div
+                class="import-tab-card"
+                classList={{
+                  selected: activePlatform() === "modrinth",
+                  "is-modrinth": activePlatform() === "modrinth",
+                }}
+                onClick={() => {
+                  setActivePlatform("modrinth");
+                  setError(null);
+                }}
+              >
+                <div class="import-tab-icon modrinth">
+                  <IconModrinth />
+                </div>
+                <div class="import-tab-info">
+                  <div class="import-tab-top">
+                    <span class="import-tab-name">Modrinth Pack</span>
+                    <span class="import-tab-tag tag-mrpack">.mrpack</span>
+                  </div>
+                  <div class="import-tab-desc">
+                    Open archive with embedded CDN links & overrides
+                  </div>
+                </div>
+                <Show when={activePlatform() === "modrinth"}>
+                  <div class="import-tab-check modrinth">
+                    <IconCheck />
+                  </div>
+                </Show>
+              </div>
+
+              {/* CurseForge Card */}
+              <div
+                class="import-tab-card"
+                classList={{
+                  selected: activePlatform() === "curseforge",
+                  "is-curseforge": activePlatform() === "curseforge",
+                }}
+                onClick={() => {
+                  setActivePlatform("curseforge");
+                  setError(null);
+                }}
+              >
+                <div class="import-tab-icon curseforge">
+                  <IconCurseForge />
+                </div>
+                <div class="import-tab-info">
+                  <div class="import-tab-top">
+                    <span class="import-tab-name">CurseForge Profile</span>
+                    <span class="import-tab-tag tag-cfzip">.zip export</span>
+                  </div>
+                  <div class="import-tab-desc">
+                    Exported profile zip containing manifest & overrides
+                  </div>
+                </div>
+                <Show when={activePlatform() === "curseforge"}>
+                  <div class="import-tab-check curseforge">
+                    <IconCheck />
+                  </div>
+                </Show>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ═══ SECTION 2: DROPZONE & FILE PICKER ═══ */}
+        <div class="card-gamemode-section">
+          <div class="card-section-header">
+            <span class="card-section-tag tag-settings-storage">FILE</span>
+            <span class="card-section-label">
+              {activePlatform() === "modrinth" ? "Modrinth Archive (.mrpack)" : "CurseForge Archive (.zip)"}
+            </span>
+            <span class="card-section-desc">
+              Drag and drop your file into the well or browse locally
+            </span>
+          </div>
+          <div class="card-section-body" style="display: flex; flex-direction: column; gap: 12px;">
+            {/* Sunken Dropzone Well */}
+            <div
+              class="import-dropzone"
+              classList={{ dragging: isDragging() }}
+              onClick={handleBrowse}
+            >
+              <div class="import-dropzone-icon">
+                <IconUpload />
+              </div>
+              <div class="import-dropzone-content">
+                <div class="import-dropzone-title">
+                  {isDragging()
+                    ? "Release to drop file..."
+                    : `Drag & drop your ${activePlatform() === "modrinth" ? ".mrpack" : ".zip"} file here`}
+                </div>
+                <div class="import-dropzone-subtitle">
+                  Supports native file drop or click anywhere in this zone to browse
+                </div>
+              </div>
+              <button
+                type="button"
+                class="btn btn--primary btn--sm"
+                style="margin-top: 4px; pointer-events: none;"
+              >
+                Choose {activePlatform() === "modrinth" ? ".mrpack file" : ".zip file"}
+              </button>
+            </div>
+
+            {/* Selected File Card */}
+            <Show when={selectedPath()}>
+              <div
+                class="import-selected-file"
+                classList={{
+                  modrinth: activePlatform() === "modrinth",
+                  curseforge: activePlatform() === "curseforge",
+                }}
+              >
+                <div class="import-selected-left">
+                  <div
+                    class="import-selected-icon"
+                    classList={{
+                      modrinth: activePlatform() === "modrinth",
+                      curseforge: activePlatform() === "curseforge",
+                    }}
+                  >
+                    <IconFileText />
+                  </div>
+                  <div class="import-selected-meta">
+                    <div class="import-selected-name">{selectedFileName()}</div>
+                    <div class="import-selected-path" title={selectedPath() || ""}>
+                      {selectedPath()}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="btn btn--sm btn--ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPath(null);
+                  }}
+                  title="Remove selected file"
+                  style="color: var(--muted); padding: 4px 8px;"
+                >
+                  <IconX />
+                </button>
+              </div>
+            </Show>
+          </div>
+        </div>
+
+        {/* ═══ SECTION 3: INSTRUCTIONS & SPECIFICATIONS ═══ */}
+        <Show
+          when={activePlatform() === "modrinth"}
+          fallback={
+            <div class="card-gamemode-section">
+              <div class="card-section-header">
+                <span class="card-section-tag tag-settings-performance">GUIDE</span>
+                <span class="card-section-label">CurseForge App Export Instructions</span>
+                <span class="card-section-desc">How to generate a compatible profile export</span>
+              </div>
+              <div class="card-section-body" style="display: flex; flex-direction: column; gap: 12px;">
+                <div class="import-step-list">
+                  <div class="import-step-item">
+                    <span class="import-step-number">1</span>
+                    <span>Open the <strong>CurseForge App</strong> and click on the Minecraft modpack or profile you want to export.</span>
+                  </div>
+                  <div class="import-step-item">
+                    <span class="import-step-number">2</span>
+                    <span>Click the three dots menu (<strong>⋮</strong>) next to the Play button, then click <strong>Export Profile</strong> (or <em>Share Profile → Export as .zip</em>).</span>
+                  </div>
+                  <div class="import-step-item">
+                    <span class="import-step-number">3</span>
+                    <span>Ensure all mods and configs are checked, click <strong>Export</strong>, and drop or choose the resulting <code>.zip</code> file above.</span>
+                  </div>
+                </div>
+
+                <div class="import-callout-box">
+                  <div class="import-callout-icon">
+                    <IconInfo />
+                  </div>
+                  <div>
+                    <strong>Why .zip exports?</strong> CurseForge share codes are temporary 7-day Overwolf client sessions without a public third-party API. The official <code>.zip</code> export contains your complete modpack manifest, options, and configs, and installs reliably in Vermeil.
+                  </div>
+                </div>
+              </div>
+            </div>
+          }
+        >
+          <div class="card-gamemode-section">
+            <div class="card-section-header">
+              <span class="card-section-tag tag-settings-general">INFO</span>
+              <span class="card-section-label">Modrinth .mrpack Standard</span>
+              <span class="card-section-desc">Fast, open, and fully verified modpack format</span>
+            </div>
+            <div class="card-section-body" style="display: flex; flex-direction: column; gap: 10px;">
+              <div class="setting-row" style="background: transparent; border: none; padding: 0;">
+                <div class="setting-text">
+                  <div class="setting-name">Direct Signed CDN URLs</div>
+                  <div class="setting-desc">
+                    Unlike other platforms, <code>.mrpack</code> files contain signed CDN download links and SHA hashes for every mod, eliminating API rate-limits and blocked downloads.
+                  </div>
+                </div>
+              </div>
+              <div class="setting-row" style="background: transparent; border: none; padding: 0;">
+                <div class="setting-text">
+                  <div class="setting-name">Where to find .mrpack files</div>
+                  <div class="setting-desc">
+                    Download any modpack release directly from <span style="color: #1bd96a; font-weight: 600;">Modrinth.com</span> by choosing "Download .mrpack", or export one from other launchers.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Show>
+
+        {/* ═══ ERROR DISPLAY ═══ */}
+        <Show when={error()}>
+          <div
+            style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--danger-soft); border: 1px solid var(--danger); border-left: 3px solid var(--danger); color: var(--danger); font-size: 11.5px;"
+          >
+            <IconAlertTriangle />
+            <span>{error()}</span>
+          </div>
+        </Show>
+
+        {/* ═══ FOOTER ACTIONS ═══ */}
+        <div class="create-actions-row" style="margin-top: var(--space-2);">
+          <button
+            type="button"
+            class="btn btn--neutral btn--lg create-cancel-btn"
+            onClick={() => setActiveScreen("create-choose")}
+            disabled={importing()}
+          >
+            <IconX /> Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn--primary btn--lg create-submit-btn"
+            onClick={handleImport}
+            disabled={importing() || !selectedPath()}
+          >
+            <Show when={importing()} fallback={<><IconCheck /> Import Instance</>}>
+              Importing...
+            </Show>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ImportInstance;

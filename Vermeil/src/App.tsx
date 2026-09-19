@@ -14,7 +14,7 @@ const Skins = lazy(() => import("./screens/Skins"));
 import CreateChoose from "./modals/CreateChoose";
 import CreateCustom from "./modals/CreateCustom";
 import BrowseModpacks from "./modals/BrowseModpacks";
-import ImportCurseForge from "./modals/ImportCurseForge";
+import ImportInstance from "./modals/ImportInstance";
 import NoAccountModal from "./components/NoAccountModal";
 import Toasts, { showToast, updateToast, dismissToast } from "./components/Toasts";
 import { initInstallProgress } from "./services/installProgress";
@@ -793,7 +793,7 @@ const App: Component = () => {
           <Show when={activeScreen() === "create-choose"}><CreateChoose /></Show>
           <Show when={activeScreen() === "create-custom"}><CreateCustom /></Show>
           <Show when={activeScreen() === "create-modpack"}><BrowseModpacks /></Show>
-          <Show when={activeScreen() === "create-import"}><ImportCurseForge /></Show>
+          <Show when={activeScreen() === "create-import"}><ImportInstance /></Show>
         </div>
         <FloatingDock />
       </div>
