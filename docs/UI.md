@@ -104,7 +104,7 @@ Routing is `<Show when={activeScreen() === "name"}>` in `App.tsx`; switch via `s
 | downloads | `Downloads.tsx` | Persistent download history |
 | (logs window) | `LogsPopout.tsx` | Standalone log viewer rendered when window label is `logs` |
 
-**Create/import pseudo-screens** (rendered in content area, Escape closes): `create-choose` (`CreateChoose.tsx`), `create-custom` (`CreateCustom.tsx`), `create-modpack` (`BrowseModpacks.tsx`), `create-import` (`ImportCurseForge.tsx`).
+**Create/import pseudo-screens** (rendered in content area, Escape closes): `create-choose` (`CreateChoose.tsx`), `create-custom` (`CreateCustom.tsx`), `create-modpack` (`BrowseModpacks.tsx`), `create-import` (`ImportInstance.tsx`).
 
 ## Modals (`modals/` + a few in `components/`)
 

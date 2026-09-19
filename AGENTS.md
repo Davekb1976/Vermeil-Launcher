@@ -117,13 +117,21 @@ Vermeil/
 
 ### Parallel Implementation Rule:
 When modifying one variant of a concept, update all parallel surfaces:
-- **Content Sources:** Modrinth (`services/modrinth.rs`) ↔ CurseForge (`services/curseforge.rs`, `cf_*.rs`).
+- **Content Sources:** Modrinth (`services/modrinth.rs`) ↔ CurseForge (`services/curseforge.rs`, `cf_*.rs`) ↔ Local Archives (`modpack.rs`, `cf_import.rs`).
 - **Loaders:** Fabric (`services/fabric.rs`) ↔ Quilt (`services/quilt.rs`) ↔ NeoForge/Forge (`services/neoforge.rs`).
 - **Accounts:** Microsoft (online) ↔ Offline accounts.
 - **Launch Entry Points:** `Home.tsx` ↔ `FloatingDock.tsx`.
 - **IPC Contract:** Rust signature ↔ `commands.ts` wrapper and interface.
 - **Events:** Backend `emit()` ↔ Frontend `listen()`.
 - **Platform Code:** `#[cfg(windows)]` ↔ `#[cfg(unix)]`.
+
+### Content Source & Installation Blast Radius:
+Content flows from three sources: **Modrinth API**, **CurseForge API**, and **Local Archives** (`.mrpack`, `.zip`). Any change to install, import, or browse flows must verify the entire 5-stage pipeline:
+1. **Queueing (`modpackQueue.ts`, `trackDownload`)**: Set clean `title` and sanitized `meta` (`iconUrl`, `loader`, `gameVersion`, `versionNumber`, `author`). **Invariant**: `loader` must ONLY ever be a real Minecraft loader (`"fabric"`, `"forge"`, `"neoforge"`, `"quilt"`, `"vanilla"`, or `undefined`) — **never** a platform name like `"modrinth"` or `"curseforge"`.
+2. **In-Flight UI (`installProgress.ts`, `FloatingDock.tsx`, `Downloads.tsx`)**: Verify `install-progress` events, dock badge count, toast messages, and `dl-active-card` fallback icons.
+3. **Backend Resolution (`modpack.rs`, `cf_import.rs`, `icon_cache.rs`)**: Resolve icons through the hierarchy (embedded archive icon → API SHA-1 lookup → API title search → `"cube"` fallback). Set `LoaderConfig`, `source_project_id`, `source_platforms`, `source_version`, and auto-pin via `settings_service::auto_pin_instance`.
+4. **Completion Contract (`completeDownload`)**: Pass `(id, nameOverride, versionNumber, metaUpdates)` containing `iconUrl`, `loader`, `gameVersion`, `author`, and `instanceId`. Trigger immediate disk persistence (`persistDownloads(true)`).
+5. **Downstream UI (`Downloads.tsx`, `Library.tsx`, `InstanceMods.tsx`)**: History cards (`DownloadCard`) must dynamically resolve missing assets via `matchingInstance()`. Instance tiles and installed mod lists must reflect clean names, cached icons, and styled loader pills. Full details in `.agents/skills/content-source-parity/SKILL.md`.
 
 ---
 
