@@ -1044,171 +1044,55 @@
 
 
 /* ============================================================
-   Home greeting block (screens/Home.tsx) — Tactical Player Plate.
-   Clean, tactile identity plate with high-contrast typography,
-   sharp 48px avatar, and balanced metadata.
+   Home greeting block (screens/Home.tsx).
+   Sits above the Continue / News sections and personalizes the
+   page with the active skin head, time-of-day greeting, and a
+   one-line summary of instances.
    ============================================================ */
 .home-greeting {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-4);
-  padding: 14px 18px;
+  padding: var(--space-5);
   margin-bottom: var(--space-5);
   background: var(--surface-panel);
   border: 1px solid var(--border);
   border-radius: 0;
-  box-shadow: var(--bevel);
-  cursor: pointer;
-  user-select: none;
-  box-sizing: border-box;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+  position: relative;
 }
-
-.home-greeting:hover {
-  border-color: var(--border-hover);
-  background: var(--surface-raised);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+.home-greeting::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--accent);
 }
-
-.home-greeting:active {
-  transform: translateY(1px);
-  box-shadow: none;
-}
-
-.home-greeting:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-/* Left identity cluster */
-.home-greeting-identity {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-
-/* Sharp 48px avatar frame with hairline border */
-.home-greeting-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 0;
-  border: 1px solid var(--border-strong);
-  box-shadow: var(--bevel);
+.home-greeting-head {
+  border-radius: var(--radius-md);
   flex-shrink: 0;
-  overflow: hidden;
-  background: var(--surface-sunken);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
-
-.home-greeting-avatar .player-head {
-  width: 100% !important;
-  height: 100% !important;
-  border-radius: 0 !important;
-}
-
-.home-greeting-avatar .player-head-canvas {
-  width: 100%;
-  height: 100%;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-  display: block;
-}
-
-/* Player info text */
-.home-greeting-info {
+.home-greeting-text {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-1);
   min-width: 0;
 }
-
-.home-greeting-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.home-greeting-salutation {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-muted);
-}
-
-.home-greeting-name {
+.home-greeting-line {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   letter-spacing: -0.01em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-
-.home-greeting-sub {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
+.home-greeting-name {
+  background: linear-gradient(135deg, #a78bfa, var(--accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.home-greeting-meta {
+  font-size: 12px;
   color: var(--muted);
-}
-
-.home-greeting-bullet {
-  opacity: 0.4;
-}
-
-/* Modifier for offline accounts in the account badge */
-.account-badge--offline {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.12);
-  color: var(--muted);
-}
-.account-badge--offline .account-badge-dot {
-  background: var(--muted);
-  box-shadow: none;
-  animation: none;
-}
-
-/* Right-hand metadata badges & manage affordance */
-.home-greeting-meta-badges {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.home-greeting-manage {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
-  padding: 4px 8px;
-  border: 1px solid var(--border);
-  background: var(--surface-raised);
-  border-radius: 0;
-  transition: color 0.12s, border-color 0.12s;
-}
-
-.home-greeting:hover .home-greeting-manage {
-  color: var(--text);
-  border-color: var(--border-hover);
-}
-
-@media (max-width: 768px) {
-  .home-greeting {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-  .home-greeting-meta-badges {
-    width: 100%;
-    justify-content: flex-start;
-  }
+  letter-spacing: 0.01em;
 }
 
 

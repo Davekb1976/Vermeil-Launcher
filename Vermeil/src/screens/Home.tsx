@@ -37,17 +37,6 @@ function relativePlayed(iso: string | null | undefined): string | null {
   return `${months} month${months === 1 ? "" : "s"} ago`;
 }
 
-/** Format total playtime seconds into compact hours/minutes (e.g. "14h 25m"). */
-function formatPlaytime(seconds: number): string {
-  if (!seconds || seconds <= 0) return "0m";
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
-  return `${minutes}m`;
-}
-
 /** Loader-tinted icon-tile background class (mirrors the Library card). */
 function bannerColor(loader: string): string {
   switch (loader) {
@@ -223,7 +212,7 @@ const Home: Component = () => {
     try { await launchInstance(instanceId); } catch (e) { console.error(e); }
   };
 
-  // Header summary — total instance count, playtime, and most-recent play date across
+  // Header summary — total instance count + most-recent play date across
   // all instances, formatted relatively. Memo'd so it only recomputes when
   // the instances signal changes, not on every render.
   const headerSummary = createMemo(() => {
@@ -234,12 +223,9 @@ const Home: Component = () => {
       .filter((d): d is string => Boolean(d))
       .sort()
       .pop();
-    const totalPlaySeconds = list.reduce((acc, i) => acc + (i.total_play_seconds || 0), 0);
     return {
       count: list.length,
       relative: relativePlayed(mostRecent),
-      totalPlaytime: formatPlaytime(totalPlaySeconds),
-      hasPlaytime: totalPlaySeconds > 0,
     };
   });
 
@@ -247,58 +233,36 @@ const Home: Component = () => {
 
   return (
     <div class="screen-enter">
-      {/* Tactical Player Greeting & Identity Plate */}
-      <div
-        class="home-greeting"
-        onClick={() => setActiveScreen("account")}
-        role="button"
-        tabIndex={0}
-        title="Manage accounts and profiles"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setActiveScreen("account");
-          }
-        }}
-      >
-        <div class="home-greeting-identity">
-          <div class="home-greeting-avatar">
-            <PlayerHead
-              skinUrl={activeSkinUrl()}
-              name={displayName()}
-              size={48}
-            />
-          </div>
-          <div class="home-greeting-info">
-            <div class="home-greeting-title-row">
-              <span class="home-greeting-salutation">{timeOfDayGreeting()},</span>
-              <span class="home-greeting-name">{displayName()}</span>
-              <div
-                class={`account-badge-active ${account()?.is_offline ? "account-badge--offline" : ""}`}
-                title={account()?.is_offline ? "Offline Minecraft profile" : "Signed in with Microsoft"}
-              >
-                <span class="account-badge-dot" />
-                <span>{account()?.is_offline ? "Offline" : "Microsoft"}</span>
+      {/* Greeting — personalizes the empty space at the top of Home and
+          grounds the page so it feels less like a bare news feed. */}
+      <div class="home-greeting panel--bracketed">
+          <PlayerHead
+            skinUrl={activeSkinUrl()}
+            name={displayName()}
+            size={56}
+            class="home-greeting-head"
+          />
+          <div class="home-greeting-text">
+            <div class="home-greeting-line">
+              {timeOfDayGreeting()}, <span class="home-greeting-name">{displayName()}</span>
+            </div>
+            <Show
+              when={headerSummary()}
+              fallback={
+                <div class="home-greeting-meta">
+                  Welcome to Vermeil. Create your first instance from the Library tab.
+                </div>
+              }
+            >
+              <div class="home-greeting-meta">
+                {headerSummary()!.count} instance{headerSummary()!.count === 1 ? "" : "s"}
+                <Show when={headerSummary()!.relative}>
+                  {" · "}last played {headerSummary()!.relative}
+                </Show>
               </div>
-            </div>
-            <div class="home-greeting-sub">
-              <span>{account()?.is_offline ? "Offline profile" : "Official Mojang account"}</span>
-              <Show when={headerSummary()?.relative}>
-                <span class="home-greeting-bullet">·</span>
-                <span>Last played {headerSummary()!.relative}</span>
-              </Show>
-            </div>
+            </Show>
           </div>
         </div>
-
-        <div class="home-greeting-meta-badges">
-          <span class="badge">{headerSummary()?.count ?? 0} instance{headerSummary()?.count === 1 ? "" : "s"}</span>
-          <Show when={headerSummary()?.hasPlaytime}>
-            <span class="badge badge--version">{headerSummary()!.totalPlaytime} played</span>
-          </Show>
-          <span class="home-greeting-manage">Manage ↗</span>
-        </div>
-      </div>
 
         {/* Continue section */}
         <div class="section-label">Continue</div>
