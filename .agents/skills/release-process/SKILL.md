@@ -139,7 +139,7 @@ are the only validation expected on our side; post-push is the user's to confirm
 `git push --force`, `git push --delete`) — the release workflow has already built
 artifacts against that SHA and the auto-updater serves them. If the wrong commit
 got tagged, cut the next patch version instead. Same rule as commits: see "Never
-rewrite pushed history" in `implementation-process.md` (`.agents/rules/implementation-process.md`).
+rewrite pushed history" in `AGENTS.md` (Section 10).
 
 ### Changelog Generation Rules
 

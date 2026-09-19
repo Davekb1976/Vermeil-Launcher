@@ -35,7 +35,7 @@ current pins.
   watcher), so it builds across MC eras on one Loom without Fabric API's
   access-widener remapping getting in the way.
 
-## I can build and run this from the agent shell
+## Building and Running from the Dev Shell
 
 JDK 25 is on PATH in the dev shell, so the mod CAN be built and smoke-tested here
 (unlike the launcher's runtime, which needs a real install). Use it — treat mod
@@ -218,8 +218,8 @@ is **download-on-demand**: `.github/workflows/mod-release.yml` (triggered by a
 `vermeil-<modVersion>+<low>.jar` plus a generated `companion-manifest.json`
 to a GitHub release. The mod is versioned independently of the launcher
 (`mod_version` in each project's `gradle.properties`; kept in sync across them).
-manifest and fetches the matching jar (SHA-1-verified) into the instance's
-`mods/`, like it does for loaders/Java/mods — see `services/companion_mod.rs`.
+The launcher reads the release manifest and fetches the matching jar (SHA-1-verified)
+into the instance's `mods/`, like it does for loaders/Java/mods — see `services/companion_mod.rs`.
 The jar filename is set by `base.archivesName = 'vermeil'` + `version =
 "<modVersion>+<low>"` in `build.gradle` (where `<low>` is the lowest supported
 version, split from the `mc_range` property).

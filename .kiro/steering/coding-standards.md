@@ -116,6 +116,9 @@ it here.
 - Always use `openUrl()` from `@tauri-apps/plugin-opener`
 - Intercept clicks on rendered HTML content (news articles, mod descriptions) to prevent webview navigation
 
+### Design System & SloppyKeys Reference
+Vermeil's tactile UI language is adopted from the creator's companion project, **SloppyKeys** (visual reference in `docs/images/sloppykeys_reference.png`). Features chunky 3D bevel buttons (`--bevel`, `--bevel-strong`, lift/scale hover, press active), framed section panels (`.card-gamemode-section`) with distinct category tag badge tints (`.tag-settings-*`), recessed sunken wells (`.card-section-body` `#0f0e13`), interactive setting plates (`.setting-row` with 3px left border), and square checkboxes (`.check.check--lg`). Reference between the creator's two projects is authorized and intentional.
+
 ## Naming Conventions
 
 | Context | Convention | Example |
@@ -171,6 +174,14 @@ Recognize these parallel groups before making changes:
 **Rule:** before considering a change done, ask "what other code does the same thing for a different variant?" Locate every parallel surface, apply the same change, and verify each one before pushing.
 
 If a parallel surface genuinely can't support the feature (e.g. CurseForge has no follower count, so a "follows" sort has no direct equivalent), document the gap with a code comment naming the missing capability — and pick a sensible nearest-equivalent rather than letting the feature silently fail on that surface.
+
+### Content Source & Installation Blast Radius
+Content flows from three sources: **Modrinth API**, **CurseForge API**, and **Local Archives** (`.mrpack`, `.zip`). Any change to install, import, or browse flows must verify the entire 5-stage pipeline:
+1. **Queueing (`modpackQueue.ts`, `trackDownload`)**: Set clean `title` and sanitized `meta` (`iconUrl`, `loader`, `gameVersion`, `versionNumber`, `author`). **Invariant**: `loader` must ONLY ever be a real Minecraft loader (`"fabric"`, `"forge"`, `"neoforge"`, `"quilt"`, `"vanilla"`, or `undefined`) — **never** a platform name like `"modrinth"` or `"curseforge"`.
+2. **In-Flight UI (`installProgress.ts`, `FloatingDock.tsx`, `Downloads.tsx`)**: Verify `install-progress` events, dock badge count, toast messages, and `dl-active-card` fallback icons.
+3. **Backend Resolution (`modpack.rs`, `cf_import.rs`, `icon_cache.rs`)**: Resolve icons through the hierarchy (embedded archive icon → API SHA-1 lookup → API title search → `"cube"` fallback). Set `LoaderConfig`, `source_project_id`, `source_platforms`, `source_version`, and auto-pin via `settings_service::auto_pin_instance`.
+4. **Completion Contract (`completeDownload`)**: Pass `(id, nameOverride, versionNumber, metaUpdates)` containing `iconUrl`, `loader`, `gameVersion`, `author`, and `instanceId`. Trigger immediate disk persistence (`persistDownloads(true)`).
+5. **Downstream UI (`Downloads.tsx`, `Library.tsx`, `InstanceMods.tsx`)**: History cards (`DownloadCard`) must dynamically resolve missing assets via `matchingInstance()`. Instance tiles and installed mod lists must reflect clean names, cached icons, and styled loader pills. Full details in `.kiro/skills/content-source-parity/SKILL.md`.
 
 ## Cross-Platform Parity (Windows ↔ Linux)
 
@@ -231,6 +242,7 @@ These apply to the whole app — backend and frontend, every feature and code pa
 - Shipping a user-facing behavior that works on only one of Windows/Linux without either providing the cross-platform equivalent or documenting why it can't exist (see **Cross-Platform Parity**)
 - Adding a new window to the `default` capability instead of giving it a scoped, least-privilege one
 - **Suppressing compiler warnings instead of fixing them.** Never use `#[allow(dead_code)]`, `#[allow(unused_imports)]`, or `#[allow(unused_variables)]` to silence warnings. If a field, function, or import triggers a warning, the correct response is to either use it or remove it — not hide it. The build must be zero-warning at all times. If a struct field exists only for future use, don't add it until the code that reads it is written in the same commit.
+- Referencing other launcher codebases by name (original work policy; SloppyKeys is the creator's own companion project, not a launcher).
 
 ## Releases
 
@@ -243,7 +255,7 @@ This is an original project. All code is written from scratch using official doc
 Rules for all written output (code comments, commits, changelogs, docs):
 
 - Describe what **our code** does. Never frame it as derived from, inspired by, or compared to another launcher.
-- Never reference other launcher codebases by name. We don't use reference folders, vendored source, or study-then-reimplement workflows.
+- Never reference other launcher codebases by name. We don't use reference folders, vendored source, or study-then-reimplement workflows (SloppyKeys is the creator's own companion project, not a launcher).
 - Third-party **services and APIs** we integrate with can be named normally: "Modrinth API", "CurseForge API", "Mojang's profile endpoint", "Adoptium API", ".mrpack format". These are services, not source code.
 - When implementing a feature, research from official documentation and specs. Not from other launchers' source code.
 

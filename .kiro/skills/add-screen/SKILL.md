@@ -53,10 +53,12 @@ File: `src/components/Sidebar.tsx` — navigation button calling `setActiveScree
 
 ## 7. Add Styles (if needed)
 
-File: `src/styles/global.css` — use existing CSS variables.
+File: `src/styles/screens.css` (or relevant modular CSS file in `src/styles/`) — use existing CSS design tokens (`var(--token)`).
 
 ## Verification
 
+- `cargo check` passes
+- `pnpm exec tsc --noEmit` / `pnpm build` passes
 - Screen renders when navigated to
 - Sidebar highlights correct item
 - Titlebar shows correct title

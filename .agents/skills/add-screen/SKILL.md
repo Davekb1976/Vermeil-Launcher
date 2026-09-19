@@ -57,6 +57,8 @@ File: `src/styles/screens.css` (or relevant modular CSS file in `src/styles/`) â
 
 ## Verification
 
+- `cargo check` passes
+- `pnpm exec tsc --noEmit` / `pnpm build` passes
 - Screen renders when navigated to
 - Sidebar highlights correct item
 - Titlebar shows correct title

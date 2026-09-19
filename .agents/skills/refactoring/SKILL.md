@@ -45,7 +45,7 @@ Guidelines for safely restructuring code without breaking existing functionality
 - **Preserve public interface** unless that's the purpose.
 - **Never amend or force-push a pushed commit** to tidy a multi-step refactor —
   add follow-up commits instead. See "Never rewrite pushed history" in
-  `implementation-process.md` (`.agents/rules/implementation-process.md`).
+  `AGENTS.md` (Section 10).
 
 ## Verification
 

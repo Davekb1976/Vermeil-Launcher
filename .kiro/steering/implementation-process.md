@@ -123,8 +123,8 @@ Before concluding, verify:
 - Implementation is consistent with the rest of the codebase.
 - No duplicate logic, conflicting implementations, or redundant abstractions were introduced.
 - Dependency and prerequisite docs match reality — any added, removed, or version-bumped dependency or tool is reflected in the manifests/lockfiles **and** in `docs/DEVELOPMENT.md` (and the relevant skill).
-- The Rust code compiles: `cargo check` from `Vermeil/src-tauri/`.
-- The frontend builds: `pnpm run build` from `Vermeil/`.
+- The Rust code compiles: `cargo check` (zero warnings) from `Vermeil/src-tauri/`.
+- The frontend type-checks and builds: `pnpm exec tsc --noEmit` and `pnpm run build` from `Vermeil/`.
 - IPC types match between Rust and TypeScript.
 
 Validate through inspection, testing, or logical verification — not assumption.

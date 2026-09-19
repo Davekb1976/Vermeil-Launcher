@@ -63,7 +63,7 @@ forces them.
 - **Mod deps** (`companion-mod/`) live in each project's `gradle.properties`
   (MC, loader, Loom/ForgeGradle) and `build.gradle`. Fabric projects pin exact
   versions from the official Fabric "Develop" page; the Forge 1.8.9 project pins
-  classic ForgeGradle 2 / MCP mappings / Forge. See the `minecraft-mod` skill.
+  classic ForgeGradle 2 / MCP mappings / Forge. See the `minecraft-mod` skill (`.kiro/skills/minecraft-mod/SKILL.md`).
 - **System tools** (JDK version, Gradle, MSVC Build Tools, WebKitGTK/system libs)
   aren't in any manifest. When a change starts requiring one — or bumps the
   required version — it is **not done** until the prerequisite is documented. The

@@ -18,7 +18,7 @@ pub async fn do_something(param: &str) -> Result<ReturnType, String> {
 }
 ```
 
-Rules: `pub async fn`, returns `Result<T, String>`, uses shared HTTP client, no Tauri types unless emitting events.
+Rules: `pub async fn`, returns `Result<T, String>` (or `Result<T, AppError>`), uses shared HTTP client, no Tauri types unless emitting events.
 
 ## 2. Create the Command Handler
 
@@ -61,7 +61,7 @@ const result = await doSomething("value");
 ## Verification
 
 - `cargo check` passes
-- `pnpm build` passes
+- `pnpm exec tsc --noEmit` / `pnpm build` passes
 - Command callable from frontend without runtime errors
 
 ## Common Mistakes
