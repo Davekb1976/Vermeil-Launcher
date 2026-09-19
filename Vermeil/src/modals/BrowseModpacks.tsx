@@ -174,7 +174,6 @@ const BrowseModpacks: Component = () => {
   const doInstall = async (pack: ModHit, versionId?: string) => {
     setConfirmPack(null);
     setInstalling(pack.project_id);
-    setActiveScreen("library");
 
     const dlId = trackDownload(pack.title, "modpack", {
       iconUrl: pack.icon_url,

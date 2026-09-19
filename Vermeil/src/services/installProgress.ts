@@ -85,8 +85,26 @@ export function initInstallProgress(): () => void {
       hideTimeout = undefined;
     }
 
+    function resetActivityTimeout() {
+      if (activityTimeout) clearTimeout(activityTimeout);
+      activityTimeout = window.setTimeout(() => {
+        setActiveInstall({
+          active: false,
+          title: "",
+          message: "",
+          fraction: 0,
+          done: false,
+          cancelling: false,
+        });
+      }, 45000);
+    }
+
     if (payload.section === "cancelled") {
       installerActive = false;
+      if (activityTimeout) {
+        clearTimeout(activityTimeout);
+        activityTimeout = undefined;
+      }
       suppressUntil = Date.now() + SUPPRESS_AFTER_CANCEL_MS;
       setActiveInstall((prev) => ({ ...prev, cancelling: true, done: false }));
       setMessageThrottled("Install cancelled", true);
@@ -107,6 +125,10 @@ export function initInstallProgress(): () => void {
 
     if (payload.section === "done") {
       installerActive = false;
+      if (activityTimeout) {
+        clearTimeout(activityTimeout);
+        activityTimeout = undefined;
+      }
       setActiveInstall((prev) => ({ ...prev, done: true, fraction: 1 }));
       setMessageThrottled("Ready to play", true);
       hideTimeout = window.setTimeout(() => {
@@ -142,17 +164,7 @@ export function initInstallProgress(): () => void {
       phaseLatchUntil = Date.now() + PHASE_LATCH_MS;
     }
 
-    if (activityTimeout) clearTimeout(activityTimeout);
-    activityTimeout = window.setTimeout(() => {
-      setActiveInstall({
-        active: false,
-        title: "",
-        message: "",
-        fraction: 0,
-        done: false,
-        cancelling: false,
-      });
-    }, 30000);
+    resetActivityTimeout();
   });
 
   unlistenDownload = listen<{ completed: number; total: number; current_file: string }>(
@@ -160,6 +172,19 @@ export function initInstallProgress(): () => void {
     (event) => {
       const { completed, total } = event.payload;
       if (total > 0 && activeInstall().active && !activeInstall().done) {
+        if (activityTimeout) {
+          clearTimeout(activityTimeout);
+          activityTimeout = window.setTimeout(() => {
+            setActiveInstall({
+              active: false,
+              title: "",
+              message: "",
+              fraction: 0,
+              done: false,
+              cancelling: false,
+            });
+          }, 45000);
+        }
         const fileFraction = completed / total;
         setActiveInstall((prev) => ({ ...prev, fraction: fileFraction }));
         if (!installerActive && Date.now() >= phaseLatchUntil) {

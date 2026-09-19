@@ -18,6 +18,29 @@ const Downloads: Component = () => {
   const activeDownloads = () => downloads().filter(d => d.status === "downloading");
   const history = () => downloads().filter(d => d.status !== "downloading").slice(0, 100);
 
+  const isCurrentActiveInstall = (dl: DownloadEntry) => {
+    if (!activeInstall().active) return false;
+    const activeTitle = activeInstall().title.trim().toLowerCase();
+    const dlName = dl.name.trim().toLowerCase();
+    if (activeTitle && (dlName === activeTitle || activeTitle.includes(dlName) || dlName.includes(activeTitle))) {
+      return true;
+    }
+    if (dl.category === "modpack") {
+      return true;
+    }
+    return false;
+  };
+
+  const queuedDownloads = () => {
+    const list = activeDownloads();
+    if (!activeInstall().active) return list;
+    return list.filter(dl => !isCurrentActiveInstall(dl));
+  };
+
+  const totalActiveCount = () => {
+    return activeInstall().active ? queuedDownloads().length + 1 : activeDownloads().length;
+  };
+
   const hasAnyActive = () => activeInstall().active || activeDownloads().length > 0;
 
   const timeAgo = (ts: number): string => {
@@ -36,9 +59,9 @@ const Downloads: Component = () => {
       {/* ── Section 1: Current Downloads ── */}
       <div class="section-label section-label--row">
         <span>Current Downloads</span>
-        <Show when={activeDownloads().length > 0 || activeInstall().active}>
+        <Show when={hasAnyActive()}>
           <span class="badge" style="font-family:var(--font-mono)">
-            {(activeDownloads().length || (activeInstall().active ? 1 : 0))} active
+            {totalActiveCount()} active
           </span>
         </Show>
       </div>
@@ -108,11 +131,16 @@ const Downloads: Component = () => {
           </div>
         </Show>
 
-        {/* Other active downloads from downloads() (e.g. background content) */}
-        <Show when={activeDownloads().length > 0}>
+        {/* Queued / other active downloads from downloads() */}
+        <Show when={queuedDownloads().length > 0}>
           <div class="dl-grid" style="margin-bottom: var(--space-4);">
-            <For each={activeDownloads()}>
-              {(dl) => <ActiveDownloadCard entry={dl} />}
+            <For each={queuedDownloads()}>
+              {(dl) => (
+                <ActiveDownloadCard
+                  entry={dl}
+                  isQueued={activeInstall().active || queuedDownloads().indexOf(dl) !== queuedDownloads().length - 1}
+                />
+              )}
             </For>
           </div>
         </Show>
@@ -141,8 +169,8 @@ const Downloads: Component = () => {
   );
 };
 
-/** Card for actively downloading individual items. */
-const ActiveDownloadCard: Component<{ entry: DownloadEntry }> = (props) => {
+/** Card for actively downloading or queued items. */
+const ActiveDownloadCard: Component<{ entry: DownloadEntry; isQueued?: boolean }> = (props) => {
   const dl = () => props.entry;
 
   return (
@@ -163,7 +191,11 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry }> = (props) => {
                 <span class="dl-card-author">by {dl().author}</span>
               </Show>
             </div>
-            <span class="toast-spinner" style="width: 14px; height: 14px; border-width: 2px;" />
+            <Show when={props.isQueued} fallback={
+              <span class="toast-spinner" style="width: 14px; height: 14px; border-width: 2px;" />
+            }>
+              <span class="badge" style="font-size: var(--fs-2xs);">In queue</span>
+            </Show>
           </div>
           <div class="dl-card-meta">
             <span class="badge">{getCategoryLabel(dl().category)}</span>
@@ -176,7 +208,9 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry }> = (props) => {
             <Show when={dl().versionNumber}>
               <span class="badge badge--vnum" title={dl().versionNumber!}>{dl().versionNumber}</span>
             </Show>
-            <span class="dl-card-time" style="color:var(--accent);font-weight:600">Downloading...</span>
+            <span class="dl-card-time" style="color:var(--accent);font-weight:600">
+              {props.isQueued ? "Waiting in queue..." : "Downloading..."}
+            </span>
           </div>
         </div>
       </div>
