@@ -18,23 +18,42 @@ const Downloads: Component = () => {
   const activeDownloads = () => downloads().filter(d => d.status === "downloading");
   const history = () => downloads().filter(d => d.status !== "downloading").slice(0, 100);
 
-  const isCurrentActiveInstall = (dl: DownloadEntry) => {
-    if (!activeInstall().active) return false;
+  // Find the single active DownloadEntry being orchestrated by activeInstall
+  const activeInstallEntry = () => {
+    if (!activeInstall().active) return null;
+    const list = activeDownloads();
+    if (list.length === 0) return null;
+
     const activeTitle = activeInstall().title.trim().toLowerCase();
-    const dlName = dl.name.trim().toLowerCase();
-    if (activeTitle && (dlName === activeTitle || activeTitle.includes(dlName) || dlName.includes(activeTitle))) {
-      return true;
+    if (activeTitle) {
+      const match = list.find((dl) => {
+        const dlName = dl.name.trim().toLowerCase();
+        return dlName === activeTitle || activeTitle.includes(dlName) || dlName.includes(activeTitle);
+      });
+      if (match) return match;
     }
-    if (dl.category === "modpack") {
-      return true;
-    }
-    return false;
+
+    // Fallback: the oldest modpack in activeDownloads, or the oldest active download
+    const oldestModpack = [...list].reverse().find((dl) => dl.category === "modpack");
+    if (oldestModpack) return oldestModpack;
+
+    return list[list.length - 1];
   };
 
   const queuedDownloads = () => {
     const list = activeDownloads();
-    if (!activeInstall().active) return list;
-    return list.filter(dl => !isCurrentActiveInstall(dl));
+    const currentActive = activeInstallEntry();
+    if (!currentActive) return list;
+    return list.filter((dl) => dl.id !== currentActive.id);
+  };
+
+  const isItemQueued = (entry: DownloadEntry) => {
+    if (activeInstall().active) {
+      return true;
+    }
+    const list = activeDownloads();
+    const oldest = list[list.length - 1];
+    return entry.id !== oldest?.id;
   };
 
   const totalActiveCount = () => {
@@ -133,12 +152,17 @@ const Downloads: Component = () => {
 
         {/* Queued / other active downloads from downloads() */}
         <Show when={queuedDownloads().length > 0}>
+          <Show when={activeInstall().active}>
+            <div style="font-size: var(--fs-xs); color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: var(--space-3) 0 var(--space-2) 0;">
+              Next in queue ({queuedDownloads().length})
+            </div>
+          </Show>
           <div class="dl-grid" style="margin-bottom: var(--space-4);">
-            <For each={queuedDownloads()}>
+            <For each={[...queuedDownloads()].reverse()}>
               {(dl) => (
                 <ActiveDownloadCard
                   entry={dl}
-                  isQueued={activeInstall().active || queuedDownloads().indexOf(dl) !== queuedDownloads().length - 1}
+                  isQueued={isItemQueued(dl)}
                 />
               )}
             </For>
