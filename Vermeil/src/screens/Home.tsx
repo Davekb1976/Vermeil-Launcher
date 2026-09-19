@@ -3,7 +3,7 @@ import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, setGameLau
 import { launchInstance, listInstanceWorlds, getJavaNews, getArticleBody, NewsArticle } from "../ipc/commands";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
-import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX } from "../components/Icons";
+import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX, IconShirt } from "../components/Icons";
 import PlayerHead from "../components/PlayerHead";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { resolveAssetUrl } from "../lib/assets";
@@ -35,6 +35,17 @@ function relativePlayed(iso: string | null | undefined): string | null {
   }
   const months = Math.floor(days / 30);
   return `${months} month${months === 1 ? "" : "s"} ago`;
+}
+
+/** Format total playtime seconds into compact hours/minutes (e.g. "14h 25m"). */
+function formatPlaytime(seconds: number): string {
+  if (!seconds || seconds <= 0) return "0m";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
 }
 
 /** Loader-tinted icon-tile background class (mirrors the Library card). */
@@ -212,7 +223,7 @@ const Home: Component = () => {
     try { await launchInstance(instanceId); } catch (e) { console.error(e); }
   };
 
-  // Header summary — total instance count + most-recent play date across
+  // Header summary — total instance count, playtime, and most-recent play date across
   // all instances, formatted relatively. Memo'd so it only recomputes when
   // the instances signal changes, not on every render.
   const headerSummary = createMemo(() => {
@@ -223,9 +234,12 @@ const Home: Component = () => {
       .filter((d): d is string => Boolean(d))
       .sort()
       .pop();
+    const totalPlaySeconds = list.reduce((acc, i) => acc + (i.total_play_seconds || 0), 0);
     return {
       count: list.length,
       relative: relativePlayed(mostRecent),
+      totalPlaytime: formatPlaytime(totalPlaySeconds),
+      hasPlaytime: totalPlaySeconds > 0,
     };
   });
 
@@ -233,36 +247,79 @@ const Home: Component = () => {
 
   return (
     <div class="screen-enter">
-      {/* Greeting — personalizes the empty space at the top of Home and
-          grounds the page so it feels less like a bare news feed. */}
-      <div class="home-greeting panel--bracketed">
-          <PlayerHead
-            skinUrl={activeSkinUrl()}
-            name={displayName()}
-            size={56}
-            class="home-greeting-head"
-          />
-          <div class="home-greeting-text">
-            <div class="home-greeting-line">
-              {timeOfDayGreeting()}, <span class="home-greeting-name">{displayName()}</span>
+      {/* Tactical Identity Plate (Player Card) */}
+      <div
+        class="home-greeting panel--bracketed"
+        onClick={() => setActiveScreen("account")}
+        role="button"
+        tabIndex={0}
+        title="Manage accounts and profiles"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setActiveScreen("account");
+          }
+        }}
+      >
+        <div class="home-greeting-identity">
+          <div class="home-greeting-avatar-well">
+            <PlayerHead
+              skinUrl={activeSkinUrl()}
+              name={displayName()}
+              size={44}
+              class="home-greeting-head"
+            />
+          </div>
+          <div class="home-greeting-info">
+            <div class="home-greeting-top">
+              <span class="home-greeting-salutation">{timeOfDayGreeting()},</span>
+              <span class="home-greeting-name">{displayName()}</span>
             </div>
-            <Show
-              when={headerSummary()}
-              fallback={
-                <div class="home-greeting-meta">
-                  Welcome to Vermeil. Create your first instance from the Library tab.
-                </div>
-              }
-            >
-              <div class="home-greeting-meta">
-                {headerSummary()!.count} instance{headerSummary()!.count === 1 ? "" : "s"}
-                <Show when={headerSummary()!.relative}>
-                  {" · "}last played {headerSummary()!.relative}
-                </Show>
+            <div class="home-greeting-badges">
+              <div
+                class={`account-badge-active ${account()?.is_offline ? "account-badge--offline" : ""}`}
+                title={account()?.is_offline ? "Offline Minecraft profile" : "Signed in with Microsoft"}
+              >
+                <span class="account-badge-dot" />
+                <span>{account()?.is_offline ? "Offline" : "Microsoft"}</span>
               </div>
-            </Show>
+              <Show
+                when={headerSummary()}
+                fallback={<span class="badge">0 instances</span>}
+              >
+                <span class="badge">
+                  {headerSummary()!.count} instance{headerSummary()!.count === 1 ? "" : "s"}
+                </span>
+                <Show when={headerSummary()!.hasPlaytime}>
+                  <span class="badge badge--version" title="Total playtime across all instances">
+                    {headerSummary()!.totalPlaytime} played
+                  </span>
+                </Show>
+                <Show when={headerSummary()!.relative}>
+                  <span class="badge">
+                    last played {headerSummary()!.relative}
+                  </span>
+                </Show>
+              </Show>
+            </div>
           </div>
         </div>
+
+        <div class="home-greeting-actions">
+          <button
+            type="button"
+            class="btn btn--secondary btn--sm home-greeting-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveScreen("skins");
+            }}
+            title="Customize player skin and in-game capes"
+          >
+            <span class="home-greeting-btn-icon"><IconShirt /></span>
+            <span>Skins & Capes</span>
+          </button>
+        </div>
+      </div>
 
         {/* Continue section */}
         <div class="section-label">Continue</div>

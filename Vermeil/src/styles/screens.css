@@ -1044,55 +1044,158 @@
 
 
 /* ============================================================
-   Home greeting block (screens/Home.tsx).
-   Sits above the Continue / News sections and personalizes the
-   page with the active skin head, time-of-day greeting, and a
-   one-line summary of instances.
+   Home greeting block (screens/Home.tsx) — Tactical Identity Plate.
+   Tactile SloppyKeys plate framing the active player profile,
+   account status, and launcher metrics above Continue / News.
    ============================================================ */
 .home-greeting {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-5);
+  padding: 14px 18px;
   margin-bottom: var(--space-5);
   background: var(--surface-panel);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
   border-radius: 0;
   position: relative;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.home-greeting::before {
-  content: "";
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: var(--accent);
+
+.home-greeting:hover {
+  background: var(--surface-raised);
+  border-color: var(--border-focus);
+  border-left-color: var(--accent-hover, var(--accent));
+  box-shadow: var(--shadow-md);
 }
-.home-greeting-head {
-  border-radius: var(--radius-md);
-  flex-shrink: 0;
+
+.home-greeting:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
-.home-greeting-text {
+
+.home-greeting-identity {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  align-items: center;
+  gap: var(--space-4);
   min-width: 0;
 }
-.home-greeting-line {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text);
+
+/* Recessed #0f0e13 well framing the pixel avatar */
+.home-greeting-avatar-well {
+  width: 52px;
+  height: 52px;
+  background: #0f0e13;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.home-greeting-head {
+  border-radius: 0;
+  flex-shrink: 0;
+}
+
+.home-greeting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.home-greeting-top {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.home-greeting-salutation {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--muted);
   letter-spacing: -0.01em;
 }
+
 .home-greeting-name {
-  background: linear-gradient(135deg, #a78bfa, var(--accent));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.home-greeting-meta {
-  font-size: 12px;
+
+/* Tactile badges shelf */
+.home-greeting-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Modifier for offline accounts in the account badge */
+.account-badge--offline {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
   color: var(--muted);
+}
+.account-badge--offline .account-badge-dot {
+  background: var(--muted);
+  box-shadow: none;
+  animation: none;
+}
+
+/* Quick Action button container */
+.home-greeting-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.home-greeting-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
   letter-spacing: 0.01em;
+  border-radius: 0;
+}
+
+.home-greeting-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+}
+
+.home-greeting-btn-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 768px) {
+  .home-greeting {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+  .home-greeting-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 
 
