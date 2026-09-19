@@ -885,7 +885,10 @@ async fn extract_overrides(
     // stall the async runtime.
     tokio::task::spawn_blocking(move || -> Result<(), String> {
         let file = fs::File::open(&mrpack_path).map_err(|e| format!("Reopen mrpack: {}", e))?;
-        let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("Reread ZIP: {}", e))?;
+        let buf_file = std::io::BufReader::with_capacity(256 * 1024, file);
+        let mut archive = zip::ZipArchive::new(buf_file).map_err(|e| format!("Reread ZIP: {}", e))?;
+        let mut created_dirs = std::collections::HashSet::new();
+        created_dirs.insert(minecraft_dir.clone());
 
         for i in 0..archive.len() {
             let mut entry = archive
@@ -900,22 +903,24 @@ async fn extract_overrides(
             };
 
             if let Some(rel) = rel_path {
+                if rel.contains("..") {
+                    continue; // Skip path traversal attempts
+                }
+                let dest = minecraft_dir.join(&rel);
                 if rel.is_empty() || entry.is_dir() {
-                    let dir = minecraft_dir.join(&rel);
-                    let _ = fs::create_dir_all(&dir);
-                } else {
-                    let dest = minecraft_dir.join(&rel);
-                    if let Some(parent) = dest.parent() {
-                        let _ = fs::create_dir_all(parent);
+                    if created_dirs.insert(dest.clone()) {
+                        let _ = fs::create_dir_all(&dest);
                     }
-                    let outfile =
+                } else {
+                    if let Some(parent) = dest.parent() {
+                        if created_dirs.insert(parent.to_path_buf()) {
+                            let _ = fs::create_dir_all(parent);
+                        }
+                    }
+                    let mut outfile =
                         fs::File::create(&dest).map_err(|e| format!("Create: {}", e))?;
-                    let mut writer = std::io::BufWriter::with_capacity(64 * 1024, outfile);
-                    let mut reader = std::io::BufReader::with_capacity(64 * 1024, &mut entry);
-                    std::io::copy(&mut reader, &mut writer)
+                    std::io::copy(&mut entry, &mut outfile)
                         .map_err(|e| format!("Extract: {}", e))?;
-                    use std::io::Write;
-                    writer.flush().map_err(|e| format!("Flush: {}", e))?;
                 }
             }
         }

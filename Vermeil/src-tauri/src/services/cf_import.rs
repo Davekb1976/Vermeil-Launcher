@@ -564,9 +564,12 @@ async fn extract_overrides_async(
     tokio::task::spawn_blocking(move || -> Result<(), String> {
         let zip_file = fs::File::open(&zip_path)
             .map_err(|e| format!("Reopen zip: {}", e))?;
-        let mut archive = zip::ZipArchive::new(zip_file)
+        let buf_file = std::io::BufReader::with_capacity(256 * 1024, zip_file);
+        let mut archive = zip::ZipArchive::new(buf_file)
             .map_err(|e| format!("Reread zip: {}", e))?;
         let prefix = format!("{}/", overrides_prefix);
+        let mut created_dirs = std::collections::HashSet::new();
+        created_dirs.insert(minecraft_dir.clone());
 
         for i in 0..archive.len() {
             let mut entry = archive.by_index(i).map_err(|e| format!("Zip entry: {}", e))?;
@@ -578,22 +581,25 @@ async fn extract_overrides_async(
 
             // Strip the overrides/ prefix to get the relative path
             let relative = &name[prefix.len()..];
+            if relative.contains("..") {
+                continue;
+            }
             let dest = minecraft_dir.join(relative);
 
             if entry.is_dir() {
-                let _ = fs::create_dir_all(&dest);
+                if created_dirs.insert(dest.clone()) {
+                    let _ = fs::create_dir_all(&dest);
+                }
             } else {
                 if let Some(parent) = dest.parent() {
-                    let _ = fs::create_dir_all(parent);
+                    if created_dirs.insert(parent.to_path_buf()) {
+                        let _ = fs::create_dir_all(parent);
+                    }
                 }
-                let outfile = fs::File::create(&dest)
+                let mut outfile = fs::File::create(&dest)
                     .map_err(|e| format!("Create override file: {}", e))?;
-                let mut writer = std::io::BufWriter::with_capacity(64 * 1024, outfile);
-                let mut reader = std::io::BufReader::with_capacity(64 * 1024, &mut entry);
-                std::io::copy(&mut reader, &mut writer)
+                std::io::copy(&mut entry, &mut outfile)
                     .map_err(|e| format!("Extract override: {}", e))?;
-                use std::io::Write;
-                writer.flush().map_err(|e| format!("Flush override: {}", e))?;
             }
         }
         Ok(())

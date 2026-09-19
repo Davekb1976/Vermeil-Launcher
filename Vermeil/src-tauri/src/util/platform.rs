@@ -64,6 +64,7 @@ pub fn java_archive_ext() -> &'static str {
 /// Extract a Java runtime archive to the given directory.
 /// Handles `.zip` on Windows and `.tar.gz` on Linux/macOS.
 pub fn extract_java_archive(archive_path: &std::path::Path, dest_dir: &std::path::Path) -> Result<(), String> {
+    use std::collections::HashSet;
     use std::fs;
     use std::io;
 
@@ -72,29 +73,38 @@ pub fn extract_java_archive(archive_path: &std::path::Path, dest_dir: &std::path
     if cfg!(windows) {
         // ZIP extraction
         let file = fs::File::open(archive_path).map_err(|e| e.to_string())?;
-        let buf_file = io::BufReader::with_capacity(64 * 1024, file);
+        let buf_file = io::BufReader::with_capacity(256 * 1024, file);
         let mut archive = zip::ZipArchive::new(buf_file).map_err(|e| format!("Open zip: {}", e))?;
+        let mut created_dirs = HashSet::new();
+        created_dirs.insert(dest_dir.to_path_buf());
+
         for i in 0..archive.len() {
             let mut entry = archive.by_index(i).map_err(|e| format!("Zip entry: {}", e))?;
-            let outpath = dest_dir.join(entry.name());
+            let enclosed = match entry.enclosed_name() {
+                Some(p) => p.to_owned(),
+                None => continue,
+            };
+            let outpath = dest_dir.join(enclosed);
+
             if entry.is_dir() {
-                fs::create_dir_all(&outpath).map_err(|e| e.to_string())?;
+                if created_dirs.insert(outpath.clone()) {
+                    let _ = fs::create_dir_all(&outpath);
+                }
             } else {
                 if let Some(parent) = outpath.parent() {
-                    fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+                    if created_dirs.insert(parent.to_path_buf()) {
+                        let _ = fs::create_dir_all(parent);
+                    }
                 }
-                let outfile = fs::File::create(&outpath).map_err(|e| e.to_string())?;
-                let mut writer = io::BufWriter::with_capacity(64 * 1024, outfile);
-                let mut reader = io::BufReader::with_capacity(64 * 1024, &mut entry);
-                io::copy(&mut reader, &mut writer).map_err(|e| e.to_string())?;
-                use io::Write;
-                writer.flush().map_err(|e| e.to_string())?;
+                let mut outfile = fs::File::create(&outpath).map_err(|e| format!("Create file {}: {}", outpath.display(), e))?;
+                io::copy(&mut entry, &mut outfile).map_err(|e| format!("Extract file {}: {}", outpath.display(), e))?;
             }
         }
     } else {
         // tar.gz extraction
         let file = fs::File::open(archive_path).map_err(|e| e.to_string())?;
-        let gz = flate2::read::GzDecoder::new(file);
+        let buf_file = io::BufReader::with_capacity(256 * 1024, file);
+        let gz = flate2::read::GzDecoder::new(buf_file);
         let mut archive = tar::Archive::new(gz);
         archive.unpack(dest_dir).map_err(|e| format!("Extract tar.gz: {}", e))?;
     }

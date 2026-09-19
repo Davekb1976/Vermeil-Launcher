@@ -130,8 +130,22 @@ async fn run_installer_headless(
     // hung. Stderr is still buffered for the error path.
     emit_phase(app, instance_name, "Starting loader installer");
 
+    let sys_mb = crate::services::memory::system_memory_mb();
+    let max_mb = if sys_mb >= 8192 {
+        2048
+    } else if sys_mb >= 4096 {
+        1536
+    } else {
+        1024
+    };
+    let init_mb = (max_mb / 4).max(256);
+
     let mut cmd = Command::new(java_exe);
-    cmd.arg("-jar")
+    cmd.arg(format!("-Xms{}m", init_mb))
+        .arg(format!("-Xmx{}m", max_mb))
+        .arg("-XX:+UseG1GC")
+        .arg("-Djava.awt.headless=true")
+        .arg("-jar")
         .arg(installer_path)
         .arg("--installClient")
         .arg(instance_dir)
@@ -440,6 +454,7 @@ async fn ensure_installer_ran(
     marker_name: &str,
     app: Option<&tauri::AppHandle>,
     instance_name: &str,
+    game_version: &str,
 ) -> Result<(String, Vec<PathBuf>, Vec<String>, Vec<String>), String> {
     let marker = instance_dir.join(format!(".{}-installed", marker_name));
 
@@ -477,9 +492,30 @@ async fn ensure_installer_ran(
             .map_err(|e| format!("Copy cached installer: {}", e))?;
 
         // The installer needs the vanilla client jar in versions/<mc_version>/<mc_version>.jar
-        // Copy it from our shared versions cache if available
-        let versions_dir = instance_dir.join("versions");
-        fs::create_dir_all(&versions_dir).map_err(|e| format!("Create versions dir: {}", e))?;
+        // and its metadata in versions/<mc_version>/<mc_version>.json.
+        // Pre-seed both from our shared caches so the installer skips downloading them.
+        let mc_versions_dir = instance_dir.join("versions").join(game_version);
+        fs::create_dir_all(&mc_versions_dir).map_err(|e| format!("Create versions dir: {}", e))?;
+
+        let target_jar = mc_versions_dir.join(format!("{}.jar", game_version));
+        if !target_jar.exists() {
+            let shared_jar = paths::data_dir().join("versions").join(format!("{}.jar", game_version));
+            if shared_jar.exists() {
+                if fs::hard_link(&shared_jar, &target_jar).is_err() {
+                    let _ = fs::copy(&shared_jar, &target_jar);
+                }
+            }
+        }
+
+        let target_json = mc_versions_dir.join(format!("{}.json", game_version));
+        if !target_json.exists() {
+            let shared_json = paths::meta_dir().join("versions").join(format!("{}.json", game_version));
+            if shared_json.exists() {
+                if fs::hard_link(&shared_json, &target_json).is_err() {
+                    let _ = fs::copy(&shared_json, &target_json);
+                }
+            }
+        }
 
         // Run it headless — streams installer phases into the progress UI
         // through the `app` handle (or runs silent if `app` is `None`).
@@ -552,7 +588,7 @@ async fn ensure_installer_ran(
 /// callers from non-UI paths can pass `None`/`""` and the install runs
 /// silent.
 pub async fn ensure_neoforge_libraries(
-    _game_version: &str,
+    game_version: &str,
     loader_version: &str,
     app: Option<&tauri::AppHandle>,
     instance_name: &str,
@@ -571,7 +607,7 @@ pub async fn ensure_neoforge_libraries(
     // Ensure Java is available (uses MC 1.21+ Java 21 by default for modern NeoForge)
     let java_exe = ensure_java_for_loader().await?;
 
-    ensure_installer_ran(&installer_url, &scratch, &java_exe, "neoforge", app, instance_name).await
+    ensure_installer_ran(&installer_url, &scratch, &java_exe, "neoforge", app, instance_name, game_version).await
 }
 
 /// Public: ensure Forge libraries and processor outputs are ready.
@@ -631,7 +667,7 @@ pub async fn ensure_forge_libraries(
     let scratch = paths::data_dir().join("loader-scratch").join(format!("forge-{}", full_version));
     let java_exe = ensure_java_for_loader().await?;
 
-    ensure_installer_ran(&installer_url, &scratch, &java_exe, "forge", app, instance_name).await
+    ensure_installer_ran(&installer_url, &scratch, &java_exe, "forge", app, instance_name, game_version).await
 }
 
 /// Get a Java executable suitable for running the installer.
