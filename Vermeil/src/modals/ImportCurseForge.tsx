@@ -28,6 +28,10 @@ const ImportCurseForge: Component = () => {
         message: packName,
         type: "loading",
         autoCloseMs: 0,
+        action: {
+          label: "View",
+          onClick: () => setActiveScreen("downloads"),
+        },
       });
 
       importCfZip(selected as string)
@@ -40,6 +44,7 @@ const ImportCurseForge: Component = () => {
             message: `${instance.name} imported successfully`,
             type: "success",
             autoCloseMs: 4000,
+            action: undefined,
           });
         })
         .catch((e: any) => {

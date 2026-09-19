@@ -10,6 +10,7 @@ dist/
 build/
 out/
 target/
+.vite/
 
 # Tauri-generated schema cache (recreated by `tauri build`).
 **/gen/schemas/

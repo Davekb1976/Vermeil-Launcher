@@ -1,4 +1,4 @@
-import { Component, createSignal, createResource, createEffect, Show, onMount, lazy } from "solid-js";
+import { Component, createSignal, createResource, createEffect, Show, onMount, onCleanup, lazy } from "solid-js";
 import FloatingDock from "./components/FloatingDock";
 import Titlebar from "./components/Titlebar";
 import ResizeHandles from "./components/ResizeHandles";
@@ -17,7 +17,7 @@ import BrowseModpacks from "./modals/BrowseModpacks";
 import ImportCurseForge from "./modals/ImportCurseForge";
 import NoAccountModal from "./components/NoAccountModal";
 import Toasts, { showToast, updateToast } from "./components/Toasts";
-import InstallProgress from "./components/InstallProgress";
+import { initInstallProgress } from "./services/installProgress";
 import BulkInstallToast from "./components/BulkInstallToast";
 import Splash from "./components/Splash";
 import DependencyIssuesModal from "./components/DependencyIssuesModal";
@@ -368,6 +368,11 @@ const App: Component = () => {
 
   // Listen for game exit/crash events from backend
   onMount(async () => {
+    const cleanupInstallProgress = initInstallProgress();
+    onCleanup(() => {
+      cleanupInstallProgress();
+    });
+
     // Live game log stream. Subscribe at app level so log lines pour into
     // the global per-instance buckets even when the user is on a different
     // screen — they can switch to the Logs tab later and still see
@@ -617,7 +622,6 @@ const App: Component = () => {
         <FloatingDock />
       </div>
       <NoAccountModal open={showNoAccountModal()} onClose={() => setShowNoAccountModal(false)} />
-      <InstallProgress />
       <BulkInstallToast />
       <DependencyIssuesModal />
       <ManualDownloadModal />

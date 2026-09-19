@@ -4,7 +4,7 @@
 # ╚══════════════════════════════════════════════════════════════════╝
 #
 # Usage:
-#   curl -fsSL https://github.com/Davekb1976/Vermeil-Launcher/releases/latest/download/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Davekb1976/Vermeil-Launcher/main/install.sh | bash
 #
 # Uninstall:
 #   vermeil-uninstall

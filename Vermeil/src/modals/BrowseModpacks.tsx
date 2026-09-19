@@ -189,6 +189,10 @@ const BrowseModpacks: Component = () => {
       message: pack.title,
       type: "loading",
       autoCloseMs: 0,
+      action: {
+        label: "View",
+        onClick: () => setActiveScreen("downloads"),
+      },
     });
 
     const installPromise =
@@ -206,6 +210,7 @@ const BrowseModpacks: Component = () => {
           message: `${pack.title} is ready to play`,
           type: "success",
           autoCloseMs: 4000,
+          action: undefined,
         });
       })
       .catch((e) => {

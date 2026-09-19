@@ -1,0 +1,83 @@
+name: Update Download Stats
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+  release:
+    types: [published, edited, deleted]
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  update-stats:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Calculate genuine installer downloads
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+
+            let total = 0;
+            let windows = 0;
+            let linux = 0;
+
+            for (const r of releases) {
+              for (const a of r.assets || []) {
+                const name = a.name.toLowerCase();
+                // Exclude metadata, checksums, scripts, and updater manifests
+                if (name.endsWith('.sig') || name === 'latest.json' || name.endsWith('.sh')) {
+                  continue;
+                }
+                if (/\.(exe|msi|zip)$/i.test(name)) {
+                  windows += a.download_count;
+                  total += a.download_count;
+                } else if (/\.(appimage|deb|rpm|tar\.gz)$/i.test(name)) {
+                  linux += a.download_count;
+                  total += a.download_count;
+                }
+              }
+            }
+
+            const badgeData = {
+              schemaVersion: 1,
+              label: 'downloads',
+              message: String(total),
+              color: '8b5cf6'
+            };
+
+            const detailedData = {
+              total,
+              windows,
+              linux,
+              updated_at: new Date().toISOString()
+            };
+
+            const fs = require('fs');
+            fs.writeFileSync('/tmp/download-count.json', JSON.stringify(badgeData, null, 2) + '\n');
+            fs.writeFileSync('/tmp/download-stats.json', JSON.stringify(detailedData, null, 2) + '\n');
+            console.log('Calculated genuine downloads:', detailedData);
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to badges branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan badges-temp
+          git rm -rf .
+          mv /tmp/download-count.json download-count.json
+          mv /tmp/download-stats.json download-stats.json
+          git add download-count.json download-stats.json
+          git commit -m "chore: update download stats badge [skip ci]"
+          git push origin HEAD:badges --force
