@@ -18,28 +18,34 @@ function timeOfDayGreeting(): string {
   return "Good evening";
 }
 
-/** Format the most recent play timestamp as a relative phrase
- *  ("today", "yesterday", "3 days ago"). Falls back to the date. */
+/** Format the most recent play timestamp as a compact relative phrase
+ *  ("just now", "15m ago", "2h ago", "yesterday", "3d ago"). Returns null
+ *  when absent or unparseable so the telemetry plate renders "None". */
 function relativePlayed(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return null;
   const diffMs = Date.now() - then;
+  if (diffMs < 60_000) return "just now";
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(diffMs / 3_600_000);
+  if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(diffMs / 86_400_000);
-  if (days <= 0) return "today";
   if (days === 1) return "yesterday";
-  if (days < 7) return `${days} days ago`;
+  if (days < 7) return `${days}d ago`;
   if (days < 30) {
     const weeks = Math.floor(days / 7);
-    return `${weeks} week${weeks === 1 ? "" : "s"} ago`;
+    return `${weeks}w ago`;
   }
   const months = Math.floor(days / 30);
-  return `${months} month${months === 1 ? "" : "s"} ago`;
+  return `${months}mo ago`;
 }
 
-/** Format total playtime seconds into compact hours/minutes (e.g. "14h 25m"). */
+/** Format total playtime seconds into compact hours/minutes (e.g. "14h 25m", "< 1m", "0m"). */
 function formatPlaytime(seconds: number): string {
   if (!seconds || seconds <= 0) return "0m";
+  if (seconds < 60) return "< 1m";
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   if (hours > 0) {
@@ -232,7 +238,7 @@ const Home: Component = () => {
     const mostRecent = list
       .map((i) => i.last_played)
       .filter((d): d is string => Boolean(d))
-      .sort()
+      .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
       .pop();
     const totalPlaySeconds = list.reduce((acc, i) => acc + (i.total_play_seconds || 0), 0);
     return {

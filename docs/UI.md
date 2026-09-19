@@ -128,7 +128,7 @@ Routing is `<Show when={activeScreen() === "name"}>` in `App.tsx`; switch via `s
 
 | Screen | File | Purpose |
 |--------|------|---------|
-| home | `Home.tsx` | Greeting, recent-worlds carousel, Mojang Java news + reader |
+| home | `Home.tsx` | Hero Hub: 3D character stage, local session stats plate, Continue world session station, Mojang Java news + reader |
 | library | `Library.tsx` | Instance grid, multi/drag-select, "+ New instance" card |
 | mods | `InstanceMods.tsx` | One instance: Content / Browse / Files / Worlds / Logs tabs (large file) |
 | settings | `Settings.tsx` | General / Resources / Global Instance tabs, Java, GC presets, keybinds |
@@ -136,6 +136,12 @@ Routing is `<Show when={activeScreen() === "name"}>` in `App.tsx`; switch via `s
 | skins | `Skins.tsx` | Lazy-loaded 3D viewer, upload, cape equip/editor |
 | downloads | `Downloads.tsx` | Persistent download history |
 | (logs window) | `LogsPopout.tsx` | Standalone log viewer rendered when window label is `logs` |
+
+### Home screen Hero Hub & Local Session Stats
+The top section of `Home.tsx` features:
+- **3D Character Stage (`CharacterStage.tsx`)**: Interactive WebGL character rendering the active player skin with an ambient idle look-around and walk cycle. Pauses automatically during gameplay (`gameRunning()`).
+- **Local Session Stats Plate**: Displays active account status, instance count, total local playtime, and last active timestamp. **Privacy contract**: All metrics are computed strictly locally from on-disk `instance.json` files (`total_play_seconds`, `last_played`). Vermeil transmits zero telemetry or analytics over the network.
+- **Continue Session Station**: Featured Hero card for the most recently played world with quick-launch play action, plus secondary quick-launch slots.
 
 **Create/import pseudo-screens** (rendered in content area, Escape closes): `create-choose` (`CreateChoose.tsx`), `create-custom` (`CreateCustom.tsx`), `create-modpack` (`BrowseModpacks.tsx`), `create-import` (`ImportInstance.tsx`).
 

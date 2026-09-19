@@ -79,6 +79,8 @@ Vermeil-Launcher/               # Repo root
 - Java version matrix: Java 8, 17, 21, 25 (auto-selected per MC version)
 - Game log capture and real-time display
 - Crash report detection and display
+- Local session metrics & playtime tracking (100% on-device, zero remote telemetry)
+- 3D interactive character stage with ambient animation on Home screen
 - Discord Rich Presence (shows what you're playing)
 - Auto-updater (Windows NSIS, Linux AppImage)
 - System tray with minimize-to-tray on game launch

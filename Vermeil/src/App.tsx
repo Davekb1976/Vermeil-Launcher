@@ -655,6 +655,7 @@ const App: Component = () => {
 
     listen("game-exited", () => {
       setGameRunning(false);
+      refetchInstances();
     });
 
     // Companion-mod install status, emitted at launch by services::companion_mod.
@@ -707,6 +708,7 @@ const App: Component = () => {
 
     listen<string | null>("game-crashed", (event) => {
       setGameRunning(false);
+      refetchInstances();
       const crashPath = event.payload;
       showToast({
         title: "Game crashed",
