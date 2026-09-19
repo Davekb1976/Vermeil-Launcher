@@ -263,12 +263,15 @@ const Downloads: Component = () => {
 
         {/* Queued / other active downloads from downloads() */}
         <Show when={queuedDownloads().length > 0}>
-          <div style="font-size: var(--fs-xs); color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: var(--space-3) 0 var(--space-2) 0;">
-            Next in queue ({queuedDownloads().length})
+          <div class="dl-queue-section-header">
+            <span>Next in queue</span>
+            <span class="badge" style="font-family:var(--font-mono)">
+              {queuedDownloads().length}
+            </span>
           </div>
-          <div class="dl-grid" style="margin-bottom: var(--space-4);">
+          <div class="dl-queue-list">
             <For each={[...queuedDownloads()].reverse()}>
-              {(dl) => <ActiveDownloadCard entry={dl} />}
+              {(dl, index) => <ActiveDownloadCard entry={dl} position={index() + 1} />}
             </For>
           </div>
         </Show>
@@ -298,7 +301,7 @@ const Downloads: Component = () => {
 };
 
 /** Card for queued items waiting in the download queue. */
-const ActiveDownloadCard: Component<{ entry: DownloadEntry }> = (props) => {
+const ActiveDownloadCard: Component<{ entry: DownloadEntry; position?: number }> = (props) => {
   const dl = () => props.entry;
 
   const handleCancel = (e: MouseEvent) => {
@@ -310,37 +313,23 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry }> = (props) => {
   };
 
   return (
-    <div class="card card--inst dl-card" style="border-left: 3px solid var(--border-strong);">
-      <div class="card-body">
-        <div class="dl-card-icon">
+    <div class="dl-queue-card">
+      <div class="dl-queue-main">
+        <div class="dl-queue-icon">
           <Show when={dl().iconUrl} fallback={
-            <span class="dl-card-icon-fallback">{dl().name.charAt(0).toUpperCase()}</span>
+            <span class="dl-queue-icon-fallback">{dl().name.charAt(0).toUpperCase()}</span>
           }>
             <img src={dl().iconUrl!} alt="" draggable={false} />
           </Show>
         </div>
-        <div class="dl-card-body">
-          <div class="dl-card-header">
-            <div class="dl-card-title-group">
-              <span class="dl-card-name" title={dl().name}>{dl().name}</span>
-              <Show when={dl().author}>
-                <span class="dl-card-author">by {dl().author}</span>
-              </Show>
-            </div>
-            <div style="display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0;">
-              <span class="badge" style="font-size: var(--fs-2xs);">In queue</span>
-              <button
-                type="button"
-                class="dl-active-cancel"
-                style="padding: 2px 8px; font-size: 9px;"
-                title="Cancel this queued download"
-                onClick={handleCancel}
-              >
-                Cancel
-              </button>
-            </div>
+        <div class="dl-queue-info">
+          <div class="dl-queue-title-row">
+            <span class="dl-queue-name" title={dl().name}>{dl().name}</span>
+            <Show when={dl().author}>
+              <span class="dl-queue-author">by {dl().author}</span>
+            </Show>
           </div>
-          <div class="dl-card-meta">
+          <div class="dl-queue-meta-row">
             <span class="badge">{getCategoryLabel(dl().category)}</span>
             <Show when={dl().loader}>
               <span class={`badge badge--loader badge--${dl().loader}`}>{dl().loader}</span>
@@ -351,11 +340,23 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry }> = (props) => {
             <Show when={dl().versionNumber}>
               <span class="badge badge--vnum" title={dl().versionNumber!}>{dl().versionNumber}</span>
             </Show>
-            <span class="dl-card-time" style="color:var(--text-muted);font-weight:600">
-              Waiting in queue...
-            </span>
           </div>
         </div>
+      </div>
+
+      <div class="dl-queue-actions">
+        <span class="dl-queue-badge">
+          <span class="dl-queue-badge-dot" />
+          {props.position !== undefined ? `Queued #${props.position}` : "In Queue"}
+        </span>
+        <button
+          type="button"
+          class="dl-queue-cancel"
+          title="Cancel this queued download"
+          onClick={handleCancel}
+        >
+          Cancel
+        </button>
       </div>
     </div>
   );
