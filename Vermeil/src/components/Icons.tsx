@@ -237,6 +237,18 @@ export const IconCurseForge: Component = () => (
   </svg>
 );
 
+// Microsoft brand mark — 4-quadrant square emblem.
+// Used under nominative fair use to identify Microsoft account authentication.
+// Source: https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks
+export const IconMicrosoft: Component<{ class?: string }> = (props) => (
+  <svg viewBox="0 0 16 16" width="11" height="11" fill="none" xmlns="http://www.w3.org/2000/svg" class={props.class}>
+    <rect x="1" y="1" width="6.5" height="6.5" fill="#f25022"/>
+    <rect x="8.5" y="1" width="6.5" height="6.5" fill="#7fba00"/>
+    <rect x="1" y="8.5" width="6.5" height="6.5" fill="#00a4ef"/>
+    <rect x="8.5" y="8.5" width="6.5" height="6.5" fill="#ffb900"/>
+  </svg>
+);
+
 // Info — Feather Icons (MIT). https://github.com/feathericons/feather
 // Replaces the `ℹ` status glyph in `.toast-icon` (info toasts).
 export const IconInfo: Component = () => (

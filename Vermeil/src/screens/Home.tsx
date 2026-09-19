@@ -3,7 +3,7 @@ import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, setGameLau
 import { launchInstance, listInstanceWorlds, getJavaNews, getArticleBody, NewsArticle } from "../ipc/commands";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
-import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX } from "../components/Icons";
+import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX, IconMicrosoft } from "../components/Icons";
 import CharacterStage from "../components/CharacterStage";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { resolveAssetUrl } from "../lib/assets";
@@ -291,7 +291,12 @@ const Home: Component = () => {
                 class={`account-badge-active ${account()?.is_offline ? "account-badge--offline" : ""}`}
                 title={account()?.is_offline ? "Offline Minecraft profile" : "Signed in with Microsoft"}
               >
-                <span class="account-badge-dot" />
+                <Show
+                  when={!account()?.is_offline}
+                  fallback={<span class="account-badge-dot account-badge-dot--offline" />}
+                >
+                  <IconMicrosoft class="account-badge-ms-icon" />
+                </Show>
                 <span>{account()?.is_offline ? "Offline" : "Microsoft"}</span>
               </div>
             </div>
