@@ -10,7 +10,7 @@ import {
   bulkProgress,
 } from "../App";
 import { activeInstall, cancelActiveInstall } from "../services/installProgress";
-import { activeModpackTask, cancelQueuedModpack } from "../services/modpackQueue";
+import { activeInstallTask, queuedInstallTasks, cancelQueuedTask } from "../services/modpackQueue";
 import { IconCheck, IconX, IconDownload } from "../components/Icons";
 
 function getCategoryLabel(category: string): string {
@@ -28,10 +28,10 @@ const Downloads: Component = () => {
   const activeDownloads = () => downloads().filter(d => d.status === "downloading");
   const history = () => downloads().filter(d => d.status !== "downloading").slice(0, 100);
 
-  // The active orchestrator install (e.g. modpack from modpackQueue)
+  // The active orchestrator install (e.g. modpack from installQueue)
   const activeInstallEntry = () => {
     if (!activeInstall().active) return null;
-    const task = activeModpackTask();
+    const task = activeInstallTask();
     if (task) {
       const found = downloads().find((d) => d.id === task.id);
       if (found) return found;
@@ -52,15 +52,40 @@ const Downloads: Component = () => {
   };
 
   // Active content download (when not orchestrated by activeInstall)
-  // In App.tsx, new downloads are prepended ([entry, ...prev]), so oldest active item is at the end (FIFO).
   const activeContentItem = () => {
     if (activeInstall().active) return null;
+    const task = activeInstallTask();
+    if (task && !task.isOrchestrator) {
+      const found = downloads().find((d) => d.id === task.id);
+      if (found) return found;
+    }
     const list = activeDownloads();
     if (list.length === 0) return null;
     return list[list.length - 1];
   };
 
   const queuedDownloads = () => {
+    const qTasks = queuedInstallTasks();
+    if (qTasks.length > 0) {
+      return qTasks.map((task) => {
+        const found = downloads().find((d) => d.id === task.id);
+        if (found) return found;
+        const synthetic: DownloadEntry = {
+          id: task.id,
+          name: task.title,
+          category: task.category,
+          status: "downloading",
+          timestamp: Date.now(),
+          iconUrl: task.meta?.iconUrl ?? undefined,
+          loader: task.meta?.loader,
+          gameVersion: task.meta?.gameVersion,
+          versionNumber: task.meta?.versionNumber ?? undefined,
+          author: task.meta?.author ?? undefined,
+        };
+        return synthetic;
+      });
+    }
+
     const list = activeDownloads();
     if (activeInstall().active) {
       const currentModpack = activeInstallEntry();
@@ -71,13 +96,12 @@ const Downloads: Component = () => {
   };
 
   const totalActiveCount = () => {
-    if (activeInstall().active) {
-      return queuedDownloads().length + 1;
-    }
-    return activeDownloads().length;
+    const qCount = queuedDownloads().length;
+    const hasActive = activeInstall().active || Boolean(activeContentItem());
+    return qCount + (hasActive ? 1 : 0);
   };
 
-  const hasAnyActive = () => activeInstall().active || activeDownloads().length > 0;
+  const hasAnyActive = () => activeInstall().active || Boolean(activeInstallTask()) || activeDownloads().length > 0;
 
   const timeAgo = (ts: number): string => {
     const diff = Date.now() - ts;
@@ -270,7 +294,7 @@ const Downloads: Component = () => {
             </span>
           </div>
           <div class="dl-queue-list">
-            <For each={[...queuedDownloads()].reverse()}>
+            <For each={queuedDownloads()}>
               {(dl, index) => <ActiveDownloadCard entry={dl} position={index() + 1} />}
             </For>
           </div>
@@ -306,7 +330,7 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry; position?: number }>
 
   const handleCancel = (e: MouseEvent) => {
     e.stopPropagation();
-    const handled = cancelQueuedModpack(dl().id);
+    const handled = cancelQueuedTask(dl().id);
     if (!handled) {
       failDownload(dl().id, "Install cancelled");
     }

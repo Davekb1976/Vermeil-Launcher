@@ -6,14 +6,17 @@ import {
   refetchInstances,
   refreshPinnedInstanceIds,
   showToast,
+  downloads,
 } from "../App";
 import { resetActiveInstall, setActiveInstall } from "./installProgress";
 
-export interface QueuedModpackTask {
+export interface QueuedInstallTask {
   id: string; // dlId from trackDownload
   title: string;
   projectId: string;
-  category: "modpack" | "instance";
+  category: string;
+  instanceId?: string;
+  isOrchestrator?: boolean;
   meta?: {
     iconUrl?: string | null;
     loader?: string;
@@ -21,58 +24,105 @@ export interface QueuedModpackTask {
     versionNumber?: string | null;
     author?: string | null;
   };
-  execute: () => Promise<any>;
+  execute: (dlId: string) => Promise<any>;
 }
 
-const [activeModpackTask, setActiveModpackTask] = createSignal<QueuedModpackTask | null>(null);
-const [queuedModpackTasks, setQueuedModpackTasks] = createSignal<QueuedModpackTask[]>([]);
+// Backwards-compatible alias for existing imports
+export type QueuedModpackTask = QueuedInstallTask;
 
-export { activeModpackTask, queuedModpackTasks };
+const [activeInstallTask, setActiveInstallTask] = createSignal<QueuedInstallTask | null>(null);
+const [queuedInstallTasks, setQueuedInstallTasks] = createSignal<QueuedInstallTask[]>([]);
 
+// Backwards-compatible aliases
+export const activeModpackTask = activeInstallTask;
+export const queuedModpackTasks = queuedInstallTasks;
+export { activeInstallTask, queuedInstallTasks };
+
+export function isTaskQueuedOrActive(projectId: string, instanceId?: string): boolean {
+  const current = activeInstallTask();
+  if (current && current.projectId === projectId) {
+    if (!instanceId || !current.instanceId || current.instanceId === instanceId) {
+      return true;
+    }
+  }
+  return queuedInstallTasks().some((t) => {
+    if (t.projectId !== projectId) return false;
+    if (!instanceId || !t.instanceId) return true;
+    return t.instanceId === instanceId;
+  });
+}
+
+export function isTaskActive(projectId: string, instanceId?: string): boolean {
+  const current = activeInstallTask();
+  if (!current || current.projectId !== projectId) return false;
+  if (instanceId && current.instanceId && current.instanceId !== instanceId) return false;
+  return true;
+}
+
+export function isTaskQueued(projectId: string, instanceId?: string): boolean {
+  return queuedInstallTasks().some((t) => {
+    if (t.projectId !== projectId) return false;
+    if (!instanceId || !t.instanceId) return true;
+    return t.instanceId === instanceId;
+  });
+}
+
+// Backwards-compatible aliases
 export function isModpackQueuedOrActive(projectId: string): boolean {
-  const current = activeModpackTask();
-  if (current && current.projectId === projectId) return true;
-  return queuedModpackTasks().some((t) => t.projectId === projectId);
+  return isTaskQueuedOrActive(projectId);
 }
 
 export function isModpackActive(dlId: string): boolean {
-  return activeModpackTask()?.id === dlId;
+  return activeInstallTask()?.id === dlId;
 }
 
-export function enqueueModpack(
-  task: Omit<QueuedModpackTask, "id">,
+export function enqueueInstallTask(
+  task: Omit<QueuedInstallTask, "id">,
 ): string {
   const dlId = trackDownload(task.title, task.category, task.meta);
-  const item: QueuedModpackTask = {
+  const item: QueuedInstallTask = {
     ...task,
     id: dlId,
   };
 
-  setQueuedModpackTasks((prev) => [...prev, item]);
+  setQueuedInstallTasks((prev) => [...prev, item]);
   processQueue();
   return dlId;
 }
 
-export function cancelQueuedModpack(dlId: string): boolean {
-  const list = queuedModpackTasks();
+// Backwards-compatible alias for modpacks (orchestrator installs)
+export function enqueueModpack(
+  task: Omit<QueuedInstallTask, "id">,
+): string {
+  return enqueueInstallTask({
+    ...task,
+    isOrchestrator: true,
+  });
+}
+
+export function cancelQueuedTask(dlId: string): boolean {
+  const list = queuedInstallTasks();
   const idx = list.findIndex((t) => t.id === dlId);
   if (idx !== -1) {
     const item = list[idx];
-    setQueuedModpackTasks((prev) => prev.filter((t) => t.id !== dlId));
+    setQueuedInstallTasks((prev) => prev.filter((t) => t.id !== dlId));
     failDownload(item.id, "Install cancelled");
     return true;
   }
   return false;
 }
 
+// Backwards-compatible alias
+export const cancelQueuedModpack = cancelQueuedTask;
+
 let isProcessing = false;
 
 async function processQueue() {
-  if (isProcessing || activeModpackTask() !== null) {
+  if (isProcessing || activeInstallTask() !== null) {
     return;
   }
 
-  const queue = queuedModpackTasks();
+  const queue = queuedInstallTasks();
   if (queue.length === 0) {
     return;
   }
@@ -80,31 +130,41 @@ async function processQueue() {
   isProcessing = true;
   const nextTask = queue[0];
   // Pop first item from queued tasks and set as active task
-  setQueuedModpackTasks((prev) => prev.slice(1));
-  setActiveModpackTask(nextTask);
+  setQueuedInstallTasks((prev) => prev.slice(1));
+  setActiveInstallTask(nextTask);
 
-  // Clear previous installation state completely so progress starts at 0%
-  resetActiveInstall();
-  setActiveInstall({
-    active: true,
-    title: nextTask.title,
-    message: "Starting installation...",
-    fraction: 0,
-    done: false,
-    cancelling: false,
-  });
+  if (nextTask.isOrchestrator) {
+    // Clear previous installation state completely so progress starts at 0%
+    resetActiveInstall();
+    setActiveInstall({
+      active: true,
+      title: nextTask.title,
+      message: "Starting installation...",
+      fraction: 0,
+      done: false,
+      cancelling: false,
+    });
+  }
 
   try {
-    await nextTask.execute();
-    await refetchInstances();
-    refreshPinnedInstanceIds().catch(() => {});
-    completeDownload(nextTask.id);
+    await nextTask.execute(nextTask.id);
+    if (nextTask.isOrchestrator) {
+      await refetchInstances();
+      refreshPinnedInstanceIds().catch(() => {});
+      completeDownload(nextTask.id);
+    } else {
+      // In case execute didn't complete it, ensure it's completed
+      const dl = downloads().find((d) => d.id === nextTask.id);
+      if (dl && dl.status === "downloading") {
+        completeDownload(nextTask.id);
+      }
+    }
   } catch (e: any) {
     const isCancelled = typeof e === "string" && e.includes("cancelled");
     if (isCancelled) {
       failDownload(nextTask.id, "Install cancelled");
     } else {
-      console.error("Modpack install failed:", e);
+      console.error(`${nextTask.isOrchestrator ? "Modpack" : "Content"} install failed:`, e);
       failDownload(nextTask.id, typeof e === "string" ? e : (e?.message || "Installation failed"));
       showToast({
         title: "Install failed",
@@ -114,10 +174,12 @@ async function processQueue() {
       });
     }
   } finally {
-    setActiveModpackTask(null);
-    resetActiveInstall();
+    setActiveInstallTask(null);
+    if (nextTask.isOrchestrator) {
+      resetActiveInstall();
+    }
     isProcessing = false;
-    // Automatically advance to the next queued modpack
+    // Automatically advance to the next queued item (FIFO)
     processQueue();
   }
 }

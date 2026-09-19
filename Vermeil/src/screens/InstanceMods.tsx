@@ -1,6 +1,6 @@
 import { Component, createSignal, createEffect, createMemo, createResource, untrack, For, Show, onMount, onCleanup } from "solid-js";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { setActiveScreen, instances, activeInstanceId, setActiveInstanceId, refetchInstances, refreshPinnedInstanceIds, initialInstanceTab, gameRunning, trackDownload, completeDownload, failDownload, startBulkBatch, endBulkBatch, showToast, gameLogsFor, setDockHidden, setDockPagination, logsPoppedOut } from "../App";
+import { setActiveScreen, instances, activeInstanceId, setActiveInstanceId, refetchInstances, refreshPinnedInstanceIds, initialInstanceTab, gameRunning, completeDownload, failDownload, startBulkBatch, endBulkBatch, showToast, gameLogsFor, setDockHidden, setDockPagination, logsPoppedOut } from "../App";
 import { reportDependencyIssues, DependencyIssue } from "../components/DependencyIssuesModal";
 import { contentVersion } from "../lib/contentVersion";
 import { loaderLabel, loaderBadgeClass } from "../lib/loader";
@@ -11,6 +11,7 @@ import ChangeLoaderModal, { openChangeLoaderModal } from "../modals/ChangeLoader
 import { formatDownloads, formatSize, formatVersionRange } from "../lib/format";
 import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled } from "../ipc/commands";
 import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconFolderOpen, IconChevronDown, IconImage } from "../components/Icons";
+import { enqueueInstallTask, isTaskQueuedOrActive, isTaskActive, isTaskQueued } from "../services/modpackQueue";
 
 const SORT_OPTIONS = [
   { value: "relevance", label: "Relevance" },
@@ -204,10 +205,8 @@ const InstanceMods: Component = () => {
 
   // Map of project_id → ModUpdate. Populated by `checkModUpdates` whenever the
   // Installed tab is opened so each card can render an "Update" pill without
-  // a per-card network round-trip. `updatingMod` tracks the project currently
-  // being upgraded so its card can show a spinner.
+  // a per-card network round-trip.
   const [modUpdates, setModUpdates] = createSignal<Map<string, ModUpdate>>(new Map());
-  const [updatingMod, setUpdatingMod] = createSignal<string | null>(null);
   const [checkingUpdates, setCheckingUpdates] = createSignal(false);
 
   // Refresh the update map. Runs on:
@@ -278,7 +277,6 @@ const InstanceMods: Component = () => {
   const installedPageSize = createGridPageSize({ track: 280, gap: 14, rowHeight: 200, maxRows: 3, maxCols: 4, debounceMs: 0 });
   const [installedPage, setInstalledPage] = createSignal(1);
   const [modSource, setModSource] = createSignal<"modrinth" | "curseforge">("modrinth");
-  const [installing, setInstalling] = createSignal<string | null>(null);
   /** Browse result shown in the detail overlay, if any. */
   const [detailMod, setDetailMod] = createSignal<ModHit | null>(null);
   const [localInstalled, setLocalInstalled] = createSignal<Set<string>>(new Set());
@@ -902,52 +900,58 @@ const InstanceMods: Component = () => {
    * exact version (a Modrinth version id or a CurseForge file id). Omitted — the
    * plain Install button — lets the backend resolve the newest compatible one.
    */
-  const handleInstallMod = async (mod: ModHit, versionId?: string) => {
+  const handleInstallMod = (mod: ModHit, versionId?: string) => {
     const inst = instance();
     if (!inst) return;
-    setInstalling(mod.project_id);
     const cat = browseFilter() === "all" ? detectCategory(mod) : browseFilter();
-    const dlId = trackDownload(mod.title, cat, {
-      iconUrl: mod.icon_url,
-      loader: inst.loader.type,
-      gameVersion: inst.game_version,
-      author: mod.author,
+    enqueueInstallTask({
+      title: mod.title,
+      projectId: mod.project_id,
+      category: cat,
+      instanceId: inst.id,
+      meta: {
+        iconUrl: mod.icon_url,
+        loader: inst.loader.type,
+        gameVersion: inst.game_version,
+        author: mod.author,
+      },
+      execute: async (dlId: string) => {
+        try {
+          const resultJson = modSource() === "curseforge"
+            ? await installCfModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId)
+            : await installModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId);
+          setLocalInstalled(prev => { const s = new Set(prev); s.add(mod.project_id); return s; });
+          try {
+            const result = JSON.parse(resultJson);
+            const depsInstalled: number = result.deps_installed ?? 0;
+            const depTitles: string[] = result.dep_titles ?? [];
+            const depIssues: DependencyIssue[] = result.issues ?? [];
+            const vnum: string | undefined = result.mod_entry?.version_number ?? undefined;
+            if (depsInstalled > 0) {
+              // Show up to 3 dep titles inline; fall back to count for the rest.
+              const preview = depTitles.slice(0, 3).join(", ");
+              const more = depTitles.length > 3 ? ` +${depTitles.length - 3} more` : "";
+              const message = depTitles.length > 0
+                ? `${mod.title} with ${preview}${more}`
+                : `${mod.title} (+${depsInstalled} dep${depsInstalled === 1 ? "" : "s"})`;
+              completeDownload(dlId, message, vnum);
+            } else {
+              completeDownload(dlId, undefined, vnum);
+            }
+            // Show structured per-dep modal for missing/incompatible/failed deps.
+            if (depIssues.length > 0) {
+              reportDependencyIssues(mod.title, depIssues);
+            }
+          } catch {
+            completeDownload(dlId);
+          }
+          await refetchInstances();
+        } catch (e: any) {
+          failDownload(dlId, typeof e === "string" ? e : (e?.message || "Unknown error"));
+          throw e;
+        }
+      },
     });
-    try {
-      const resultJson = modSource() === "curseforge"
-        ? await installCfModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId)
-        : await installModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId);
-      setLocalInstalled(prev => { const s = new Set(prev); s.add(mod.project_id); return s; });
-      try {
-        const result = JSON.parse(resultJson);
-        const depsInstalled: number = result.deps_installed ?? 0;
-        const depTitles: string[] = result.dep_titles ?? [];
-        const depIssues: DependencyIssue[] = result.issues ?? [];
-        const vnum: string | undefined = result.mod_entry?.version_number ?? undefined;
-        if (depsInstalled > 0) {
-          // Show up to 3 dep titles inline; fall back to count for the rest.
-          const preview = depTitles.slice(0, 3).join(", ");
-          const more = depTitles.length > 3 ? ` +${depTitles.length - 3} more` : "";
-          const message = depTitles.length > 0
-            ? `${mod.title} with ${preview}${more}`
-            : `${mod.title} (+${depsInstalled} dep${depsInstalled === 1 ? "" : "s"})`;
-          completeDownload(dlId, message, vnum);
-        } else {
-          completeDownload(dlId, undefined, vnum);
-        }
-        // Show structured per-dep modal for missing/incompatible/failed deps.
-        if (depIssues.length > 0) {
-          reportDependencyIssues(mod.title, depIssues);
-        }
-      } catch {
-        completeDownload(dlId);
-      }
-      // Refresh from the instance so dependencies pulled in alongside the
-      // primary mod show as installed immediately.
-      await refetchInstances();
-    } catch (e: any) {
-      failDownload(dlId, typeof e === "string" ? e : (e?.message || "Unknown error"));
-    } finally { setInstalling(null); }
   };
 
   const toggleSelectItem = (mod: ModHit) => {
@@ -964,44 +968,50 @@ const InstanceMods: Component = () => {
   /// Apply an available update for a single Modrinth-sourced mod. Reuses the
   /// install-flow's structured error envelope so any compatibility issues
   /// during the dependency walk are surfaced through the existing modal.
-  const handleUpdateMod = async (projectId: string, modTitle: string) => {
+  const handleUpdateMod = (projectId: string, modTitle: string) => {
     const inst = instance();
     if (!inst) return;
-    setUpdatingMod(projectId);
-    const dlId = trackDownload(modTitle, "mod", {
-      loader: inst.loader.type,
-      gameVersion: inst.game_version,
-    });
-    try {
-      const resultJson = await applyModUpdate(inst.id, projectId);
-      // Clear the pill optimistically; the next refresh confirms.
-      setModUpdates(prev => {
-        const next = new Map(prev);
-        next.delete(projectId);
-        return next;
-      });
-      try {
-        const result = JSON.parse(resultJson);
-        const issues: DependencyIssue[] = result.issues ?? [];
-        if (issues.length > 0) {
-          reportDependencyIssues(modTitle, issues);
+    enqueueInstallTask({
+      title: modTitle,
+      projectId,
+      category: "mod",
+      instanceId: inst.id,
+      meta: {
+        loader: inst.loader.type,
+        gameVersion: inst.game_version,
+      },
+      execute: async (dlId: string) => {
+        try {
+          const resultJson = await applyModUpdate(inst.id, projectId);
+          // Clear the pill optimistically; the next refresh confirms.
+          setModUpdates(prev => {
+            const next = new Map(prev);
+            next.delete(projectId);
+            return next;
+          });
+          try {
+            const result = JSON.parse(resultJson);
+            const issues: DependencyIssue[] = result.issues ?? [];
+            if (issues.length > 0) {
+              reportDependencyIssues(modTitle, issues);
+            }
+          } catch {
+            // Older command shape — ignore.
+          }
+          await refetchInstances();
+          completeDownload(dlId, modTitle);
+          // Re-check in case the update introduced new mods that themselves have
+          // pending updates (rare but possible with deep dep trees).
+          refreshUpdates();
+        } catch (e: any) {
+          failDownload(dlId, typeof e === "string" ? e : (e?.message || "Unknown error"));
+          throw e;
         }
-      } catch {
-        // Older command shape — ignore.
-      }
-      await refetchInstances();
-      completeDownload(dlId, modTitle);
-      // Re-check in case the update introduced new mods that themselves have
-      // pending updates (rare but possible with deep dep trees).
-      refreshUpdates();
-    } catch (e: any) {
-      failDownload(dlId, typeof e === "string" ? e : (e?.message || "Unknown error"));
-    } finally {
-      setUpdatingMod(null);
-    }
+      },
+    });
   };
 
-  const handleBulkInstall = async () => {
+  const handleBulkInstall = () => {
     const inst = instance();
     if (!inst) return;
     const items = Array.from(selectedItems().values());
@@ -1011,52 +1021,58 @@ const InstanceMods: Component = () => {
     setSelectMode(false);
     setSelectedItems(new Map());
 
-    // Track all items upfront so toast shows correct total
-    const dlIds: { dlId: string; mod: ModHit; category: string }[] = [];
-    for (const { mod, category } of items) {
-      const dlId = trackDownload(mod.title, category, {
-        iconUrl: mod.icon_url,
-        loader: inst.loader.type,
-        gameVersion: inst.game_version,
-        author: mod.author,
-      });
-      dlIds.push({ dlId, mod, category });
-    }
     startBulkBatch(items.length);
 
     // Aggregate dependency issues across the whole batch so the modal at the
     // end lists everything in one place rather than firing per-item.
     const aggregateIssues: DependencyIssue[] = [];
+    let completedCount = 0;
 
-    // Process items sequentially to avoid rate limits and instance.json race conditions
-    for (const { dlId, mod, category } of dlIds) {
-      try {
-        const resultJson = modSource() === "curseforge"
-          ? await installCfModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, category)
-          : await installModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, category);
-        setLocalInstalled(prev => { const s = new Set(prev); s.add(mod.project_id); return s; });
-        try {
-          const result = JSON.parse(resultJson);
-          const depIssues: DependencyIssue[] = result.issues ?? [];
-          aggregateIssues.push(...depIssues);
-          completeDownload(dlId, undefined, result.mod_entry?.version_number ?? undefined);
-        } catch {
-          // resultJson might not be valid JSON for older command shapes — ignore
-          completeDownload(dlId);
-        }
-      } catch (e: any) {
-        failDownload(dlId, `Failed to install ${mod.title}`);
-        console.error(`Bulk install failed for ${mod.title}:`, e);
-      }
-    }
-
-    endBulkBatch();
-    setBulkInstalling(false);
-    await refetchInstances();
-
-    // Surface every issue collected during the batch in one modal.
-    if (aggregateIssues.length > 0) {
-      reportDependencyIssues(`${items.length} items`, aggregateIssues);
+    // Process items sequentially in queue to avoid rate limits and instance.json race conditions
+    for (const { mod, category } of items) {
+      enqueueInstallTask({
+        title: mod.title,
+        projectId: mod.project_id,
+        category,
+        instanceId: inst.id,
+        meta: {
+          iconUrl: mod.icon_url,
+          loader: inst.loader.type,
+          gameVersion: inst.game_version,
+          author: mod.author,
+        },
+        execute: async (dlId: string) => {
+          try {
+            const resultJson = modSource() === "curseforge"
+              ? await installCfModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, category)
+              : await installModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, category);
+            setLocalInstalled(prev => { const s = new Set(prev); s.add(mod.project_id); return s; });
+            try {
+              const result = JSON.parse(resultJson);
+              const depIssues: DependencyIssue[] = result.issues ?? [];
+              aggregateIssues.push(...depIssues);
+              completeDownload(dlId, undefined, result.mod_entry?.version_number ?? undefined);
+            } catch {
+              // resultJson might not be valid JSON for older command shapes — ignore
+              completeDownload(dlId);
+            }
+          } catch (e: any) {
+            failDownload(dlId, `Failed to install ${mod.title}`);
+            console.error(`Bulk install failed for ${mod.title}:`, e);
+          } finally {
+            completedCount++;
+            await refetchInstances();
+            if (completedCount >= items.length) {
+              endBulkBatch();
+              setBulkInstalling(false);
+              // Surface every issue collected during the batch in one modal.
+              if (aggregateIssues.length > 0) {
+                reportDependencyIssues(`${items.length} items`, aggregateIssues);
+              }
+            }
+          }
+        },
+      });
     }
   };
 
@@ -1908,15 +1924,17 @@ const InstanceMods: Component = () => {
                       <Show when={modUpdates().has(mod.project_id)}>
                         <button
                           class="mod-tag mod-tag-update"
-                          disabled={updatingMod() === mod.project_id}
+                          disabled={isTaskQueuedOrActive(mod.project_id, instance()?.id)}
                           data-tip={`Update to ${modUpdates().get(mod.project_id)?.latest_version_number}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleUpdateMod(mod.project_id, mod.title || mod.filename);
                           }}
                         >
-                          {updatingMod() === mod.project_id
+                          {isTaskActive(mod.project_id, instance()?.id)
                             ? "Updating..."
+                            : isTaskQueued(mod.project_id, instance()?.id)
+                            ? "Queued"
                             : `↑ ${modUpdates().get(mod.project_id)?.latest_version_number ?? "Update"}`}
                         </button>
                       </Show>
@@ -2150,9 +2168,9 @@ const InstanceMods: Component = () => {
                         <Show when={selectMode()} fallback={
                           /* stopPropagation so installing doesn't also toggle
                              the card's detail view. */
-                          <button class="btn btn--sm btn--primary" disabled={installing() === mod.project_id}
+                          <button class="btn btn--sm btn--primary" disabled={isTaskQueuedOrActive(mod.project_id, instance()?.id)}
                             onClick={(e) => { e.stopPropagation(); handleInstallMod(mod); }}>
-                            {installing() === mod.project_id ? "..." : "+ Install"}
+                            {isTaskActive(mod.project_id, instance()?.id) ? "..." : isTaskQueued(mod.project_id, instance()?.id) ? "Queued" : "+ Install"}
                           </button>
                         }>
                           <div class={`select-check ${selectedItems().has(mod.project_id) ? "checked" : ""}`}>
@@ -2184,7 +2202,7 @@ const InstanceMods: Component = () => {
               category={browseFilter() === "all" ? (detailMod() ? detectCategory(detailMod()!) : "mod") : browseFilter()}
               loaders={detailMod() ? extractLoaders(detailMod()!.categories) : []}
               installedVersionId={instance()?.mods?.find(m => m.project_id === detailMod()?.project_id)?.version_id}
-              busy={installing() === detailMod()?.project_id}
+              busy={isTaskQueuedOrActive(detailMod()?.project_id || "", instance()?.id)}
               onClose={() => setDetailMod(null)}
               /* Close on install. The install-progress popup and toasts sit at
                  z-index 9998/9999, well above the modal overlay's 50, so leaving
