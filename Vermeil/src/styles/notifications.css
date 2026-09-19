@@ -307,6 +307,18 @@
 .install-progress-bar-fill.done {
   background: var(--success);
 }
+.install-progress-bar-fill.indeterminate {
+  width: 40% !important;
+  animation: indeterminateProgress 1.4s ease-in-out infinite;
+}
+@keyframes indeterminateProgress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
 
 
 

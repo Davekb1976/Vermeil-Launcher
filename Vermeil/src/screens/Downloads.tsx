@@ -1,5 +1,13 @@
 import { Component, For, Show } from "solid-js";
-import { downloads, clearDownloadHistory, DownloadEntry } from "../App";
+import {
+  downloads,
+  clearDownloadHistory,
+  DownloadEntry,
+  isBulkInstall,
+  bulkBatchSize,
+  bulkDone,
+  bulkProgress,
+} from "../App";
 import { activeInstall, cancelActiveInstall } from "../services/installProgress";
 import { IconCheck, IconX, IconDownload } from "../components/Icons";
 
@@ -40,24 +48,30 @@ const Downloads: Component = () => {
     return list[list.length - 1];
   };
 
-  const queuedDownloads = () => {
+  // Active content download (when not orchestrated by activeInstall)
+  // In App.tsx, new downloads are prepended ([entry, ...prev]), so oldest active item is at the end (FIFO).
+  const activeContentItem = () => {
+    if (activeInstall().active) return null;
     const list = activeDownloads();
-    const currentActive = activeInstallEntry();
-    if (!currentActive) return list;
-    return list.filter((dl) => dl.id !== currentActive.id);
+    if (list.length === 0) return null;
+    return list[list.length - 1];
   };
 
-  const isItemQueued = (entry: DownloadEntry) => {
-    if (activeInstall().active) {
-      return true;
-    }
+  const queuedDownloads = () => {
     const list = activeDownloads();
-    const oldest = list[list.length - 1];
-    return entry.id !== oldest?.id;
+    if (activeInstall().active) {
+      const currentModpack = activeInstallEntry();
+      return currentModpack ? list.filter((dl) => dl.id !== currentModpack.id) : list;
+    }
+    const currentContent = activeContentItem();
+    return currentContent ? list.filter((dl) => dl.id !== currentContent.id) : [];
   };
 
   const totalActiveCount = () => {
-    return activeInstall().active ? queuedDownloads().length + 1 : activeDownloads().length;
+    if (activeInstall().active) {
+      return queuedDownloads().length + 1;
+    }
+    return activeDownloads().length;
   };
 
   const hasAnyActive = () => activeInstall().active || activeDownloads().length > 0;
@@ -150,21 +164,90 @@ const Downloads: Component = () => {
           </div>
         </Show>
 
+        {/* Content download (single mod, update, bulk mod install) */}
+        <Show when={!activeInstall().active && Boolean(activeContentItem())}>
+          <div class="dl-active-card">
+            <div class="dl-active-header">
+              <div class="dl-active-title-row">
+                <div class="dl-active-icon-badge">
+                  <Show
+                    when={activeContentItem()?.iconUrl}
+                    fallback={<IconDownload />}
+                  >
+                    <img
+                      src={activeContentItem()!.iconUrl!}
+                      alt=""
+                      draggable={false}
+                    />
+                  </Show>
+                </div>
+                <div class="dl-active-title-group">
+                  <span class="dl-active-name" title={activeContentItem()?.name}>
+                    {activeContentItem()?.name}
+                  </span>
+                  <Show when={activeContentItem()?.author}>
+                    <span class="dl-card-author">by {activeContentItem()?.author}</span>
+                  </Show>
+                  <span class="badge">{getCategoryLabel(activeContentItem()?.category || "")}</span>
+                  <Show when={activeContentItem()?.loader}>
+                    <span class={`badge badge--loader badge--${activeContentItem()!.loader}`}>
+                      {activeContentItem()!.loader}
+                    </span>
+                  </Show>
+                  <Show when={activeContentItem()?.gameVersion}>
+                    <span class="badge badge--version">{activeContentItem()!.gameVersion}</span>
+                  </Show>
+                  <Show when={activeContentItem()?.versionNumber}>
+                    <span class="badge badge--vnum" title={activeContentItem()!.versionNumber!}>
+                      {activeContentItem()!.versionNumber}
+                    </span>
+                  </Show>
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: var(--space-2); flex-shrink: 0;">
+                <Show when={isBulkInstall()}>
+                  <span class="badge" style="font-family: var(--font-mono); font-size: var(--fs-xs);">
+                    {bulkDone()} / {bulkBatchSize()}
+                  </span>
+                </Show>
+                <span class="badge" style="color: var(--accent); border-color: rgba(139, 92, 246, 0.3);">
+                  Installing
+                </span>
+              </div>
+            </div>
+
+            <div class="dl-active-stage-row">
+              <span class="dl-active-stage">
+                {isBulkInstall()
+                  ? `Installing ${activeContentItem()?.name} (${bulkDone()} of ${bulkBatchSize()} completed)`
+                  : `Downloading and installing ${activeContentItem()?.name}...`}
+              </span>
+              <Show when={isBulkInstall()}>
+                <span class="dl-active-pct">
+                  {`${Math.round(bulkProgress() * 100)}%`}
+                </span>
+              </Show>
+            </div>
+
+            <div class="install-progress-bar-track">
+              <div
+                class="install-progress-bar-fill"
+                classList={{ indeterminate: !isBulkInstall() }}
+                style={isBulkInstall() ? { width: `${Math.min(bulkProgress() * 100, 100)}%` } : undefined}
+              />
+            </div>
+          </div>
+        </Show>
+
         {/* Queued / other active downloads from downloads() */}
         <Show when={queuedDownloads().length > 0}>
-          <Show when={activeInstall().active}>
-            <div style="font-size: var(--fs-xs); color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: var(--space-3) 0 var(--space-2) 0;">
-              Next in queue ({queuedDownloads().length})
-            </div>
-          </Show>
+          <div style="font-size: var(--fs-xs); color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: var(--space-3) 0 var(--space-2) 0;">
+            Next in queue ({queuedDownloads().length})
+          </div>
           <div class="dl-grid" style="margin-bottom: var(--space-4);">
             <For each={[...queuedDownloads()].reverse()}>
-              {(dl) => (
-                <ActiveDownloadCard
-                  entry={dl}
-                  isQueued={isItemQueued(dl)}
-                />
-              )}
+              {(dl) => <ActiveDownloadCard entry={dl} />}
             </For>
           </div>
         </Show>
@@ -193,12 +276,12 @@ const Downloads: Component = () => {
   );
 };
 
-/** Card for actively downloading or queued items. */
-const ActiveDownloadCard: Component<{ entry: DownloadEntry; isQueued?: boolean }> = (props) => {
+/** Card for queued items waiting in the download queue. */
+const ActiveDownloadCard: Component<{ entry: DownloadEntry }> = (props) => {
   const dl = () => props.entry;
 
   return (
-    <div class="card card--inst dl-card" style="border-left: 3px solid var(--accent);">
+    <div class="card card--inst dl-card" style="border-left: 3px solid var(--border-strong);">
       <div class="card-body">
         <div class="dl-card-icon">
           <Show when={dl().iconUrl} fallback={
@@ -215,11 +298,7 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry; isQueued?: boolean }
                 <span class="dl-card-author">by {dl().author}</span>
               </Show>
             </div>
-            <Show when={props.isQueued} fallback={
-              <span class="toast-spinner" style="width: 14px; height: 14px; border-width: 2px;" />
-            }>
-              <span class="badge" style="font-size: var(--fs-2xs);">In queue</span>
-            </Show>
+            <span class="badge" style="font-size: var(--fs-2xs);">In queue</span>
           </div>
           <div class="dl-card-meta">
             <span class="badge">{getCategoryLabel(dl().category)}</span>
@@ -232,8 +311,8 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry; isQueued?: boolean }
             <Show when={dl().versionNumber}>
               <span class="badge badge--vnum" title={dl().versionNumber!}>{dl().versionNumber}</span>
             </Show>
-            <span class="dl-card-time" style="color:var(--accent);font-weight:600">
-              {props.isQueued ? "Waiting in queue..." : "Downloading..."}
+            <span class="dl-card-time" style="color:var(--text-muted);font-weight:600">
+              Waiting in queue...
             </span>
           </div>
         </div>

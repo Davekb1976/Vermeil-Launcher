@@ -968,7 +968,10 @@ const InstanceMods: Component = () => {
     const inst = instance();
     if (!inst) return;
     setUpdatingMod(projectId);
-    const dlId = trackDownload(modTitle, "mod");
+    const dlId = trackDownload(modTitle, "mod", {
+      loader: inst.loader.type,
+      gameVersion: inst.game_version,
+    });
     try {
       const resultJson = await applyModUpdate(inst.id, projectId);
       // Clear the pill optimistically; the next refresh confirms.
@@ -1015,6 +1018,7 @@ const InstanceMods: Component = () => {
         iconUrl: mod.icon_url,
         loader: inst.loader.type,
         gameVersion: inst.game_version,
+        author: mod.author,
       });
       dlIds.push({ dlId, mod, category });
     }
