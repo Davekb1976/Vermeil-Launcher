@@ -5215,16 +5215,42 @@
    ════════════════════════════════════════════════════════════ */
 .import-screen {
   width: 100%;
-  max-width: 860px;
   box-sizing: border-box;
   padding-bottom: 80px;
 }
 
 .import-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1060px) {
+  .import-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.import-main-column {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  min-width: 0;
   width: 100%;
+}
+
+.import-sidebar-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.import-sidebar-column .card-gamemode-section {
+  margin-bottom: 0;
 }
 
 /* Source Selection Cards */
