@@ -247,9 +247,9 @@ const Home: Component = () => {
 
   return (
     <div class="screen-enter">
-      {/* Tactical Identity Plate (Player Card) */}
+      {/* World-Card Architectural Twin: Player Greeting & Identity Plate */}
       <div
-        class="home-greeting panel--bracketed"
+        class="home-greeting"
         onClick={() => setActiveScreen("account")}
         role="button"
         tabIndex={0}
@@ -261,21 +261,22 @@ const Home: Component = () => {
           }
         }}
       >
-        <div class="home-greeting-identity">
-          <div class="home-greeting-avatar-well">
-            <PlayerHead
-              skinUrl={activeSkinUrl()}
-              name={displayName()}
-              size={44}
-              class="home-greeting-head"
-            />
-          </div>
-          <div class="home-greeting-info">
-            <div class="home-greeting-top">
+        {/* Flush left square avatar thumb bay — exact twin of .world-card-thumb */}
+        <div class="home-greeting-thumb">
+          <PlayerHead
+            skinUrl={activeSkinUrl()}
+            name={displayName()}
+            size={82}
+            class="home-greeting-avatar"
+          />
+        </div>
+
+        {/* Card content body */}
+        <div class="home-greeting-body">
+          <div class="home-greeting-main">
+            <div class="home-greeting-title-row">
               <span class="home-greeting-salutation">{timeOfDayGreeting()},</span>
               <span class="home-greeting-name">{displayName()}</span>
-            </div>
-            <div class="home-greeting-badges">
               <div
                 class={`account-badge-active ${account()?.is_offline ? "account-badge--offline" : ""}`}
                 title={account()?.is_offline ? "Offline Minecraft profile" : "Signed in with Microsoft"}
@@ -283,41 +284,47 @@ const Home: Component = () => {
                 <span class="account-badge-dot" />
                 <span>{account()?.is_offline ? "Offline" : "Microsoft"}</span>
               </div>
-              <Show
-                when={headerSummary()}
-                fallback={<span class="badge">0 instances</span>}
-              >
-                <span class="badge">
-                  {headerSummary()!.count} instance{headerSummary()!.count === 1 ? "" : "s"}
-                </span>
-                <Show when={headerSummary()!.hasPlaytime}>
-                  <span class="badge badge--version" title="Total playtime across all instances">
-                    {headerSummary()!.totalPlaytime} played
-                  </span>
-                </Show>
-                <Show when={headerSummary()!.relative}>
-                  <span class="badge">
-                    last played {headerSummary()!.relative}
-                  </span>
-                </Show>
-              </Show>
+            </div>
+            <div class="home-greeting-sub">
+              <span class="home-greeting-session-label">Active Session</span>
+              <span class="home-greeting-bullet">·</span>
+              <span class="home-greeting-account-type">
+                {account()?.is_offline ? "Local offline profile" : "Official Mojang profile"}
+              </span>
             </div>
           </div>
-        </div>
 
-        <div class="home-greeting-actions">
-          <button
-            type="button"
-            class="btn btn--secondary btn--sm home-greeting-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              setActiveScreen("skins");
-            }}
-            title="Customize player skin and in-game capes"
-          >
-            <span class="home-greeting-btn-icon"><IconShirt /></span>
-            <span>Skins & Capes</span>
-          </button>
+          {/* Central live telemetry cluster */}
+          <div class="home-greeting-telemetry">
+            <div class="home-telemetry-plate">
+              <span class="home-telemetry-num">{headerSummary()?.count ?? 0}</span>
+              <span class="home-telemetry-lbl">Instances</span>
+            </div>
+            <div class="home-telemetry-plate">
+              <span class="home-telemetry-num">{headerSummary()?.totalPlaytime ?? "0m"}</span>
+              <span class="home-telemetry-lbl">Playtime</span>
+            </div>
+            <div class="home-telemetry-plate">
+              <span class="home-telemetry-num">{headerSummary()?.relative ?? "None"}</span>
+              <span class="home-telemetry-lbl">Last Active</span>
+            </div>
+          </div>
+
+          {/* Right actions */}
+          <div class="home-greeting-actions">
+            <button
+              type="button"
+              class="btn btn--secondary btn--sm home-action-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveScreen("skins");
+              }}
+              title="Customize player skin and in-game capes"
+            >
+              <IconShirt />
+              <span>Skins & Capes</span>
+            </button>
+          </div>
         </div>
       </div>
 
