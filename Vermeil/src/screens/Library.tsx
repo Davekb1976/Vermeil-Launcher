@@ -4,6 +4,7 @@ import { Instance, deleteInstance, getSettings } from "../ipc/commands";
 import { IconPlus, IconModrinth, IconCurseForge, IconX } from "../components/Icons";
 import Dropdown from "../components/Dropdown";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
+import { resolveAssetUrl } from "../lib/assets";
 
 /** Library sort modes. Persisted in localStorage so the choice sticks between
  *  sessions (a pure view preference — kept out of the launcher settings file to
@@ -38,12 +39,10 @@ function bannerColor(loader: string): string {
 /**
  * Resolve an instance's banner icon. We treat the literal `"cube"` value as
  * the sentinel "no real icon, fall back to the loader badge" because that's
- * what the backend writes for instances created without an `icon_url`. A real
- * value is a `data:image/...;base64,...` URL ready for `<img src>`.
+ * what the backend writes for instances created without an `icon_url`.
  */
 function instanceIconUrl(inst: { icon: string }): string | undefined {
-  if (!inst.icon || inst.icon === "cube") return undefined;
-  return inst.icon;
+  return resolveAssetUrl(inst.icon);
 }
 
 function timeAgo(dateStr: string | null): string {

@@ -446,9 +446,6 @@ createEffect(() => {
   let changed = false;
   const updated = currentDownloads.map((d) => {
     if (d.category !== "modpack") return d;
-    if (d.iconUrl && d.loader && d.loader !== "modrinth" && d.loader !== "curseforge" && d.gameVersion) {
-      return d;
-    }
     const dlNorm = d.name.toLowerCase().replace(/[^a-z0-9]/g, "");
     const inst = (d.instanceId && instList.find((i) => i.id === d.instanceId)) ||
       instList.find((i) => {
@@ -456,16 +453,27 @@ createEffect(() => {
         return (dlNorm.length > 0 && instNorm.length > 0) && (dlNorm.includes(instNorm) || instNorm.includes(dlNorm));
       });
     if (inst) {
-      changed = true;
-      return {
-        ...d,
-        name: d.name.includes(" v") || d.name.endsWith(".mrpack") || d.name.endsWith(".zip") ? inst.name : d.name,
-        instanceId: inst.id,
-        iconUrl: d.iconUrl || (inst.icon && inst.icon !== "cube" ? inst.icon : undefined),
-        loader: (d.loader && d.loader !== "modrinth" && d.loader !== "curseforge") ? d.loader : inst.loader?.type,
-        gameVersion: d.gameVersion || inst.game_version,
-        versionNumber: d.versionNumber || inst.source_version || undefined,
-      };
+      const newName = (d.name.includes(" v") || d.name.endsWith(".mrpack") || d.name.endsWith(".zip")) ? inst.name : d.name;
+      const newInstId = inst.id;
+      // Do not store multi-megabyte base64 strings in download history; card renders will resolve it dynamically
+      const candidateIcon = inst.icon && inst.icon !== "cube" && !inst.icon.startsWith("data:") ? inst.icon : undefined;
+      const newIcon = d.iconUrl || candidateIcon;
+      const newLoader = (d.loader && d.loader !== "modrinth" && d.loader !== "curseforge") ? d.loader : inst.loader?.type;
+      const newGv = d.gameVersion || inst.game_version;
+      const newVn = d.versionNumber || inst.source_version || undefined;
+
+      if (newName !== d.name || newInstId !== d.instanceId || newIcon !== d.iconUrl || newLoader !== d.loader || newGv !== d.gameVersion || newVn !== d.versionNumber) {
+        changed = true;
+        return {
+          ...d,
+          name: newName,
+          instanceId: newInstId,
+          iconUrl: newIcon,
+          loader: newLoader,
+          gameVersion: newGv,
+          versionNumber: newVn,
+        };
+      }
     }
     return d;
   });

@@ -2,6 +2,7 @@ import { Component, createSignal, Show, For, onMount } from "solid-js";
 import { instances, showToast, refreshPinnedInstanceIds } from "../App";
 import { getSettings, saveSettings } from "../ipc/commands";
 import { IconCheck, IconSearch } from "../components/Icons";
+import { resolveAssetUrl } from "../lib/assets";
 
 /**
  * Dock pin manager. Lets the user pick up to 6 instances to surface as
@@ -155,12 +156,12 @@ const PinInstancesModal: Component = () => {
                             </Show>
                           </div>
                           <div class="pin-instance-icon">
-                            <Show when={inst.icon && inst.icon !== "cube"} fallback={
+                            <Show when={resolveAssetUrl(inst.icon)} fallback={
                               <div class="pin-instance-icon-placeholder">
                                 {inst.name.trim().charAt(0).toUpperCase() || "?"}
                               </div>
                             }>
-                              <img src={inst.icon} alt="" draggable={false} />
+                              <img src={resolveAssetUrl(inst.icon)!} alt="" draggable={false} />
                             </Show>
                           </div>
                           <div class="pin-instance-info">

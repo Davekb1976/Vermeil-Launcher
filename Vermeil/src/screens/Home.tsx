@@ -6,6 +6,7 @@ import { createGridPageSize } from "../lib/gridPageSize";
 import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX } from "../components/Icons";
 import PlayerHead from "../components/PlayerHead";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { resolveAssetUrl } from "../lib/assets";
 
 /** Pick a time-of-day greeting. Cheap personalization that makes the home
  *  screen feel less generic without leaning on user data we don't have. */
@@ -290,8 +291,8 @@ const Home: Component = () => {
                     <div class="world-card-title">{world.worldName}</div>
                     <div class="world-card-sub">
                       {/* Modpack/instance icon + name */}
-                      <Show when={world.instanceIcon && world.instanceIcon !== 'cube'}>
-                        <img class="world-card-inst-icon" src={world.instanceIcon} alt="" draggable={false} />
+                      <Show when={resolveAssetUrl(world.instanceIcon)}>
+                        <img class="world-card-inst-icon" src={resolveAssetUrl(world.instanceIcon)!} alt="" draggable={false} />
                       </Show>
                       <span class="world-card-inst-name">{world.instanceName}</span>
                     </div>

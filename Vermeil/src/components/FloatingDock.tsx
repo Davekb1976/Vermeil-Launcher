@@ -19,6 +19,7 @@ import {
   clearGameLogs,
   activeDownloadCount,
 } from "../App";
+import { resolveAssetUrl } from "../lib/assets";
 import {
   IconHome,
   IconGrid,
@@ -402,8 +403,7 @@ const FloatingDock: Component = () => {
                 <div class="dock-pin-items">
                   <For each={pinnedInstances()}>
                     {(inst, i) => {
-                      const iconSrc = () =>
-                        inst.icon && inst.icon !== "cube" ? inst.icon : undefined;
+                      const iconSrc = () => resolveAssetUrl(inst.icon);
                       const tooltip = `${inst.name} · ${inst.game_version} ${loaderLabel(inst.loader?.type || "vanilla")}`;
                       return (
                         <button

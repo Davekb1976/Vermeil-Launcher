@@ -132,7 +132,7 @@ pub async fn import_zip(
         (parsed_manifest, found_icon)
     };
 
-    let embedded_icon_data_url = if let Some((ref buf, ref ext)) = embedded_icon_bytes {
+    let embedded_icon_path = if let Some((ref buf, ref ext)) = embedded_icon_bytes {
         crate::services::icon_cache::cache_icon_bytes(buf, ext).await
     } else {
         None
@@ -169,7 +169,7 @@ pub async fn import_zip(
     }
 
     let final_icon = project_icon
-        .or(embedded_icon_data_url)
+        .or(embedded_icon_path)
         .unwrap_or_else(|| "cube".to_string());
 
     // Parse loader info

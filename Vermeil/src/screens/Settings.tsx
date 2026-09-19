@@ -13,6 +13,7 @@ import KeybindCapture from "../components/KeybindCapture";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { KEYBINDS, resolveBinding } from "../lib/keybinds";
 import { listen } from "@tauri-apps/api/event";
+import { resolveAssetUrl } from "../lib/assets";
 
 type SettingsTab = "all" | "general" | "resources" | "instances" | "keybinds";
 
@@ -1394,7 +1395,7 @@ const Settings: Component = () => {
                     <div class="card-grid">
                       <For each={instances() || []}>
                         {(inst) => {
-                          const iconUrl = (!inst.icon || inst.icon === "cube") ? undefined : inst.icon;
+                          const iconUrl = resolveAssetUrl(inst.icon);
                           const colorClass = (() => {
                             switch (inst.loader.type) {
                               case "fabric": return "fabric";

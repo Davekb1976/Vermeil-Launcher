@@ -50,8 +50,7 @@ pub async fn cache_remote_icon(url: &str) -> Option<String> {
     let path: PathBuf = icons_dir.join(format!("{}.{}", hash, ext));
 
     if path.exists() {
-        // Already cached — return as data URL
-        return file_to_data_url(&path).await;
+        return Some(clean_path_string(&path));
     }
 
     // Not cached yet — go fetch.
@@ -94,40 +93,27 @@ pub async fn cache_remote_icon(url: &str) -> Option<String> {
     if let Err(e) = tokio::fs::rename(&part, &path).await {
         if path.exists() {
             let _ = tokio::fs::remove_file(&part).await;
-            return file_to_data_url(&path).await;
+            return Some(clean_path_string(&path));
         }
         tracing::debug!("icon cache: rename {:?} -> {:?}: {}", part, path, e);
         return None;
     }
 
-    file_to_data_url(&path).await
+    Some(clean_path_string(&path))
 }
 
-/// Read a cached icon file and return it as a `data:image/...;base64,...` URL.
-/// This sidesteps all Tauri asset-protocol scope/path-encoding issues — the
-/// webview loads the image directly from the inline data URL, same pattern
-/// we use for skin textures.
-async fn file_to_data_url(path: &PathBuf) -> Option<String> {
-    let bytes = match tokio::fs::read(path).await {
-        Ok(b) => b,
-        Err(e) => {
-            tracing::debug!("icon cache: read {:?} for data URL: {}", path, e);
-            return None;
+pub fn clean_path_string(path: &std::path::Path) -> String {
+    let s = path.to_string_lossy().to_string();
+    #[cfg(windows)]
+    {
+        if let Some(rest) = s.strip_prefix(r"\\?\UNC\") {
+            return format!(r"\\{}", rest);
         }
-    };
-
-    let mime = match path.extension().and_then(|e| e.to_str()) {
-        Some("png") => "image/png",
-        Some("jpg") | Some("jpeg") => "image/jpeg",
-        Some("webp") => "image/webp",
-        Some("gif") => "image/gif",
-        Some("svg") => "image/svg+xml",
-        _ => "image/png",
-    };
-
-    use base64::Engine;
-    let encoded = base64::engine::general_purpose::STANDARD.encode(&bytes);
-    Some(format!("data:{};base64,{}", mime, encoded))
+        if let Some(rest) = s.strip_prefix(r"\\?\") {
+            return rest.to_string();
+        }
+    }
+    s
 }
 
 fn guess_extension(url: &str) -> Option<String> {
@@ -152,7 +138,7 @@ fn hex_lower(bytes: &[u8]) -> String {
     out
 }
 
-/// Cache raw icon bytes directly to disk and return as a data URL.
+/// Cache raw icon bytes directly to disk and return as a clean file path.
 /// Used for embedded icons extracted from modpack archives (.mrpack, .zip).
 pub async fn cache_icon_bytes(bytes: &[u8], ext: &str) -> Option<String> {
     if bytes.is_empty() {
@@ -175,24 +161,10 @@ pub async fn cache_icon_bytes(bytes: &[u8], ext: &str) -> Option<String> {
     if !path.exists() {
         if let Err(e) = tokio::fs::write(&path, bytes).await {
             tracing::debug!("icon cache: write {:?} failed: {}", path, e);
-            let mime = match clean_ext {
-                "webp" => "image/webp",
-                "jpg" | "jpeg" => "image/jpeg",
-                "gif" => "image/gif",
-                "svg" => "image/svg+xml",
-                _ => "image/png",
-            };
-            return Some(bytes_to_data_url(bytes, mime));
+            return None;
         }
     }
 
-    file_to_data_url(&path).await
-}
-
-/// Convert raw image bytes to an inline `data:image/...;base64,...` URL.
-pub fn bytes_to_data_url(bytes: &[u8], mime: &str) -> String {
-    use base64::Engine;
-    let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
-    format!("data:{};base64,{}", mime, encoded)
+    Some(clean_path_string(&path))
 }
 

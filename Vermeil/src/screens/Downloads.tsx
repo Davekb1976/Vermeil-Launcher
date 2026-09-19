@@ -13,6 +13,7 @@ import {
 import { activeInstall, cancelActiveInstall } from "../services/installProgress";
 import { activeInstallTask, queuedInstallTasks, cancelQueuedTask } from "../services/modpackQueue";
 import { IconCheck, IconX, IconDownload } from "../components/Icons";
+import { resolveAssetUrl } from "../lib/assets";
 
 function getCategoryLabel(category: string): string {
   switch (category) {
@@ -117,7 +118,7 @@ const Downloads: Component = () => {
 
   const activeIcon = () => {
     const entry = activeInstallEntry();
-    if (entry?.iconUrl) return entry.iconUrl;
+    if (entry?.iconUrl) return resolveAssetUrl(entry.iconUrl);
     const instList = instances() ?? [];
     const activeTitle = (entry?.name || activeInstall().title).toLowerCase().replace(/[^a-z0-9]/g, "");
     if (activeTitle.length > 0) {
@@ -125,7 +126,7 @@ const Downloads: Component = () => {
         const instNorm = i.name.toLowerCase().replace(/[^a-z0-9]/g, "");
         return instNorm.length > 0 && (activeTitle.includes(instNorm) || instNorm.includes(activeTitle));
       });
-      if (inst && inst.icon && inst.icon !== "cube") return inst.icon;
+      if (inst && inst.icon && inst.icon !== "cube") return resolveAssetUrl(inst.icon);
     }
     return undefined;
   };
@@ -368,9 +369,9 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry; position?: number }>
   };
 
   const cardIcon = () => {
-    if (dl().iconUrl) return dl().iconUrl;
+    if (dl().iconUrl) return resolveAssetUrl(dl().iconUrl);
     const inst = matchingInstance();
-    if (inst && inst.icon && inst.icon !== "cube") return inst.icon;
+    if (inst && inst.icon && inst.icon !== "cube") return resolveAssetUrl(inst.icon);
     return undefined;
   };
 
@@ -468,9 +469,9 @@ const DownloadCard: Component<{ entry: DownloadEntry; timeAgo: (ts: number) => s
   };
 
   const cardIcon = () => {
-    if (dl().iconUrl) return dl().iconUrl;
+    if (dl().iconUrl) return resolveAssetUrl(dl().iconUrl);
     const inst = matchingInstance();
-    if (inst && inst.icon && inst.icon !== "cube") return inst.icon;
+    if (inst && inst.icon && inst.icon !== "cube") return resolveAssetUrl(inst.icon);
     return undefined;
   };
 

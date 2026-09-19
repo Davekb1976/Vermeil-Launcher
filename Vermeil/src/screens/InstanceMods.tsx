@@ -13,6 +13,8 @@ import { searchMods, installModToInstance, installCfModToInstance, listInstanceF
 import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconFolderOpen, IconChevronDown, IconImage } from "../components/Icons";
 import { enqueueInstallTask, isTaskQueuedOrActive, isTaskActive, isTaskQueued } from "../services/modpackQueue";
 
+import { resolveAssetUrl } from "../lib/assets";
+
 const SORT_OPTIONS = [
   { value: "relevance", label: "Relevance" },
   { value: "downloads", label: "Downloads" },
@@ -29,16 +31,13 @@ type InstanceTab = "content" | "files" | "worlds" | "logs" | "settings";
 /**
  * Resolve the best icon URL for a mod entry / installed item.
  *
- * Prefers `local_icon_path` when set (a `data:image/...;base64,...` URL
- * cached on install — works offline, no CDN re-hit). Falls back to the
- * remote `icon_url` for items that haven't been re-cached yet (older
- * installs from before the cache existed). Returns `undefined` if neither
- * is available so the caller can render its own fallback glyph.
+ * Prefers `local_icon_path` when set (a disk path or cached URL — works offline,
+ * no CDN re-hit). Falls back to the remote `icon_url` for items that haven't been
+ * re-cached yet. Returns `undefined` if neither is available so the caller can
+ * render its own fallback glyph.
  */
 function resolveIconUrl(item: { local_icon_path?: string | null; icon_url?: string | null }): string | undefined {
-  if (item.local_icon_path) return item.local_icon_path;
-  if (item.icon_url) return item.icon_url;
-  return undefined;
+  return resolveAssetUrl(item.local_icon_path) || (item.icon_url ? item.icon_url : undefined);
 }
 
 /**
@@ -1289,11 +1288,11 @@ const InstanceMods: Component = () => {
                 <div style="display:flex;gap:14px;align-items:center;flex:1;min-width:0">
                   <div class="instance-icon-preview">
                     <Show
-                      when={instance() && instance()!.icon !== "cube"}
+                      when={resolveAssetUrl(instance()?.icon)}
                       fallback={<span class="instance-icon-placeholder">{(instance()?.name ?? "?").trim().charAt(0).toUpperCase() || "?"}</span>}
                     >
                       <img
-                        src={instance()!.icon}
+                        src={resolveAssetUrl(instance()?.icon)!}
                         alt=""
                         draggable={false}
                       />

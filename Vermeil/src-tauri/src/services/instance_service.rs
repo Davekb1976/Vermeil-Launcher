@@ -21,7 +21,8 @@ pub async fn list_all() -> Result<Vec<Instance>, Box<dyn std::error::Error + Sen
             let meta_path = path.join("instance.json");
             if meta_path.exists() {
                 let content = fs::read_to_string(&meta_path)?;
-                if let Ok(instance) = serde_json::from_str::<Instance>(&content) {
+                if let Ok(mut instance) = serde_json::from_str::<Instance>(&content) {
+                    sanitize_instance_json(&mut instance, &meta_path);
                     instances.push(instance);
                 }
             }
@@ -34,6 +35,49 @@ pub async fn list_all() -> Result<Vec<Instance>, Box<dyn std::error::Error + Sen
     });
 
     Ok(instances)
+}
+
+/// Sanitize any legacy bloated base64 data URLs in `instance.mods` or `instance.icon`.
+fn sanitize_instance_json(instance: &mut Instance, meta_path: &std::path::Path) {
+    let mut modified = false;
+
+    for m in &mut instance.mods {
+        if let Some(ref path) = m.local_icon_path {
+            if path.starts_with("data:") {
+                m.local_icon_path = None;
+                modified = true;
+            }
+        }
+    }
+
+    if instance.icon.starts_with("data:") {
+        if let Some((_header, b64)) = instance.icon.split_once(',') {
+            use base64::Engine;
+            if let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(b64) {
+                let icons_dir = paths::data_dir().join("icons");
+                let _ = fs::create_dir_all(&icons_dir);
+                use sha1::{Digest, Sha1};
+                let mut hasher = Sha1::new();
+                hasher.update(&bytes);
+                let mut hash = String::with_capacity(40);
+                for b in hasher.finalize() {
+                    hash.push_str(&format!("{:02x}", b));
+                }
+                let icon_dest = icons_dir.join(format!("{}.png", hash));
+                if fs::write(&icon_dest, &bytes).is_ok() {
+                    instance.icon = crate::services::icon_cache::clean_path_string(&icon_dest);
+                    modified = true;
+                }
+            }
+        }
+    }
+
+    if modified {
+        if let Ok(serialized) = serde_json::to_string_pretty(instance) {
+            let _ = fs::write(meta_path, serialized);
+            tracing::info!("Sanitized legacy bloated instance.json for {}", instance.name);
+        }
+    }
 }
 
 pub async fn create(config: CreateInstanceConfig) -> Result<Instance, Box<dyn std::error::Error + Send + Sync>> {
@@ -92,7 +136,8 @@ pub async fn get_by_id(id: &str) -> Result<Instance, Box<dyn std::error::Error +
     }
 
     let content = fs::read_to_string(&meta_path)?;
-    let instance: Instance = serde_json::from_str(&content)?;
+    let mut instance: Instance = serde_json::from_str(&content)?;
+    sanitize_instance_json(&mut instance, &meta_path);
     Ok(instance)
 }
 

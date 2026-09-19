@@ -250,7 +250,7 @@ pub async fn install_from_mrpack_file(
     let mut source_version = index.version_id.clone();
 
     // 1. Cache embedded icon if found in archive
-    let embedded_icon_data_url = if let Some((ref buf, ref ext)) = embedded_icon_bytes {
+    let embedded_icon_path = if let Some((ref buf, ref ext)) = embedded_icon_bytes {
         crate::services::icon_cache::cache_icon_bytes(buf, ext).await
     } else {
         None
@@ -447,7 +447,7 @@ pub async fn install_from_mrpack_file(
     // The resolved project icon (Modrinth API or embedded archive icon) becomes
     // the new instance's tile icon. Only falls back to "cube" if no icon could be found.
     let icon_value = project_icon_path
-        .or(embedded_icon_data_url)
+        .or(embedded_icon_path)
         .unwrap_or_else(|| "cube".to_string());
     let instance = Instance {
         format_version: 1,
