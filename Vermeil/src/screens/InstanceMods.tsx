@@ -70,7 +70,7 @@ const InstanceMods: Component = () => {
   // now returns InstanceSummary (mod_count only) to keep IPC lean. This
   // separate fetch loads the complete mod list for the active instance only.
   const [instanceDetail, { refetch: refetchDetail }] = createResource(
-    () => activeInstanceId(),
+    () => activeInstanceId() || instance()?.id || null,
     async (id) => {
       if (!id) return null;
       try { return await getInstance(id); } catch { return null; }
@@ -78,6 +78,15 @@ const InstanceMods: Component = () => {
   );
   /** Shorthand: mods from the full detail, or empty array. */
   const instanceMods = () => instanceDetail()?.mods || [];
+
+  // When the instance summary's mod count changes, automatically refresh detail
+  createEffect(() => {
+    const inst = instance();
+    if (inst) {
+      void inst.mod_count;
+      untrack(() => refetchDetail());
+    }
+  });
 
   // Per-instance memory. Adaptive by default (services/memory.rs); an instance
   // can opt out via `java.adaptive_override` and set RAM manually. `effectiveMemory`

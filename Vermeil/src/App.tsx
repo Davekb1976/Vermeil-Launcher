@@ -118,6 +118,7 @@ export function appendGameLog(instanceId: string, line: string) {
 /** Clear logs for a single instance. Called at launch time so a fresh
  *  session starts with an empty viewer instead of last session's output. */
 export function clearGameLogs(instanceId: string) {
+  _logBuffer.delete(instanceId);
   setGameLogs(prev => {
     const next = { ...prev };
     delete next[instanceId];
