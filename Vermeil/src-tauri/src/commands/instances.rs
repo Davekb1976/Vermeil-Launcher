@@ -134,7 +134,18 @@ pub async fn import_mrpack(
     path: String,
     window: tauri::WebviewWindow,
 ) -> Result<Instance, String> {
+    use tauri::Emitter;
     let _install = crate::services::download::InstallScope::begin();
+    let _ = window.emit(
+        "install-progress",
+        crate::services::prepare::InstallProgressPayload {
+            section: "game".to_string(),
+            title: "Modpack".to_string(),
+            message: "Analyzing package...".to_string(),
+            fraction: 0.0,
+            skipped: false,
+        },
+    );
     let path_buf = std::path::PathBuf::from(&path);
     let instance = crate::services::modpack::install_from_mrpack_file(
         &path_buf,

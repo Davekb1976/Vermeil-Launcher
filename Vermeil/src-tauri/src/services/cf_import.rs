@@ -88,26 +88,89 @@ pub struct CfHash {
 pub async fn import_zip(
     zip_path: &str,
     api_key: &str,
-    source_project_id: Option<String>,
-    project_icon: Option<String>,
+    mut source_project_id: Option<String>,
+    mut project_icon: Option<String>,
     window: Option<tauri::WebviewWindow>,
 ) -> Result<Instance, String> {
     let zip_path_buf = PathBuf::from(zip_path);
-    let zip_file = fs::File::open(&zip_path_buf)
-        .map_err(|e| format!("Failed to open zip: {}", e))?;
-    let mut archive = zip::ZipArchive::new(zip_file)
-        .map_err(|e| format!("Invalid zip file: {}", e))?;
 
-    // Find and parse manifest.json
-    let manifest: CfManifest = {
-        let mut manifest_file = archive.by_name("manifest.json")
-            .map_err(|_| "No manifest.json found in zip. Is this a CurseForge export?".to_string())?;
-        let mut content = String::new();
-        std::io::Read::read_to_string(&mut manifest_file, &mut content)
-            .map_err(|e| format!("Read manifest: {}", e))?;
-        serde_json::from_str(&content)
-            .map_err(|e| format!("Parse manifest.json: {}", e))?
+    // Find and parse manifest.json, and extract embedded icon if present.
+    // Done in a dedicated synchronous block so `archive` and `ZipFile` references
+    // are dropped before any async await points (ensuring Send safety).
+    let (manifest, embedded_icon_bytes) = {
+        let zip_file = fs::File::open(&zip_path_buf)
+            .map_err(|e| format!("Failed to open zip: {}", e))?;
+        let mut archive = zip::ZipArchive::new(zip_file)
+            .map_err(|e| format!("Invalid zip file: {}", e))?;
+
+        let parsed_manifest: CfManifest = {
+            let mut manifest_file = archive.by_name("manifest.json")
+                .map_err(|_| "No manifest.json found in zip. Is this a CurseForge export?".to_string())?;
+            let mut content = String::new();
+            std::io::Read::read_to_string(&mut manifest_file, &mut content)
+                .map_err(|e| format!("Read manifest: {}", e))?;
+            serde_json::from_str(&content)
+                .map_err(|e| format!("Parse manifest.json: {}", e))?
+        };
+
+        let mut found_icon = None;
+        for candidate in &[
+            "icon.png", "pack.png", "logo.png", "icon.webp",
+            "overrides/icon.png", "overrides/pack.png", "overrides/logo.png",
+            "client-overrides/icon.png", "client-overrides/pack.png",
+        ] {
+            if let Ok(mut entry) = archive.by_name(candidate) {
+                let mut buf = Vec::new();
+                if std::io::Read::read_to_end(&mut entry, &mut buf).is_ok() && !buf.is_empty() {
+                    let ext = if candidate.ends_with(".webp") { "webp" } else { "png" };
+                    found_icon = Some((buf, ext.to_string()));
+                    break;
+                }
+            }
+        }
+
+        (parsed_manifest, found_icon)
     };
+
+    let embedded_icon_data_url = if let Some((ref buf, ref ext)) = embedded_icon_bytes {
+        crate::services::icon_cache::cache_icon_bytes(buf, ext).await
+    } else {
+        None
+    };
+
+    // 2. If project icon or source project ID is missing, search CurseForge API for matching modpack
+    if (project_icon.is_none() || source_project_id.is_none()) && !api_key.is_empty() && !manifest.name.is_empty() {
+        if let Ok(res) = crate::services::curseforge::search(
+            api_key,
+            &manifest.name,
+            "",
+            "",
+            0,
+            5,
+            "relevance",
+            "modpack",
+        ).await {
+            let target = manifest.name.trim().to_lowercase();
+            let matched = res.hits.iter().find(|h| {
+                h.title.trim().to_lowercase() == target
+            }).or_else(|| res.hits.first());
+
+            if let Some(hit) = matched {
+                if source_project_id.is_none() {
+                    source_project_id = Some(hit.project_id.clone());
+                }
+                if project_icon.is_none() {
+                    if let Some(ref icon_url) = hit.icon_url {
+                        project_icon = crate::services::icon_cache::cache_remote_icon(icon_url).await;
+                    }
+                }
+            }
+        }
+    }
+
+    let final_icon = project_icon
+        .or(embedded_icon_data_url)
+        .unwrap_or_else(|| "cube".to_string());
 
     // Parse loader info
     let (loader_type, loader_version) = parse_loader(&manifest.minecraft.mod_loaders);
@@ -137,7 +200,7 @@ pub async fn import_zip(
         format_version: 1,
         id: instance_id.clone(),
         name: instance_name,
-        icon: project_icon.unwrap_or_else(|| "cube".to_string()),
+        icon: final_icon,
         icon_custom: None,
         game_version: manifest.minecraft.version.clone(),
         loader: LoaderConfig {

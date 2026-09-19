@@ -188,35 +188,136 @@ pub async fn install_from_modrinth(
     result
 }
 
+fn compute_file_sha1(path: &std::path::Path) -> Option<String> {
+    use sha1::{Digest, Sha1};
+    let mut file = fs::File::open(path).ok()?;
+    let mut hasher = Sha1::new();
+    std::io::copy(&mut file, &mut hasher).ok()?;
+    Some(format!("{:x}", hasher.finalize()))
+}
+
 /// Install a modpack from a local .mrpack file. Writes instance.json, then runs
 /// the unified prepare flow with mod tasks + an override-extraction post action.
 ///
 /// `project_icon_path` is an optional pre-cached icon path (typically populated
-/// when this is called via `install_from_modrinth`). If supplied, it becomes
-/// the new instance's `icon`. Imports from a local file with no project context
-/// pass `None` and get the generic `"cube"` placeholder.
+/// when this is called via `install_from_modrinth`). If not supplied, we resolve
+/// the icon automatically via archive extraction or Modrinth hash/name search.
 pub async fn install_from_mrpack_file(
     mrpack_path: &PathBuf,
-    source_project_id: Option<String>,
-    project_icon_path: Option<String>,
+    mut source_project_id: Option<String>,
+    mut project_icon_path: Option<String>,
     window: Option<tauri::WebviewWindow>,
 ) -> Result<Instance, String> {
-    // Open the ZIP and read the manifest.
-    let file = fs::File::open(mrpack_path).map_err(|e| format!("Open mrpack: {}", e))?;
-    let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("Read mrpack ZIP: {}", e))?;
+    // Open the ZIP, read manifest, and extract embedded icon if present.
+    // Done in a dedicated synchronous block so `archive` and `ZipFile` references
+    // are dropped before any async await points (ensuring Send safety).
+    let (index, embedded_icon_bytes) = {
+        let file = fs::File::open(mrpack_path).map_err(|e| format!("Open mrpack: {}", e))?;
+        let mut archive = zip::ZipArchive::new(file).map_err(|e| format!("Read mrpack ZIP: {}", e))?;
 
-    let mut index_str = String::new();
-    {
-        let mut entry = archive
-            .by_name("modrinth.index.json")
-            .map_err(|_| "No modrinth.index.json in mrpack")?;
-        entry
-            .read_to_string(&mut index_str)
-            .map_err(|e| format!("Read index: {}", e))?;
+        let mut index_str = String::new();
+        {
+            let mut entry = archive
+                .by_name("modrinth.index.json")
+                .map_err(|_| "No modrinth.index.json in mrpack")?;
+            entry
+                .read_to_string(&mut index_str)
+                .map_err(|e| format!("Read index: {}", e))?;
+        }
+
+        let parsed_index: MrpackIndex = serde_json::from_str(&index_str)
+            .map_err(|e| format!("Parse modrinth.index.json: {}", e))?;
+
+        let mut found_icon = None;
+        for candidate in &[
+            "icon.png", "pack.png", "logo.png", "icon.webp",
+            "overrides/icon.png", "overrides/pack.png", "overrides/logo.png",
+            "client-overrides/icon.png", "client-overrides/pack.png",
+        ] {
+            if let Ok(mut entry) = archive.by_name(candidate) {
+                let mut buf = Vec::new();
+                if entry.read_to_end(&mut buf).is_ok() && !buf.is_empty() {
+                    let ext = if candidate.ends_with(".webp") { "webp" } else { "png" };
+                    found_icon = Some((buf, ext.to_string()));
+                    break;
+                }
+            }
+        }
+
+        (parsed_index, found_icon)
+    };
+
+    let mut source_version = index.version_id.clone();
+
+    // 1. Cache embedded icon if found in archive
+    let embedded_icon_data_url = if let Some((ref buf, ref ext)) = embedded_icon_bytes {
+        crate::services::icon_cache::cache_icon_bytes(buf, ext).await
+    } else {
+        None
+    };
+
+    // 2. If project icon or source project ID is missing, resolve via Modrinth file SHA-1
+    if project_icon_path.is_none() || source_project_id.is_none() {
+        if let Some(sha1) = compute_file_sha1(mrpack_path) {
+            let version_url = format!("https://api.modrinth.com/v2/version_file/{}?algorithm=sha1", sha1);
+            if let Ok(resp) = crate::util::http::HTTP.get(&version_url).send().await {
+                if resp.status().is_success() {
+                    if let Ok(val) = resp.json::<serde_json::Value>().await {
+                        if let Some(pid) = val.get("project_id").and_then(|p| p.as_str()) {
+                            if source_project_id.is_none() {
+                                source_project_id = Some(pid.to_string());
+                            }
+                            if source_version.is_none() {
+                                if let Some(ver) = val.get("version_number").and_then(|v| v.as_str()) {
+                                    source_version = Some(ver.to_string());
+                                }
+                            }
+                            if project_icon_path.is_none() {
+                                if let Ok(Some(url)) = fetch_project_icon(pid).await {
+                                    project_icon_path = crate::services::icon_cache::cache_remote_icon(&url).await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
-    let index: MrpackIndex = serde_json::from_str(&index_str)
-        .map_err(|e| format!("Parse modrinth.index.json: {}", e))?;
+    // 3. Fallback: Search Modrinth by modpack name if still missing project ID or icon
+    if (project_icon_path.is_none() || source_project_id.is_none()) && !index.name.is_empty() {
+        let search_url = format!(
+            "https://api.modrinth.com/v2/search?query={}&facets=[[\"project_type:modpack\"]]&limit=5",
+            urlencoding::encode(&index.name)
+        );
+        if let Ok(resp) = crate::util::http::HTTP.get(&search_url).send().await {
+            if resp.status().is_success() {
+                if let Ok(val) = resp.json::<serde_json::Value>().await {
+                    if let Some(hits) = val.get("hits").and_then(|h| h.as_array()) {
+                        let target = index.name.trim().to_lowercase();
+                        let matched = hits.iter().find(|h| {
+                            let title = h.get("title").and_then(|t| t.as_str()).unwrap_or("").trim().to_lowercase();
+                            let slug = h.get("slug").and_then(|s| s.as_str()).unwrap_or("").trim().to_lowercase();
+                            title == target || slug == target
+                        }).or_else(|| hits.first());
+
+                        if let Some(hit) = matched {
+                            if source_project_id.is_none() {
+                                if let Some(pid) = hit.get("project_id").and_then(|p| p.as_str()) {
+                                    source_project_id = Some(pid.to_string());
+                                }
+                            }
+                            if project_icon_path.is_none() {
+                                if let Some(icon_url) = hit.get("icon_url").and_then(|i| i.as_str()) {
+                                    project_icon_path = crate::services::icon_cache::cache_remote_icon(icon_url).await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // Determine loader and game version
     let game_version = index
@@ -343,11 +444,11 @@ pub async fn install_from_mrpack_file(
     // (with duplicate-name handling).
     let final_name = unique_instance_name(&index.name)?;
     let now = chrono::Utc::now().to_rfc3339();
-    // The pre-cached project icon (passed in by `install_from_modrinth`) becomes
-    // the new instance's tile icon. Local-file imports pass `None` and fall
-    // back to the generic `"cube"` placeholder, which the frontend reads as
-    // "show the loader-tinted default tile."
-    let icon_value = project_icon_path.unwrap_or_else(|| "cube".to_string());
+    // The resolved project icon (Modrinth API or embedded archive icon) becomes
+    // the new instance's tile icon. Only falls back to "cube" if no icon could be found.
+    let icon_value = project_icon_path
+        .or(embedded_icon_data_url)
+        .unwrap_or_else(|| "cube".to_string());
     let instance = Instance {
         format_version: 1,
         id: id.clone(),
@@ -367,7 +468,7 @@ pub async fn install_from_mrpack_file(
         mods: mod_entries,
         source_project_id,
         source_platforms: vec!["modrinth".to_string()],
-        source_version: index.version_id.clone(),
+        source_version,
         companion_enabled: true,
     };
 

@@ -152,3 +152,47 @@ fn hex_lower(bytes: &[u8]) -> String {
     out
 }
 
+/// Cache raw icon bytes directly to disk and return as a data URL.
+/// Used for embedded icons extracted from modpack archives (.mrpack, .zip).
+pub async fn cache_icon_bytes(bytes: &[u8], ext: &str) -> Option<String> {
+    if bytes.is_empty() {
+        return None;
+    }
+
+    let icons_dir = paths::data_dir().join("icons");
+    if let Err(e) = tokio::fs::create_dir_all(&icons_dir).await {
+        tracing::debug!("icon cache: create_dir_all failed for {:?}: {}", icons_dir, e);
+        return None;
+    }
+
+    let mut hasher = Sha1::new();
+    hasher.update(bytes);
+    let hash = hex_lower(&hasher.finalize());
+
+    let clean_ext = if ext.is_empty() { "png" } else { ext.trim_start_matches('.') };
+    let path: PathBuf = icons_dir.join(format!("{}.{}", hash, clean_ext));
+
+    if !path.exists() {
+        if let Err(e) = tokio::fs::write(&path, bytes).await {
+            tracing::debug!("icon cache: write {:?} failed: {}", path, e);
+            let mime = match clean_ext {
+                "webp" => "image/webp",
+                "jpg" | "jpeg" => "image/jpeg",
+                "gif" => "image/gif",
+                "svg" => "image/svg+xml",
+                _ => "image/png",
+            };
+            return Some(bytes_to_data_url(bytes, mime));
+        }
+    }
+
+    file_to_data_url(&path).await
+}
+
+/// Convert raw image bytes to an inline `data:image/...;base64,...` URL.
+pub fn bytes_to_data_url(bytes: &[u8], mime: &str) -> String {
+    use base64::Engine;
+    let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
+    format!("data:{};base64,{}", mime, encoded)
+}
+

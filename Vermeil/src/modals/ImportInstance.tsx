@@ -114,6 +114,13 @@ const ImportInstance: Component = () => {
         projectId: path,
         title,
         category: "modpack",
+        meta: {
+          iconUrl: undefined,
+          loader: activePlatform() === "modrinth" ? "modrinth" : "curseforge",
+          gameVersion: undefined,
+          versionNumber: undefined,
+          author: undefined,
+        },
         execute: () => {
           if (platform === "modrinth") {
             return importMrpack(path);

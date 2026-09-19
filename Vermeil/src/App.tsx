@@ -158,14 +158,19 @@ loadDownloadHistory().then(json => {
   } catch {}
 }).catch(() => {});
 
-// Persist to disk whenever a download completes or fails (debounced)
+// Persist to disk whenever a download completes or fails
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
-function persistDownloads() {
+function persistDownloads(immediate = false) {
   if (saveTimeout) clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
+  const doSave = () => {
     const completed = downloads().filter(d => d.status !== "downloading").slice(0, 200);
     saveDownloadHistory(JSON.stringify(completed)).catch(() => {});
-  }, 500);
+  };
+  if (immediate) {
+    doSave();
+  } else {
+    saveTimeout = setTimeout(doSave, 300);
+  }
 }
 
 // Active download queue toast tracking
@@ -246,24 +251,38 @@ export function trackDownload(
   return id;
 }
 
-export function completeDownload(id: string, nameOverride?: string, versionNumber?: string) {
+export function completeDownload(
+  id: string,
+  nameOverride?: string,
+  versionNumber?: string,
+  metaUpdates?: {
+    iconUrl?: string | null;
+    loader?: string;
+    gameVersion?: string;
+    author?: string | null;
+  },
+) {
   let finishedItem: DownloadEntry | undefined;
   setDownloads(prev =>
     prev.map(d => {
       if (d.id === id) {
-        finishedItem = d;
-        return {
+        finishedItem = {
           ...d,
           status: "completed" as const,
           timestamp: Date.now(),
           name: nameOverride || d.name,
           versionNumber: versionNumber ?? d.versionNumber,
+          iconUrl: metaUpdates?.iconUrl !== undefined ? (metaUpdates.iconUrl ?? undefined) : d.iconUrl,
+          loader: metaUpdates?.loader ?? d.loader,
+          gameVersion: metaUpdates?.gameVersion ?? d.gameVersion,
+          author: metaUpdates?.author !== undefined ? (metaUpdates.author ?? undefined) : d.author,
         };
+        return finishedItem;
       }
       return d;
     })
   );
-  persistDownloads();
+  persistDownloads(true);
 
   currentBatchCompleted++;
   if (nameOverride || finishedItem?.name) {
@@ -322,7 +341,7 @@ export function failDownload(id: string, errorMsg?: string) {
       return d;
     })
   );
-  persistDownloads();
+  persistDownloads(true);
 
   currentBatchFailed++;
 
@@ -371,7 +390,7 @@ const bulkProgress = () => bulkBatchSize() > 0 ? bulkDone() / bulkBatchSize() : 
 
 export function clearDownloadHistory() {
   setDownloads(prev => prev.filter(d => d.status === "downloading"));
-  persistDownloads();
+  persistDownloads(true);
 }
 
 // Auto-updater state. Populated by `services/updater.ts` after a successful

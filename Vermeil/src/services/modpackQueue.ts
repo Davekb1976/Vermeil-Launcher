@@ -147,16 +147,36 @@ async function processQueue() {
   }
 
   try {
-    await nextTask.execute(nextTask.id);
+    const result = await nextTask.execute(nextTask.id);
     if (nextTask.isOrchestrator) {
       await refetchInstances();
       refreshPinnedInstanceIds().catch(() => {});
-      completeDownload(nextTask.id);
+      completeDownload(
+        nextTask.id,
+        result?.name || nextTask.title,
+        result?.source_version ?? nextTask.meta?.versionNumber ?? undefined,
+        {
+          iconUrl: result?.icon && result.icon !== "cube" ? result.icon : nextTask.meta?.iconUrl,
+          loader: result?.loader?.type || nextTask.meta?.loader,
+          gameVersion: result?.game_version || nextTask.meta?.gameVersion,
+          author: nextTask.meta?.author,
+        },
+      );
     } else {
       // In case execute didn't complete it, ensure it's completed
       const dl = downloads().find((d) => d.id === nextTask.id);
       if (dl && dl.status === "downloading") {
-        completeDownload(nextTask.id);
+        completeDownload(
+          nextTask.id,
+          result?.name,
+          result?.source_version ?? nextTask.meta?.versionNumber ?? undefined,
+          {
+            iconUrl: result?.icon && result.icon !== "cube" ? result.icon : nextTask.meta?.iconUrl,
+            loader: result?.loader?.type || nextTask.meta?.loader,
+            gameVersion: result?.game_version || nextTask.meta?.gameVersion,
+            author: nextTask.meta?.author,
+          },
+        );
       }
     }
   } catch (e: any) {
