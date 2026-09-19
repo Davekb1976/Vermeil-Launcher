@@ -622,50 +622,64 @@ pub struct CfFileInfo {
 
 // ─── Modpack install from project ID ────────────────────────────────────
 
-/// Brief project info for one CurseForge id: `(name, website_url)`.
-///
-/// Used to build a manual-download prompt, so both halves are optional — a
-/// failed lookup should still let the caller name the file it couldn't fetch.
-pub async fn fetch_project_brief(
-    api_key: &str,
-    mod_id: &str,
-) -> (Option<String>, Option<String>) {
-    let url = format!("{}/mods/{}", CF_BASE, mod_id);
-    let resp = match HTTP.get(&url).header("x-api-key", api_key).send().await {
-        Ok(r) if r.status().is_success() => r,
-        _ => return (None, None),
-    };
-    let body: serde_json::Value = match resp.json().await {
-        Ok(v) => v,
-        Err(_) => return (None, None),
-    };
-    let data = body.get("data").unwrap_or(&body);
-    let name = data.get("name").and_then(|n| n.as_str()).map(str::to_string);
-    let website = data
+/// Complete project metadata fetched from CurseForge's mod endpoint.
+#[derive(Debug, Clone, Default)]
+pub struct ProjectMeta {
+    pub name: Option<String>,
+    pub icon_url: Option<String>,
+    pub author: Option<String>,
+    pub class_id: Option<u32>,
+    pub website_url: Option<String>,
+}
+
+fn parse_project_meta_item(item: &serde_json::Value) -> ProjectMeta {
+    let name = item.get("name").and_then(|n| n.as_str()).map(str::to_string);
+    let website_url = item
         .get("links")
         .and_then(|l| l.get("websiteUrl"))
         .and_then(|u| u.as_str())
         .filter(|u| !u.is_empty())
         .map(str::to_string);
-    (name, website)
+    let class_id = item.get("classId").and_then(|c| c.as_u64()).map(|c| c as u32);
+    let author = item
+        .get("authors")
+        .and_then(|a| a.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|a| a.get("name"))
+        .and_then(|n| n.as_str())
+        .map(str::to_string);
+    let icon_url = item.get("logo").and_then(|l| {
+        let thumb = l.get("thumbnailUrl").and_then(|u| u.as_str()).unwrap_or_default();
+        let regular = l.get("url").and_then(|u| u.as_str()).unwrap_or_default();
+        let chosen = if !thumb.is_empty() { thumb } else { regular };
+        if chosen.is_empty() {
+            None
+        } else {
+            Some(chosen.to_string())
+        }
+    });
+
+    ProjectMeta {
+        name,
+        icon_url,
+        author,
+        class_id,
+        website_url,
+    }
 }
 
-/// Same as `fetch_project_brief` for many ids in one request.
-///
-/// Uses the batch `POST /v1/mods` endpoint (up to 50 ids) rather than one GET
-/// per project: a modpack can block several files at once, and the per-key rate
-/// limit is the binding constraint on this API. Returns id → (name, website).
-pub async fn fetch_projects_brief(
+/// Batch-fetch complete project metadata for many mod IDs in one request.
+/// Uses the batch `POST /v1/mods` endpoint (up to 50 IDs per batch).
+pub async fn fetch_projects_meta(
     api_key: &str,
     mod_ids: &[String],
-) -> std::collections::HashMap<String, (Option<String>, Option<String>)> {
+) -> std::collections::HashMap<String, ProjectMeta> {
     use std::collections::HashMap;
-    let mut out: HashMap<String, (Option<String>, Option<String>)> = HashMap::new();
+    let mut out: HashMap<String, ProjectMeta> = HashMap::new();
     if api_key.is_empty() || mod_ids.is_empty() {
         return out;
     }
 
-    // The endpoint caps a request at 50 ids.
     for chunk in mod_ids.chunks(50) {
         let ids: Vec<u64> = chunk.iter().filter_map(|s| s.parse::<u64>().ok()).collect();
         if ids.is_empty() {
@@ -693,17 +707,52 @@ pub async fn fetch_projects_brief(
             let Some(id) = item.get("id").and_then(|i| i.as_u64()) else {
                 continue;
             };
-            let name = item.get("name").and_then(|n| n.as_str()).map(str::to_string);
-            let website = item
-                .get("links")
-                .and_then(|l| l.get("websiteUrl"))
-                .and_then(|u| u.as_str())
-                .filter(|u| !u.is_empty())
-                .map(str::to_string);
-            out.insert(id.to_string(), (name, website));
+            out.insert(id.to_string(), parse_project_meta_item(item));
         }
     }
     out
+}
+
+/// Fetch project metadata for one CurseForge project ID.
+pub async fn fetch_project_meta(
+    api_key: &str,
+    mod_id: &str,
+) -> ProjectMeta {
+    let mut batch = fetch_projects_meta(api_key, &[mod_id.to_string()]).await;
+    if let Some(meta) = batch.remove(mod_id) {
+        return meta;
+    }
+
+    // Fallback: single GET endpoint if not returned in batch
+    let url = format!("{}/mods/{}", CF_BASE, mod_id);
+    let resp = match HTTP.get(&url).header("x-api-key", api_key).send().await {
+        Ok(r) if r.status().is_success() => r,
+        _ => return ProjectMeta::default(),
+    };
+    let body: serde_json::Value = match resp.json().await {
+        Ok(v) => v,
+        Err(_) => return ProjectMeta::default(),
+    };
+    let data = body.get("data").unwrap_or(&body);
+    parse_project_meta_item(data)
+}
+
+/// Brief project info for one CurseForge id: `(name, website_url)`.
+pub async fn fetch_project_brief(
+    api_key: &str,
+    mod_id: &str,
+) -> (Option<String>, Option<String>) {
+    let meta = fetch_project_meta(api_key, mod_id).await;
+    (meta.name, meta.website_url)
+}
+
+/// Same as `fetch_project_brief` for many ids in one request.
+pub async fn fetch_projects_brief(
+    api_key: &str,
+    mod_ids: &[String],
+) -> std::collections::HashMap<String, (Option<String>, Option<String>)> {
+    let metas = fetch_projects_meta(api_key, mod_ids).await;
+    metas.into_iter().map(|(id, m)| (id, (m.name, m.website_url))).collect()
 }
 
 /// Fetch the download URL for the latest (or specified) file of a CurseForge

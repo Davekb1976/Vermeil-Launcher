@@ -16,7 +16,7 @@ import CreateCustom from "./modals/CreateCustom";
 import BrowseModpacks from "./modals/BrowseModpacks";
 import ImportCurseForge from "./modals/ImportCurseForge";
 import NoAccountModal from "./components/NoAccountModal";
-import Toasts, { showToast } from "./components/Toasts";
+import Toasts, { showToast, updateToast } from "./components/Toasts";
 import InstallProgress from "./components/InstallProgress";
 import BulkInstallToast from "./components/BulkInstallToast";
 import Splash from "./components/Splash";
@@ -342,7 +342,7 @@ createEffect(() => {
   refreshActiveSkin().catch(() => {});
 });
 
-export { activeScreen, setActiveScreen, activeInstanceId, setActiveInstanceId, initialInstanceTab, setInitialInstanceTab, gameLaunched, setGameLaunched, gameRunning, setGameRunning, logsPoppedOut, setLogsPoppedOut, downloads, activeDownloadCount, isBulkInstall, bulkDone, bulkProgress, instances, refetchInstances, account, refetchAccount, activeSkinUrl, offline, showToast };
+export { activeScreen, setActiveScreen, activeInstanceId, setActiveInstanceId, initialInstanceTab, setInitialInstanceTab, gameLaunched, setGameLaunched, gameRunning, setGameRunning, logsPoppedOut, setLogsPoppedOut, downloads, activeDownloadCount, isBulkInstall, bulkDone, bulkProgress, instances, refetchInstances, account, refetchAccount, activeSkinUrl, offline, showToast, updateToast };
 
 const screenTitles: Record<Screen, string> = {
   home: "Home",

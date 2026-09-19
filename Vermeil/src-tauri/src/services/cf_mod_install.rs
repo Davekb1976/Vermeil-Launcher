@@ -23,12 +23,12 @@
 //! candidate locally before committing to a download.
 
 use crate::models::instance::{Instance, ModEntry};
-use crate::services::curseforge::{self, CfFileInfo};
+use crate::services::curseforge::{self, CfFileInfo, ProjectMeta};
 use crate::services::download::{DownloadTask, download_file};
 use crate::services::icon_cache;
 use crate::services::mod_install::{DependencyIssue, InstallResult, compatible_game_version};
 use crate::util::paths;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 
 /// CurseForge `classId` values for the content types the launcher installs.
@@ -135,6 +135,17 @@ pub async fn install_cf_mod(
     let mut deps_installed: Vec<String> = Vec::new();
     let mut dep_titles: Vec<String> = Vec::new();
     let mut issues: Vec<DependencyIssue> = Vec::new();
+    let mut meta_cache: HashMap<String, ProjectMeta> = HashMap::new();
+
+    // Cache currently-installed project IDs so we don't re-read instance.json from disk
+    // on every dependency and conflict check.
+    let instance_dir = paths::instances_dir().join(instance_id);
+    let meta_path = instance_dir.join("instance.json");
+    let mut installed_project_ids: HashSet<String> = fs::read_to_string(&meta_path)
+        .ok()
+        .and_then(|raw| serde_json::from_str::<Instance>(&raw).ok())
+        .map(|inst| inst.mods.into_iter().map(|m| m.project_id).collect())
+        .unwrap_or_default();
 
     let root = install_cf_one(
         instance_id,
@@ -151,6 +162,8 @@ pub async fn install_cf_mod(
         &mut issues,
         true,
         window,
+        &mut meta_cache,
+        &mut installed_project_ids,
     )
     .await?;
 
@@ -160,6 +173,18 @@ pub async fn install_cf_mod(
         dep_titles,
         issues,
     })
+}
+
+async fn get_or_fetch_meta<'a>(
+    api_key: &str,
+    mod_id: &str,
+    meta_cache: &'a mut HashMap<String, ProjectMeta>,
+) -> &'a ProjectMeta {
+    if !meta_cache.contains_key(mod_id) {
+        let meta = curseforge::fetch_project_meta(api_key, mod_id).await;
+        meta_cache.insert(mod_id.to_string(), meta);
+    }
+    meta_cache.get(mod_id).unwrap()
 }
 
 /// Resolve and install one CurseForge project. Recurses into required
@@ -182,6 +207,8 @@ async fn install_cf_one(
     issues: &mut Vec<DependencyIssue>,
     is_root: bool,
     window: Option<&tauri::WebviewWindow>,
+    meta_cache: &mut HashMap<String, ProjectMeta>,
+    installed_project_ids: &mut HashSet<String>,
 ) -> Result<ModEntry, String> {
     if !visited_projects.insert(mod_id.to_string()) {
         return Err(format!("Cycle detected on CurseForge project {}", mod_id));
@@ -191,25 +218,11 @@ async fn install_cf_one(
     let loader_filter = effective_loader(category, loader);
 
     // === Resolve which file to install ===
-    //
-    // A pinned file is fetched **by id**, not searched for in a list query. The
-    // files endpoint filters server-side and pages at 50, so the set it returns
-    // depends on the filters passed — and the version picker doesn't pass the
-    // same ones the installer would. Searching a list for the pin therefore
-    // missed legitimately-chosen files (notably older uploads with no loader tag,
-    // which the picker marks compatible but `modLoaderType` excludes) and fell
-    // back to a *different* version while reporting success.
-    //
-    // `listed` stays empty on the pinned path; it's only needed to describe what
-    // the project does offer when nothing matches.
     let mut listed: Vec<CfFileInfo> = Vec::new();
     let chosen: Option<CfFileInfo> = match pinned_file_id.as_deref() {
         Some(pin) => match curseforge::get_file(api_key, mod_id, pin).await {
             Ok(f) => Some(f),
             Err(e) => {
-                // The file was deleted, or the id is stale from a cached picker
-                // list. Fall back to resolving normally rather than failing, but
-                // say so — the installed version won't be the one requested.
                 tracing::warn!(
                     "Pinned CurseForge file {} for project {} couldn't be fetched ({}); \
                      resolving newest compatible instead",
@@ -233,11 +246,8 @@ async fn install_cf_one(
     let file = match chosen {
         Some(f) => f,
         None => {
-            // Nothing compatible. Record a structured issue so the modal can
-            // explain which loaders / versions the project actually covers,
-            // matching what the Modrinth path reports.
-            let (title, _, _, _) = fetch_cf_project_meta(api_key, mod_id).await;
-            let dep_title = title.unwrap_or_else(|| mod_id.to_string());
+            let meta = get_or_fetch_meta(api_key, mod_id, meta_cache).await;
+            let dep_title = meta.name.clone().unwrap_or_else(|| mod_id.to_string());
             let mut all_loaders: Vec<String> = Vec::new();
             let mut all_versions: Vec<String> = Vec::new();
             for f in &listed {
@@ -254,8 +264,6 @@ async fn install_cf_one(
             }
             let kind = if listed.is_empty() { "missing" } else { "incompatible" };
             let reason = if listed.is_empty() {
-                // The list query filters by game version server-side, so an empty
-                // page means "nothing for this MC version", not "no files exist".
                 format!(
                     "CurseForge lists no files for this project on MC {}.",
                     game_version
@@ -287,12 +295,6 @@ async fn install_cf_one(
 
     let file_version_id = file.file_id.to_string();
 
-    // === Reconcile against what's already installed ===
-    // Before the download, so a redundant install costs no bandwidth and a
-    // pinned version isn't overwritten by a file we'd have to delete again.
-    // Deliberately NOT scoped to `source == "curseforge"`: the same logical mod
-    // published on both platforms would otherwise be installed twice, leaving
-    // two jars of it in `mods/`.
     let instance_dir = paths::instances_dir().join(instance_id);
     let meta_path = instance_dir.join("instance.json");
     let installed_before: Option<ModEntry> = fs::read_to_string(&meta_path)
@@ -304,8 +306,6 @@ async fn install_cf_one(
         if prev.version_id == file_version_id {
             return Ok(prev.clone());
         }
-        // Held at this version because another mod requires it exactly. Only an
-        // explicit user choice may move it.
         if prev.pinned && !had_explicit_file {
             let dep_title = prev.title.clone().unwrap_or_else(|| mod_id.to_string());
             let held_at = prev
@@ -332,15 +332,12 @@ async fn install_cf_one(
     }
 
     // === Download ===
-    // No URL means the author opted out of third-party distribution. Hand the
-    // user the project page rather than reconstructing a CDN link behind their
-    // back, then fail — for a dependency the caller turns this error into a
-    // `failed` issue, so it's visible in both places.
     let download_url = match file.download_url.as_ref() {
         Some(u) => u,
         None => {
-            let (name, website) = curseforge::fetch_project_brief(api_key, mod_id).await;
-            let title = name.unwrap_or_else(|| mod_id.to_string());
+            let meta = get_or_fetch_meta(api_key, mod_id, meta_cache).await;
+            let title = meta.name.clone().unwrap_or_else(|| mod_id.to_string());
+            let website = meta.website_url.clone();
             crate::services::manual_download::notify(
                 window,
                 crate::services::manual_download::ManualDownload {
@@ -372,8 +369,11 @@ async fn install_cf_one(
     };
     download_file(&crate::util::http::HTTP, &task).await?;
 
-    // === Metadata ===
-    let (title, icon_url, author, _class) = fetch_cf_project_meta(api_key, mod_id).await;
+    // === Metadata (cached, zero redundant HTTP calls) ===
+    let (title, icon_url, author) = {
+        let meta = get_or_fetch_meta(api_key, mod_id, meta_cache).await;
+        (meta.name.clone(), meta.icon_url.clone(), meta.author.clone())
+    };
     let local_icon_path = match icon_url.as_deref() {
         Some(u) => icon_cache::cache_remote_icon(u).await,
         None => None,
@@ -391,8 +391,6 @@ async fn install_cf_one(
             Some(file.display_name.clone())
         },
         enabled: true,
-        // Always false: a CurseForge dependency can't name a file, so we never
-        // hold one at an exact version on its parent's behalf.
         pinned: false,
         title: title.clone(),
         icon_url,
@@ -402,7 +400,7 @@ async fn install_cf_one(
         author,
     };
 
-    // === Persist instance.json (replace in place, same as the Modrinth path) ===
+    // === Persist instance.json ===
     let content =
         fs::read_to_string(&meta_path).map_err(|e| format!("Read instance.json: {}", e))?;
     let mut instance: Instance =
@@ -455,55 +453,67 @@ async fn install_cf_one(
             }
         }
     }
+    installed_project_ids.insert(mod_id.to_string());
 
     let parent = title.clone().unwrap_or_else(|| mod_id.to_string());
 
     // === Declared conflicts (relationType 5) ===
     for clash_id in &file.incompatible {
-        let present = serde_json::from_str::<Instance>(&fs::read_to_string(&meta_path).unwrap_or_default())
-            .ok()
-            .and_then(|inst| inst.mods.into_iter().find(|m| &m.project_id == clash_id));
-        if let Some(clash) = present {
-            let clash_title = clash.title.clone().unwrap_or_else(|| clash_id.clone());
-            issues.push(DependencyIssue {
-                parent_title: parent.clone(),
-                dep_title: clash_title.clone(),
-                dep_project_id: clash_id.clone(),
-                required_game_versions: Vec::new(),
-                required_loaders: Vec::new(),
-                instance_game_version: game_version.to_string(),
-                instance_loader: loader.to_string(),
-                kind: "conflict".to_string(),
-                reason: format!(
-                    "{} declares it cannot run alongside {}, which is installed. \
-                     Remove one of them.",
-                    parent, clash_title
-                ),
-            });
+        if installed_project_ids.contains(clash_id) {
+            let present = serde_json::from_str::<Instance>(&fs::read_to_string(&meta_path).unwrap_or_default())
+                .ok()
+                .and_then(|inst| inst.mods.into_iter().find(|m| &m.project_id == clash_id));
+            if let Some(clash) = present {
+                let clash_title = clash.title.clone().unwrap_or_else(|| clash_id.clone());
+                issues.push(DependencyIssue {
+                    parent_title: parent.clone(),
+                    dep_title: clash_title.clone(),
+                    dep_project_id: clash_id.clone(),
+                    required_game_versions: Vec::new(),
+                    required_loaders: Vec::new(),
+                    instance_game_version: game_version.to_string(),
+                    instance_loader: loader.to_string(),
+                    kind: "conflict".to_string(),
+                    reason: format!(
+                        "{} declares it cannot run alongside {}, which is installed. \
+                         Remove one of them.",
+                        parent, clash_title
+                    ),
+                });
+            }
         }
     }
 
     // === Walk required dependencies ===
-    // Recursive, matching the Modrinth path. The previous one-level walk meant a
-    // dependency's own dependencies were never installed.
+    // Batch-fetch metadata for all unvisited, uncached dependencies at once
+    let unvisited_deps: Vec<String> = file
+        .dependencies
+        .iter()
+        .filter(|dep_id| !visited_projects.contains(*dep_id) && !installed_project_ids.contains(*dep_id))
+        .cloned()
+        .collect();
+
+    let uncached_dep_ids: Vec<String> = unvisited_deps
+        .iter()
+        .filter(|dep_id| !meta_cache.contains_key(*dep_id))
+        .cloned()
+        .collect();
+
+    if !uncached_dep_ids.is_empty() {
+        let batch = curseforge::fetch_projects_meta(api_key, &uncached_dep_ids).await;
+        meta_cache.extend(batch);
+    }
+
     for dep_id in &file.dependencies {
         if visited_projects.contains(dep_id) {
             continue;
         }
-        let already_installed = serde_json::from_str::<Instance>(
-            &fs::read_to_string(&meta_path).unwrap_or_default(),
-        )
-        .ok()
-        .map(|inst| inst.mods.iter().any(|m| &m.project_id == dep_id))
-        .unwrap_or(false);
-        if already_installed {
+        if installed_project_ids.contains(dep_id) {
             visited_projects.insert(dep_id.clone());
             continue;
         }
 
-        // Route each dependency by its OWN content type. Passing the parent's
-        // category down dropped resource-pack and datapack deps into `mods/`.
-        let (_, _, _, dep_class) = fetch_cf_project_meta(api_key, dep_id).await;
+        let dep_class = meta_cache.get(dep_id).and_then(|m| m.class_id);
         let dep_category = category_for_class(dep_class);
 
         if let Err(e) = Box::pin(install_cf_one(
@@ -521,17 +531,20 @@ async fn install_cf_one(
             issues,
             false,
             window,
+            meta_cache,
+            installed_project_ids,
         ))
         .await
         {
             tracing::warn!("Skipping CurseForge dependency {} of {}: {}", dep_id, mod_id, e);
-            // Only add a generic entry when the recursive call didn't record a
-            // more specific one of its own.
             if !issues.iter().any(|i| &i.dep_project_id == dep_id) {
-                let (dep_title, _, _, _) = fetch_cf_project_meta(api_key, dep_id).await;
+                let dep_title = meta_cache
+                    .get(dep_id)
+                    .and_then(|m| m.name.clone())
+                    .unwrap_or_else(|| dep_id.clone());
                 issues.push(DependencyIssue {
                     parent_title: parent.clone(),
-                    dep_title: dep_title.unwrap_or_else(|| dep_id.clone()),
+                    dep_title,
                     dep_project_id: dep_id.clone(),
                     required_game_versions: Vec::new(),
                     required_loaders: Vec::new(),
@@ -558,58 +571,6 @@ fn category_for_class(class_id: Option<u32>) -> String {
         _ => "mod",
     }
     .to_string()
-}
-
-/// Fetch project name, icon URL, primary author, and `classId` from CurseForge.
-/// All four come from the same `/v1/mods/{id}` response, so this is one call.
-async fn fetch_cf_project_meta(
-    api_key: &str,
-    mod_id: &str,
-) -> (Option<String>, Option<String>, Option<String>, Option<u32>) {
-    let url = format!("https://api.curseforge.com/v1/mods/{}", mod_id);
-    let resp = match crate::util::http::HTTP
-        .get(&url)
-        .header("x-api-key", api_key)
-        .send()
-        .await
-    {
-        Ok(r) if r.status().is_success() => r,
-        _ => return (None, None, None, None),
-    };
-
-    #[derive(serde::Deserialize)]
-    struct Wrapper { data: ProjectData }
-    #[derive(serde::Deserialize)]
-    struct ProjectData {
-        name: Option<String>,
-        logo: Option<Logo>,
-        #[serde(default)]
-        authors: Vec<Author>,
-        #[serde(rename = "classId", default)]
-        class_id: Option<u32>,
-    }
-    #[derive(serde::Deserialize)]
-    struct Logo {
-        #[serde(rename = "thumbnailUrl")]
-        thumbnail_url: String,
-        #[serde(default)]
-        url: String,
-    }
-    #[derive(serde::Deserialize)]
-    struct Author {
-        name: String,
-    }
-
-    match resp.json::<Wrapper>().await {
-        Ok(w) => {
-            let author = w.data.authors.into_iter().next().map(|a| a.name);
-            let icon = w.data.logo.map(|l| {
-                if l.thumbnail_url.is_empty() { l.url } else { l.thumbnail_url }
-            }).filter(|u| !u.is_empty());
-            (w.data.name, icon, author, w.data.class_id)
-        }
-        Err(_) => (None, None, None, None),
-    }
 }
 
 #[cfg(test)]

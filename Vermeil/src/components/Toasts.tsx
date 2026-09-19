@@ -1,5 +1,5 @@
 import { Component, For, createSignal } from "solid-js";
-import { IconInfo, IconCheck, IconAlertTriangle, IconX } from "./Icons";
+import { IconInfo, IconCheck, IconAlertTriangle, IconX, IconRefresh } from "./Icons";
 
 export interface ToastAction {
   /** Visible button label. */
@@ -12,48 +12,86 @@ export interface ToastAction {
   keepOpen?: boolean;
 }
 
+export type ToastType = "info" | "success" | "warning" | "error" | "loading";
+
 export interface Toast {
   id: string;
   title: string;
   message?: string;
-  type: "info" | "success" | "warning" | "error";
+  type: ToastType;
   autoCloseMs?: number;
   /** Optional CTA rendered next to the dismiss button. */
   action?: ToastAction;
 }
 
 const [toasts, setToasts] = createSignal<Toast[]>([]);
+const activeTimers = new Map<string, ReturnType<typeof setInterval>>();
 
-/** Show a toast notification. Returns the toast ID for manual dismissal. */
+function startTimer(id: string, ms: number) {
+  if (activeTimers.has(id)) {
+    clearInterval(activeTimers.get(id)!);
+    activeTimers.delete(id);
+  }
+  if (ms <= 0) return;
+
+  let remaining = ms;
+  let last = performance.now();
+  const interval = setInterval(() => {
+    if (document.visibilityState === "visible") {
+      remaining -= (performance.now() - last);
+      if (remaining <= 0) {
+        clearInterval(interval);
+        activeTimers.delete(id);
+        dismissToast(id);
+      }
+    }
+    last = performance.now();
+  }, 250);
+  activeTimers.set(id, interval);
+}
+
+/** Show a toast notification. Returns the toast ID for manual dismissal or updating. */
 export function showToast(toast: Omit<Toast, "id">): string {
   const id = Math.random().toString(36).slice(2);
   const entry: Toast = { ...toast, id };
   setToasts((prev) => [...prev, entry].slice(-5)); // max 5 visible
 
-  const autoClose = toast.autoCloseMs ?? 5000;
+  const autoClose = toast.autoCloseMs ?? (toast.type === "loading" ? 0 : 5000);
   if (autoClose > 0) {
-    // Use a visibility-aware countdown so toasts don't silently expire while
-    // the window is unfocused (alt-tabbed). The timer only ticks down while
-    // the document is visible, ensuring the user always sees the toast for
-    // its full duration.
-    let remaining = autoClose;
-    let last = performance.now();
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") {
-        remaining -= (performance.now() - last);
-        if (remaining <= 0) {
-          clearInterval(interval);
-          dismissToast(id);
-        }
-      }
-      last = performance.now();
-    }, 250);
+    startTimer(id, autoClose);
   }
   return id;
 }
 
+/** Update an active toast in-place (e.g. transitioning from loading to success or error). */
+export function updateToast(id: string, updates: Partial<Omit<Toast, "id">>) {
+  setToasts((prev) =>
+    prev.map((t) => {
+      if (t.id !== id) return t;
+      return { ...t, ...updates };
+    })
+  );
+
+  const autoClose = updates.autoCloseMs !== undefined
+    ? updates.autoCloseMs
+    : (updates.type && updates.type !== "loading" ? 4000 : 0);
+
+  if (autoClose > 0) {
+    startTimer(id, autoClose);
+  } else if (updates.autoCloseMs === 0 || updates.type === "loading") {
+    if (activeTimers.has(id)) {
+      clearInterval(activeTimers.get(id)!);
+      activeTimers.delete(id);
+    }
+  }
+}
+
 /** Dismiss a specific toast by ID. */
 export function dismissToast(id: string) {
+  if (activeTimers.has(id)) {
+    clearInterval(activeTimers.get(id)!);
+    activeTimers.delete(id);
+  }
   setToasts((prev) => prev.filter((t) => t.id !== id));
 }
 
@@ -67,6 +105,8 @@ const typeIcon = (type: Toast["type"]) => {
       return <IconAlertTriangle />;
     case "error":
       return <IconX />;
+    case "loading":
+      return <span class="toast-spinner-icon"><IconRefresh /></span>;
   }
 };
 

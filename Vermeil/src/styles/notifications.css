@@ -59,55 +59,120 @@
 }
 .toast-view:hover { text-decoration: underline; }
 
-/* Toast notification system */
+/* Toast notification system (SloppyKeys tactile design) */
 .toast-container {
   position: fixed;
-  bottom: 16px;
-  right: 16px;
+  bottom: 24px;
+  right: 24px;
   z-index: 9999;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-width: 320px;
+  max-width: 360px;
+  pointer-events: none;
 }
 .toast-item {
+  pointer-events: auto;
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-  animation: toast-in 0.2s ease-out;
+  border-radius: 0;
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--border-hover);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), var(--bevel);
+  animation: toast-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  min-width: 280px;
 }
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+.toast-info { border-left-color: var(--info); }
+.toast-success { border-left-color: var(--success); }
+.toast-warning { border-left-color: var(--warn); }
+.toast-error { border-left-color: var(--danger); }
+.toast-loading { border-left-color: var(--accent); }
+
 .toast-icon {
   font-size: 14px;
-  font-weight: 700;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  border-radius: 0;
   flex-shrink: 0;
+  box-shadow: var(--bevel);
 }
-.toast-info .toast-icon { background: var(--info-soft); color: var(--blue); }
-.toast-success .toast-icon { background: var(--success-soft); color: var(--success); }
-.toast-warning .toast-icon { background: var(--warn-soft); color: var(--yellow); }
-.toast-error .toast-icon { background: var(--danger-soft); color: var(--danger); }
+.toast-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.toast-info .toast-icon { background: var(--info-soft); color: var(--info); border: 1px solid rgba(91, 138, 240, 0.3); }
+.toast-success .toast-icon { background: var(--success-soft); color: var(--success); border: 1px solid rgba(76, 175, 114, 0.3); }
+.toast-warning .toast-icon { background: var(--warn-soft); color: var(--warn); border: 1px solid rgba(232, 162, 58, 0.3); }
+.toast-error .toast-icon { background: var(--danger-soft); color: var(--danger); border: 1px solid rgba(224, 86, 86, 0.3); }
+.toast-loading .toast-icon { background: var(--accent-soft); color: var(--accent); border: 1px solid rgba(139, 92, 246, 0.3); }
+
+.toast-spinner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: spin 0.9s linear infinite;
+}
+
 .toast-body { flex: 1; min-width: 0; }
-.toast-title { font-size: 12px; font-weight: 600; color: var(--text); }
-.toast-msg { font-size: 11px; color: var(--muted); margin-top: var(--space-1); }
+.toast-title { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--text); letter-spacing: 0.2px; }
+.toast-msg { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; line-height: 1.4; word-break: break-word; }
 .toast-dismiss {
-  background: none; border: none; color: var(--muted); cursor: pointer;
-  font-size: 12px; padding: var(--space-1); opacity: 0.6; transition: opacity 0.15s;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0;
+  color: var(--text-faint);
+  cursor: pointer;
+  padding: 2px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
 }
-.toast-dismiss:hover { opacity: 1; }
+.toast-dismiss svg {
+  width: 14px;
+  height: 14px;
+}
+.toast-dismiss:hover {
+  border-color: var(--border-hover);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+.toast-action {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--bevel);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 0;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  align-self: center;
+  transition: transform 0.08s ease, background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+.toast-action:hover {
+  background: var(--surface-panel);
+  border-color: var(--accent);
+  color: var(--accent);
+  transform: translateY(-1px);
+}
+.toast-action:active {
+  transform: translateY(1px);
+}
 
 /* Install progress popup */
 .install-progress-popup {
@@ -249,19 +314,20 @@
 }
 
 
-/* Bulk install progress toast — bottom-right, paired with InstallProgress
+/* Bulk install progress toast — bottom-center, paired with InstallProgress
    popup. Rendered only while a bulk batch is in flight (size > 1). */
 .bulk-toast {
   position: fixed;
-  bottom: 20px;
+  bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
   width: 360px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: 0;
   padding: var(--space-3) var(--space-4);
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6), var(--bevel);
   z-index: 60;
   animation: fadeIn .15s ease;
 }
@@ -272,26 +338,28 @@
   margin-bottom: var(--space-2);
 }
 .bulk-toast-title {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
   color: var(--text);
 }
 .bulk-toast-count {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--accent);
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
+  font-weight: 700;
 }
 .bulk-toast-bar-track {
   width: 100%;
   height: 4px;
-  background: var(--bg);
-  border-radius: var(--radius-xs);
+  background: var(--surface-sunken);
+  border-radius: 0;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
   overflow: hidden;
 }
 .bulk-toast-bar-fill {
   height: 100%;
   background: var(--accent);
-  border-radius: var(--radius-xs);
+  border-radius: 0;
   transition: width 0.2s ease;
 }
 
