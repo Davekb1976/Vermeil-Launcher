@@ -1,6 +1,6 @@
 import { Component, createSignal, createEffect, createMemo, createResource, untrack, For, Show, onMount, onCleanup } from "solid-js";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { setActiveScreen, instances, activeInstanceId, setActiveInstanceId, refetchInstances, refreshPinnedInstanceIds, initialInstanceTab, gameRunning, trackDownload, completeDownload, failDownload, startBulkBatch, endBulkBatch, showToast, updateToast, gameLogsFor, setDockHidden, setDockPagination, logsPoppedOut } from "../App";
+import { setActiveScreen, instances, activeInstanceId, setActiveInstanceId, refetchInstances, refreshPinnedInstanceIds, initialInstanceTab, gameRunning, trackDownload, completeDownload, failDownload, startBulkBatch, endBulkBatch, showToast, updateToast, gameLogsFor, setDockHidden, setDockPagination, logsPoppedOut, downloadToastsEnabled } from "../App";
 import { reportDependencyIssues, DependencyIssue } from "../components/DependencyIssuesModal";
 import { contentVersion } from "../lib/contentVersion";
 import { loaderLabel, loaderBadgeClass } from "../lib/loader";
@@ -913,12 +913,14 @@ const InstanceMods: Component = () => {
       gameVersion: inst.game_version,
       author: mod.author,
     });
-    const toastId = showToast({
-      title: "Installing content",
-      message: mod.title,
-      type: "loading",
-      autoCloseMs: 0,
-    });
+    const toastId = downloadToastsEnabled()
+      ? showToast({
+          title: "Installing content",
+          message: mod.title,
+          type: "loading",
+          autoCloseMs: 0,
+        })
+      : null;
     try {
       const resultJson = modSource() === "curseforge"
         ? await installCfModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId)
@@ -938,10 +940,10 @@ const InstanceMods: Component = () => {
             ? `${mod.title} with ${preview}${more}`
             : `${mod.title} (+${depsInstalled} dep${depsInstalled === 1 ? "" : "s"})`;
           completeDownload(dlId, message, vnum);
-          updateToast(toastId, { title: "Installed", message, type: "success", autoCloseMs: 4000 });
+          if (toastId) updateToast(toastId, { title: "Installed", message, type: "success", autoCloseMs: 4000 });
         } else {
           completeDownload(dlId, undefined, vnum);
-          updateToast(toastId, { title: "Installed", message: mod.title, type: "success", autoCloseMs: 3000 });
+          if (toastId) updateToast(toastId, { title: "Installed", message: mod.title, type: "success", autoCloseMs: 3000 });
         }
         // Show structured per-dep modal for missing/incompatible/failed deps.
         if (depIssues.length > 0) {
@@ -949,19 +951,28 @@ const InstanceMods: Component = () => {
         }
       } catch {
         completeDownload(dlId);
-        updateToast(toastId, { title: "Installed", message: mod.title, type: "success", autoCloseMs: 3000 });
+        if (toastId) updateToast(toastId, { title: "Installed", message: mod.title, type: "success", autoCloseMs: 3000 });
       }
       // Refresh from the instance so dependencies pulled in alongside the
       // primary mod show as installed immediately.
       await refetchInstances();
     } catch (e: any) {
       failDownload(dlId);
-      updateToast(toastId, {
-        title: "Install failed",
-        message: typeof e === "string" ? e : (e?.message || "Unknown error"),
-        type: "error",
-        autoCloseMs: 5000,
-      });
+      if (toastId) {
+        updateToast(toastId, {
+          title: "Install failed",
+          message: typeof e === "string" ? e : (e?.message || "Unknown error"),
+          type: "error",
+          autoCloseMs: 5000,
+        });
+      } else {
+        showToast({
+          title: "Install failed",
+          message: typeof e === "string" ? e : (e?.message || "Unknown error"),
+          type: "error",
+          autoCloseMs: 5000,
+        });
+      }
     } finally { setInstalling(null); }
   };
 
@@ -983,12 +994,14 @@ const InstanceMods: Component = () => {
     const inst = instance();
     if (!inst) return;
     setUpdatingMod(projectId);
-    const toastId = showToast({
-      title: "Updating content",
-      message: modTitle,
-      type: "loading",
-      autoCloseMs: 0,
-    });
+    const toastId = downloadToastsEnabled()
+      ? showToast({
+          title: "Updating content",
+          message: modTitle,
+          type: "loading",
+          autoCloseMs: 0,
+        })
+      : null;
     try {
       const resultJson = await applyModUpdate(inst.id, projectId);
       // Clear the pill optimistically; the next refresh confirms.
@@ -1007,17 +1020,26 @@ const InstanceMods: Component = () => {
         // Older command shape — ignore.
       }
       await refetchInstances();
-      updateToast(toastId, { title: "Updated", message: modTitle, type: "success", autoCloseMs: 3000 });
+      if (toastId) updateToast(toastId, { title: "Updated", message: modTitle, type: "success", autoCloseMs: 3000 });
       // Re-check in case the update introduced new mods that themselves have
       // pending updates (rare but possible with deep dep trees).
       refreshUpdates();
     } catch (e: any) {
-      updateToast(toastId, {
-        title: "Update failed",
-        message: typeof e === "string" ? e : (e?.message || "Unknown error"),
-        type: "error",
-        autoCloseMs: 5000,
-      });
+      if (toastId) {
+        updateToast(toastId, {
+          title: "Update failed",
+          message: typeof e === "string" ? e : (e?.message || "Unknown error"),
+          type: "error",
+          autoCloseMs: 5000,
+        });
+      } else {
+        showToast({
+          title: "Update failed",
+          message: typeof e === "string" ? e : (e?.message || "Unknown error"),
+          type: "error",
+          autoCloseMs: 5000,
+        });
+      }
     } finally {
       setUpdatingMod(null);
     }

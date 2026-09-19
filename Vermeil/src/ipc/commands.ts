@@ -122,6 +122,12 @@ export interface LauncherSettings {
   show_snapshots: boolean;
   /** Show the animated boot splash when the launcher window first appears. */
   splash_screen: boolean;
+  /**
+   * Show toast notifications when downloads start and complete.
+   * When false, download toasts are suppressed and the Floating Dock
+   * downloads button displays an active download count badge instead.
+   */
+  download_toasts: boolean;
   concurrent_downloads: number;
   /**
    * Maximum simultaneous disk writes during batch downloads.

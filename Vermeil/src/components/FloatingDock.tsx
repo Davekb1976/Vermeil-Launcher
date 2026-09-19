@@ -17,6 +17,8 @@ import {
   dockHidden,
   dockPagination,
   clearGameLogs,
+  downloadToastsEnabled,
+  activeDownloadCount,
 } from "../App";
 import {
   IconHome,
@@ -216,7 +218,9 @@ const FloatingDock: Component = () => {
 
   const hidden = () => dockHidden() && !nearBottom() && !pinSelectorOpen();
 
-  const DockBtn = (props: { screens: Screen[]; target: Screen; icon: any; label: string }) => (
+  const showDownloadBadge = () => !downloadToastsEnabled() && activeDownloadCount() > 0;
+
+  const DockBtn = (props: { screens: Screen[]; target: Screen; icon: any; label: string; badge?: number }) => (
     <div class="dock-btn-slot">
       <button
         type="button"
@@ -229,6 +233,9 @@ const FloatingDock: Component = () => {
         data-tooltip={props.label}
       >
         {props.icon}
+        <Show when={props.badge !== undefined && props.badge > 0}>
+          <span class="dock-badge">{props.badge}</span>
+        </Show>
       </button>
     </div>
   );
@@ -368,7 +375,13 @@ const FloatingDock: Component = () => {
               </button>
             </div>
 
-            <DockBtn screens={["downloads"]} target="downloads" icon={<IconDownload />} label="Downloads" />
+            <DockBtn
+              screens={["downloads"]}
+              target="downloads"
+              icon={<IconDownload />}
+              label="Downloads"
+              badge={showDownloadBadge() ? activeDownloadCount() : undefined}
+            />
             <DockBtn screens={["settings"]} target="settings" icon={<IconSettings />} label="Settings" />
             <DockBtn screens={["account"]} target="account" icon={<IconUser />} label="Account" />
           </div>

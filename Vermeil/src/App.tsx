@@ -261,12 +261,20 @@ const [account, { refetch: refetchAccount }] = createResource(getActiveAccount);
 // app is reloaded.
 const [pinnedInstanceIds, setPinnedInstanceIds] = createSignal<string[]>([]);
 
+// Download toast suppression toggle. When false, content and modpack download
+// toasts are suppressed and the floating dock displays an active download count badge.
+const [downloadToastsEnabled, setDownloadToastsEnabled] = createSignal(true);
+export { downloadToastsEnabled, setDownloadToastsEnabled };
+
 /** Re-load pin list from settings. Called on startup and after the pin
  *  manager modal saves changes. */
 export async function refreshPinnedInstanceIds() {
   try {
     const s = await getSettings();
     setPinnedInstanceIds(s.sidebar_pinned_instances ?? []);
+    if (typeof s.download_toasts === "boolean") {
+      setDownloadToastsEnabled(s.download_toasts);
+    }
   } catch (e) {
     console.error("Failed to load sidebar pins:", e);
   }

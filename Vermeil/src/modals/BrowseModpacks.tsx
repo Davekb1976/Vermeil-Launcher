@@ -10,6 +10,7 @@ import {
   showToast,
   updateToast,
   setDockPagination,
+  downloadToastsEnabled,
 } from "../App";
 import {
   searchModpacks,
@@ -184,16 +185,18 @@ const BrowseModpacks: Component = () => {
       versionNumber: pack.version_name ?? undefined,
     });
 
-    const toastId = showToast({
-      title: "Installing modpack...",
-      message: pack.title,
-      type: "loading",
-      autoCloseMs: 0,
-      action: {
-        label: "View",
-        onClick: () => setActiveScreen("downloads"),
-      },
-    });
+    const toastId = downloadToastsEnabled()
+      ? showToast({
+          title: "Installing modpack...",
+          message: pack.title,
+          type: "loading",
+          autoCloseMs: 0,
+          action: {
+            label: "View",
+            onClick: () => setActiveScreen("downloads"),
+          },
+        })
+      : null;
 
     const installPromise =
       modSource() === "curseforge"
@@ -205,32 +208,45 @@ const BrowseModpacks: Component = () => {
         refetchInstances();
         refreshPinnedInstanceIds().catch(() => {});
         completeDownload(dlId);
-        updateToast(toastId, {
-          title: "Modpack installed",
-          message: `${pack.title} is ready to play`,
-          type: "success",
-          autoCloseMs: 4000,
-          action: undefined,
-        });
+        if (toastId) {
+          updateToast(toastId, {
+            title: "Modpack installed",
+            message: `${pack.title} is ready to play`,
+            type: "success",
+            autoCloseMs: 4000,
+            action: undefined,
+          });
+        }
       })
       .catch((e) => {
         failDownload(dlId);
         if (typeof e === "string" && e === "Install cancelled") {
-          updateToast(toastId, {
-            title: "Install cancelled",
-            message: pack.title,
-            type: "info",
-            autoCloseMs: 3000,
-          });
+          if (toastId) {
+            updateToast(toastId, {
+              title: "Install cancelled",
+              message: pack.title,
+              type: "info",
+              autoCloseMs: 3000,
+            });
+          }
           return;
         }
         console.error("Modpack install failed:", e);
-        updateToast(toastId, {
-          title: "Install failed",
-          message: typeof e === "string" ? e : "Unknown error occurred during installation",
-          type: "error",
-          autoCloseMs: 5000,
-        });
+        if (toastId) {
+          updateToast(toastId, {
+            title: "Install failed",
+            message: typeof e === "string" ? e : "Unknown error occurred during installation",
+            type: "error",
+            autoCloseMs: 5000,
+          });
+        } else {
+          showToast({
+            title: "Install failed",
+            message: typeof e === "string" ? e : "Unknown error occurred during installation",
+            type: "error",
+            autoCloseMs: 5000,
+          });
+        }
       })
       .finally(() => setInstalling(null));
   };

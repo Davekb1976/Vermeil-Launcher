@@ -1,6 +1,6 @@
 import { Component, createSignal, createResource, Show, For, onMount, onCleanup, createEffect } from "solid-js";
 import { getSettings, saveSettings, getCacheSize, purgeCache, getAppDirectory, openAppDirectory, LauncherSettings, detectJavaInstallations, validateJavaPath, setJavaPath, installRecommendedJava, deleteJavaInstall, pruneInvalidJavaPaths, getSystemMemory, JavaInstall } from "../ipc/commands";
-import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, instances, showToast } from "../App";
+import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, instances, showToast, setDownloadToastsEnabled } from "../App";
 import { checkForUpdates } from "../services/updater";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -62,6 +62,7 @@ const Settings: Component = () => {
     "Discord Rich Presence", "Display playing status", "discord", "rpc", "rich presence",
     "Show snapshots", "Include experimental versions", "snapshots", "snapshot", "experimental",
     "Force delete", "Skip confirmation when deleting instances", "delete", "remove", "confirmation",
+    "Download notifications", "Show toast notifications when downloads start and complete", "toasts", "download toast", "notifications",
     "Check for updates", "Manually check for a new version"
   );
   const matchesAbout = () => isGeneralSection() || matches(
@@ -616,6 +617,29 @@ const Settings: Component = () => {
                                 type="checkbox"
                                 checked={settings()!.force_delete}
                                 onChange={(e) => updateSetting("force_delete", e.currentTarget.checked)}
+                              />
+                              <span class="check-box"></span>
+                            </label>
+                          </div>
+                        </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Download notifications", "Show toast notifications when downloads start and complete", "toasts", "download toast", "notifications")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Download notifications</span>
+                            <span class="setting-desc">Show toast notifications for downloads</span>
+                          </div>
+                          <div class="setting-control">
+                            <label class="check check--lg">
+                              <input
+                                type="checkbox"
+                                checked={settings()!.download_toasts}
+                                onChange={(e) => {
+                                  const checked = e.currentTarget.checked;
+                                  updateSetting("download_toasts", checked);
+                                  setDownloadToastsEnabled(checked);
+                                }}
                               />
                               <span class="check-box"></span>
                             </label>
