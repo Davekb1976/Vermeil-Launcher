@@ -3,7 +3,7 @@ import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, setGameLau
 import { launchInstance, listInstanceWorlds, getJavaNews, getArticleBody, NewsArticle } from "../ipc/commands";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
-import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX, IconShirt } from "../components/Icons";
+import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX } from "../components/Icons";
 import PlayerHead from "../components/PlayerHead";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { resolveAssetUrl } from "../lib/assets";
@@ -247,7 +247,7 @@ const Home: Component = () => {
 
   return (
     <div class="screen-enter">
-      {/* World-Card Architectural Twin: Player Greeting & Identity Plate */}
+      {/* Tactical Player Greeting & Identity Plate */}
       <div
         class="home-greeting"
         onClick={() => setActiveScreen("account")}
@@ -261,19 +261,15 @@ const Home: Component = () => {
           }
         }}
       >
-        {/* Flush left square avatar thumb bay — exact twin of .world-card-thumb */}
-        <div class="home-greeting-thumb">
-          <PlayerHead
-            skinUrl={activeSkinUrl()}
-            name={displayName()}
-            size={82}
-            class="home-greeting-avatar"
-          />
-        </div>
-
-        {/* Card content body */}
-        <div class="home-greeting-body">
-          <div class="home-greeting-main">
+        <div class="home-greeting-identity">
+          <div class="home-greeting-avatar">
+            <PlayerHead
+              skinUrl={activeSkinUrl()}
+              name={displayName()}
+              size={48}
+            />
+          </div>
+          <div class="home-greeting-info">
             <div class="home-greeting-title-row">
               <span class="home-greeting-salutation">{timeOfDayGreeting()},</span>
               <span class="home-greeting-name">{displayName()}</span>
@@ -286,45 +282,21 @@ const Home: Component = () => {
               </div>
             </div>
             <div class="home-greeting-sub">
-              <span class="home-greeting-session-label">Active Session</span>
-              <span class="home-greeting-bullet">·</span>
-              <span class="home-greeting-account-type">
-                {account()?.is_offline ? "Local offline profile" : "Official Mojang profile"}
-              </span>
+              <span>{account()?.is_offline ? "Offline profile" : "Official Mojang account"}</span>
+              <Show when={headerSummary()?.relative}>
+                <span class="home-greeting-bullet">·</span>
+                <span>Last played {headerSummary()!.relative}</span>
+              </Show>
             </div>
           </div>
+        </div>
 
-          {/* Central live telemetry cluster */}
-          <div class="home-greeting-telemetry">
-            <div class="home-telemetry-plate">
-              <span class="home-telemetry-num">{headerSummary()?.count ?? 0}</span>
-              <span class="home-telemetry-lbl">Instances</span>
-            </div>
-            <div class="home-telemetry-plate">
-              <span class="home-telemetry-num">{headerSummary()?.totalPlaytime ?? "0m"}</span>
-              <span class="home-telemetry-lbl">Playtime</span>
-            </div>
-            <div class="home-telemetry-plate">
-              <span class="home-telemetry-num">{headerSummary()?.relative ?? "None"}</span>
-              <span class="home-telemetry-lbl">Last Active</span>
-            </div>
-          </div>
-
-          {/* Right actions */}
-          <div class="home-greeting-actions">
-            <button
-              type="button"
-              class="btn btn--secondary btn--sm home-action-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                setActiveScreen("skins");
-              }}
-              title="Customize player skin and in-game capes"
-            >
-              <IconShirt />
-              <span>Skins & Capes</span>
-            </button>
-          </div>
+        <div class="home-greeting-meta-badges">
+          <span class="badge">{headerSummary()?.count ?? 0} instance{headerSummary()?.count === 1 ? "" : "s"}</span>
+          <Show when={headerSummary()?.hasPlaytime}>
+            <span class="badge badge--version">{headerSummary()!.totalPlaytime} played</span>
+          </Show>
+          <span class="home-greeting-manage">Manage ↗</span>
         </div>
       </div>
 
