@@ -5390,36 +5390,6 @@
   line-height: 1.35;
 }
 
-.import-tab-check {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 18px;
-  height: 18px;
-  background: var(--accent);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0;
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.3);
-}
-
-.import-tab-check.modrinth {
-  background: #1bd96a;
-  color: #000000;
-}
-
-.import-tab-check.curseforge {
-  background: #f16436;
-  color: #ffffff;
-}
-
-.import-tab-check svg {
-  width: 12px;
-  height: 12px;
-  stroke-width: 2.5;
-}
 
 /* Tactile Sunken Dropzone */
 .import-dropzone {

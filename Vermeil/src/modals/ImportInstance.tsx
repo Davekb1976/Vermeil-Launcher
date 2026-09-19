@@ -237,11 +237,6 @@ const ImportInstance: Component = () => {
                       Open archive with embedded CDN links & overrides
                     </div>
                   </div>
-                  <Show when={activePlatform() === "modrinth"}>
-                    <div class="import-tab-check modrinth">
-                      <IconCheck />
-                    </div>
-                  </Show>
                 </div>
 
                 {/* CurseForge Card */}
@@ -271,11 +266,6 @@ const ImportInstance: Component = () => {
                       Exported profile zip containing manifest & overrides
                     </div>
                   </div>
-                  <Show when={activePlatform() === "curseforge"}>
-                    <div class="import-tab-check curseforge">
-                      <IconCheck />
-                    </div>
-                  </Show>
                 </div>
               </div>
             </div>
