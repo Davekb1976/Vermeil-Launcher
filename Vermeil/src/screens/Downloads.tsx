@@ -8,6 +8,7 @@ import {
   bulkBatchSize,
   bulkDone,
   bulkProgress,
+  instances,
 } from "../App";
 import { activeInstall, cancelActiveInstall } from "../services/installProgress";
 import { activeInstallTask, queuedInstallTasks, cancelQueuedTask } from "../services/modpackQueue";
@@ -114,6 +115,21 @@ const Downloads: Component = () => {
     return `${Math.floor(hours / 24)}d ago`;
   };
 
+  const activeIcon = () => {
+    const entry = activeInstallEntry();
+    if (entry?.iconUrl) return entry.iconUrl;
+    const instList = instances() ?? [];
+    const activeTitle = (entry?.name || activeInstall().title).toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (activeTitle.length > 0) {
+      const inst = instList.find((i) => {
+        const instNorm = i.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return instNorm.length > 0 && (activeTitle.includes(instNorm) || instNorm.includes(activeTitle));
+      });
+      if (inst && inst.icon && inst.icon !== "cube") return inst.icon;
+    }
+    return undefined;
+  };
+
   return (
     <div class="screen-enter">
       {/* ── Section 1: Current Downloads ── */}
@@ -144,8 +160,8 @@ const Downloads: Component = () => {
               <div class="dl-active-title-row">
                 <div class="dl-active-icon-badge">
                   <Show when={activeInstall().done} fallback={
-                    <Show when={activeInstallEntry()?.iconUrl} fallback={<IconDownload />}>
-                      <img src={activeInstallEntry()!.iconUrl!} alt="" draggable={false} />
+                    <Show when={activeIcon()} fallback={<IconDownload />}>
+                      <img src={activeIcon()!} alt="" draggable={false} />
                     </Show>
                   }>
                     <IconCheck />
@@ -336,33 +352,78 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry; position?: number }>
     }
   };
 
+  const matchingInstance = () => {
+    if (dl().category !== "modpack") return undefined;
+    const instList = instances() ?? [];
+    if (dl().instanceId) {
+      const found = instList.find((i) => i.id === dl().instanceId);
+      if (found) return found;
+    }
+    const dlNorm = dl().name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (dlNorm.length === 0) return undefined;
+    return instList.find((i) => {
+      const instNorm = i.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      return instNorm.length > 0 && (dlNorm.includes(instNorm) || instNorm.includes(dlNorm));
+    });
+  };
+
+  const cardIcon = () => {
+    if (dl().iconUrl) return dl().iconUrl;
+    const inst = matchingInstance();
+    if (inst && inst.icon && inst.icon !== "cube") return inst.icon;
+    return undefined;
+  };
+
+  const cardName = () => {
+    const inst = matchingInstance();
+    return inst?.name || dl().name;
+  };
+
+  const cardLoader = () => {
+    if (dl().loader && dl().loader !== "modrinth" && dl().loader !== "curseforge") return dl().loader;
+    const inst = matchingInstance();
+    return inst?.loader?.type ?? dl().loader;
+  };
+
+  const cardGameVersion = () => {
+    if (dl().gameVersion) return dl().gameVersion;
+    const inst = matchingInstance();
+    return inst?.game_version;
+  };
+
+  const cardVersionNumber = () => {
+    if (dl().versionNumber) return dl().versionNumber;
+    const inst = matchingInstance();
+    return inst?.source_version ?? undefined;
+  };
+
   return (
     <div class="dl-queue-card">
       <div class="dl-queue-main">
         <div class="dl-queue-icon">
-          <Show when={dl().iconUrl} fallback={
-            <span class="dl-queue-icon-fallback">{dl().name.charAt(0).toUpperCase()}</span>
+          <Show when={cardIcon()} fallback={
+            <span class="dl-queue-icon-fallback">{cardName().charAt(0).toUpperCase()}</span>
           }>
-            <img src={dl().iconUrl!} alt="" draggable={false} />
+            <img src={cardIcon()!} alt="" draggable={false} />
           </Show>
         </div>
         <div class="dl-queue-info">
           <div class="dl-queue-title-row">
-            <span class="dl-queue-name" title={dl().name}>{dl().name}</span>
+            <span class="dl-queue-name" title={cardName()}>{cardName()}</span>
             <Show when={dl().author}>
               <span class="dl-queue-author">by {dl().author}</span>
             </Show>
           </div>
           <div class="dl-queue-meta-row">
             <span class="badge">{getCategoryLabel(dl().category)}</span>
-            <Show when={dl().loader}>
-              <span class={`badge badge--loader badge--${dl().loader}`}>{dl().loader}</span>
+            <Show when={cardLoader()}>
+              <span class={`badge badge--loader badge--${cardLoader()}`}>{cardLoader()}</span>
             </Show>
-            <Show when={dl().gameVersion}>
-              <span class="badge badge--version">{dl().gameVersion}</span>
+            <Show when={cardGameVersion()}>
+              <span class="badge badge--version">{cardGameVersion()}</span>
             </Show>
-            <Show when={dl().versionNumber}>
-              <span class="badge badge--vnum" title={dl().versionNumber!}>{dl().versionNumber}</span>
+            <Show when={cardVersionNumber()}>
+              <span class="badge badge--vnum" title={cardVersionNumber()!}>{cardVersionNumber()}</span>
             </Show>
           </div>
         </div>
@@ -391,20 +452,65 @@ const DownloadCard: Component<{ entry: DownloadEntry; timeAgo: (ts: number) => s
   const dl = () => props.entry;
   const failed = () => dl().status === "failed";
 
+  const matchingInstance = () => {
+    if (dl().category !== "modpack") return undefined;
+    const instList = instances() ?? [];
+    if (dl().instanceId) {
+      const found = instList.find((i) => i.id === dl().instanceId);
+      if (found) return found;
+    }
+    const dlNorm = dl().name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (dlNorm.length === 0) return undefined;
+    return instList.find((i) => {
+      const instNorm = i.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      return instNorm.length > 0 && (dlNorm.includes(instNorm) || instNorm.includes(dlNorm));
+    });
+  };
+
+  const cardIcon = () => {
+    if (dl().iconUrl) return dl().iconUrl;
+    const inst = matchingInstance();
+    if (inst && inst.icon && inst.icon !== "cube") return inst.icon;
+    return undefined;
+  };
+
+  const cardName = () => {
+    const inst = matchingInstance();
+    return inst?.name || dl().name;
+  };
+
+  const cardLoader = () => {
+    if (dl().loader && dl().loader !== "modrinth" && dl().loader !== "curseforge") return dl().loader;
+    const inst = matchingInstance();
+    return inst?.loader?.type ?? dl().loader;
+  };
+
+  const cardGameVersion = () => {
+    if (dl().gameVersion) return dl().gameVersion;
+    const inst = matchingInstance();
+    return inst?.game_version;
+  };
+
+  const cardVersionNumber = () => {
+    if (dl().versionNumber) return dl().versionNumber;
+    const inst = matchingInstance();
+    return inst?.source_version ?? undefined;
+  };
+
   return (
     <div class="card card--inst dl-card" classList={{ "dl-card-failed": failed() }}>
       <div class="card-body">
         <div class="dl-card-icon">
-          <Show when={dl().iconUrl} fallback={
-            <span class="dl-card-icon-fallback">{dl().name.charAt(0).toUpperCase()}</span>
+          <Show when={cardIcon()} fallback={
+            <span class="dl-card-icon-fallback">{cardName().charAt(0).toUpperCase()}</span>
           }>
-            <img src={dl().iconUrl!} alt="" draggable={false} />
+            <img src={cardIcon()!} alt="" draggable={false} />
           </Show>
         </div>
         <div class="dl-card-body">
           <div class="dl-card-header">
             <div class="dl-card-title-group">
-              <span class="dl-card-name" title={dl().name}>{dl().name}</span>
+              <span class="dl-card-name" title={cardName()}>{cardName()}</span>
               <Show when={dl().author}>
                 <span class="dl-card-author">by {dl().author}</span>
               </Show>
@@ -415,14 +521,14 @@ const DownloadCard: Component<{ entry: DownloadEntry; timeAgo: (ts: number) => s
           </div>
           <div class="dl-card-meta">
             <span class="badge">{getCategoryLabel(dl().category)}</span>
-            <Show when={dl().loader}>
-              <span class={`badge badge--loader badge--${dl().loader}`}>{dl().loader}</span>
+            <Show when={cardLoader()}>
+              <span class={`badge badge--loader badge--${cardLoader()}`}>{cardLoader()}</span>
             </Show>
-            <Show when={dl().gameVersion}>
-              <span class="badge badge--version">{dl().gameVersion}</span>
+            <Show when={cardGameVersion()}>
+              <span class="badge badge--version">{cardGameVersion()}</span>
             </Show>
-            <Show when={dl().versionNumber}>
-              <span class="badge badge--vnum" title={dl().versionNumber!}>{dl().versionNumber}</span>
+            <Show when={cardVersionNumber()}>
+              <span class="badge badge--vnum" title={cardVersionNumber()!}>{cardVersionNumber()}</span>
             </Show>
             <span class="dl-card-time">{props.timeAgo(dl().timestamp)}</span>
           </div>

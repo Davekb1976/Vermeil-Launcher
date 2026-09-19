@@ -160,6 +160,7 @@ async function processQueue() {
           loader: result?.loader?.type || nextTask.meta?.loader,
           gameVersion: result?.game_version || nextTask.meta?.gameVersion,
           author: nextTask.meta?.author,
+          instanceId: result?.id,
         },
       );
     } else {
@@ -175,6 +176,7 @@ async function processQueue() {
             loader: result?.loader?.type || nextTask.meta?.loader,
             gameVersion: result?.game_version || nextTask.meta?.gameVersion,
             author: nextTask.meta?.author,
+            instanceId: result?.id,
           },
         );
       }

@@ -116,7 +116,7 @@ const ImportInstance: Component = () => {
         category: "modpack",
         meta: {
           iconUrl: undefined,
-          loader: activePlatform() === "modrinth" ? "modrinth" : "curseforge",
+          loader: undefined,
           gameVersion: undefined,
           versionNumber: undefined,
           author: undefined,

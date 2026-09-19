@@ -144,6 +144,8 @@ export interface DownloadEntry {
    *  search results so we can show "by Author" in the Downloads history
    *  card without re-fetching project metadata. */
   author?: string;
+  /** Instance ID on disk for modpacks, used to link back to instance data. */
+  instanceId?: string;
 }
 const [downloads, setDownloads] = createSignal<DownloadEntry[]>([]);
 const [bulkBatchSize, setBulkBatchSize] = createSignal(0); // Track bulk install total
@@ -260,6 +262,7 @@ export function completeDownload(
     loader?: string;
     gameVersion?: string;
     author?: string | null;
+    instanceId?: string;
   },
 ) {
   let finishedItem: DownloadEntry | undefined;
@@ -276,6 +279,7 @@ export function completeDownload(
           loader: metaUpdates?.loader ?? d.loader,
           gameVersion: metaUpdates?.gameVersion ?? d.gameVersion,
           author: metaUpdates?.author !== undefined ? (metaUpdates.author ?? undefined) : d.author,
+          instanceId: metaUpdates?.instanceId ?? d.instanceId,
         };
         return finishedItem;
       }
@@ -433,6 +437,44 @@ export function ensureAccountOrPrompt(): boolean {
 
 const [instances, { refetch: refetchInstances }] = createResource(listInstances);
 const [account, { refetch: refetchAccount }] = createResource(getActiveAccount);
+
+// Auto-heal modpack download entries missing metadata (e.g. from local file imports)
+createEffect(() => {
+  const instList = instances();
+  if (!instList || instList.length === 0) return;
+  const currentDownloads = downloads();
+  let changed = false;
+  const updated = currentDownloads.map((d) => {
+    if (d.category !== "modpack") return d;
+    if (d.iconUrl && d.loader && d.loader !== "modrinth" && d.loader !== "curseforge" && d.gameVersion) {
+      return d;
+    }
+    const dlNorm = d.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const inst = (d.instanceId && instList.find((i) => i.id === d.instanceId)) ||
+      instList.find((i) => {
+        const instNorm = i.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return (dlNorm.length > 0 && instNorm.length > 0) && (dlNorm.includes(instNorm) || instNorm.includes(dlNorm));
+      });
+    if (inst) {
+      changed = true;
+      return {
+        ...d,
+        name: d.name.includes(" v") || d.name.endsWith(".mrpack") || d.name.endsWith(".zip") ? inst.name : d.name,
+        instanceId: inst.id,
+        iconUrl: d.iconUrl || (inst.icon && inst.icon !== "cube" ? inst.icon : undefined),
+        loader: (d.loader && d.loader !== "modrinth" && d.loader !== "curseforge") ? d.loader : inst.loader?.type,
+        gameVersion: d.gameVersion || inst.game_version,
+        versionNumber: d.versionNumber || inst.source_version || undefined,
+      };
+    }
+    return d;
+  });
+
+  if (changed) {
+    setDownloads(updated);
+    persistDownloads(true);
+  }
+});
 
 // Sidebar pinned-instance IDs. Sourced from `LauncherSettings.sidebar_pinned_instances`
 // but mirrored into a signal so the sidebar updates reactively the moment
