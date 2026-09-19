@@ -1,5 +1,5 @@
 import { Component, createSignal, Show } from "solid-js";
-import { setActiveScreen, refetchInstances, refreshPinnedInstanceIds, showToast, updateToast, trackDownload, completeDownload, failDownload, downloadToastsEnabled } from "../App";
+import { setActiveScreen, refetchInstances, refreshPinnedInstanceIds, trackDownload, completeDownload, failDownload } from "../App";
 import { importCfZip } from "../ipc/commands";
 import { open } from "@tauri-apps/plugin-dialog";
 
@@ -23,62 +23,18 @@ const ImportCurseForge: Component = () => {
       const packName = fileName.replace(/\.zip$/i, "");
       const dlId = trackDownload(packName, "modpack");
 
-      const toastId = downloadToastsEnabled()
-        ? showToast({
-            title: "Importing modpack...",
-            message: packName,
-            type: "loading",
-            autoCloseMs: 0,
-            action: {
-              label: "View",
-              onClick: () => setActiveScreen("downloads"),
-            },
-          })
-        : null;
-
       importCfZip(selected as string)
         .then((instance) => {
           refetchInstances();
           refreshPinnedInstanceIds().catch(() => {});
           completeDownload(dlId, instance.name);
-          if (toastId) {
-            updateToast(toastId, {
-              title: "Import complete",
-              message: `${instance.name} imported successfully`,
-              type: "success",
-              autoCloseMs: 4000,
-              action: undefined,
-            });
-          }
         })
         .catch((e: any) => {
-          failDownload(dlId);
           if (typeof e === "string" && e === "Install cancelled") {
-            if (toastId) {
-              updateToast(toastId, {
-                title: "Import cancelled",
-                message: packName,
-                type: "info",
-                autoCloseMs: 3000,
-              });
-            }
+            failDownload(dlId, "Import cancelled");
             return;
           }
-          if (toastId) {
-            updateToast(toastId, {
-              title: "Import failed",
-              message: typeof e === "string" ? e : e.message || "Import failed",
-              type: "error",
-              autoCloseMs: 6000,
-            });
-          } else {
-            showToast({
-              title: "Import failed",
-              message: typeof e === "string" ? e : e.message || "Import failed",
-              type: "error",
-              autoCloseMs: 6000,
-            });
-          }
+          failDownload(dlId, typeof e === "string" ? e : e?.message || "Import failed");
         })
         .finally(() => setImporting(false));
     } catch (e: any) {

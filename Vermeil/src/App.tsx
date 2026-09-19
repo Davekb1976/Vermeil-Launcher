@@ -16,7 +16,7 @@ import CreateCustom from "./modals/CreateCustom";
 import BrowseModpacks from "./modals/BrowseModpacks";
 import ImportCurseForge from "./modals/ImportCurseForge";
 import NoAccountModal from "./components/NoAccountModal";
-import Toasts, { showToast, updateToast } from "./components/Toasts";
+import Toasts, { showToast, updateToast, dismissToast } from "./components/Toasts";
 import { initInstallProgress } from "./services/installProgress";
 import BulkInstallToast from "./components/BulkInstallToast";
 import Splash from "./components/Splash";
@@ -168,6 +168,56 @@ function persistDownloads() {
   }, 500);
 }
 
+// Active download queue toast tracking
+let activeDownloadToastId: string | null = null;
+let currentBatchTotal = 0;
+let currentBatchCompleted = 0;
+let currentBatchFailed = 0;
+let lastFinishedItemName: string | null = null;
+
+function updateDownloadQueueToast() {
+  if (!downloadToastsEnabled()) {
+    if (activeDownloadToastId) {
+      dismissToast(activeDownloadToastId);
+      activeDownloadToastId = null;
+    }
+    return;
+  }
+
+  const active = downloads().filter((d) => d.status === "downloading");
+  if (active.length === 0) return;
+
+  // Oldest active download is at the end of the active array (since new entries prepend)
+  const currentItem = active[active.length - 1];
+  const queueRemaining = active.length - 1;
+
+  const isPack = currentItem.category === "modpack";
+  const title = isPack ? "Installing modpack..." : "Installing content";
+  const message = queueRemaining > 0
+    ? `${currentItem.name} (+${queueRemaining} in queue)`
+    : currentItem.name;
+
+  if (activeDownloadToastId) {
+    updateToast(activeDownloadToastId, {
+      title,
+      message,
+      type: "loading",
+      autoCloseMs: 0,
+    });
+  } else {
+    activeDownloadToastId = showToast({
+      title,
+      message,
+      type: "loading",
+      autoCloseMs: 0,
+      action: {
+        label: "View",
+        onClick: () => setActiveScreen("downloads"),
+      },
+    });
+  }
+}
+
 export function trackDownload(
   name: string,
   category: string,
@@ -187,17 +237,128 @@ export function trackDownload(
     author: meta?.author ?? undefined,
   };
   setDownloads(prev => [entry, ...prev].slice(0, 200));
+
+  currentBatchTotal++;
+  if (downloadToastsEnabled()) {
+    updateDownloadQueueToast();
+  }
+
   return id;
 }
 
 export function completeDownload(id: string, nameOverride?: string, versionNumber?: string) {
-  setDownloads(prev => prev.map(d => d.id === id ? { ...d, status: "completed" as const, timestamp: Date.now(), name: nameOverride || d.name, versionNumber: versionNumber ?? d.versionNumber } : d));
+  let finishedItem: DownloadEntry | undefined;
+  setDownloads(prev =>
+    prev.map(d => {
+      if (d.id === id) {
+        finishedItem = d;
+        return {
+          ...d,
+          status: "completed" as const,
+          timestamp: Date.now(),
+          name: nameOverride || d.name,
+          versionNumber: versionNumber ?? d.versionNumber,
+        };
+      }
+      return d;
+    })
+  );
   persistDownloads();
+
+  currentBatchCompleted++;
+  if (nameOverride || finishedItem?.name) {
+    lastFinishedItemName = nameOverride || finishedItem!.name;
+  }
+
+  const remaining = downloads().filter(d => d.status === "downloading");
+
+  if (remaining.length > 0) {
+    if (downloadToastsEnabled()) {
+      updateDownloadQueueToast();
+    }
+  } else {
+    if (downloadToastsEnabled() && activeDownloadToastId) {
+      if (currentBatchTotal > 1) {
+        updateToast(activeDownloadToastId, {
+          title: "Downloads complete",
+          message: currentBatchFailed > 0
+            ? `${currentBatchCompleted} installed (${currentBatchFailed} failed)`
+            : `${currentBatchCompleted} items installed`,
+          type: "success",
+          autoCloseMs: 4000,
+          action: {
+            label: "View",
+            onClick: () => setActiveScreen("downloads"),
+          },
+        });
+      } else {
+        const isPack = finishedItem?.category === "modpack";
+        const displayName = lastFinishedItemName || finishedItem?.name || "Content";
+        updateToast(activeDownloadToastId, {
+          title: isPack ? "Modpack installed" : "Installed",
+          message: isPack ? `${displayName} is ready to play` : displayName,
+          type: "success",
+          autoCloseMs: 3500,
+          action: undefined,
+        });
+      }
+      activeDownloadToastId = null;
+    }
+    currentBatchTotal = 0;
+    currentBatchCompleted = 0;
+    currentBatchFailed = 0;
+    lastFinishedItemName = null;
+  }
 }
 
-export function failDownload(id: string) {
-  setDownloads(prev => prev.map(d => d.id === id ? { ...d, status: "failed" as const, timestamp: Date.now() } : d));
+export function failDownload(id: string, errorMsg?: string) {
+  let failedItem: DownloadEntry | undefined;
+  setDownloads(prev =>
+    prev.map(d => {
+      if (d.id === id) {
+        failedItem = d;
+        return { ...d, status: "failed" as const, timestamp: Date.now() };
+      }
+      return d;
+    })
+  );
   persistDownloads();
+
+  currentBatchFailed++;
+
+  const isCancelled = errorMsg === "Install cancelled" || errorMsg === "Import cancelled";
+  showToast({
+    title: isCancelled ? "Install cancelled" : "Install failed",
+    message: errorMsg || `${failedItem?.name || "Content"} failed to install`,
+    type: isCancelled ? "info" : "error",
+    autoCloseMs: 5000,
+  });
+
+  const remaining = downloads().filter(d => d.status === "downloading");
+
+  if (remaining.length > 0) {
+    if (downloadToastsEnabled()) {
+      updateDownloadQueueToast();
+    }
+  } else {
+    if (activeDownloadToastId) {
+      if (currentBatchCompleted > 0 && downloadToastsEnabled()) {
+        updateToast(activeDownloadToastId, {
+          title: "Downloads complete",
+          message: `${currentBatchCompleted} installed (${currentBatchFailed} failed)`,
+          type: "warning",
+          autoCloseMs: 4000,
+        });
+      } else {
+        dismissToast(activeDownloadToastId);
+      }
+      activeDownloadToastId = null;
+    }
+    currentBatchTotal = 0;
+    currentBatchCompleted = 0;
+    currentBatchFailed = 0;
+    lastFinishedItemName = null;
+  }
 }
 
 export function startBulkBatch(total: number) { setBulkBatchSize(total); }
@@ -265,6 +426,13 @@ const [pinnedInstanceIds, setPinnedInstanceIds] = createSignal<string[]>([]);
 // toasts are suppressed and the floating dock displays an active download count badge.
 const [downloadToastsEnabled, setDownloadToastsEnabled] = createSignal(true);
 export { downloadToastsEnabled, setDownloadToastsEnabled };
+
+createEffect(() => {
+  if (!downloadToastsEnabled() && activeDownloadToastId) {
+    dismissToast(activeDownloadToastId);
+    activeDownloadToastId = null;
+  }
+});
 
 /** Re-load pin list from settings. Called on startup and after the pin
  *  manager modal saves changes. */

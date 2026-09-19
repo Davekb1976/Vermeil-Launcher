@@ -17,7 +17,6 @@ import {
   dockHidden,
   dockPagination,
   clearGameLogs,
-  downloadToastsEnabled,
   activeDownloadCount,
 } from "../App";
 import {
@@ -218,7 +217,7 @@ const FloatingDock: Component = () => {
 
   const hidden = () => dockHidden() && !nearBottom() && !pinSelectorOpen();
 
-  const showDownloadBadge = () => !downloadToastsEnabled() && activeDownloadCount() > 0;
+  const showDownloadBadge = () => activeDownloadCount() > 0;
 
   const DockBtn = (props: { screens: Screen[]; target: Screen; icon: any; label: string; badge?: number }) => (
     <div class="dock-btn-slot">

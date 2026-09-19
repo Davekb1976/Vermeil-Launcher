@@ -8,9 +8,7 @@ import {
   completeDownload,
   failDownload,
   showToast,
-  updateToast,
   setDockPagination,
-  downloadToastsEnabled,
 } from "../App";
 import {
   searchModpacks,
@@ -185,19 +183,6 @@ const BrowseModpacks: Component = () => {
       versionNumber: pack.version_name ?? undefined,
     });
 
-    const toastId = downloadToastsEnabled()
-      ? showToast({
-          title: "Installing modpack...",
-          message: pack.title,
-          type: "loading",
-          autoCloseMs: 0,
-          action: {
-            label: "View",
-            onClick: () => setActiveScreen("downloads"),
-          },
-        })
-      : null;
-
     const installPromise =
       modSource() === "curseforge"
         ? installCfModpack(pack.project_id, versionId ?? pack.latest_version ?? undefined)
@@ -208,45 +193,14 @@ const BrowseModpacks: Component = () => {
         refetchInstances();
         refreshPinnedInstanceIds().catch(() => {});
         completeDownload(dlId);
-        if (toastId) {
-          updateToast(toastId, {
-            title: "Modpack installed",
-            message: `${pack.title} is ready to play`,
-            type: "success",
-            autoCloseMs: 4000,
-            action: undefined,
-          });
-        }
       })
       .catch((e) => {
-        failDownload(dlId);
         if (typeof e === "string" && e === "Install cancelled") {
-          if (toastId) {
-            updateToast(toastId, {
-              title: "Install cancelled",
-              message: pack.title,
-              type: "info",
-              autoCloseMs: 3000,
-            });
-          }
+          failDownload(dlId, "Install cancelled");
           return;
         }
         console.error("Modpack install failed:", e);
-        if (toastId) {
-          updateToast(toastId, {
-            title: "Install failed",
-            message: typeof e === "string" ? e : "Unknown error occurred during installation",
-            type: "error",
-            autoCloseMs: 5000,
-          });
-        } else {
-          showToast({
-            title: "Install failed",
-            message: typeof e === "string" ? e : "Unknown error occurred during installation",
-            type: "error",
-            autoCloseMs: 5000,
-          });
-        }
+        failDownload(dlId, typeof e === "string" ? e : "Installation failed");
       })
       .finally(() => setInstalling(null));
   };
