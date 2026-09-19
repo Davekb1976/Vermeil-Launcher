@@ -82,6 +82,25 @@ const ImportInstance: Component = () => {
       return;
     }
 
+    const lower = path.toLowerCase();
+    const isMrpack = lower.endsWith(".mrpack");
+    const isZip = lower.endsWith(".zip");
+
+    if (!isMrpack && !isZip) {
+      setError("Unsupported format. Please select a .mrpack (Modrinth) or .zip (CurseForge) file.");
+      return;
+    }
+
+    if (activePlatform() === "modrinth" && !isMrpack) {
+      setError("You selected a .zip file while on the Modrinth tab. Please switch to CurseForge or select a .mrpack file.");
+      return;
+    }
+
+    if (activePlatform() === "curseforge" && !isZip) {
+      setError("You selected a .mrpack file while on the CurseForge tab. Please switch to Modrinth or select a .zip file.");
+      return;
+    }
+
     setError(null);
     setImporting(true);
 
@@ -112,9 +131,13 @@ const ImportInstance: Component = () => {
     }
   };
 
-  onMount(async () => {
-    try {
-      const unlisten = await getCurrentWebview().onDragDropEvent((event) => {
+  let unlistenDrag: (() => void) | undefined;
+  let isUnmounted = false;
+
+  onMount(() => {
+    getCurrentWebview()
+      .onDragDropEvent((event) => {
+        if (isUnmounted) return;
         if (event.payload.type === "over") {
           setIsDragging(true);
         } else if (event.payload.type === "leave") {
@@ -126,13 +149,23 @@ const ImportInstance: Component = () => {
             handleSelectFile(paths[0]);
           }
         }
+      })
+      .then((unlisten) => {
+        if (isUnmounted) {
+          unlisten();
+        } else {
+          unlistenDrag = unlisten;
+        }
+      })
+      .catch((e) => {
+        console.warn("Drag-and-drop listener unavailable:", e);
       });
+  });
 
-      onCleanup(() => {
-        unlisten();
-      });
-    } catch (e) {
-      console.warn("Drag-and-drop listener unavailable:", e);
+  onCleanup(() => {
+    isUnmounted = true;
+    if (unlistenDrag) {
+      unlistenDrag();
     }
   });
 
@@ -177,6 +210,9 @@ const ImportInstance: Component = () => {
                 onClick={() => {
                   setActivePlatform("modrinth");
                   setError(null);
+                  if (selectedPath() && selectedPath()!.toLowerCase().endsWith(".zip")) {
+                    setSelectedPath(null);
+                  }
                 }}
               >
                 <div class="import-tab-icon modrinth">
@@ -208,6 +244,9 @@ const ImportInstance: Component = () => {
                 onClick={() => {
                   setActivePlatform("curseforge");
                   setError(null);
+                  if (selectedPath() && selectedPath()!.toLowerCase().endsWith(".mrpack")) {
+                    setSelectedPath(null);
+                  }
                 }}
               >
                 <div class="import-tab-icon curseforge">
@@ -249,6 +288,15 @@ const ImportInstance: Component = () => {
               class="import-dropzone"
               classList={{ dragging: isDragging() }}
               onClick={handleBrowse}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleBrowse();
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-label={`Browse for ${activePlatform() === "modrinth" ? ".mrpack" : ".zip"} file`}
             >
               <div class="import-dropzone-icon">
                 <IconUpload />
