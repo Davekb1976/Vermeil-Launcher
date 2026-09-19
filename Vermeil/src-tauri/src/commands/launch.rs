@@ -219,7 +219,7 @@ pub async fn sync_instance_mods(
         if let Ok(content) = tokio::fs::read_to_string(&meta_path).await {
             if let Ok(instance) = serde_json::from_str::<crate::models::instance::Instance>(&content) {
                 let needs_enrichment = instance.mods.iter().any(|m| {
-                    (m.source == "modpack" && m.title.is_none())
+                    ((m.source == "modpack" || instance.source_project_id.is_some()) && m.title.is_none())
                         || (m.icon_url.is_some() && m.local_icon_path.is_none())
                 });
                 if needs_enrichment {
