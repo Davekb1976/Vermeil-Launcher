@@ -587,7 +587,7 @@
   left: 50%;
   right: auto;
   top: auto;
-  bottom: calc(18px + 64px + 32px);
+  bottom: calc(18px + 64px + 8px);
   transform: translateX(-50%);
 }
 
