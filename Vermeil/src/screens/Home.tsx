@@ -183,36 +183,39 @@ const Home: Component = () => {
   });
   onCleanup(() => setDockPagination(null));
 
-  const [recentWorlds] = createResource(async () => {
-    const insts = instances();
-    if (!insts || insts.length === 0) return [];
+  const [recentWorlds] = createResource(
+    instances,
+    async (insts) => {
+      if (!insts || insts.length === 0) return [];
 
-    const allWorlds: {
-      instanceId: string; instanceName: string; instanceIcon: string;
-      loader: string; gameVersion: string;
-      worldName: string; worldFolder: string; worldIcon: string | null; lastPlayed: string;
-    }[] = [];
-    for (const inst of insts.slice(0, 10)) {
-      try {
-        const worlds = await listInstanceWorlds(inst.id);
-        for (const w of worlds) {
-          allWorlds.push({
-            instanceId: inst.id,
-            instanceName: inst.name,
-            instanceIcon: inst.icon,
-            loader: inst.loader.type,
-            gameVersion: inst.game_version,
-            worldName: w.name,
-            worldFolder: w.folder_name,
-            worldIcon: w.icon,
-            lastPlayed: w.last_played,
-          });
-        }
-      } catch { /* ignore */ }
-    }
-    allWorlds.sort((a, b) => b.lastPlayed.localeCompare(a.lastPlayed));
-    return allWorlds.slice(0, 5);
-  });
+      const allWorlds: {
+        instanceId: string; instanceName: string; instanceIcon: string;
+        loader: string; gameVersion: string;
+        worldName: string; worldFolder: string; worldIcon: string | null; lastPlayed: string;
+      }[] = [];
+      for (const inst of insts.slice(0, 10)) {
+        try {
+          const worlds = await listInstanceWorlds(inst.id);
+          for (const w of worlds) {
+            allWorlds.push({
+              instanceId: inst.id,
+              instanceName: inst.name,
+              instanceIcon: inst.icon,
+              loader: inst.loader.type,
+              gameVersion: inst.game_version,
+              worldName: w.name,
+              worldFolder: w.folder_name,
+              worldIcon: w.icon,
+              lastPlayed: w.last_played,
+            });
+          }
+        } catch { /* ignore */ }
+      }
+      allWorlds.sort((a, b) => b.lastPlayed.localeCompare(a.lastPlayed));
+      return allWorlds.slice(0, 5);
+    },
+    { initialValue: [] }
+  );
 
   // Number of empty slots to display so the secondary 2x2 sub-grid always has 4 slots (5 worlds total with hero)
   const emptySlotCount = createMemo(() => {
