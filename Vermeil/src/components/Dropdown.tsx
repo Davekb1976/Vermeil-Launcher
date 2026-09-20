@@ -36,7 +36,7 @@ const Dropdown: Component<DropdownProps> = (props) => {
   return (
     <div
       class="custom-dropdown"
-      classList={{ disabled: props.disabled }}
+      classList={{ disabled: props.disabled, open: open() }}
       style={props.width ? `width:${props.width}` : "width:auto;min-width:120px"}
       tabIndex={props.disabled ? -1 : 0}
       onBlur={() => setTimeout(() => setOpen(false), 150)}

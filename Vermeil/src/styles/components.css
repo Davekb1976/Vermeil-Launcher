@@ -2115,6 +2115,20 @@
   border-left-color: var(--accent);
 }
 
+/* Elevate setting rows / cells when an embedded dropdown is open so its menu
+   floats cleanly above subsequent grid items and their positioned controls (e.g. .check). */
+.card-section-body .setting-row:has(.custom-dropdown.open),
+.card-section-body .setting-row:has(.custom-dropdown-options),
+.setting-row:has(.custom-dropdown.open),
+.setting-row:has(.custom-dropdown-options),
+.settings-cell:has(.custom-dropdown.open),
+.settings-cell:has(.custom-dropdown-options),
+.setting-control:has(.custom-dropdown.open),
+.setting-control:has(.custom-dropdown-options) {
+  position: relative;
+  z-index: 100;
+}
+
 .card-section-body .setting-row.full,
 .settings-cell--full {
   grid-column: 1 / -1;
@@ -2626,6 +2640,9 @@ select.field-input[size] { appearance: none; }
   position: relative;
   width: 100%;
 }
+.custom-dropdown.open {
+  z-index: 100;
+}
 /* Trigger height is a fixed control height rather than padding-derived, so a
    dropdown lines up with the inputs and buttons beside it. Compact by default;
    a container opts into the standard field height by setting --dropdown-height
@@ -2662,7 +2679,7 @@ select.field-input[size] { appearance: none; }
   top: calc(100% + 4px);
   left: 0;
   right: 0;
-  z-index: 50;
+  z-index: 100;
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -3503,6 +3520,13 @@ select.field-input[size] { appearance: none; }
   display: flex;
   align-items: center;
   flex-shrink: 0;
+}
+.inst-meta-sort-wrap:has(.custom-dropdown.open),
+.inst-meta-sort-wrap:has(.custom-dropdown-options),
+.inst-meta-row:has(.custom-dropdown.open),
+.inst-meta-row:has(.custom-dropdown-options) {
+  position: relative;
+  z-index: 100;
 }
 .inst-meta-sort-wrap .custom-dropdown-selected {
   height: 32px;
