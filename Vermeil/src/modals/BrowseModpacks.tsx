@@ -4,6 +4,7 @@ import {
   instances,
   showToast,
   setDockPagination,
+  setDockHidden,
 } from "../App";
 import { enqueueModpack, isModpackQueuedOrActive } from "../services/modpackQueue";
 import {
@@ -137,6 +138,7 @@ const BrowseModpacks: Component = () => {
 
   // Initial load
   onMount(() => {
+    setDockHidden(true);
     doSearch("", 1);
   });
 
@@ -149,6 +151,7 @@ const BrowseModpacks: Component = () => {
     }
   });
   onCleanup(() => {
+    setDockHidden(false);
     setDockPagination(null);
     clearTimeout(searchTimeout);
     clearTimeout(pageTimeout);

@@ -134,7 +134,7 @@
 /* When dock is auto-hidden (globally via setting or on Logs/Skins), collapse
    the 112px bottom clearance down to standard padding to maximize vertical space. */
 .content.dock-hidden {
-  padding-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
   scroll-padding-bottom: 0;
 }
 

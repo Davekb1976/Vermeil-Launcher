@@ -144,7 +144,7 @@ fn default_concurrent_writes() -> u8 { 10 }
 fn default_download_speed_limit_mb() -> u32 { 0 }
 fn default_splash_screen() -> bool { true }
 fn default_download_toasts() -> bool { true }
-fn default_auto_hide_dock() -> bool { false }
+fn default_auto_hide_dock() -> bool { true }
 
 /// In-game custom cape state (companion mod). The baked cape image lives at
 /// `<data>/ingame-cape.png`; this is just the toggle + which library cape.
@@ -174,7 +174,7 @@ impl Default for LauncherSettings {
             show_snapshots: false,
             splash_screen: true,
             download_toasts: true,
-            auto_hide_dock: false,
+            auto_hide_dock: true,
             concurrent_downloads: default_concurrent_downloads(),
             concurrent_writes: default_concurrent_writes(),
             download_speed_limit_mb: default_download_speed_limit_mb(),

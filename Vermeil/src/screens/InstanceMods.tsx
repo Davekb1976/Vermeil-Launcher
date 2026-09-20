@@ -360,11 +360,10 @@ const InstanceMods: Component = () => {
   // (via the jump button or by scrolling down themselves).
   const [autoScrollLogs, setAutoScrollLogs] = createSignal(true);
 
-  // Hide the floating dock while the Logs tab is active so it doesn't cover
-  // output. Reset on tab change and on unmount. The dock still reveals on
-  // cursor-near-bottom (handled in FloatingDock).
+  // Hide the floating dock while on the instance screen so it doesn't cover
+  // cards, controls, or log output. The dock still reveals on cursor-near-bottom.
   createEffect(() => {
-    setDockHidden(mainTab() === "logs");
+    setDockHidden(true);
   });
   onCleanup(() => setDockHidden(false));
 

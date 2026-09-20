@@ -558,7 +558,7 @@ export { pinSelectorOpen, setPinSelectorOpen };
 
 // Global dock auto-hide setting. When true, the floating dock auto-hides across
 // all screens until hovered, collapsing bottom clearance to maximize vertical space.
-const [autoHideDockSetting, setAutoHideDockSetting] = createSignal(false);
+const [autoHideDockSetting, setAutoHideDockSetting] = createSignal(true);
 export { autoHideDockSetting, setAutoHideDockSetting };
 
 // Dock auto-hide. Set true to slide the floating dock out of view (used on
