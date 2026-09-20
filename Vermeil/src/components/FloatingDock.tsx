@@ -18,6 +18,7 @@ import {
   autoHideDockSetting,
   dockPagination,
   paginationPosition,
+  paginationScrollMode,
   clearGameLogs,
   activeDownloadCount,
 } from "../App";
@@ -99,6 +100,20 @@ const DockPaginationIsland: Component = () => {
     if (islandEl) islandEl.removeEventListener("wheel", handleWheel);
   });
 
+  // When pagination scroll mode is toggled on, capture mouse wheel anywhere in the window
+  createEffect(() => {
+    if (!paginationScrollMode()) return;
+    const onWindowWheel = (e: WheelEvent) => {
+      const pag = dockPagination();
+      if (!pag || pag.total <= 1) return;
+      handleWheel(e);
+    };
+    window.addEventListener("wheel", onWindowWheel, { passive: false });
+    onCleanup(() => {
+      window.removeEventListener("wheel", onWindowWheel);
+    });
+  });
+
   const startHold = () => {
     const pag = dockPagination();
     if (!pag) return;
@@ -140,6 +155,7 @@ const DockPaginationIsland: Component = () => {
   return (
     <div
       class={`dock-page-island ${holding() ? "holding" : ""}`}
+      classList={{ "scroll-mode-active": paginationScrollMode() }}
       ref={(el) => {
         islandEl = el;
         el.addEventListener("wheel", handleWheel, { passive: false });
@@ -147,6 +163,7 @@ const DockPaginationIsland: Component = () => {
       onMouseDown={startHold}
       onMouseUp={cancelHold}
       onMouseLeave={cancelHold}
+      data-tip={paginationScrollMode() ? "Scroll Mode: ON (Alt+P to toggle)" : undefined}
     >
       <Show when={!holding()}>
         <div class="dock-page-dots">

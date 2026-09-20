@@ -589,6 +589,17 @@ export interface DockPaginationState {
 const [dockPagination, setDockPagination] = createSignal<DockPaginationState | null>(null);
 export { dockPagination, setDockPagination };
 
+// Pagination scroll mode. When true, mouse wheel anywhere in the app is
+// captured and forwarded to `dockPagination().onPageChange`.
+const [paginationScrollMode, setPaginationScrollMode] = createSignal(false);
+export { paginationScrollMode, setPaginationScrollMode };
+
+createEffect(() => {
+  if (!dockPagination()) {
+    setPaginationScrollMode(false);
+  }
+});
+
 // Active skin URL for the currently signed-in Microsoft account. Populated
 // lazily from `getSkinProfile()` whenever the active account changes; cleared
 // for offline accounts since they have no Mojang profile to fetch.
@@ -840,6 +851,33 @@ const App: Component = () => {
         setPinSelectorOpen((v) => !v);
         return;
       }
+      if (
+        matchesKeybind(e, resolveBinding("toggle_pagination_scroll", userBindings)) ||
+        matchesKeybind(e, "Alt+P")
+      ) {
+        e.preventDefault();
+        const pag = dockPagination();
+        if (!pag || pag.total <= 1) {
+          showToast({
+            title: "Pagination Inactive",
+            message: "No multi-page content is currently displayed",
+            type: "info",
+            autoCloseMs: 2500,
+          });
+          return;
+        }
+        const next = !paginationScrollMode();
+        setPaginationScrollMode(next);
+        showToast({
+          title: next ? "Scroll Mode: ON" : "Scroll Mode: OFF",
+          message: next
+            ? "Mouse wheel anywhere navigates pages"
+            : "Mouse wheel returned to normal scrolling",
+          type: "info",
+          autoCloseMs: 2000,
+        });
+        return;
+      }
     };
 
     document.addEventListener("keydown", (e) => {
@@ -847,6 +885,10 @@ const App: Component = () => {
       // user-rebindable because users expect Escape to "back out" of UI
       // and remapping it would brick recovery from a stuck modal.
       if (e.key === "Escape") {
+        if (paginationScrollMode()) {
+          setPaginationScrollMode(false);
+          return;
+        }
         if (pinInstancesModalOpen()) {
           closePinInstancesModal();
           return;

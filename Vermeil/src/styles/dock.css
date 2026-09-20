@@ -649,7 +649,7 @@
   animation: dockPagIslandIn 0.25s cubic-bezier(0.34, 1.2, 0.64, 1);
   cursor: pointer;
   position: relative;
-  transition: border-color 0.3s ease;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 @keyframes dockPagIslandIn {
   from { opacity: 0; transform: translateY(6px) scale(0.9); }
@@ -661,6 +661,15 @@
 /* When input is showing, subtle border. */
 .dock-page-island.holding {
   border-color: var(--border-hover);
+}
+
+/* Scroll Mode active — indicates mouse wheel anywhere in window drives pagination */
+.dock-page-island.scroll-mode-active {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 14px color-mix(in srgb, var(--accent) 55%, transparent),
+    0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 /* Dot row */

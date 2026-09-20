@@ -46,6 +46,12 @@ export const KEYBINDS: KeybindAction[] = [
     description: "Open the floating pin carousel for quick instance switching",
     default: "Ctrl+P",
   },
+  {
+    id: "toggle_pagination_scroll",
+    label: "Toggle pagination scroll mode",
+    description: "Route scroll wheel anywhere on screen to page navigation",
+    default: "Alt+P",
+  },
 ];
 
 /** Resolve a keybind: user override (if any) → action default. */
