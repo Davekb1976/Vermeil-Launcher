@@ -122,7 +122,8 @@ Vermeil-Launcher/               # Repo root
 - Variant switch (Classic/Slim)
 - Elytra toggle with animation
 - Cape equip/unequip
-- Local skin library
+- Local skin library (Wardrobe) with automatic capture and local caching
+- Historical skin synchronization from Crafty.gg archive (restores previous skins with chronological date tagging and deduplication)
 - Custom local capes — upload a static or animated image and edit it in the 3D viewer
 
 ### Settings

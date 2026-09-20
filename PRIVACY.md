@@ -34,6 +34,7 @@ Using Vermeil means making HTTPS requests to the following providers. Vermeil se
 | CurseForge (`api.curseforge.com`, `edge.forgecdn.net`) | Search and download CurseForge content (only if enabled) | The search queries you make |
 | Adoptium (`api.adoptium.net`) | Download Java runtimes when needed | None |
 | Fabric / Quilt / NeoForge / Forge metadata servers | Download mod loader files | None |
+| Crafty.gg (`api.crafty.gg`) | On-demand historical skin synchronization (only when you click "Sync" in the Wardrobe) | Your Minecraft account UUID (no credentials or personal data) |
 | GitHub (`github.com`, `objects.githubusercontent.com`) | Check for and download Vermeil updates | None |
 
 ## Microsoft account tokens

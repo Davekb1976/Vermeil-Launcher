@@ -76,6 +76,7 @@
 - Adaptive RAM allocation per instance
 - Discord Rich Presence
 - 3D skin viewer with upload, cape, and elytra support
+- Skin Wardrobe with on-demand historical skin synchronization from Crafty.gg
 - Companion mod for in-game custom capes
 - Auto-updater (Windows and Linux AppImage)
 - Global video settings (FPS, VSync, FOV, GUI Scale, FOV Effects)
