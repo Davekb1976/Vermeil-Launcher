@@ -9,7 +9,7 @@ import {
   getAccountSkin,
 } from "../ipc/commands";
 import PlayerHead from "../components/PlayerHead";
-import { IconX, IconTrash, IconPlus, IconUser, IconShieldCheck, IconAlertTriangle } from "../components/Icons";
+import { IconX, IconTrash, IconPlus, IconUser, IconShieldCheck, IconAlertTriangle, IconMicrosoft } from "../components/Icons";
 import type { MinecraftProfile } from "../ipc/commands";
 
 /**
@@ -189,8 +189,13 @@ const Account: Component = () => {
                       </div>
                     </div>
                     <Show when={acc.active}>
-                      <div class="account-badge-active">
-                        <span class="account-badge-dot" />
+                      <div class={`account-badge-active ${acc.is_offline ? "account-badge--offline" : ""}`}>
+                        <Show
+                          when={!acc.is_offline}
+                          fallback={<span class="account-badge-dot account-badge-dot--offline" />}
+                        >
+                          <IconMicrosoft class="account-badge-ms-icon" />
+                        </Show>
                         <span>Active</span>
                       </div>
                     </Show>
