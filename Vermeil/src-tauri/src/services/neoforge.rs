@@ -1,5 +1,6 @@
 use crate::services::download::{DownloadTask, download_all, download_file};
 use crate::util::paths;
+use std::collections::HashSet;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -7,6 +8,9 @@ use std::process::Stdio;
 use tauri::Emitter;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
+
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 
 const NEOFORGE_MAVEN: &str = "https://maven.neoforged.net/releases";
 const FORGE_MAVEN: &str = "https://maven.minecraftforge.net";
@@ -143,12 +147,16 @@ async fn run_installer_headless(
     let mut cmd = Command::new(java_exe);
     cmd.arg(format!("-Xms{}m", init_mb))
         .arg(format!("-Xmx{}m", max_mb))
+        .arg("-XX:+TieredCompilation")
+        .arg("-XX:TieredStopAtLevel=1")
+        .arg("-Djava.net.preferIPv4Stack=true")
         .arg("-XX:+UseG1GC")
         .arg("-Djava.awt.headless=true")
         .arg("-jar")
         .arg(installer_path)
         .arg("--installClient")
         .arg(instance_dir)
+        .current_dir(instance_dir)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     // Hide the console window the JVM would otherwise spawn on Windows.
@@ -320,18 +328,139 @@ fn find_version_json(instance_dir: &Path) -> Result<(String, serde_json::Value),
         .ok_or("No version.json found in instance versions/ directory".to_string())
 }
 
-/// After the installer runs, libraries are at <instance>/libraries.
-/// We MOVE them to the shared libraries dir to avoid duplication across instances.
-fn migrate_installer_libraries(instance_dir: &Path) -> Result<(), String> {
-    let src = instance_dir.join("libraries");
-    if !src.exists() { return Ok(()); }
+/// RAII guard to create and safely unlink `<instance_dir>/libraries` junction/symlink.
+struct LibrariesLinkGuard {
+    link_path: PathBuf,
+    target_path: PathBuf,
+    is_linked: bool,
+}
 
-    let dest = paths::libraries_dir();
-    fs::create_dir_all(&dest).map_err(|e| format!("Create libs dir: {}", e))?;
+impl LibrariesLinkGuard {
+    pub fn link(instance_dir: &Path, libs_dir: &Path) -> Self {
+        let link_path = instance_dir.join("libraries");
+        Self::clean_existing_path(&link_path);
 
-    copy_dir_merge(&src, &dest)?;
-    let _ = fs::remove_dir_all(&src);
+        let is_linked = Self::create_link(libs_dir, &link_path);
+        if !is_linked {
+            tracing::warn!(
+                "Failed to link {} -> {}, falling back to copy",
+                link_path.display(),
+                libs_dir.display()
+            );
+        } else {
+            tracing::debug!("Linked {} -> {}", link_path.display(), libs_dir.display());
+        }
+
+        Self {
+            link_path,
+            target_path: libs_dir.to_path_buf(),
+            is_linked,
+        }
+    }
+
+    #[cfg(windows)]
+    fn create_link(target: &Path, link: &Path) -> bool {
+        // cmd /C mklink /J <link> <target> creates an NTFS directory junction.
+        // Junctions work without Administrator privileges or Developer Mode on Windows.
+        let status = std::process::Command::new("cmd")
+            .args(&["/C", "mklink", "/J"])
+            .arg(link)
+            .arg(target)
+            .creation_flags(crate::services::java::CREATE_NO_WINDOW)
+            .output();
+        match status {
+            Ok(out) if out.status.success() => true,
+            Ok(out) => {
+                tracing::warn!("mklink /J failed: {}", String::from_utf8_lossy(&out.stderr));
+                false
+            }
+            Err(e) => {
+                tracing::warn!("mklink /J spawn error: {}", e);
+                false
+            }
+        }
+    }
+
+    #[cfg(not(windows))]
+    fn create_link(target: &Path, link: &Path) -> bool {
+        std::os::unix::fs::symlink(target, link).is_ok()
+    }
+
+    fn remove_link(link: &Path) -> std::io::Result<()> {
+        #[cfg(windows)]
+        {
+            // Win32 RemoveDirectory on a junction removes the junction link itself,
+            // never the target directory or its contents.
+            std::fs::remove_dir(link)
+        }
+        #[cfg(not(windows))]
+        {
+            std::fs::remove_file(link)
+        }
+    }
+
+    fn clean_existing_path(path: &Path) {
+        if std::fs::symlink_metadata(path).is_ok() {
+            if Self::remove_link(path).is_err() {
+                let _ = std::fs::remove_dir_all(path);
+            }
+        }
+    }
+
+    pub fn finish(mut self) -> Result<(), String> {
+        if self.is_linked {
+            Self::clean_existing_path(&self.link_path);
+            self.is_linked = false;
+        } else if self.link_path.exists() {
+            copy_dir_merge(&self.link_path, &self.target_path)?;
+            let _ = std::fs::remove_dir_all(&self.link_path);
+        }
+        Ok(())
+    }
+}
+
+impl Drop for LibrariesLinkGuard {
+    fn drop(&mut self) {
+        if self.is_linked {
+            Self::clean_existing_path(&self.link_path);
+        }
+    }
+}
+
+/// Extract all bundled Maven artifacts stored inside the installer JAR (under `maven/`)
+/// directly into the shared libraries directory.
+fn extract_bundled_installer_libraries(installer_path: &Path) -> Result<(), String> {
+    let file = fs::File::open(installer_path)
+        .map_err(|e| format!("Open installer {}: {}", installer_path.display(), e))?;
+    let mut archive = zip::ZipArchive::new(file)
+        .map_err(|e| format!("Open installer zip: {}", e))?;
+    let libs_dir = paths::libraries_dir();
+
+    for i in 0..archive.len() {
+        let mut entry = archive.by_index(i).map_err(|e| format!("Read zip entry: {}", e))?;
+        let name = entry.name().to_string();
+        if name.starts_with("maven/") && !name.ends_with('/') {
+            let rel_path = &name["maven/".len()..];
+            let dest = libs_dir.join(rel_path);
+            if !dest.exists() {
+                if let Some(parent) = dest.parent() {
+                    let _ = fs::create_dir_all(parent);
+                }
+                if let Ok(mut outfile) = fs::File::create(&dest) {
+                    let _ = std::io::copy(&mut entry, &mut outfile);
+                }
+            }
+        }
+    }
     Ok(())
+}
+
+/// Read a named text entry from a zip archive into a String.
+fn read_zip_entry_to_string(archive: &mut zip::ZipArchive<fs::File>, entry_name: &str) -> Option<String> {
+    let mut entry = archive.by_name(entry_name).ok()?;
+    let mut content = String::new();
+    std::io::Read::read_to_string(&mut entry, &mut content).ok()?;
+    Some(content)
 }
 
 fn copy_dir_merge(src: &Path, dest: &Path) -> Result<(), String> {
@@ -350,39 +479,29 @@ fn copy_dir_merge(src: &Path, dest: &Path) -> Result<(), String> {
     Ok(())
 }
 
-/// Resolve all libraries listed in the installer's version.json to actual paths,
-/// downloading any that aren't yet in the shared libraries dir.
-///
-/// **Concurrency:** all missing libraries are batched into a single
-/// `download_all` call. Vanilla / Fabric / Quilt all use the parallel
-/// batcher already; Forge / NeoForge previously didn't, which made the
-/// post-installer "verify libs" pass several times slower than it needed
-/// to be. Routing through the same batcher means Forge benefits from the
-/// `concurrent_downloads` setting (default 8) like every other source.
-async fn resolve_libraries(
-    version_json: &serde_json::Value,
-    app: Option<&tauri::AppHandle>,
-) -> Result<Vec<PathBuf>, String> {
-    let libs_dir = paths::libraries_dir();
-    let mut paths_out = Vec::new();
-    let mut tasks: Vec<DownloadTask> = Vec::new();
-
-    let libraries = match version_json.get("libraries").and_then(|v| v.as_array()) {
+/// Collect download tasks for libraries declared in an install_profile.json or version.json.
+/// Deduplicates across sources and skips files already present in `libs_dir`.
+fn collect_json_library_tasks(
+    json_val: &serde_json::Value,
+    libs_dir: &Path,
+    tasks: &mut Vec<DownloadTask>,
+    paths_out: &mut Vec<PathBuf>,
+    seen_dest: &mut HashSet<PathBuf>,
+) {
+    let libraries = match json_val.get("libraries").and_then(|v| v.as_array()) {
         Some(l) => l,
-        None => return Ok(paths_out),
+        None => return,
     };
 
     for lib in libraries {
-        // Skip libraries with natives (they're handled by ensure_natives in launch.rs)
         if lib.get("natives").is_some() { continue; }
 
         if let Some(artifact) = lib.get("downloads").and_then(|d| d.get("artifact")) {
-            // Modern format: has downloads.artifact with path and url
             let path = artifact.get("path").and_then(|p| p.as_str()).unwrap_or("");
             if path.is_empty() { continue; }
 
             let dest = libs_dir.join(path);
-            if !dest.exists() {
+            if seen_dest.insert(dest.clone()) && !dest.exists() {
                 if let Some(url) = artifact.get("url").and_then(|u| u.as_str()) {
                     if !url.is_empty() {
                         tasks.push(DownloadTask {
@@ -396,27 +515,22 @@ async fn resolve_libraries(
             }
             paths_out.push(dest);
         } else if let Some(name) = lib.get("name").and_then(|n| n.as_str()) {
-            // Old format: has name and optional url (Maven base URL)
             let rel_path = maven_to_path(name);
             let dest = libs_dir.join(&rel_path);
 
-            if !dest.exists() {
-                // Determine the download URL
+            if seen_dest.insert(dest.clone()) && !dest.exists() {
                 let base_url = lib.get("url")
                     .and_then(|u| u.as_str())
                     .unwrap_or("https://libraries.minecraft.net/");
 
-                // Normalize: ensure base URL ends with /
                 let base = if base_url.ends_with('/') {
                     base_url.to_string()
                 } else {
                     format!("{}/", base_url)
                 };
-
-                // Replace http:// with https:// for security
                 let base = base.replace("http://", "https://");
-
                 let url = format!("{}{}", base, rel_path);
+
                 tasks.push(DownloadTask {
                     url,
                     dest: dest.clone(),
@@ -424,24 +538,29 @@ async fn resolve_libraries(
                     expected_size: None,
                 });
             }
-
             paths_out.push(dest);
         }
     }
+}
 
-    // Single parallel batch for everything that's missing. The batch
-    // honors the user's `concurrent_downloads` setting and emits the same
-    // `download-progress` events the vanilla flow uses, so the popup
-    // shows real progress instead of a frozen percentage.
+/// Resolve all libraries listed in the installer's version.json to actual paths,
+/// downloading any that aren't yet in the shared libraries dir.
+async fn resolve_libraries(
+    version_json: &serde_json::Value,
+    app: Option<&tauri::AppHandle>,
+) -> Result<Vec<PathBuf>, String> {
+    let libs_dir = paths::libraries_dir();
+    let mut paths_out = Vec::new();
+    let mut tasks = Vec::new();
+    let mut seen_dest = HashSet::new();
+
+    collect_json_library_tasks(version_json, &libs_dir, &mut tasks, &mut paths_out, &mut seen_dest);
+
     if !tasks.is_empty() {
         download_all(tasks, app.cloned()).await?;
     }
 
-    // Filter out anything that still doesn't exist on disk (download
-    // failures fall through silently here so the installer can decide
-    // whether the missing lib is actually required for launch).
     paths_out.retain(|p| p.exists());
-
     Ok(paths_out)
 }
 
@@ -459,11 +578,12 @@ async fn ensure_installer_ran(
     let marker = instance_dir.join(format!(".{}-installed", marker_name));
 
     if !marker.exists() {
+        crate::services::download::cancel_check()?;
+
         // Download installer to a shared cache so multiple instances using
         // the same loader version don't re-download the 15-40MB JAR.
         let cache_dir = paths::data_dir().join("cache").join("installers");
         fs::create_dir_all(&cache_dir).map_err(|e| format!("Create installer cache dir: {}", e))?;
-        // Use the installer URL's filename as the cache key (e.g. "neoforge-21.4.148-installer.jar")
         let cache_filename = installer_url
             .rsplit('/')
             .next()
@@ -472,6 +592,7 @@ async fn ensure_installer_ran(
         let cached_installer = cache_dir.join(&cache_filename);
 
         if !cached_installer.exists() {
+            emit_phase(app, instance_name, "Downloading loader installer");
             let task = DownloadTask {
                 url: installer_url.to_string(),
                 dest: cached_installer.clone(),
@@ -483,52 +604,103 @@ async fn ensure_installer_ran(
             tracing::info!("Using cached installer: {}", cached_installer.display());
         }
 
-        // Copy to instance dir for the installer to use (it writes files
-        // relative to its own directory). Ensure the instance dir exists —
-        // fs::copy (unlike download_file) won't create the parent.
-        fs::create_dir_all(instance_dir).map_err(|e| format!("Create instance dir: {}", e))?;
-        let installer_path = instance_dir.join("loader-installer.jar");
-        fs::copy(&cached_installer, &installer_path)
-            .map_err(|e| format!("Copy cached installer: {}", e))?;
+        crate::services::download::cancel_check()?;
 
-        // The installer needs the vanilla client jar in versions/<mc_version>/<mc_version>.jar
-        // and its metadata in versions/<mc_version>/<mc_version>.json.
-        // Pre-seed both from our shared caches so the installer skips downloading them.
-        let mc_versions_dir = instance_dir.join("versions").join(game_version);
-        fs::create_dir_all(&mc_versions_dir).map_err(|e| format!("Create versions dir: {}", e))?;
-
-        let target_jar = mc_versions_dir.join(format!("{}.jar", game_version));
-        if !target_jar.exists() {
-            let shared_jar = paths::data_dir().join("versions").join(format!("{}.jar", game_version));
-            if shared_jar.exists() {
-                if fs::hard_link(&shared_jar, &target_jar).is_err() {
-                    let _ = fs::copy(&shared_jar, &target_jar);
-                }
-            }
+        // Extract bundled maven libraries from the installer JAR into shared libraries dir
+        if let Err(e) = extract_bundled_installer_libraries(&cached_installer) {
+            tracing::warn!("Failed extracting bundled libraries from installer: {}", e);
         }
 
-        let target_json = mc_versions_dir.join(format!("{}.json", game_version));
-        if !target_json.exists() {
-            let shared_json = paths::meta_dir().join("versions").join(format!("{}.json", game_version));
-            if shared_json.exists() {
-                if fs::hard_link(&shared_json, &target_json).is_err() {
-                    let _ = fs::copy(&shared_json, &target_json);
+        // Inspect install_profile.json from the installer JAR
+        let file = fs::File::open(&cached_installer)
+            .map_err(|e| format!("Open installer jar {}: {}", cached_installer.display(), e))?;
+        let mut archive = zip::ZipArchive::new(file)
+            .map_err(|e| format!("Open installer zip: {}", e))?;
+
+        let profile_content = read_zip_entry_to_string(&mut archive, "install_profile.json")
+            .ok_or_else(|| "Installer JAR missing install_profile.json".to_string())?;
+        let profile: serde_json::Value = serde_json::from_str(&profile_content)
+            .map_err(|e| format!("Parse install_profile.json: {}", e))?;
+
+        // Detect legacy Forge (pre-1.13, e.g. 1.12.2, 1.7.10) which has versionInfo and NO processors.
+        // It does not need the headless JVM installer to run at all!
+        if profile.get("processors").is_none() && profile.get("versionInfo").is_some() {
+            tracing::info!("Legacy Forge detected (no processors), extracting profile directly");
+            emit_phase(app, instance_name, "Reading legacy Forge profile");
+            fs::create_dir_all(instance_dir).map_err(|e| format!("Create instance dir: {}", e))?;
+            extract_old_forge_profile(&cached_installer, instance_dir)?;
+            let _ = fs::write(&marker, "");
+        } else {
+            // Modern Forge / NeoForge:
+            // Pre-fetch all installer and loader libraries in parallel using Rust's async download_all.
+            // When Java runs, 100% of libraries are already present, avoiding Java's slow sequential HTTP downloader!
+            let libs_dir = paths::libraries_dir();
+            let mut prefetch_tasks = Vec::new();
+            let mut _dummy_paths = Vec::new();
+            let mut seen_dest = HashSet::new();
+
+            // 1. Collect libraries from install_profile.json (processor dependencies)
+            collect_json_library_tasks(&profile, &libs_dir, &mut prefetch_tasks, &mut _dummy_paths, &mut seen_dest);
+
+            // 2. Collect libraries from version.json (game dependencies)
+            if let Some(version_content) = read_zip_entry_to_string(&mut archive, "version.json") {
+                if let Ok(version_val) = serde_json::from_str::<serde_json::Value>(&version_content) {
+                    collect_json_library_tasks(&version_val, &libs_dir, &mut prefetch_tasks, &mut _dummy_paths, &mut seen_dest);
                 }
             }
+
+            // Close archive before downloading so the file handle is released
+            drop(archive);
+
+            // 3. Batch-download any missing libraries concurrently in parallel
+            if !prefetch_tasks.is_empty() {
+                emit_phase(app, instance_name, "Downloading loader libraries");
+                download_all(prefetch_tasks, app.cloned()).await?;
+            }
+
+            crate::services::download::cancel_check()?;
+
+            // Pre-seed vanilla client jar and json into <instance_dir>/versions/<mc_version>/
+            fs::create_dir_all(instance_dir).map_err(|e| format!("Create instance dir: {}", e))?;
+            let mc_versions_dir = instance_dir.join("versions").join(game_version);
+            fs::create_dir_all(&mc_versions_dir).map_err(|e| format!("Create versions dir: {}", e))?;
+
+            let target_jar = mc_versions_dir.join(format!("{}.jar", game_version));
+            if !target_jar.exists() {
+                let shared_jar = paths::data_dir().join("versions").join(format!("{}.jar", game_version));
+                if shared_jar.exists() {
+                    if fs::hard_link(&shared_jar, &target_jar).is_err() {
+                        let _ = fs::copy(&shared_jar, &target_jar);
+                    }
+                }
+            }
+
+            let target_json = mc_versions_dir.join(format!("{}.json", game_version));
+            if !target_json.exists() {
+                let shared_json = paths::meta_dir().join("versions").join(format!("{}.json", game_version));
+                if shared_json.exists() {
+                    if fs::hard_link(&shared_json, &target_json).is_err() {
+                        let _ = fs::copy(&shared_json, &target_json);
+                    }
+                }
+            }
+
+            // Link <instance_dir>/libraries directly to paths::libraries_dir() via NTFS junction or symlink.
+            // This lets the installer find all pre-cached libraries with 0 network calls and write its
+            // processor outputs directly into the shared libraries directory.
+            let link_guard = LibrariesLinkGuard::link(instance_dir, &libs_dir);
+
+            // Run the headless installer
+            let install_result = run_installer_headless(&cached_installer, instance_dir, java_exe, app, instance_name).await;
+
+            // Unlink or migrate
+            link_guard.finish()?;
+
+            install_result?;
+
+            // Mark as done
+            let _ = fs::write(&marker, "");
         }
-
-        // Run it headless — streams installer phases into the progress UI
-        // through the `app` handle (or runs silent if `app` is `None`).
-        run_installer_headless(&installer_path, instance_dir, java_exe, app, instance_name).await?;
-
-        // Move libraries to shared dir
-        migrate_installer_libraries(instance_dir)?;
-
-        // Cleanup installer jar
-        let _ = fs::remove_file(&installer_path);
-
-        // Mark as done
-        let _ = fs::write(&marker, "");
     }
 
     // Read the version.json the installer produced
@@ -579,33 +751,116 @@ async fn ensure_installer_ran(
     Ok((main_class, libs, jvm_args, game_args))
 }
 
+/// Resolve the official NeoForge installer URL from Maven for a given loader version.
+pub fn resolve_neoforge_installer_url(loader_version: &str) -> String {
+    format!(
+        "{}/net/neoforged/neoforge/{}/neoforge-{}-installer.jar",
+        NEOFORGE_MAVEN, loader_version, loader_version
+    )
+}
+
+/// Normalize Forge coordinate format into `{game_version}-{forge_version}`.
+pub fn canonical_forge_version(game_version: &str, loader_version: &str) -> String {
+    if loader_version.starts_with(&format!("{}-", game_version)) {
+        let suffix = format!("-{}", game_version);
+        if loader_version.ends_with(&suffix) && loader_version.len() > suffix.len() + game_version.len() + 1 {
+            loader_version[..loader_version.len() - suffix.len()].to_string()
+        } else {
+            loader_version.to_string()
+        }
+    } else {
+        format!("{}-{}", game_version, loader_version)
+    }
+}
+
+/// Resolve the Forge installer URL, probing standard 1.13+ vs legacy pre-1.13 Maven coordinates.
+pub async fn resolve_forge_installer_url(game_version: &str, loader_version: &str) -> String {
+    let full_version = canonical_forge_version(game_version, loader_version);
+    let standard_url = format!(
+        "{}/net/minecraftforge/forge/{}/forge-{}-installer.jar",
+        FORGE_MAVEN, full_version, full_version
+    );
+
+    match crate::util::http::HTTP.head(&standard_url).send().await {
+        Ok(resp) if resp.status().is_success() => standard_url,
+        _ => {
+            let legacy_version = format!("{}-{}", full_version, game_version);
+            let legacy_url = format!(
+                "{}/net/minecraftforge/forge/{}/forge-{}-installer.jar",
+                FORGE_MAVEN, legacy_version, legacy_version
+            );
+            tracing::info!(
+                "Forge standard URL not found, using legacy format: {}",
+                legacy_url
+            );
+            legacy_url
+        }
+    }
+}
+
+/// Helper to locate a java executable inside a JDK installation directory.
+fn find_java_exe_in(dir: &Path) -> Option<PathBuf> {
+    let exe_name = crate::util::platform::java_exe_name();
+    let direct = dir.join("bin").join(exe_name);
+    if direct.exists() {
+        return Some(direct);
+    }
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let nested = entry.path().join("bin").join(exe_name);
+            if nested.exists() {
+                return Some(nested);
+            }
+        }
+    }
+    None
+}
+
+/// Get a Java executable suitable for running the installer for the given Minecraft version.
+/// Prioritizes the exact version downloaded/required by the game to ensure compatibility.
+async fn ensure_java_for_loader(game_version: &str) -> Result<PathBuf, String> {
+    let req_ver = crate::services::launch::required_java_version(game_version);
+    let java_dir = paths::java_dir();
+
+    // 1. Prefer the exact required Java version (already downloaded by prepare.rs)
+    let exact_dir = java_dir.join(format!("jdk-{}", req_ver));
+    if exact_dir.exists() {
+        if let Some(exe) = find_java_exe_in(&exact_dir) {
+            return Ok(exe);
+        }
+    }
+
+    // 2. Try compatible Java versions
+    let candidates: &[u8] = match req_ver {
+        8 => &[8, 17, 21, 25],
+        17 => &[17, 21, 25],
+        21 => &[21, 25, 17],
+        _ => &[25, 21, 17, 8],
+    };
+
+    for v in candidates {
+        let install_dir = java_dir.join(format!("jdk-{}", v));
+        if install_dir.exists() {
+            if let Some(exe) = find_java_exe_in(&install_dir) {
+                return Ok(exe);
+            }
+        }
+    }
+
+    // Fallback: trigger download for this exact game version
+    crate::services::launch::ensure_java_public(game_version).await
+}
+
 /// Public: ensure NeoForge libraries and processor outputs are ready.
-///
-/// `app` and `instance_name` thread the live AppHandle through the install
-/// flow so we can stream phase updates ("Patching client", "Splitting client
-/// jar", etc.) into the progress popup instead of leaving it stuck at
-/// "Running NeoForge installer" for the duration. Both are optional —
-/// callers from non-UI paths can pass `None`/`""` and the install runs
-/// silent.
 pub async fn ensure_neoforge_libraries(
     game_version: &str,
     loader_version: &str,
     app: Option<&tauri::AppHandle>,
     instance_name: &str,
 ) -> Result<(String, Vec<PathBuf>, Vec<String>, Vec<String>), String> {
-    let installer_url = format!(
-        "{}/net/neoforged/neoforge/{}/neoforge-{}-installer.jar",
-        NEOFORGE_MAVEN, loader_version, loader_version
-    );
-
-    // We run the installer with the instance's .minecraft as the target.
-    // For now, use a temporary scratch dir per instance for the installer to operate in.
-    // The instance ID isn't easily available here; the instance_dir comes from launch.rs
-    // through a per-call context. To keep this simple we reuse a scratch under data/.
+    let installer_url = resolve_neoforge_installer_url(loader_version);
     let scratch = paths::data_dir().join("loader-scratch").join(format!("neoforge-{}", loader_version));
-
-    // Ensure Java is available (uses MC 1.21+ Java 21 by default for modern NeoForge)
-    let java_exe = ensure_java_for_loader().await?;
+    let java_exe = ensure_java_for_loader(game_version).await?;
 
     ensure_installer_ran(&installer_url, &scratch, &java_exe, "neoforge", app, instance_name, game_version).await
 }
@@ -617,86 +872,11 @@ pub async fn ensure_forge_libraries(
     app: Option<&tauri::AppHandle>,
     instance_name: &str,
 ) -> Result<(String, Vec<PathBuf>, Vec<String>, Vec<String>), String> {
-    // The Forge maven uses the full coord `{game_version}-{forge_version}` (e.g. `1.20.1-47.4.10`).
-    // Custom instances pass that full string, but Modrinth/CurseForge modpack manifests give just
-    // the forge-side number (`47.4.10` / `forge-47.4.10`). Normalize so all sources work.
-    //
-    // The version from `get_forge_versions` may already be in legacy format with the MC version
-    // repeated at the end (e.g. `1.1-1.3.2.1-1.1`). We detect that to avoid double-suffixing.
-    let full_version = if loader_version.starts_with(&format!("{}-", game_version)) {
-        // Already prefixed. Strip a trailing `-{game_version}` if present (legacy format from
-        // the Maven metadata) to get the canonical `{mc}-{forge}` form for the standard URL.
-        let suffix = format!("-{}", game_version);
-        if loader_version.ends_with(&suffix) && loader_version.len() > suffix.len() + game_version.len() + 1 {
-            // It's something like "1.8.9-11.15.1.2318-1.8.9" → strip to "1.8.9-11.15.1.2318"
-            loader_version[..loader_version.len() - suffix.len()].to_string()
-        } else {
-            loader_version.to_string()
-        }
-    } else {
-        format!("{}-{}", game_version, loader_version)
-    };
-
-    // Try the standard URL first (works for Forge 1.13+).
-    // Old Forge (pre-1.13) uses a legacy format with the MC version repeated at the end:
-    // e.g. `forge-1.8.9-11.15.1.2318-1.8.9-installer.jar` instead of
-    //       `forge-1.8.9-11.15.1.2318-installer.jar`.
-    // We probe with a HEAD request and fall back to the legacy format on 404.
-    let standard_url = format!(
-        "{}/net/minecraftforge/forge/{}/forge-{}-installer.jar",
-        FORGE_MAVEN, full_version, full_version
-    );
-
-    let installer_url = match crate::util::http::HTTP.head(&standard_url).send().await {
-        Ok(resp) if resp.status().is_success() => standard_url,
-        _ => {
-            // Legacy format: {mc}-{forge}-{mc} (e.g. 1.8.9-11.15.1.2318-1.8.9)
-            let legacy_version = format!("{}-{}", full_version, game_version);
-            let legacy_url = format!(
-                "{}/net/minecraftforge/forge/{}/forge-{}-installer.jar",
-                FORGE_MAVEN, legacy_version, legacy_version
-            );
-            tracing::info!(
-                "Forge standard URL not found, trying legacy format: {}",
-                legacy_url
-            );
-            legacy_url
-        }
-    };
-
+    let full_version = canonical_forge_version(game_version, loader_version);
+    let installer_url = resolve_forge_installer_url(game_version, loader_version).await;
     let scratch = paths::data_dir().join("loader-scratch").join(format!("forge-{}", full_version));
-    let java_exe = ensure_java_for_loader().await?;
+    let java_exe = ensure_java_for_loader(game_version).await?;
 
     ensure_installer_ran(&installer_url, &scratch, &java_exe, "forge", app, instance_name, game_version).await
-}
-
-/// Get a Java executable suitable for running the installer.
-/// We pick whichever java the launcher already has installed; the installer itself
-/// is fairly tolerant of Java versions for the install step.
-async fn ensure_java_for_loader() -> Result<PathBuf, String> {
-    let java_dir = paths::java_dir();
-
-    // Try existing Java installs — prefer higher versions first since
-    // the game likely already downloaded Java 25 or 21
-    for v in &[25u8, 21, 17, 8] {
-        let install_dir = java_dir.join(format!("jdk-{}", v));
-        if install_dir.exists() {
-            if let Ok(entries) = fs::read_dir(&install_dir) {
-                for entry in entries.flatten() {
-                    let nested_exe = entry.path().join("bin").join(crate::util::platform::java_exe_name());
-                    if nested_exe.exists() {
-                        return Ok(nested_exe);
-                    }
-                }
-            }
-            let direct = install_dir.join("bin").join(crate::util::platform::java_exe_name());
-            if direct.exists() {
-                return Ok(direct);
-            }
-        }
-    }
-
-    // Fallback: trigger Adoptium download via launch::ensure_java for MC 1.21
-    crate::services::launch::ensure_java_public("1.21.5").await
 }
 

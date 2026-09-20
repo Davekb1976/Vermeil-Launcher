@@ -368,6 +368,28 @@ async fn collect_loader_tasks(instance: &Instance) -> Vec<DownloadTask> {
                 }
             }
         }
+        crate::models::instance::LoaderType::Neoforge => {
+            if let Some(ref ver) = instance.loader.version {
+                let url = crate::services::neoforge::resolve_neoforge_installer_url(ver);
+                let cache_dir = paths::data_dir().join("cache").join("installers");
+                let filename = url.rsplit('/').next().unwrap_or("loader-installer.jar");
+                let dest = cache_dir.join(filename);
+                if !dest.exists() {
+                    tasks.push(DownloadTask { url, dest, expected_sha1: None, expected_size: None });
+                }
+            }
+        }
+        crate::models::instance::LoaderType::Forge => {
+            if let Some(ref ver) = instance.loader.version {
+                let url = crate::services::neoforge::resolve_forge_installer_url(&instance.game_version, ver).await;
+                let cache_dir = paths::data_dir().join("cache").join("installers");
+                let filename = url.rsplit('/').next().unwrap_or("loader-installer.jar");
+                let dest = cache_dir.join(filename);
+                if !dest.exists() {
+                    tasks.push(DownloadTask { url, dest, expected_sha1: None, expected_size: None });
+                }
+            }
+        }
         _ => {}
     }
 
