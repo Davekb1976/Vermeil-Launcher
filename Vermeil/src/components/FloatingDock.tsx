@@ -184,12 +184,65 @@ const FloatingDock: Component = () => {
   const isActive = (screens: Screen[]) => screens.includes(activeScreen());
 
   const [nearBottom, setNearBottom] = createSignal(false);
+  let leaveTimer: number | undefined;
+
   onMount(() => {
     const handler = (e: MouseEvent) => {
-      setNearBottom(window.innerHeight - e.clientY < 90);
+      // If dock isn't in auto-hide mode, reset nearBottom and bail
+      if (!dockHidden()) {
+        if (nearBottom()) setNearBottom(false);
+        return;
+      }
+
+      const center = window.innerWidth / 2;
+      const distFromBottom = window.innerHeight - e.clientY;
+
+      if (!nearBottom()) {
+        // Precise bottom-centered trigger zone: 180px width (90px left/right of center) and bottom 32px
+        const inCenterTrigger = Math.abs(e.clientX - center) <= 90 && distFromBottom <= 32;
+        if (inCenterTrigger) {
+          if (leaveTimer !== undefined) {
+            clearTimeout(leaveTimer);
+            leaveTimer = undefined;
+          }
+          setNearBottom(true);
+        }
+      } else {
+        // Dock is currently visible: keep it open while cursor is within dock bounding area (+ margin)
+        let inDockArea = false;
+        if (dockEl) {
+          const rect = dockEl.getBoundingClientRect();
+          inDockArea =
+            e.clientX >= rect.left - 40 &&
+            e.clientX <= rect.right + 40 &&
+            e.clientY >= rect.top - 30 &&
+            e.clientY <= window.innerHeight;
+        } else {
+          inDockArea = Math.abs(e.clientX - center) <= 240 && distFromBottom <= 100;
+        }
+
+        if (inDockArea) {
+          if (leaveTimer !== undefined) {
+            clearTimeout(leaveTimer);
+            leaveTimer = undefined;
+          }
+        } else {
+          // Cursor moved away from dock — give 300ms grace period before sliding away
+          if (leaveTimer === undefined) {
+            leaveTimer = window.setTimeout(() => {
+              setNearBottom(false);
+              leaveTimer = undefined;
+            }, 300);
+          }
+        }
+      }
     };
+
     window.addEventListener("mousemove", handler);
-    onCleanup(() => window.removeEventListener("mousemove", handler));
+    onCleanup(() => {
+      window.removeEventListener("mousemove", handler);
+      if (leaveTimer !== undefined) clearTimeout(leaveTimer);
+    });
   });
 
   // Auto-dismiss pin selector when clicking outside the dock pill
@@ -331,8 +384,27 @@ const FloatingDock: Component = () => {
   };
 
   return (
-    <div class={`dock-wrap ${pinSelectorOpen() ? "pin-mode" : ""} ${hidden() ? "dock-hidden" : ""}`}>
-      <Show when={Boolean(dockPagination()) && !pinSelectorOpen()}>
+    <>
+      {/* Cut-off rectangular bottom-centered trigger tab — appears when dock is auto-hidden */}
+      <Show when={dockHidden() && !pinSelectorOpen()}>
+        <div
+          class={`dock-trigger-zone ${!nearBottom() ? "visible" : ""}`}
+          onMouseEnter={() => {
+            if (leaveTimer !== undefined) {
+              clearTimeout(leaveTimer);
+              leaveTimer = undefined;
+            }
+            setNearBottom(true);
+          }}
+          onClick={() => setNearBottom(true)}
+          data-tip="Show dock"
+        >
+          <div class="dock-trigger-handle" />
+        </div>
+      </Show>
+
+      <div class={`dock-wrap ${pinSelectorOpen() ? "pin-mode" : ""} ${hidden() ? "dock-hidden" : ""}`}>
+        <Show when={Boolean(dockPagination()) && !pinSelectorOpen()}>
         <DockPaginationIsland />
       </Show>
 
@@ -478,6 +550,7 @@ const FloatingDock: Component = () => {
         </Show>
       </div>
     </div>
+  </>
   );
 };
 
