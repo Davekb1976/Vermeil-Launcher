@@ -192,7 +192,7 @@ const Home: Component = () => {
       loader: string; gameVersion: string;
       worldName: string; worldIcon: string | null; lastPlayed: string;
     }[] = [];
-    for (const inst of insts.slice(0, 5)) {
+    for (const inst of insts.slice(0, 10)) {
       try {
         const worlds = await listInstanceWorlds(inst.id);
         for (const w of worlds) {
@@ -210,13 +210,14 @@ const Home: Component = () => {
       } catch { /* ignore */ }
     }
     allWorlds.sort((a, b) => b.lastPlayed.localeCompare(a.lastPlayed));
-    return allWorlds.slice(0, 3);
+    return allWorlds.slice(0, 5);
   });
 
-  // Number of empty slots to display so Continue section always has 3 balanced cards
+  // Number of empty slots to display so the secondary 2x2 sub-grid always has 4 slots (5 worlds total with hero)
   const emptySlotCount = createMemo(() => {
-    const count = recentWorlds()?.length ?? 0;
-    return Math.max(0, 3 - count);
+    const total = recentWorlds()?.length ?? 0;
+    const subWorlds = Math.max(0, total - 1);
+    return Math.max(0, 4 - subWorlds);
   });
 
   const handlePlayWorld = async (instanceId: string) => {
@@ -388,7 +389,7 @@ const Home: Component = () => {
                 );
               })()}
 
-              {/* Secondary World / Placeholder Row (Slots 2 & 3) */}
+              {/* Secondary World / Placeholder 2x2 Grid (Slots 2 to 5 / Placeholders 1 to 4) */}
               <div class="continue-sub-grid">
                 <For each={recentWorlds()!.slice(1)}>
                   {(world) => (
