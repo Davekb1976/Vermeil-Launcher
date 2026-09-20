@@ -335,7 +335,8 @@ export const removeAccount = (id: string) => invoke<void>("remove_account", { id
 export const logout = () => invoke<void>("logout");
 
 // Launch commands
-export const launchInstance = (instanceId: string) => invoke<number>("launch_instance", { instanceId });
+export const launchInstance = (instanceId: string, quickPlayWorld?: string) =>
+  invoke<number>("launch_instance", { instanceId, quickPlayWorld });
 /** `versionId` installs that exact version; omit it to get the newest compatible one. */
 export const installModToInstance = (instanceId: string, projectId: string, loader: string, gameVersion: string, category?: string, versionId?: string) =>
   invoke<string>("install_mod_to_instance", { instanceId, projectId, loader, gameVersion, category, versionId });

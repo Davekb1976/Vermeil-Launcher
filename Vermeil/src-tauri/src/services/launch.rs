@@ -925,7 +925,14 @@ mod tests {
 }
 
 /// Launch Minecraft for an instance
-pub async fn launch(instance: &Instance, username: &str, uuid: &str, access_token: &str, window: Option<tauri::WebviewWindow>) -> Result<u32, String> {
+pub async fn launch(
+    instance: &Instance,
+    username: &str,
+    uuid: &str,
+    access_token: &str,
+    quick_play_world: Option<&str>,
+    window: Option<tauri::WebviewWindow>,
+) -> Result<u32, String> {
     // Create log file early so the frontend poller can show progress
     let game_dir = paths::instances_dir().join(&instance.id).join(".minecraft");
     fs::create_dir_all(&game_dir).map_err(|e| e.to_string())?;
@@ -1340,6 +1347,52 @@ pub async fn launch(instance: &Instance, username: &str, uuid: &str, access_toke
         game_args.push(win_width.to_string());
         game_args.push("--height".to_string());
         game_args.push(win_height.to_string());
+    }
+
+    // Quick Play Singleplayer (Minecraft 1.20+)
+    // Directly boots the game client into the requested world folder inside saves/.
+    if let Some(world_folder) = quick_play_world {
+        let trimmed = world_folder.trim();
+        // Strict path safety check: reject path traversal and control characters
+        let is_safe_name = !trimmed.is_empty()
+            && !trimmed.contains('/')
+            && !trimmed.contains('\\')
+            && !trimmed.contains("..")
+            && !trimmed.contains('\0');
+
+        if is_safe_name {
+            let saves_dir = game_dir.join("saves");
+            let world_path = saves_dir.join(trimmed);
+            if world_path.is_dir() {
+                if mc_version_at_least(&instance.game_version, 1, 20) {
+                    tracing::info!(
+                        "Enabling Quick Play for world '{}' in instance '{}' (MC {})",
+                        trimmed,
+                        instance.name,
+                        instance.game_version
+                    );
+                    game_args.push("--quickPlaySingleplayer".to_string());
+                    game_args.push(trimmed.to_string());
+                } else {
+                    tracing::info!(
+                        "Quick Play requested for '{}' but MC {} does not support --quickPlaySingleplayer; launching to title screen",
+                        trimmed,
+                        instance.game_version
+                    );
+                }
+            } else {
+                tracing::warn!(
+                    "Requested Quick Play world '{}' does not exist in {:?}; skipping quick play",
+                    trimmed,
+                    saves_dir
+                );
+            }
+        } else {
+            tracing::warn!(
+                "Rejected suspicious Quick Play world name: '{}'",
+                world_folder
+            );
+        }
     }
 
     // 7b. Patch options.txt with global video settings. Every mirrored key is

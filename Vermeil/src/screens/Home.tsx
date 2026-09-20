@@ -1,5 +1,5 @@
 import { Component, createSignal, createEffect, createResource, createMemo, For, Show, onCleanup } from "solid-js";
-import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, setGameLaunched, instances, ensureAccountOrPrompt, account, activeSkinUrl, setDockPagination, clearGameLogs } from "../App";
+import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, setGameLaunched, instances, ensureAccountOrPrompt, account, activeSkinUrl, setDockPagination, clearGameLogs, showToast } from "../App";
 import { launchInstance, listInstanceWorlds, getJavaNews, getArticleBody, NewsArticle } from "../ipc/commands";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
@@ -190,7 +190,7 @@ const Home: Component = () => {
     const allWorlds: {
       instanceId: string; instanceName: string; instanceIcon: string;
       loader: string; gameVersion: string;
-      worldName: string; worldIcon: string | null; lastPlayed: string;
+      worldName: string; worldFolder: string; worldIcon: string | null; lastPlayed: string;
     }[] = [];
     for (const inst of insts.slice(0, 10)) {
       try {
@@ -203,6 +203,7 @@ const Home: Component = () => {
             loader: inst.loader.type,
             gameVersion: inst.game_version,
             worldName: w.name,
+            worldFolder: w.folder_name,
             worldIcon: w.icon,
             lastPlayed: w.last_played,
           });
@@ -220,14 +221,55 @@ const Home: Component = () => {
     return Math.max(0, 4 - subWorlds);
   });
 
-  const handlePlayWorld = async (instanceId: string) => {
+  const handlePlayWorld = async (
+    instanceId: string,
+    worldFolder?: string,
+    worldName?: string,
+    gameVersion?: string
+  ) => {
     if (!ensureAccountOrPrompt()) return;
     setActiveInstanceId(instanceId);
     setInitialInstanceTab("logs");
     setGameLaunched(true);
     setActiveScreen("mods");
     clearGameLogs(instanceId);
-    try { await launchInstance(instanceId); } catch (e) { console.error(e); }
+
+    if (worldName) {
+      // Check version support for native Quick Play (Minecraft 1.20+)
+      const isModern = (() => {
+        if (!gameVersion) return true;
+        const match = gameVersion.match(/^(\d+)\.(\d+)/);
+        if (!match) return true;
+        const major = parseInt(match[1], 10);
+        const minor = parseInt(match[2], 10);
+        return major > 1 || (major === 1 && minor >= 20);
+      })();
+
+      if (!isModern) {
+        showToast({
+          title: "Direct Join: MC 1.20+ Required",
+          message: `MC ${gameVersion} doesn't support quick play. Opening to title screen.`,
+          type: "info",
+        });
+      } else {
+        showToast({
+          title: "Resuming World",
+          message: `Launching into ${worldName}...`,
+          type: "info",
+        });
+      }
+    }
+
+    try {
+      await launchInstance(instanceId, worldFolder);
+    } catch (e) {
+      console.error("Failed to launch instance for world:", e);
+      showToast({
+        title: "Launch Failed",
+        message: String(e),
+        type: "error",
+      });
+    }
   };
 
   // Header summary — total instance count, playtime, and most-recent play date across
@@ -387,7 +429,12 @@ const Home: Component = () => {
                         class="btn btn--primary continue-hero-play"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handlePlayWorld(heroWorld().instanceId);
+                          handlePlayWorld(
+                            heroWorld().instanceId,
+                            heroWorld().worldFolder,
+                            heroWorld().worldName,
+                            heroWorld().gameVersion
+                          );
                         }}
                       >
                         <IconPlay /> Play
@@ -425,7 +472,12 @@ const Home: Component = () => {
                           class="btn btn--primary btn--sm world-card-play"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handlePlayWorld(world.instanceId);
+                            handlePlayWorld(
+                              world.instanceId,
+                              world.worldFolder,
+                              world.worldName,
+                              world.gameVersion
+                            );
                           }}
                         >
                           <IconPlay />

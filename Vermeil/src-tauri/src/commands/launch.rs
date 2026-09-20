@@ -32,7 +32,11 @@ pub fn take_user_stopped() -> bool {
 }
 
 #[tauri::command]
-pub async fn launch_instance(instance_id: String, window: tauri::WebviewWindow) -> Result<u32, String> {
+pub async fn launch_instance(
+    instance_id: String,
+    quick_play_world: Option<String>,
+    window: tauri::WebviewWindow,
+) -> Result<u32, String> {
     // Clear old log file before launching
     let log_path = paths::instances_dir()
         .join(&instance_id)
@@ -73,7 +77,14 @@ pub async fn launch_instance(instance_id: String, window: tauri::WebviewWindow) 
     };
 
     // Launch the game
-    let pid = launch::launch(&instance, &username, &uuid, &token, Some(window.clone())).await?;
+    let pid = launch::launch(
+        &instance,
+        &username,
+        &uuid,
+        &token,
+        quick_play_world.as_deref(),
+        Some(window.clone()),
+    ).await?;
     GAME_PID.store(pid, Ordering::SeqCst);
     USER_STOPPED.store(false, Ordering::SeqCst);
 
