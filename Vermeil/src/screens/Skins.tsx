@@ -1076,7 +1076,6 @@ const Skins: Component = () => {
             <div class="skins-panel-header">
               <div class="skins-panel-title-wrap">
                 <span class="card-section-tag tag-settings-skins">WARDROBE</span>
-                <span class="skins-panel-title">Skin Library</span>
                 <span class="skins-count-badge">{(localSkins() ?? []).length}</span>
               </div>
               <div class="skins-panel-actions">

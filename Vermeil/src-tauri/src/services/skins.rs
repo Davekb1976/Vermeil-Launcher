@@ -753,7 +753,19 @@ struct CraftyResponse {
 
 #[derive(Debug, Deserialize)]
 struct CraftyData {
+    id: Option<String>,
     skins: Option<Vec<CraftySkinEntry>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CraftySkinsListResponse {
+    data: Option<Vec<CraftySkinEntry>>,
+    meta: Option<CraftyMeta>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CraftyMeta {
+    last_page: Option<usize>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -799,7 +811,58 @@ pub async fn sync_crafty_skin_history(
         .await
         .map_err(|e| format!("Failed to parse Crafty.gg response: {}", e))?;
 
-    let crafty_skins = body.data.and_then(|d| d.skins).unwrap_or_default();
+    let mut crafty_skins = Vec::new();
+
+    // Crafty returns full historical skins on a secondary endpoint using the player's internal id:
+    // GET https://api.crafty.gg/api/v2/players/{crafty_id}/skins
+    if let Some(crafty_id) = body.data.as_ref().and_then(|d| d.id.as_deref()) {
+        let skins_url = format!("https://api.crafty.gg/api/v2/players/{}/skins", crafty_id);
+        if let Ok(skins_resp) = HTTP
+            .get(&skins_url)
+            .header(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            )
+            .send()
+            .await
+        {
+            if skins_resp.status().is_success() {
+                if let Ok(list_body) = skins_resp.json::<CraftySkinsListResponse>().await {
+                    let last_page = list_body.meta.as_ref().and_then(|m| m.last_page).unwrap_or(1);
+                    if let Some(entries) = list_body.data {
+                        crafty_skins.extend(entries);
+                    }
+                    // Fetch subsequent pages if more than 15 historical skins exist
+                    for page in 2..=last_page.min(5) {
+                        let page_url = format!("{}?page={}", skins_url, page);
+                        if let Ok(page_resp) = HTTP
+                            .get(&page_url)
+                            .header(
+                                "User-Agent",
+                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                            )
+                            .send()
+                            .await
+                        {
+                            if page_resp.status().is_success() {
+                                if let Ok(page_body) = page_resp.json::<CraftySkinsListResponse>().await {
+                                    if let Some(entries) = page_body.data {
+                                        crafty_skins.extend(entries);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback to embedded skins from initial profile if secondary endpoint failed or returned empty
+    if crafty_skins.is_empty() {
+        crafty_skins = body.data.and_then(|d| d.skins).unwrap_or_default();
+    }
+
     if crafty_skins.is_empty() {
         return Ok(CraftySyncResult {
             added: 0,

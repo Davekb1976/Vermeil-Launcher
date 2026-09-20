@@ -55,8 +55,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: 6px;
+  padding: 8px 10px;
   background: var(--surface-panel);
   border-bottom: 1px solid var(--border);
   min-height: 42px;
@@ -69,15 +69,16 @@
 .skins-panel-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-shrink: 0;
 }
 
 .skins-panel-title-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .skins-panel-title {
@@ -86,7 +87,8 @@
   color: var(--text);
   letter-spacing: 0.01em;
   white-space: nowrap;
-  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .skins-count-badge {
