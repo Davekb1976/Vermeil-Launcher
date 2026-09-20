@@ -187,10 +187,12 @@ impl RateLimiter {
             if state.tokens >= 0.0 {
                 Duration::ZERO
             } else {
+                let max_debt = rate * 2.0; // clamp accumulated deficit to at most 2 seconds
+                if state.tokens < -max_debt {
+                    state.tokens = -max_debt;
+                }
                 let debt = -state.tokens;
-                // Cap debt sleep to at most 3 seconds so workers don't over-sleep
-                let capped_debt = debt.min(rate * 3.0);
-                Duration::from_secs_f64(capped_debt / rate)
+                Duration::from_secs_f64(debt / rate)
             }
         };
 

@@ -41,7 +41,7 @@ pub async fn save(settings: &LauncherSettings) -> Result<(), Box<dyn std::error:
 
     let config_path = data_dir.join("config.json");
     let json = serde_json::to_string_pretty(settings)?;
-    fs::write(config_path, json)?;
+    paths::atomic_write(&config_path, json.as_bytes())?;
     Ok(())
 }
 
