@@ -1,4 +1,4 @@
-import { Component, createSignal, Show, For, onMount } from "solid-js";
+import { Component, createSignal, Show, For, onMount, createResource } from "solid-js";
 import {
   setActiveScreen,
   refetchAccount,
@@ -16,9 +16,24 @@ import {
   installRecommendedJava,
   pruneInvalidJavaPaths,
   JavaInstall,
+  getSkinProfile,
 } from "../ipc/commands";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
-import { IconDownload, IconSearch, IconFolderOpen, IconLayers, IconSettings } from "../components/Icons";
+import {
+  IconDownload,
+  IconSearch,
+  IconFolderOpen,
+  IconLayers,
+  IconSettings,
+  IconMicrosoft,
+  IconCheck,
+  IconX,
+  IconAlertTriangle,
+  IconCube,
+  IconChevronDown,
+  IconChevronRight,
+} from "../components/Icons";
+import PlayerHead from "../components/PlayerHead";
 import JavaPathInput from "../components/JavaPathInput";
 import JavaChooserModal from "./JavaChooserModal";
 
@@ -30,15 +45,9 @@ import JavaChooserModal from "./JavaChooserModal";
  * `instances.length === 0` on startup.
  *
  * Three steps:
- *   1. Account — Microsoft sign-in or offline username, reusing the
- *      same IPC commands as the standalone Account screen.
- *   2. Java    — Same slot UI as Settings → Resources → Java. Optional. If the
- *      user skips entirely, the launcher auto-installs the right JRE the first
- *      time they try to play (existing `ensure_java_public()` behavior). The
- *      step is here so power users can pre-pick an existing JDK before any
- *      Adoptium download kicks off.
- *   3. Choice  — Send the user to either the modpack browser or the custom
- *      setup screen. Both branches mark `onboarded = true` first.
+ *   1. Account     — Active identity detection, branded Microsoft sign-in, or offline profile.
+ *   2. Environment — Smart automated Java isolation, system runtime detection, and advanced slot config.
+ *   3. Ready       — Choice between curated modpacks, custom instance setup, or archive import.
  *
  * Closing the wizard mid-flow flips `onboarded = true` so we don't pester
  * the user again. They can still revisit Settings to configure things.
@@ -65,15 +74,13 @@ async function markOnboarded() {
     s.onboarded = true;
     await saveSettings(s);
   } catch (e) {
-    // If settings save fails the user just sees the wizard again next launch;
-    // not catastrophic, log and move on.
     console.error("Failed to persist onboarded flag:", e);
   }
 }
 
 /**
  * Java majors shown in the wizard. Same set as Settings → Resources → Java.
- * Newest first because that's what most new users will need (MC 1.21+ / 26+).
+ * Newest first because that's what most modern instances need (MC 1.21+ / 26+).
  */
 const JAVA_SLOTS: number[] = [25, 21, 17, 8];
 
@@ -81,28 +88,44 @@ const OnboardingWizard: Component = () => {
   const [loggingIn, setLoggingIn] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [offlineUsername, setOfflineUsername] = createSignal("");
+  const [showAddAccount, setShowAddAccount] = createSignal(false);
 
-  // Java step state. Detections are cached locally so the buttons can show
-  // an "already installed" state. Per-major busy flag prevents double-clicks.
+  // Java step state.
   const [javaDetections, setJavaDetections] = createSignal<JavaInstall[]>([]);
   const [javaPaths, setJavaPaths] = createSignal<Record<number, string>>({});
   const [javaBusy, setJavaBusy] = createSignal<Record<number, "install" | "detect" | "browse" | null>>({});
+  const [detectingAll, setDetectingAll] = createSignal(false);
+  const [showAdvancedJava, setShowAdvancedJava] = createSignal(false);
+
   const setJavaSlotBusy = (m: number, b: "install" | "detect" | "browse" | null) =>
-    setJavaBusy(prev => ({ ...prev, [m]: b }));
-  // Chooser modal state — surfaced when Detect returns more than one match
-  // for a major. Mirrors the Settings → Resources behaviour.
+    setJavaBusy((prev) => ({ ...prev, [m]: b }));
+
+  // Chooser modal state — surfaced when Detect returns more than one match for a major.
   const [chooser, setChooser] = createSignal<{ major: number; options: JavaInstall[] } | null>(null);
+
+  // Active account skin texture URL (if online profile is active)
+  const [skinUrl] = createResource(
+    () => account(),
+    async (acc) => {
+      if (!acc || acc.is_offline) return null;
+      try {
+        const profile = await getSkinProfile();
+        const active = profile.skins.find((s) => s.state === "ACTIVE") ?? profile.skins[0];
+        return active?.texture ?? null;
+      } catch {
+        return null;
+      }
+    }
+  );
 
   /** Best-known path for a major: user-set > detected. */
   const javaPathFor = (major: number): string => {
     const userSet = javaPaths()[major];
     if (userSet) return userSet;
-    return javaDetections().find(i => i.major === major)?.path ?? "";
+    return javaDetections().find((i) => i.major === major)?.path ?? "";
   };
 
-  // Initialize the Java step's configured paths from settings, plus a
-  // background detection + self-heal prune of stale paths. Cheap — spawns
-  // `java -version` once per candidate and caches the results.
+  // Initialize configured paths, background detection, and stale path pruning.
   onMount(() => {
     getSettings()
       .then((s) => setJavaPaths(s.java_paths || {}))
@@ -110,7 +133,6 @@ const OnboardingWizard: Component = () => {
     pruneInvalidJavaPaths()
       .then((cleared) => {
         if (cleared.length === 0) return;
-        // Reflect the prune in the local copy so the UI stays in sync.
         setJavaPaths((prev) => {
           const next = { ...prev };
           for (const m of cleared) delete next[m];
@@ -131,8 +153,6 @@ const OnboardingWizard: Component = () => {
   });
 
   const close = async () => {
-    // Treat closing as "I know what I'm doing" — flag onboarded so we don't
-    // pester the user again. They can still revisit Settings to tweak memory.
     await markOnboarded();
     setOpen(false);
   };
@@ -143,6 +163,7 @@ const OnboardingWizard: Component = () => {
     try {
       await startMsLogin();
       await refetchAccount();
+      setShowAddAccount(false);
       setStep(2);
     } catch (e: any) {
       const msg = typeof e === "string" ? e : e.message || "Login failed";
@@ -160,6 +181,7 @@ const OnboardingWizard: Component = () => {
       await addOfflineAccount(name);
       await refetchAccount();
       setOfflineUsername("");
+      setShowAddAccount(false);
       setStep(2);
     } catch (e: any) {
       setError(typeof e === "string" ? e : e.message || "Failed to add account");
@@ -168,13 +190,59 @@ const OnboardingWizard: Component = () => {
 
   // ─── Java step actions ──────────────────────────────────────────────────
 
+  const handleAutoConfigureAll = async () => {
+    setDetectingAll(true);
+    try {
+      const found = await detectJavaInstallations();
+      setJavaDetections(found);
+      let boundCount = 0;
+      const nextPaths = { ...javaPaths() };
+
+      for (const major of JAVA_SLOTS) {
+        if (!nextPaths[major]) {
+          const match = found.find((i) => i.major === major);
+          if (match) {
+            await setJavaPath(major, match.path);
+            nextPaths[major] = match.path;
+            boundCount++;
+          }
+        }
+      }
+
+      setJavaPaths(nextPaths);
+      if (boundCount > 0) {
+        showToast({
+          title: "System Runtimes Configured",
+          message: `Bound ${boundCount} detected Java installation${boundCount > 1 ? "s" : ""} to your profile.`,
+          type: "success",
+        });
+      } else if (found.length > 0) {
+        showToast({
+          title: "Already Up to Date",
+          message: "Detected runtimes are already configured.",
+          type: "info",
+        });
+      } else {
+        showToast({
+          title: "No System Java Found",
+          message: "Vermeil will automatically download official Adoptium JREs when you launch your game.",
+          type: "info",
+        });
+      }
+    } catch (e) {
+      showToast({ title: "Detection failed", message: String(e), type: "error" });
+    } finally {
+      setDetectingAll(false);
+    }
+  };
+
   const handleJavaInstall = async (major: number) => {
     setJavaSlotBusy(major, "install");
     try {
       const install = await installRecommendedJava(major);
-      setJavaPaths(prev => ({ ...prev, [major]: install.path }));
-      setJavaDetections(prev => {
-        const without = prev.filter(i => i.path !== install.path);
+      setJavaPaths((prev) => ({ ...prev, [major]: install.path }));
+      setJavaDetections((prev) => {
+        const without = prev.filter((i) => i.path !== install.path);
         return [...without, install];
       });
       showToast({ title: `Java ${major} installed`, message: install.full_version, type: "success" });
@@ -190,7 +258,7 @@ const OnboardingWizard: Component = () => {
     try {
       const found = await detectJavaInstallations();
       setJavaDetections(found);
-      const matches = found.filter(i => i.major === major);
+      const matches = found.filter((i) => i.major === major);
       if (matches.length === 0) {
         showToast({
           title: `Java ${major} not found`,
@@ -200,8 +268,6 @@ const OnboardingWizard: Component = () => {
       } else if (matches.length === 1) {
         await applyDetection(major, matches[0]);
       } else {
-        // Multiple matches — let the user pick instead of silently grabbing
-        // the first by source priority. Same UX as Settings → Resources.
         setChooser({ major, options: matches });
       }
     } catch (e) {
@@ -213,9 +279,9 @@ const OnboardingWizard: Component = () => {
 
   const applyDetection = async (major: number, install: JavaInstall) => {
     await setJavaPath(major, install.path);
-    setJavaPaths(prev => ({ ...prev, [major]: install.path }));
-    setJavaDetections(prev => {
-      const without = prev.filter(i => i.path !== install.path);
+    setJavaPaths((prev) => ({ ...prev, [major]: install.path }));
+    setJavaDetections((prev) => {
+      const without = prev.filter((i) => i.path !== install.path);
       return [...without, install];
     });
     showToast({ title: `Java ${major} set`, message: install.path, type: "success" });
@@ -242,9 +308,9 @@ const OnboardingWizard: Component = () => {
         return;
       }
       await setJavaPath(major, install.path);
-      setJavaPaths(prev => ({ ...prev, [major]: install.path }));
-      setJavaDetections(prev => {
-        const without = prev.filter(i => i.path !== install.path);
+      setJavaPaths((prev) => ({ ...prev, [major]: install.path }));
+      setJavaDetections((prev) => {
+        const without = prev.filter((i) => i.path !== install.path);
         return [...without, install];
       });
       showToast({ title: `Java ${major} updated`, message: install.path, type: "success" });
@@ -269,86 +335,168 @@ const OnboardingWizard: Component = () => {
     setActiveScreen("create-custom");
   };
 
-  // ─── Step indicator helper ─────────────────────────────────────────────
+  const goToImport = async () => {
+    await markOnboarded();
+    setOpen(false);
+    setActiveScreen("create-import");
+  };
 
-  const STEPS: { num: WizardStep; label: string }[] = [
-    { num: 1, label: "Account" },
-    { num: 2, label: "Java" },
-    { num: 3, label: "Get started" },
-  ];
+  const canGoToStep = (target: WizardStep) => {
+    if (target === step()) return false;
+    if (target < step()) return true;
+    if (target === 2) return Boolean(account());
+    if (target === 3) return Boolean(account());
+    return false;
+  };
 
   return (
     <Show when={open()}>
       <div class="modal-overlay">
-        <div class="modal onboarding-modal panel panel--bracketed">
-          <div class="modal-header">
-            <span class="modal-title">Welcome to Vermeil</span>
-            <button class="modal-close" onClick={close}>✕</button>
+        <div class="modal onboarding-modal">
+          {/* Tactile Branding Header */}
+          <div class="onboarding-header">
+            <div class="onboarding-brand">
+              <span class="onboarding-brand-title">Vermeil</span>
+              <span class="card-section-tag tag-settings-general">v1.0.0</span>
+            </div>
+            <button
+              class="modal-close tip-below tip-left"
+              data-tip="Skip onboarding"
+              onClick={close}
+            >
+              <IconX />
+            </button>
           </div>
 
-          <div class="onboarding-progress">
-            <For each={STEPS}>
-              {(s, i) => (
-                <>
-                  <Show when={i() > 0}>
-                    <div class={`onboarding-step-line ${step() >= s.num ? "active" : ""}`} />
-                  </Show>
-                  <div class={`onboarding-step ${step() >= s.num ? "active" : ""}`}>
-                    <div class="onboarding-step-num">{s.num}</div>
-                    <div class="onboarding-step-label">{s.label}</div>
-                  </div>
-                </>
-              )}
-            </For>
+          {/* Keycap Stepper */}
+          <div class="onboarding-stepper">
+            <div
+              class={`onboarding-step-key ${step() === 1 ? "active" : ""} ${step() > 1 ? "completed" : ""}`}
+              onClick={() => canGoToStep(1) && setStep(1)}
+            >
+              <span class="onboarding-step-num">
+                <Show when={step() > 1} fallback="01">
+                  <IconCheck />
+                </Show>
+              </span>
+              <span class="onboarding-step-label">Account</span>
+            </div>
+
+            <div class={`onboarding-step-divider ${step() >= 2 ? "active" : ""}`} />
+
+            <div
+              class={`onboarding-step-key ${step() === 2 ? "active" : ""} ${step() > 2 ? "completed" : ""} ${!canGoToStep(2) && step() < 2 ? "disabled" : ""}`}
+              onClick={() => canGoToStep(2) && setStep(2)}
+            >
+              <span class="onboarding-step-num">
+                <Show when={step() > 2} fallback="02">
+                  <IconCheck />
+                </Show>
+              </span>
+              <span class="onboarding-step-label">Environment</span>
+            </div>
+
+            <div class={`onboarding-step-divider ${step() >= 3 ? "active" : ""}`} />
+
+            <div
+              class={`onboarding-step-key ${step() === 3 ? "active" : ""} ${!canGoToStep(3) && step() < 3 ? "disabled" : ""}`}
+              onClick={() => canGoToStep(3) && setStep(3)}
+            >
+              <span class="onboarding-step-num">03</span>
+              <span class="onboarding-step-label">Ready</span>
+            </div>
           </div>
 
-          {/* Step 1: Account */}
+          {/* Step 1: Account Station */}
           <Show when={step() === 1}>
             <div class="modal-body">
-              <div class="onboarding-heading">Sign in</div>
+              <div class="onboarding-heading">Account Setup</div>
               <div class="onboarding-subtext">
-                Pick a Microsoft account to play online, or use an offline name
-                to skip authentication. You can add or switch accounts later.
+                Sign in with an official Microsoft account to access online multiplayer and realms, or create an offline profile to play locally.
               </div>
 
-              <div style="margin-top:18px">
+              <Show when={account()}>
+                <div class="onboarding-active-account">
+                  <PlayerHead
+                    skinUrl={skinUrl()}
+                    name={account()!.name}
+                    size={42}
+                  />
+                  <div class="onboarding-active-info">
+                    <div class="onboarding-active-name">{account()!.name}</div>
+                    <div class="onboarding-active-badge">
+                      <Show
+                        when={!account()!.is_offline}
+                        fallback={<span>Offline Profile</span>}
+                      >
+                        <IconMicrosoft />
+                        <span>Microsoft Account</span>
+                      </Show>
+                    </div>
+                  </div>
+                  <div class="onboarding-active-status">
+                    <IconCheck />
+                    <span>Active</span>
+                  </div>
+                </div>
+
                 <button
-                  class="btn btn--primary"
-                  onClick={handleMicrosoftLogin}
-                  disabled={loggingIn()}
-                  style="width:100%"
+                  class="onboarding-switch-btn"
+                  onClick={() => setShowAddAccount(!showAddAccount())}
                 >
-                  {loggingIn() ? "Signing in..." : "Sign in with Microsoft"}
+                  {showAddAccount() ? "Hide account options" : "Switch or add another account..."}
                 </button>
-              </div>
+              </Show>
 
-              <div class="onboarding-or">or</div>
+              <Show when={!account() || showAddAccount()}>
+                <div>
+                  <button
+                    class="btn btn--primary onboarding-ms-btn"
+                    onClick={handleMicrosoftLogin}
+                    disabled={loggingIn()}
+                  >
+                    <IconMicrosoft />
+                    <span>{loggingIn() ? "Connecting to Microsoft..." : "Sign in with Microsoft"}</span>
+                  </button>
 
-              <div class="field-label">Offline username</div>
-              <div style="display:flex;gap:8px">
-                <input
-                  class="field-control field-control--text"
-                  placeholder="Username (1-16 chars)"
-                  value={offlineUsername()}
-                  onInput={(e) => setOfflineUsername(e.currentTarget.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleOfflineLogin();
-                  }}
-                  maxLength={16}
-                />
-                <button
-                  class="btn btn--neutral"
-                  onClick={handleOfflineLogin}
-                  disabled={!offlineUsername().trim()}
-                >
-                  Add
-                </button>
-              </div>
+                  <div class="onboarding-or">// OR OFFLINE PROFILE</div>
+
+                  <div class="onboarding-offline-well">
+                    <div class="field-label" style="margin-bottom:0">Offline Username</div>
+                    <div class="onboarding-offline-row">
+                      <input
+                        class="field-control field-control--text"
+                        placeholder="Player username (1-16 chars)"
+                        value={offlineUsername()}
+                        onInput={(e) => setOfflineUsername(e.currentTarget.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleOfflineLogin();
+                        }}
+                        maxLength={16}
+                      />
+                      <button
+                        class="btn btn--neutral"
+                        onClick={handleOfflineLogin}
+                        disabled={!offlineUsername().trim()}
+                      >
+                        Add Profile
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </Show>
 
               <Show when={error()}>
-                <div class="onboarding-error">{error()}</div>
+                <div class="onboarding-error">
+                  <IconAlertTriangle />
+                  <span>{error()}</span>
+                  <button onClick={() => setError(null)}>
+                    <IconX />
+                  </button>
+                </div>
               </Show>
             </div>
+
             <div class="modal-footer">
               <button class="btn btn--ghost" onClick={close}>Skip setup</button>
               <button
@@ -356,94 +504,144 @@ const OnboardingWizard: Component = () => {
                 onClick={() => setStep(2)}
                 disabled={!account()}
               >
-                Next
+                Next: Environment
               </button>
             </div>
           </Show>
 
-          {/* Step 2: Java */}
+          {/* Step 2: Java Runtime Environment */}
           <Show when={step() === 2}>
             <div class="modal-body">
-              <div class="onboarding-heading">Java runtimes (optional)</div>
+              <div class="onboarding-heading">Java Runtime Environment</div>
               <div class="onboarding-subtext">
-                Each Minecraft major needs its own JRE. Skip this and Vermeil will
-                download what you need the first time you play. If you already
-                have JDKs installed, point at them now to avoid extra downloads.
+                Minecraft versions require matching Java versions (Java 21 for 1.20.5+, Java 17 for 1.18+, Java 8 for 1.16-).
               </div>
 
-              <div class="java-slots onboarding-java-slots">
-                <For each={JAVA_SLOTS}>
-                  {(major) => {
-                    const det = () => javaDetections().find(i => i.major === major);
-                    const path = () => javaPathFor(major);
-                    const installed = () => Boolean(path());
-                    const busy = () => javaBusy()[major] ?? null;
-                    return (
-                      <div class="java-slot">
-                        <div class="java-slot-title">Java {major} location</div>
-                        <JavaPathInput
-                          major={major}
-                          value={path()}
-                          placeholder={`Not configured — will install on first play`}
-                          disabled={busy() !== null}
-                          onCommit={async (newPath) => {
-                            setJavaPaths(prev => {
-                              const next = { ...prev };
-                              if (newPath) next[major] = newPath;
-                              else delete next[major];
-                              return next;
-                            });
-                            if (newPath) {
-                              try {
-                                const install = await validateJavaPath(newPath);
-                                setJavaDetections(prev => {
-                                  const without = prev.filter(i => i.path !== install.path);
-                                  return [...without, install];
-                                });
-                              } catch {
-                                // Already toasted by JavaPathInput on the unhappy path.
-                              }
-                            }
-                          }}
-                        />
-                        <Show when={det() && installed()}>
-                          <div class="java-slot-meta">
-                            {det()!.full_version} · {det()!.arch} · {det()!.source.replace("_", " ")}
-                          </div>
-                        </Show>
-                        <div class="java-slot-actions">
-                          <button
-                            class={`btn btn--sm ${installed() ? "btn--neutral" : "btn--primary"}`}
-                            onClick={() => handleJavaInstall(major)}
-                            disabled={busy() !== null}
-                            title={installed() ? "Replace with a fresh Adoptium download" : "Download from Adoptium"}
-                          >
-                            <IconDownload />
-                            {busy() === "install" ? "Installing..." : "Install recommended"}
-                          </button>
-                          <button
-                            class="btn btn--sm btn--neutral"
-                            onClick={() => handleJavaDetect(major)}
-                            disabled={busy() !== null}
-                          >
-                            <IconSearch />
-                            {busy() === "detect" ? "Detecting..." : "Detect"}
-                          </button>
-                          <button
-                            class="btn btn--sm btn--neutral"
-                            onClick={() => handleJavaBrowse(major)}
-                            disabled={busy() !== null}
-                          >
-                            <IconFolderOpen />
-                            {busy() === "browse" ? "Picking..." : "Browse"}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  }}
-                </For>
+              {/* Recommendation card */}
+              <div class="onboarding-java-hero">
+                <div class="onboarding-hero-top">
+                  <span class="card-section-tag tag-settings-performance">AUTOMATIC</span>
+                  <span class="onboarding-hero-title">Zero-Configuration Isolation (Recommended)</span>
+                </div>
+                <div class="onboarding-hero-desc">
+                  Vermeil automatically detects and downloads isolated official Adoptium JREs the first time you launch any Minecraft version. No manual paths needed.
+                </div>
               </div>
+
+              {/* Detected runtimes banner */}
+              <Show when={javaDetections().length > 0}>
+                <div class="onboarding-detected-banner">
+                  <div class="onboarding-detected-info">
+                    <div class="onboarding-detected-title">
+                      {javaDetections().length} System Runtime{javaDetections().length > 1 ? "s" : ""} Found
+                    </div>
+                    <div class="onboarding-detected-list">
+                      {javaDetections().map((d) => `Java ${d.major} (${d.source.replace("_", " ")})`).join(" · ")}
+                    </div>
+                  </div>
+                  <button
+                    class="btn btn--sm btn--neutral"
+                    onClick={handleAutoConfigureAll}
+                    disabled={detectingAll()}
+                  >
+                    <IconSearch />
+                    <span>{detectingAll() ? "Configuring..." : "Auto-Bind"}</span>
+                  </button>
+                </div>
+              </Show>
+
+              {/* Advanced toggle */}
+              <button
+                class="onboarding-accordion-toggle"
+                onClick={() => setShowAdvancedJava(!showAdvancedJava())}
+              >
+                <div style="display:flex;align-items:center;gap:8px">
+                  <IconSettings />
+                  <span>Configure Specific Slots (Java 25, 21, 17, 8)</span>
+                </div>
+                <Show when={showAdvancedJava()} fallback={<IconChevronRight />}>
+                  <IconChevronDown />
+                </Show>
+              </button>
+
+              <Show when={showAdvancedJava()}>
+                <div class="onboarding-advanced-well">
+                  <For each={JAVA_SLOTS}>
+                    {(major) => {
+                      const det = () => javaDetections().find((i) => i.major === major);
+                      const path = () => javaPathFor(major);
+                      const installed = () => Boolean(path());
+                      const busy = () => javaBusy()[major] ?? null;
+                      return (
+                        <div class="java-slot" style="margin-bottom:0">
+                          <div class="java-slot-title">Java {major} Location</div>
+                          <JavaPathInput
+                            major={major}
+                            value={path()}
+                            placeholder="Auto-provisions on first play"
+                            disabled={busy() !== null}
+                            onCommit={async (newPath) => {
+                              setJavaPaths((prev) => {
+                                const next = { ...prev };
+                                if (newPath) next[major] = newPath;
+                                else delete next[major];
+                                return next;
+                              });
+                              if (newPath) {
+                                try {
+                                  const install = await validateJavaPath(newPath);
+                                  setJavaDetections((prev) => {
+                                    const without = prev.filter((i) => i.path !== install.path);
+                                    return [...without, install];
+                                  });
+                                } catch {
+                                  // Handled in JavaPathInput
+                                }
+                              }
+                            }}
+                          />
+                          <Show when={det() && installed()}>
+                            <div class="java-slot-meta">
+                              {det()!.full_version} · {det()!.arch} · {det()!.source.replace("_", " ")}
+                            </div>
+                          </Show>
+                          <div class="java-slot-actions">
+                            <button
+                              class={`btn btn--sm ${installed() ? "btn--neutral" : "btn--primary"} tip-below`}
+                              data-tip={installed() ? "Replace with official Adoptium build" : "Download official Adoptium JDK"}
+                              onClick={() => handleJavaInstall(major)}
+                              disabled={busy() !== null}
+                            >
+                              <IconDownload />
+                              <span>{busy() === "install" ? "Installing..." : "Install"}</span>
+                            </button>
+                            <button
+                              class="btn btn--sm btn--neutral tip-below"
+                              data-tip={`Search system for Java ${major}`}
+                              onClick={() => handleJavaDetect(major)}
+                              disabled={busy() !== null}
+                            >
+                              <IconSearch />
+                              <span>{busy() === "detect" ? "Detecting..." : "Detect"}</span>
+                            </button>
+                            <button
+                              class="btn btn--sm btn--neutral tip-below"
+                              data-tip="Browse filesystem for javaw.exe"
+                              onClick={() => handleJavaBrowse(major)}
+                              disabled={busy() !== null}
+                            >
+                              <IconFolderOpen />
+                              <span>{busy() === "browse" ? "Picking..." : "Browse"}</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  </For>
+                </div>
+              </Show>
             </div>
+
             <div class="modal-footer">
               <button class="btn btn--ghost" onClick={() => setStep(1)}>Back</button>
               <button class="btn btn--primary" onClick={() => setStep(3)}>
@@ -455,33 +653,68 @@ const OnboardingWizard: Component = () => {
           {/* Step 3: First instance choice */}
           <Show when={step() === 3}>
             <div class="modal-body">
-              <div class="onboarding-heading">Create your first instance</div>
+              <div class="onboarding-heading">Ready to Play</div>
               <div class="onboarding-subtext">
-                You're all set. Pick how you'd like to start — drop into a curated
-                modpack, or build a custom setup yourself.
+                Your launcher is ready. Choose how you'd like to create your first Minecraft instance:
               </div>
 
               <div class="onboarding-choices">
-                <div class="onboarding-choice" onClick={goToModpacks}>
-                  <div class="onboarding-choice-icon" style="color:var(--blue)"><IconLayers /></div>
-                  <div class="onboarding-choice-text">
-                    <div class="onboarding-choice-title">Install a modpack</div>
+                <div
+                  class="onboarding-choice-card onboarding-choice-card--modpack"
+                  onClick={goToModpacks}
+                >
+                  <div class="onboarding-choice-icon" style="color:var(--accent)">
+                    <IconLayers />
+                  </div>
+                  <div class="onboarding-choice-info">
+                    <div class="onboarding-choice-header">
+                      <span class="card-section-tag tag-settings-general">CURATED</span>
+                      <span class="onboarding-choice-title">Browse Modpacks</span>
+                    </div>
                     <div class="onboarding-choice-desc">
-                      Browse and install one-click modpacks from Modrinth.
+                      Explore and install thousands of community modpacks from Modrinth and CurseForge with one-click setup.
                     </div>
                   </div>
                 </div>
-                <div class="onboarding-choice" onClick={goToCustom}>
-                  <div class="onboarding-choice-icon" style="color:var(--accent)"><IconSettings /></div>
-                  <div class="onboarding-choice-text">
-                    <div class="onboarding-choice-title">Custom setup</div>
+
+                <div
+                  class="onboarding-choice-card onboarding-choice-card--custom"
+                  onClick={goToCustom}
+                >
+                  <div class="onboarding-choice-icon" style="color:var(--success)">
+                    <IconCube />
+                  </div>
+                  <div class="onboarding-choice-info">
+                    <div class="onboarding-choice-header">
+                      <span class="card-section-tag tag-settings-performance">VANILLA & MODDED</span>
+                      <span class="onboarding-choice-title">Custom Instance</span>
+                    </div>
                     <div class="onboarding-choice-desc">
-                      Pick your version and loader, then add mods later.
+                      Choose any Minecraft version and configure Fabric, NeoForge, Forge, Quilt, or Vanilla directly.
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  class="onboarding-choice-card onboarding-choice-card--import"
+                  onClick={goToImport}
+                >
+                  <div class="onboarding-choice-icon" style="color:var(--warn)">
+                    <IconFolderOpen />
+                  </div>
+                  <div class="onboarding-choice-info">
+                    <div class="onboarding-choice-header">
+                      <span class="card-section-tag tag-settings-storage">LOCAL ARCHIVE</span>
+                      <span class="onboarding-choice-title">Import Modpack</span>
+                    </div>
+                    <div class="onboarding-choice-desc">
+                      Import an existing .mrpack (Modrinth) or .zip (CurseForge) archive file directly from your computer.
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+
             <div class="modal-footer">
               <button class="btn btn--ghost" onClick={() => setStep(2)}>Back</button>
               <button class="btn btn--ghost" onClick={close}>I'll decide later</button>
@@ -490,10 +723,7 @@ const OnboardingWizard: Component = () => {
         </div>
       </div>
 
-      {/* Chooser modal — sibling of the wizard's overlay so it stacks on
-          top via DOM order. The wizard's `.modal-overlay` doesn't close on
-          backdrop click, so dismissing the chooser leaves the wizard intact
-          underneath. */}
+      {/* Chooser modal — sibling of the wizard's overlay so it stacks on top via DOM order. */}
       <Show when={chooser()}>
         <JavaChooserModal
           major={chooser()!.major}

@@ -97,141 +97,484 @@
 
 /* ============================================================
    First-run onboarding wizard (modals/OnboardingWizard.tsx).
-   Slightly wider than the standard modal to fit the step
-   indicator without crowding the title row.
+   Tactile SloppyKeys style, framed panel, keycap progress stepper.
    ============================================================ */
-.onboarding-modal { width: 520px; }
-.onboarding-progress {
+.onboarding-modal {
+  width: 580px;
+  max-width: min(580px, calc(100vw - 40px));
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.onboarding-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: var(--surface-panel);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+.onboarding-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.onboarding-brand-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.onboarding-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background: var(--surface-sunken);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.onboarding-step-key {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: var(--bevel);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s, opacity 0.15s;
+  user-select: none;
+}
+
+.onboarding-step-key:hover:not(.disabled) {
+  border-color: var(--border-hover);
+  background: var(--surface-raised);
+}
+
+.onboarding-step-key.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface-panel));
+  box-shadow: inset 0 -2px 0 var(--accent), 0 0 12px rgba(139, 92, 246, 0.2);
+}
+
+.onboarding-step-key.completed {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  opacity: 0.95;
+}
+
+.onboarding-step-key.disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.onboarding-step-num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-faint);
+  line-height: 1;
+}
+
+.onboarding-step-key.active .onboarding-step-num {
+  color: var(--accent);
+}
+
+.onboarding-step-key.completed .onboarding-step-num {
+  color: var(--success);
+  display: flex;
+  align-items: center;
+}
+
+.onboarding-step-key.completed .onboarding-step-num svg {
+  width: 12px;
+  height: 12px;
+}
+
+.onboarding-step-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.onboarding-step-key.active .onboarding-step-label {
+  color: var(--text);
+}
+
+.onboarding-step-divider {
+  flex: 1;
+  max-width: 32px;
+  height: 1px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.onboarding-step-divider.active {
+  background: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+
+.onboarding-heading {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
+
+.onboarding-subtext {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: var(--space-4);
+}
+
+/* Step 1: Account Station */
+.onboarding-active-account {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--success);
+  margin-bottom: var(--space-4);
+}
+
+.onboarding-active-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.onboarding-active-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.onboarding-active-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.onboarding-active-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.onboarding-switch-btn {
+  font-size: 11px;
+  color: var(--text-faint);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-bottom: var(--space-3);
+  padding: 0;
+  text-align: left;
+}
+.onboarding-switch-btn:hover {
+  color: var(--accent);
+}
+
+.onboarding-ms-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-6) var(--space-2);
-  border-bottom: 1px solid var(--border);
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: var(--bevel-strong);
 }
-.onboarding-step {
+
+.onboarding-ms-btn svg {
+  flex-shrink: 0;
+}
+
+.onboarding-offline-well {
+  padding: 12px 14px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-1);
-  opacity: 0.5;
-  transition: opacity 0.2s;
+  gap: 8px;
+  margin-top: var(--space-3);
 }
-.onboarding-step.active { opacity: 1; }
-.onboarding-step-num {
-  width: 24px; height: 24px;
-  border-radius: 50%;
-  background: var(--bg4);
-  color: var(--muted);
-  font-size: 11px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  border: 1px solid var(--border);
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
+
+.onboarding-offline-row {
+  display: flex;
+  gap: 8px;
 }
-.onboarding-step.active .onboarding-step-num {
-  background: var(--accent);
-  color: var(--text);
-  border-color: var(--accent);
-}
-.onboarding-step-label {
-  font-size: 10px;
-  color: var(--muted);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-.onboarding-step.active .onboarding-step-label { color: var(--text); }
-.onboarding-step-line {
-  flex: 0 0 60px;
-  height: 1px;
-  background: var(--border);
-  margin-bottom: var(--space-4);
-  transition: background 0.2s;
-}
-.onboarding-step-line.active { background: var(--accent); }
-.onboarding-heading {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: var(--space-2);
-}
-.onboarding-subtext {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.55;
-}
+
 .onboarding-or {
   text-align: center;
+  font-family: var(--font-mono);
   font-size: 10px;
-  color: var(--muted);
-  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  margin: var(--space-5) 0 var(--space-4);
+  margin: var(--space-4) 0;
   position: relative;
 }
+
 .onboarding-or::before,
 .onboarding-or::after {
   content: "";
   position: absolute;
   top: 50%;
-  width: calc(50% - 22px);
+  width: calc(50% - 30px);
   height: 1px;
   background: var(--border);
 }
+
 .onboarding-or::before { left: 0; }
 .onboarding-or::after { right: 0; }
+
 .onboarding-error {
   margin-top: var(--space-3);
-  padding: var(--space-2) var(--space-3);
+  padding: 8px 12px;
   background: var(--danger-soft);
-  border: 1px solid var(--danger-soft);
-  border-radius: var(--radius-sm);
-  color: var(--danger);
+  border: 1px solid rgba(224, 86, 86, 0.4);
+  border-radius: 0;
+  color: var(--text);
   font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.onboarding-error svg {
+  color: var(--danger);
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.onboarding-error button {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+}
+.onboarding-error button:hover {
+  color: var(--text);
+}
+
+/* Step 2: Java Station */
+.onboarding-java-hero {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  background: var(--surface-panel);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: var(--space-3);
+}
+
+.onboarding-hero-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.onboarding-hero-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.onboarding-hero-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.onboarding-detected-banner {
+  padding: 10px 12px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--info);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: var(--space-3);
+}
+
+.onboarding-detected-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.onboarding-detected-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.onboarding-detected-list {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.onboarding-accordion-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--surface-panel);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font);
+  cursor: pointer;
+  box-shadow: var(--bevel);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.onboarding-accordion-toggle:hover {
+  background: var(--surface-raised);
+  color: var(--text);
+  border-color: var(--border-hover);
+}
+
+.onboarding-accordion-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.onboarding-advanced-well {
+  padding: 12px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-top: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.onboarding-advanced-well::-webkit-scrollbar { width: 4px; }
+.onboarding-advanced-well::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 0; }
+.onboarding-advanced-well::-webkit-scrollbar-track { background: transparent; }
+
+/* Step 3: Launch Choice Plates */
 .onboarding-choices {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  margin-top: var(--space-5);
+  gap: 10px;
+  margin-top: var(--space-3);
 }
-.onboarding-choice {
+
+.onboarding-choice-card {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-4);
-  background: var(--bg3);
+  gap: 14px;
+  padding: 12px 14px;
+  background: var(--surface-panel);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-left: 3px solid var(--border-strong);
+  border-radius: 0;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  box-shadow: var(--bevel);
+  transition: border-color 0.15s, transform 0.15s, background 0.15s;
+  user-select: none;
 }
-.onboarding-choice:hover {
-  border-color: var(--accent);
-  background: var(--accent-tint);
+
+.onboarding-choice-card:hover {
+  border-left-color: var(--accent);
+  background: var(--surface-raised);
+  transform: translateY(-1px);
 }
+
+.onboarding-choice-card--modpack:hover { border-left-color: var(--accent); }
+.onboarding-choice-card--custom:hover { border-left-color: var(--success); }
+.onboarding-choice-card--import:hover { border-left-color: var(--warn); }
+
 .onboarding-choice-icon {
-  font-size: 22px;
-  width: 36px;
-  text-align: center;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
   flex-shrink: 0;
 }
-.onboarding-choice-text {
+
+.onboarding-choice-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.onboarding-choice-info {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 3px;
   min-width: 0;
+  flex: 1;
 }
+
+.onboarding-choice-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .onboarding-choice-title {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
 }
+
 .onboarding-choice-desc {
   font-size: 11px;
-  color: var(--muted);
-  line-height: 1.5;
+  color: var(--text-muted);
+  line-height: 1.45;
 }
 
 
