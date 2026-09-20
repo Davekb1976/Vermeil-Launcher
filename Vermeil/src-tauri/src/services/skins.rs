@@ -175,6 +175,17 @@ pub struct LocalSkin {
     pub created_at: i64,
 }
 
+/// Result of syncing historical skins from Crafty.gg.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CraftySyncResult {
+    /// Number of new skins added to the local library.
+    pub added: usize,
+    /// Total historical skins returned by Crafty.gg.
+    pub total: usize,
+    /// The updated full list of local skins.
+    pub skins: Vec<LocalSkin>,
+}
+
 // Internal representation of the saved-skins index file. Stores filesystem
 // paths, not data URLs (we read+encode on the way out).
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -733,6 +744,147 @@ pub fn read_local_skin(account_id: &str, hash: &str) -> Result<(Vec<u8>, SkinVar
         .ok_or_else(|| format!("Local skin {} not found", hash))?;
     let bytes = fs::read(&entry.path).map_err(|e| format!("Read skin: {}", e))?;
     Ok((bytes, entry.variant))
+}
+
+#[derive(Debug, Deserialize)]
+struct CraftyResponse {
+    data: Option<CraftyData>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CraftyData {
+    skins: Option<Vec<CraftySkinEntry>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CraftySkinEntry {
+    texture: String,
+    slim: Option<bool>,
+    changed_at: Option<String>,
+    created_at: Option<String>,
+}
+
+/// Fetch previous skins from Crafty.gg's open player archive and import
+/// them into the local wardrobe library, deduplicating against existing entries.
+pub async fn sync_crafty_skin_history(
+    account: &MinecraftProfile,
+) -> Result<CraftySyncResult, String> {
+    require_microsoft(account)?;
+
+    let url = format!("https://api.crafty.gg/api/v2/players/{}", account.id);
+    let resp = HTTP
+        .get(&url)
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        )
+        .send()
+        .await
+        .map_err(|e| format!("Failed to reach Crafty.gg: {}", e))?;
+
+    if resp.status() == reqwest::StatusCode::NOT_FOUND {
+        return Ok(CraftySyncResult {
+            added: 0,
+            total: 0,
+            skins: list_local_skins(&account.id),
+        });
+    }
+
+    if !resp.status().is_success() {
+        return Err(format!("Crafty.gg returned HTTP status {}", resp.status()));
+    }
+
+    let body: CraftyResponse = resp
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse Crafty.gg response: {}", e))?;
+
+    let crafty_skins = body.data.and_then(|d| d.skins).unwrap_or_default();
+    if crafty_skins.is_empty() {
+        return Ok(CraftySyncResult {
+            added: 0,
+            total: 0,
+            skins: list_local_skins(&account.id),
+        });
+    }
+
+    let dir = skins_dir(&account.id);
+    fs::create_dir_all(&dir).map_err(|e| format!("Create skins dir: {}", e))?;
+
+    let mut lib = load_library(&account.id);
+    let mut added = 0;
+
+    for skin in &crafty_skins {
+        let png_bytes = match base64::engine::general_purpose::STANDARD.decode(skin.texture.trim()) {
+            Ok(b) => b,
+            Err(_) => continue,
+        };
+
+        if validate_skin_dimensions(&png_bytes).is_err() {
+            continue;
+        }
+
+        let mut hasher = Sha1::new();
+        hasher.update(&png_bytes);
+        let hash = hex_lower(&hasher.finalize());
+
+        let png_path = dir.join(format!("{}.png", hash));
+        if !png_path.exists() {
+            if let Err(e) = fs::write(&png_path, &png_bytes) {
+                tracing::warn!("Failed to write synced skin {}: {}", hash, e);
+                continue;
+            }
+        }
+
+        let variant = if skin.slim.unwrap_or(false) {
+            SkinVariant::Slim
+        } else {
+            SkinVariant::Classic
+        };
+
+        let date_str = skin.changed_at.as_deref().or(skin.created_at.as_deref());
+        let (ts, name) = if let Some(ds) = date_str {
+            if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(ds) {
+                let ts = dt.timestamp();
+                let month_str = dt.format("%b %Y").to_string();
+                (ts, format!("Skin ({})", month_str))
+            } else {
+                (0, format!("Skin {}", &hash[..6.min(hash.len())]))
+            }
+        } else {
+            (0, format!("Skin {}", &hash[..6.min(hash.len())]))
+        };
+
+        if let Some(existing) = lib.skins.iter_mut().find(|s| s.hash == hash) {
+            // Update metadata if it has a generic hash name and timestamp is known
+            if (existing.name.starts_with("Skin ") || existing.name.is_empty()) && existing.name.len() <= 13 {
+                existing.name = name;
+            }
+            if existing.created_at == 0 && ts > 0 {
+                existing.created_at = ts;
+            }
+        } else {
+            lib.skins.push(LocalSkinEntry {
+                hash,
+                name,
+                variant,
+                path: png_path.to_string_lossy().to_string(),
+                created_at: ts,
+            });
+            added += 1;
+        }
+    }
+
+    // Sort descending by created_at so newest skins appear first
+    lib.skins.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+    save_library(&account.id, &lib)?;
+
+    let all_skins = list_local_skins(&account.id);
+    Ok(CraftySyncResult {
+        added,
+        total: crafty_skins.len(),
+        skins: all_skins,
+    })
 }
 
 // ───────────────────────── Helpers ──────────────────────────────────────

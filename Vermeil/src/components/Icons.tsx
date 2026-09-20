@@ -166,8 +166,8 @@ export const IconTrash2: Component = () => (
 );
 
 // Refresh / reload — Feather Icons (MIT).
-export const IconReload: Component = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+export const IconReload: Component<{ class?: string }> = (props) => (
+  <svg class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <polyline points="23 4 23 10 17 10"/>
     <polyline points="1 20 1 14 7 14"/>
     <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/>

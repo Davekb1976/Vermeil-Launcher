@@ -9,6 +9,7 @@ import {
   listLocalSkins,
   equipLocalSkin,
   removeLocalSkin,
+  syncCraftySkins,
   listCustomCapes,
   removeCustomCape,
   readCustomCapeSource,
@@ -752,6 +753,42 @@ const Skins: Component = () => {
     }
   };
 
+  const handleSyncHistory = async () => {
+    if (busy() !== null) return;
+    setBusy("sync");
+    try {
+      const res = await syncCraftySkins();
+      await refetchLocal();
+      if (res.added > 0) {
+        showToast({
+          title: "Skins synced",
+          message: `Imported ${res.added} previous skin${res.added === 1 ? "" : "s"} from Crafty.gg`,
+          type: "success",
+        });
+      } else if (res.total > 0) {
+        showToast({
+          title: "Wardrobe up to date",
+          message: `All ${res.total} skins from your account history are already saved.`,
+          type: "info",
+        });
+      } else {
+        showToast({
+          title: "No skin history",
+          message: "No previous skins found on Crafty.gg for this account.",
+          type: "info",
+        });
+      }
+    } catch (e) {
+      showToast({
+        title: "Sync failed",
+        message: String(e),
+        type: "error",
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const handleEquipLocal = async (skin: LocalSkin) => {
     if (busy() !== null) return;
     // Optimistic crossfade: swap the canvas texture immediately so the click
@@ -1042,15 +1079,26 @@ const Skins: Component = () => {
                 <span class="skins-panel-title">Skin Library</span>
                 <span class="skins-count-badge">{(localSkins() ?? []).length}</span>
               </div>
-              <button
-                class="skins-mini-btn tip-below tip-right"
-                data-tip="Import skin PNG"
-                onClick={handleUpload}
-                disabled={busy() !== null}
-              >
-                <IconUpload />
-                <span>{busy() === "upload" ? "Importing…" : "Import"}</span>
-              </button>
+              <div class="skins-panel-actions">
+                <button
+                  class="skins-mini-btn tip-below"
+                  data-tip="Sync previous skins from Crafty.gg"
+                  onClick={handleSyncHistory}
+                  disabled={busy() !== null}
+                >
+                  <IconReload class={busy() === "sync" ? "icon-spin" : undefined} />
+                  <span>{busy() === "sync" ? "Syncing…" : "Sync"}</span>
+                </button>
+                <button
+                  class="skins-mini-btn tip-below tip-right"
+                  data-tip="Import skin PNG"
+                  onClick={handleUpload}
+                  disabled={busy() !== null}
+                >
+                  <IconUpload />
+                  <span>{busy() === "upload" ? "Importing…" : "Import"}</span>
+                </button>
+              </div>
             </div>
 
             <div class="skins-panel-body">
@@ -1060,16 +1108,26 @@ const Skins: Component = () => {
                   <div class="skins-empty-wardrobe">
                     <div class="skins-empty-wardrobe-title">No skins saved</div>
                     <div class="skins-empty-wardrobe-text">
-                      Import a .png skin to build your saved wardrobe.
+                      Import a .png skin or sync previous skins from your account history.
                     </div>
-                    <button
-                      class="skins-action-btn skins-action-btn--primary"
-                      onClick={handleUpload}
-                      disabled={busy() !== null}
-                    >
-                      <IconUpload />
-                      <span>Import Skin</span>
-                    </button>
+                    <div class="skins-empty-wardrobe-actions">
+                      <button
+                        class="skins-action-btn skins-action-btn--primary"
+                        onClick={handleUpload}
+                        disabled={busy() !== null}
+                      >
+                        <IconUpload />
+                        <span>Import Skin</span>
+                      </button>
+                      <button
+                        class="skins-action-btn skins-action-btn--secondary"
+                        onClick={handleSyncHistory}
+                        disabled={busy() !== null}
+                      >
+                        <IconReload class={busy() === "sync" ? "icon-spin" : undefined} />
+                        <span>{busy() === "sync" ? "Syncing History…" : "Sync Previous Skins"}</span>
+                      </button>
+                    </div>
                   </div>
                 }
               >
@@ -1095,7 +1153,7 @@ const Skins: Component = () => {
                             />
                           </div>
                           <div class="skins-lib-card-info">
-                            <div class="skins-lib-card-name" title={skin.name}>
+                            <div class="skins-lib-card-name">
                               {skin.name}
                             </div>
                             <div class="skins-lib-card-meta">

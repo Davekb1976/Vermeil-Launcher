@@ -549,6 +549,11 @@ export interface LocalSkin {
   /** Unix epoch seconds when added. */
   created_at: number;
 }
+export interface CraftySyncResult {
+  added: number;
+  total: number;
+  skins: LocalSkin[];
+}
 
 /**
  * Transform describing how an uploaded image is placed onto the cape's
@@ -641,6 +646,8 @@ export const addLocalSkin = (name: string, pngData: Uint8Array | number[] | stri
   });
 export const removeLocalSkin = (hash: string) =>
   invoke<void>("remove_local_skin", { hash });
+export const syncCraftySkins = () =>
+  invoke<CraftySyncResult>("sync_crafty_skins");
 
 // Custom capes (local, display-only — never sent to Mojang).
 export const listCustomCapes = () => invoke<CustomCape[]>("list_custom_capes");

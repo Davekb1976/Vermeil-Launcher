@@ -6,7 +6,7 @@
 
 use crate::services::auth::MinecraftProfile;
 use crate::services::skins::{
-    self, CustomCape, LocalSkin, PlayerProfile, SkinVariant,
+    self, CraftySyncResult, CustomCape, LocalSkin, PlayerProfile, SkinVariant,
 };
 use crate::util::{paths, credentials};
 use std::fs;
@@ -204,4 +204,10 @@ pub async fn get_account_skin(account_id: String) -> Result<Option<String>, Stri
         .find(|s| s.state == "ACTIVE")
         .or_else(|| profile.skins.first());
     Ok(active.map(|s| s.texture.clone()))
+}
+
+#[tauri::command]
+pub async fn sync_crafty_skins() -> Result<CraftySyncResult, String> {
+    let account = active_microsoft_account()?;
+    skins::sync_crafty_skin_history(&account).await
 }
