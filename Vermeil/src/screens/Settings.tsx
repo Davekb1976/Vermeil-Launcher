@@ -23,6 +23,9 @@ type SettingsTab = "all" | "general" | "resources" | "instances" | "keybinds";
 const clampConcurrency = (n: number, max: number): number =>
   Math.max(1, Math.min(max, Math.round(Number.isNaN(n) ? 10 : n)));
 
+const clampSpeedLimit = (n: number, max = 500): number =>
+  Math.max(0, Math.min(max, Math.round(Number.isNaN(n) ? 0 : n)));
+
 const Settings: Component = () => {
   const [tab, setTab] = createSignal<SettingsTab>("all");
   const [search, setSearch] = createSignal("");
@@ -76,8 +79,8 @@ const Settings: Component = () => {
     "folder", "path", "directory", "cache", "purge", "clear"
   );
   const matchesPerformance = () => isResourcesSection() || matches(
-    "Performance", "Concurrency", "Concurrent downloads", "Concurrent writes",
-    "parallel", "threads", "downloads", "writes", "disk", "speed"
+    "Performance", "Concurrency", "Concurrent downloads", "Concurrent writes", "Download speed limit",
+    "parallel", "threads", "downloads", "writes", "disk", "speed", "bandwidth", "limit", "throttle", "rate"
   );
   const matchesJava = () => isResourcesSection() || matches(
     "Java", "jdk", "jre", "runtime", "Adoptium", "System Java", "GC preset", "Garbage collection",
@@ -140,8 +143,10 @@ const Settings: Component = () => {
   // round-trip completes.
   const [dlDraft, setDlDraft] = createSignal<number | null>(null);
   const [wrDraft, setWrDraft] = createSignal<number | null>(null);
+  const [speedDraft, setSpeedDraft] = createSignal<number | null>(null);
   const dlValue = (): number => dlDraft() ?? Math.min(settings()?.concurrent_downloads ?? 10, 20);
   const wrValue = (): number => wrDraft() ?? settings()?.concurrent_writes ?? 10;
+  const speedValue = (): number => speedDraft() ?? settings()?.download_speed_limit_mb ?? 0;
   createEffect(() => {
     const s = settings();
     const d = dlDraft();
@@ -151,6 +156,11 @@ const Settings: Component = () => {
     const s = settings();
     const w = wrDraft();
     if (s && w !== null && s.concurrent_writes === w) setWrDraft(null);
+  });
+  createEffect(() => {
+    const s = settings();
+    const sp = speedDraft();
+    if (s && sp !== null && (s.download_speed_limit_mb ?? 0) === sp) setSpeedDraft(null);
   });
 
   // Java location finder — populated by `runDetect()` and re-run on demand.
@@ -799,11 +809,11 @@ const Settings: Component = () => {
                 <div class="card-gamemode-section">
                   <div class="card-section-header">
                     <span class="card-section-tag tag-settings-performance">PERFORMANCE</span>
-                    <span class="card-section-label">Concurrency Limits</span>
-                    <span class="card-section-desc">Max concurrent downloads and disk writes</span>
+                    <span class="card-section-label">Concurrency & Bandwidth</span>
+                    <span class="card-section-desc">Max concurrent downloads, disk writes, and speed limit</span>
                   </div>
                   <div class="card-section-body">
-                    <div class="setting-card-grid setting-card-grid--2col">
+                    <div class="setting-card-grid">
                       <div class="setting-row">
                         <div class="setting-info">
                           <span class="setting-name">Concurrent downloads</span>
@@ -876,6 +886,47 @@ const Settings: Component = () => {
                                 e.currentTarget.value = String(safe);
                                 setWrDraft(safe);
                                 updateSetting("concurrent_writes", safe);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="setting-row">
+                        <div class="setting-info">
+                          <span class="setting-name">Download speed limit</span>
+                          <span class="setting-desc">
+                            {speedValue() === 0 ? "Unlimited bandwidth (0 = uncapped)" : `Capped at ${speedValue()} MB/s across all transfers`}
+                          </span>
+                        </div>
+                        <div class="setting-control">
+                          <div class="concurrency-control">
+                            <input
+                              class="concurrency-slider"
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={Math.min(speedValue(), 100)}
+                              style={`--slider-pct: ${(Math.min(speedValue(), 100) / 100) * 100}%`}
+                              onInput={(e) => {
+                                const safe = clampSpeedLimit(parseInt(e.currentTarget.value));
+                                e.currentTarget.style.setProperty('--slider-pct', `${(Math.min(safe, 100) / 100) * 100}%`);
+                                setSpeedDraft(safe);
+                                updateSetting("download_speed_limit_mb", safe);
+                              }}
+                            />
+                            <input
+                              class="concurrency-number"
+                              type="number"
+                              min="0"
+                              max="500"
+                              value={speedValue()}
+                              onChange={(e) => {
+                                const safe = clampSpeedLimit(parseInt(e.currentTarget.value));
+                                e.currentTarget.value = String(safe);
+                                setSpeedDraft(safe);
+                                updateSetting("download_speed_limit_mb", safe);
                               }}
                             />
                           </div>

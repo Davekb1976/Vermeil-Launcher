@@ -144,6 +144,10 @@ export interface LauncherSettings {
    * fetches and vice versa.
    */
   concurrent_writes: number;
+  /**
+   * Maximum download speed in MB/s across all transfers (0 = unlimited).
+   */
+  download_speed_limit_mb: number;
   mod_sources: string[];
   force_delete: boolean;
   curseforge_api_key: string;

@@ -56,6 +56,13 @@ pub fn run() {
             // settings file always exist regardless of whether a cape is set.
             crate::services::companion_settings::ensure_scaffold();
 
+            // Initialize download speed limit from persisted settings
+            tauri::async_runtime::spawn(async {
+                if let Ok(s) = crate::services::settings_service::load().await {
+                    crate::services::download::set_speed_limit_mb(s.download_speed_limit_mb);
+                }
+            });
+
             // Window shadow for native frameless look
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_shadow(true);

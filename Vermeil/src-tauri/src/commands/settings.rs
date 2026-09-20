@@ -10,6 +10,7 @@ pub async fn get_settings() -> Result<LauncherSettings, String> {
 
 #[tauri::command]
 pub async fn save_settings(settings: LauncherSettings) -> Result<(), String> {
+    crate::services::download::set_speed_limit_mb(settings.download_speed_limit_mb);
     settings_service::save(&settings)
         .await
         .map_err(|e| e.to_string())

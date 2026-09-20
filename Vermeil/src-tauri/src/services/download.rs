@@ -119,6 +119,100 @@ impl Drop for InstallScope {
     }
 }
 
+/// Global token-bucket rate limiter for download bandwidth throttling.
+///
+/// Throttles chunk reads across all concurrent tasks down to the user's
+/// configured `download_speed_limit_mb` (0 = unlimited).
+pub struct RateLimiter {
+    bytes_per_sec: AtomicU64,
+    state: Mutex<TokenBucketState>,
+}
+
+struct TokenBucketState {
+    tokens: f64,
+    last_refill: Instant,
+}
+
+impl RateLimiter {
+    pub fn new() -> Self {
+        Self {
+            bytes_per_sec: AtomicU64::new(0),
+            state: Mutex::new(TokenBucketState {
+                tokens: 0.0,
+                last_refill: Instant::now(),
+            }),
+        }
+    }
+
+    /// Update the speed limit dynamically in-flight.
+    pub fn set_limit_mb(&self, mb: u32) {
+        let bytes_per_sec = (mb as u64) * 1024 * 1024;
+        self.bytes_per_sec.store(bytes_per_sec, Ordering::Relaxed);
+        if let Ok(mut state) = self.state.lock() {
+            state.tokens = 0.0;
+            state.last_refill = Instant::now();
+        }
+        if mb == 0 {
+            tracing::info!("Download speed limit set to Unlimited");
+        } else {
+            tracing::info!("Download speed limit set to {} MB/s", mb);
+        }
+    }
+
+    /// Consume `bytes` from the token bucket, asynchronously sleeping if deficit exists.
+    pub async fn consume(&self, bytes: usize) -> Result<(), String> {
+        let limit = self.bytes_per_sec.load(Ordering::Relaxed);
+        // Fast path: unlimited has 0 mutex locks, 0 timer allocations.
+        if limit == 0 {
+            return Ok(());
+        }
+
+        let sleep_duration = {
+            let mut state = match self.state.lock() {
+                Ok(s) => s,
+                Err(_) => return Ok(()),
+            };
+
+            let now = Instant::now();
+            let elapsed = now.saturating_duration_since(state.last_refill).as_secs_f64();
+            state.last_refill = now;
+
+            let rate = limit as f64;
+            let max_burst = rate * 0.5; // up to 500ms burst capacity
+            state.tokens = (state.tokens + elapsed * rate).min(max_burst);
+
+            let needed = bytes as f64;
+            state.tokens -= needed;
+
+            if state.tokens >= 0.0 {
+                Duration::ZERO
+            } else {
+                let debt = -state.tokens;
+                // Cap debt sleep to at most 3 seconds so workers don't over-sleep
+                let capped_debt = debt.min(rate * 3.0);
+                Duration::from_secs_f64(capped_debt / rate)
+            }
+        };
+
+        if !sleep_duration.is_zero() {
+            cancel_check()?;
+            tokio::time::sleep(sleep_duration).await;
+            cancel_check()?;
+        }
+
+        Ok(())
+    }
+}
+
+lazy_static::lazy_static! {
+    static ref RATE_LIMITER: RateLimiter = RateLimiter::new();
+}
+
+/// Dynamically update the download rate limit (in MB/s, 0 = unlimited).
+pub fn set_speed_limit_mb(mb: u32) {
+    RATE_LIMITER.set_limit_mb(mb);
+}
+
 #[derive(Debug, Clone)]
 pub struct DownloadTask {
     pub url: String,
@@ -219,6 +313,8 @@ async fn fetch_bytes(
     let mut stream = resp.bytes_stream();
     while let Some(chunk) = stream.next().await {
         let chunk = chunk.map_err(|e| format!("Read chunk: {}", e))?;
+        cancel_check()?;
+        RATE_LIMITER.consume(chunk.len()).await?;
         bytes.extend_from_slice(&chunk);
     }
     Ok(bytes)
@@ -358,6 +454,7 @@ async fn resolve_concurrency() -> (usize, usize) {
         Ok(s) => {
             let dl = (s.concurrent_downloads as usize).clamp(1, MAX_FETCH);
             let wr = (s.concurrent_writes as usize).clamp(1, MAX_WRITE);
+            set_speed_limit_mb(s.download_speed_limit_mb);
             (dl, wr)
         }
         Err(e) => {

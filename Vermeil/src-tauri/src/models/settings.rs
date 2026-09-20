@@ -31,6 +31,10 @@ pub struct LauncherSettings {
     /// disk doesn't starve fetches and vice versa.
     #[serde(default = "default_concurrent_writes")]
     pub concurrent_writes: u8,
+    /// Maximum download speed in MB/s across all concurrent transfers.
+    /// 0 means unlimited.
+    #[serde(default = "default_download_speed_limit_mb")]
+    pub download_speed_limit_mb: u32,
     pub mod_sources: Vec<String>,
     #[serde(default)]
     pub force_delete: bool,
@@ -132,6 +136,7 @@ pub struct GlobalVideoSettings {
 
 fn default_concurrent_downloads() -> u8 { 10 }
 fn default_concurrent_writes() -> u8 { 10 }
+fn default_download_speed_limit_mb() -> u32 { 0 }
 fn default_splash_screen() -> bool { true }
 fn default_download_toasts() -> bool { true }
 
@@ -165,6 +170,7 @@ impl Default for LauncherSettings {
             download_toasts: true,
             concurrent_downloads: default_concurrent_downloads(),
             concurrent_writes: default_concurrent_writes(),
+            download_speed_limit_mb: default_download_speed_limit_mb(),
             mod_sources: vec!["modrinth".to_string(), "curseforge".to_string()],
             force_delete: false,
             curseforge_api_key: "$2a$10$Vqhx8J1qatEwez9lhg6cjeh1W6RC6H8AtXeLdu7o8H45smb66wCgu".to_string(),
