@@ -42,25 +42,33 @@
 
 ## Screenshots
 
-> Screenshots showcase the **v1.0.0** release.
+> Animated previews from the official **v1.0.0** release.
 
 <p align="center">
-  <img src="docs/images/screenshots/browse-mods.png" alt="Vermeil Instance & Content Browser" width="100%" />
+  <img src="docs/images/screenshots/home.gif" alt="Vermeil Home Screen" width="100%" />
 </p>
 <p align="center">
-  <em>Browse & install mods, resource packs, and shaders directly from Modrinth and CurseForge</em>
+  <em>Interactive 3D character stage, telemetry stats, Minecraft news, and recent worlds continue station</em>
 </p>
 
 <p align="center">
-  <img src="docs/images/screenshots/settings.png" alt="Vermeil Settings Screen" width="49%" />
-  <img src="docs/images/screenshots/accounts.png" alt="Vermeil Account Management" width="49%" />
+  <img src="docs/images/screenshots/library.gif" alt="Vermeil Instance Library" width="49%" />
+  <img src="docs/images/screenshots/skin.gif" alt="Vermeil 3D Character Studio" width="49%" />
+</p>
+<p align="center">
+  <em>Tactile instance management with floating dock, and the 3D Character Studio with skin history sync</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshots/settings.gif" alt="Vermeil Settings Screen" width="49%" />
+  <img src="docs/images/screenshots/accounts.gif" alt="Vermeil Account Management" width="49%" />
 </p>
 <p align="center">
   <em>Tactile launcher preferences, storage management, and encrypted local account profiles</em>
 </p>
 
 <p align="center">
-  <a href="docs/SCREENSHOTS.md"><strong>Explore the full screenshot gallery and UI details &rarr;</strong></a>
+  <a href="docs/SCREENSHOTS.md"><strong>Explore the full animated gallery and screen details &rarr;</strong></a>
 </p>
 
 ## Features
