@@ -289,10 +289,15 @@ export function completeDownload(
     instanceId?: string;
   },
 ) {
+  let alreadyFinalized = false;
   let finishedItem: DownloadEntry | undefined;
   setDownloads(prev =>
     prev.map(d => {
       if (d.id === id) {
+        if (d.status === "completed" || d.status === "failed") {
+          alreadyFinalized = true;
+          return d;
+        }
         finishedItem = {
           ...d,
           status: "completed" as const,
@@ -310,6 +315,7 @@ export function completeDownload(
       return d;
     })
   );
+  if (alreadyFinalized) return;
   persistDownloads();
 
   currentBatchCompleted++;
@@ -359,27 +365,40 @@ export function completeDownload(
 }
 
 export function failDownload(id: string, errorMsg?: string) {
+  let alreadyFinalized = false;
   let failedItem: DownloadEntry | undefined;
   setDownloads(prev =>
     prev.map(d => {
       if (d.id === id) {
         failedItem = d;
+        if (d.status === "failed" || d.status === "completed") {
+          alreadyFinalized = true;
+          return d;
+        }
         return { ...d, status: "failed" as const, timestamp: Date.now() };
       }
       return d;
     })
   );
+  if (alreadyFinalized) return;
   persistDownloads();
 
   currentBatchFailed++;
 
   const isCancelled = errorMsg === "Install cancelled" || errorMsg === "Import cancelled";
-  showToast({
-    title: isCancelled ? "Install cancelled" : "Install failed",
-    message: errorMsg || `${failedItem?.name || "Content"} failed to install`,
-    type: isCancelled ? "info" : "error",
-    autoCloseMs: 5000,
-  });
+  const isManualDownload = typeof errorMsg === "string" && (
+    errorMsg.includes("disabled third-party downloads") ||
+    errorMsg.includes("can't be downloaded automatically")
+  );
+
+  if (!isManualDownload) {
+    showToast({
+      title: isCancelled ? "Install cancelled" : "Install failed",
+      message: errorMsg || `${failedItem?.name || "Content"} failed to install`,
+      type: isCancelled ? "info" : "error",
+      autoCloseMs: 5000,
+    });
+  }
 
   const remaining = downloads().filter(d => d.status === "downloading");
 

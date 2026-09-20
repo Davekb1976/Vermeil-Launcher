@@ -935,41 +935,36 @@ const InstanceMods: Component = () => {
         author: mod.author,
       },
       execute: async (dlId: string) => {
+        const resultJson = modSource() === "curseforge"
+          ? await installCfModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId)
+          : await installModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId);
+        setLocalInstalled(prev => { const s = new Set(prev); s.add(mod.project_id); return s; });
         try {
-          const resultJson = modSource() === "curseforge"
-            ? await installCfModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId)
-            : await installModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId);
-          setLocalInstalled(prev => { const s = new Set(prev); s.add(mod.project_id); return s; });
-          try {
-            const result = JSON.parse(resultJson);
-            const depsInstalled: number = result.deps_installed ?? 0;
-            const depTitles: string[] = result.dep_titles ?? [];
-            const depIssues: DependencyIssue[] = result.issues ?? [];
-            const vnum: string | undefined = result.mod_entry?.version_number ?? undefined;
-            if (depsInstalled > 0) {
-              // Show up to 3 dep titles inline; fall back to count for the rest.
-              const preview = depTitles.slice(0, 3).join(", ");
-              const more = depTitles.length > 3 ? ` +${depTitles.length - 3} more` : "";
-              const message = depTitles.length > 0
-                ? `${mod.title} with ${preview}${more}`
-                : `${mod.title} (+${depsInstalled} dep${depsInstalled === 1 ? "" : "s"})`;
-              completeDownload(dlId, message, vnum);
-            } else {
-              completeDownload(dlId, undefined, vnum);
-            }
-            // Show structured per-dep modal for missing/incompatible/failed deps.
-            if (depIssues.length > 0) {
-              reportDependencyIssues(mod.title, depIssues);
-            }
-          } catch {
-            completeDownload(dlId);
+          const result = JSON.parse(resultJson);
+          const depsInstalled: number = result.deps_installed ?? 0;
+          const depTitles: string[] = result.dep_titles ?? [];
+          const depIssues: DependencyIssue[] = result.issues ?? [];
+          const vnum: string | undefined = result.mod_entry?.version_number ?? undefined;
+          if (depsInstalled > 0) {
+            // Show up to 3 dep titles inline; fall back to count for the rest.
+            const preview = depTitles.slice(0, 3).join(", ");
+            const more = depTitles.length > 3 ? ` +${depTitles.length - 3} more` : "";
+            const message = depTitles.length > 0
+              ? `${mod.title} with ${preview}${more}`
+              : `${mod.title} (+${depsInstalled} dep${depsInstalled === 1 ? "" : "s"})`;
+            completeDownload(dlId, message, vnum);
+          } else {
+            completeDownload(dlId, undefined, vnum);
           }
-          await refetchInstances();
-          await refetchDetail();
-        } catch (e: any) {
-          failDownload(dlId, typeof e === "string" ? e : (e?.message || "Unknown error"));
-          throw e;
+          // Show structured per-dep modal for missing/incompatible/failed deps.
+          if (depIssues.length > 0) {
+            reportDependencyIssues(mod.title, depIssues);
+          }
+        } catch {
+          completeDownload(dlId);
         }
+        await refetchInstances();
+        await refetchDetail();
       },
     });
   };
@@ -1001,33 +996,28 @@ const InstanceMods: Component = () => {
         gameVersion: inst.game_version,
       },
       execute: async (dlId: string) => {
+        const resultJson = await applyModUpdate(inst.id, projectId);
+        // Clear the pill optimistically; the next refresh confirms.
+        setModUpdates(prev => {
+          const next = new Map(prev);
+          next.delete(projectId);
+          return next;
+        });
         try {
-          const resultJson = await applyModUpdate(inst.id, projectId);
-          // Clear the pill optimistically; the next refresh confirms.
-          setModUpdates(prev => {
-            const next = new Map(prev);
-            next.delete(projectId);
-            return next;
-          });
-          try {
-            const result = JSON.parse(resultJson);
-            const issues: DependencyIssue[] = result.issues ?? [];
-            if (issues.length > 0) {
-              reportDependencyIssues(modTitle, issues);
-            }
-          } catch {
-            // Older command shape — ignore.
+          const result = JSON.parse(resultJson);
+          const issues: DependencyIssue[] = result.issues ?? [];
+          if (issues.length > 0) {
+            reportDependencyIssues(modTitle, issues);
           }
-          await refetchInstances();
-          await refetchDetail();
-          completeDownload(dlId, modTitle);
-          // Re-check in case the update introduced new mods that themselves have
-          // pending updates (rare but possible with deep dep trees).
-          refreshUpdates();
-        } catch (e: any) {
-          failDownload(dlId, typeof e === "string" ? e : (e?.message || "Unknown error"));
-          throw e;
+        } catch {
+          // Older command shape — ignore.
         }
+        await refetchInstances();
+        await refetchDetail();
+        completeDownload(dlId, modTitle);
+        // Re-check in case the update introduced new mods that themselves have
+        // pending updates (rare but possible with deep dep trees).
+        refreshUpdates();
       },
     });
   };
@@ -1078,7 +1068,8 @@ const InstanceMods: Component = () => {
               completeDownload(dlId);
             }
           } catch (e: any) {
-            failDownload(dlId, `Failed to install ${mod.title}`);
+            const errStr = typeof e === "string" ? e : (e?.message || `Failed to install ${mod.title}`);
+            failDownload(dlId, errStr);
             console.error(`Bulk install failed for ${mod.title}:`, e);
           } finally {
             completedCount++;

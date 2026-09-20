@@ -5,7 +5,6 @@ import {
   failDownload,
   refetchInstances,
   refreshPinnedInstanceIds,
-  showToast,
   downloads,
 } from "../App";
 import { resetActiveInstall, setActiveInstall } from "./installProgress";
@@ -187,13 +186,10 @@ async function processQueue() {
       failDownload(nextTask.id, "Install cancelled");
     } else {
       console.error(`${nextTask.isOrchestrator ? "Modpack" : "Content"} install failed:`, e);
-      failDownload(nextTask.id, typeof e === "string" ? e : (e?.message || "Installation failed"));
-      showToast({
-        title: "Install failed",
-        message: `${nextTask.title}: ${typeof e === "string" ? e : (e?.message || "Unknown error")}`,
-        type: "error",
-        autoCloseMs: 8000,
-      });
+      const dl = downloads().find((d) => d.id === nextTask.id);
+      if (!dl || dl.status === "downloading") {
+        failDownload(nextTask.id, typeof e === "string" ? e : (e?.message || "Installation failed"));
+      }
     }
   } finally {
     setActiveInstallTask(null);
