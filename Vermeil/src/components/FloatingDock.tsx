@@ -398,9 +398,7 @@ const FloatingDock: Component = () => {
           }}
           onClick={() => setNearBottom(true)}
           data-tip="Show dock"
-        >
-          <div class="dock-trigger-handle" />
-        </div>
+        />
       </Show>
 
       <div class={`dock-wrap ${pinSelectorOpen() ? "pin-mode" : ""} ${hidden() ? "dock-hidden" : ""}`}>
