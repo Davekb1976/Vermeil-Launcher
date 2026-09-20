@@ -862,25 +862,8 @@ const App: Component = () => {
       ) {
         e.preventDefault();
         const pag = dockPagination();
-        if (!pag || pag.total <= 1) {
-          showToast({
-            title: "Pagination Inactive",
-            message: "No multi-page content is currently displayed",
-            type: "info",
-            autoCloseMs: 2500,
-          });
-          return;
-        }
-        const next = !paginationScrollMode();
-        setPaginationScrollMode(next);
-        showToast({
-          title: next ? "Scroll Mode: ON" : "Scroll Mode: OFF",
-          message: next
-            ? "Mouse wheel anywhere navigates pages"
-            : "Mouse wheel returned to normal scrolling",
-          type: "info",
-          autoCloseMs: 2000,
-        });
+        if (!pag || pag.total <= 1) return;
+        setPaginationScrollMode((v) => !v);
         return;
       }
     };
