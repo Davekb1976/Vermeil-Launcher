@@ -33,8 +33,8 @@ Vermeil is a custom Minecraft: Java Edition launcher built with **Rust (Tauri 2)
 ```
 Vermeil-Launcher/               # Repo root
 ├── .github/workflows/          # CI/CD (release.yml)
-├── .kiro/                      # AI steering files
-│   └── steering/               # Coding standards, implementation process, etc.
+├── .agents/                    # Agent & pair-programming skills
+│   └── skills/                 # add-screen, add-mod-loader, release-process, etc.
 ├── Vermeil/                  # The actual app
 │   ├── src/                    # SolidJS frontend
 │   │   ├── components/         # Reusable UI (Sidebar, Titlebar, Icons, Dropdown, etc.)
@@ -141,7 +141,12 @@ Vermeil-Launcher/               # Repo root
 - Linux: file permissions protection
 
 ### UI/UX
-- Custom dark theme with accent colors
+- Tactile SloppyKeys design language: chunky keycap bevel buttons (`--bevel`, `--bevel-strong`), framed category sections, sunken tracks (`#0f0e13`)
+- Custom tactile tooltips (`data-tip`) with zero border radius and purple left accent edge (no native OS tooltips)
+- Auto-hiding floating dock with bottom-centered trigger zone and animated keycap press physics
+- Multi-position pagination dock (bottom, left, right) with global mouse wheel scroll mode keybind (default: Z)
+- Dynamic real-time download speed limiter in Settings with live token-bucket throughput throttling
+- Custom dark theme with accent colors and sharp corners
 - Frameless window with custom titlebar
 - Custom styled dropdowns (cross-platform consistent)
 - Slider controls for FPS, FOV, memory
@@ -181,7 +186,9 @@ Vermeil-Launcher/               # Repo root
 | 0.2.0 | Custom dropdowns, slider fix, fullscreen sync, Ubuntu 24.04 build |
 | 0.2.1 | FOV Effects slider, pin modal upgrade, Linux install script |
 | 0.2.2 | Linux window resize, skin library auto-capture |
-| 0.2.3 – 0.5.9 | Ongoing fixes and features (see git tags + CHANGELOG.md); notable: custom local capes (static and animated) |
+| 0.2.3 – 0.5.9 | Ongoing fixes and features (custom capes, Discord RPC, video settings) |
+| 0.6.0 – 0.8.5 | CurseForge parity, modpack downloads, content browser overhaul |
+| 1.0.0 | Milestone release: SloppyKeys tactile UI, 3D Character Studio, Crafty.gg skin sync, auto-hide dock, pagination island, download rate limiter |
 
 ---
 

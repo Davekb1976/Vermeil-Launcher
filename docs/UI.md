@@ -131,9 +131,9 @@ Before adding, restyling, or modifying any interactive element (button, badge, t
 
 ## Global state (`App.tsx`)
 
-Module-level signals, exported with their setters and imported where needed. Resources: `instances`, `account`. Signals: `activeScreen`, `activeInstanceId`, `initialInstanceTab`, `gameRunning`, `pinnedInstanceIds`, `pinSelectorOpen`, `activeSkinUrl`, `gameLogs`, `downloads`, `offline`, `updateAvailable`.
+Module-level signals, exported with their setters and imported where needed. Resources: `instances`, `account`. Signals: `activeScreen`, `activeInstanceId`, `initialInstanceTab`, `gameRunning`, `pinnedInstanceIds`, `pinSelectorOpen`, `activeSkinUrl`, `gameLogs`, `downloads`, `activeDownloadsCount`, `dockHidden`, `paginationState`, `scrollModeActive`, `offline`, `updateAvailable`.
 
-Helpers: `appendGameLog`/`clearGameLogs`/`gameLogsFor`, `trackDownload`/`completeDownload`/`failDownload`, `startBulkBatch`/`endBulkBatch`, `refreshPinnedInstanceIds`, `refreshActiveSkin`, `ensureAccountOrPrompt`.
+Helpers: `appendGameLog`/`clearGameLogs`/`gameLogsFor`, `trackDownload`/`completeDownload`/`failDownload`, `startBulkBatch`/`endBulkBatch`, `refreshPinnedInstanceIds`, `refreshActiveSkin`, `ensureAccountOrPrompt`, `setPaginationState`, `clearPaginationState`.
 
 ## Screens (`screens/`)
 
@@ -146,7 +146,7 @@ Routing is `<Show when={activeScreen() === "name"}>` in `App.tsx`; switch via `s
 | mods | `InstanceMods.tsx` | One instance: Content / Browse / Files / Worlds / Logs tabs (large file) |
 | settings | `Settings.tsx` | General / Resources / Global Instance tabs, Java, GC presets, keybinds |
 | account | `Account.tsx` | Account list, Microsoft sign-in, offline account |
-| skins | `Skins.tsx` | Lazy-loaded 3D viewer, upload, cape equip/editor |
+| skins | `Skins.tsx` | 3D Character Studio: WebGL model, voxel ember stage, animated elytra, Wardrobe with Crafty.gg history sync, custom cape designer |
 | downloads | `Downloads.tsx` | Persistent download history |
 | (logs window) | `LogsPopout.tsx` | Standalone log viewer rendered when window label is `logs` |
 
@@ -168,7 +168,7 @@ Mounted at App level, controlled by signal. `OnboardingWizard`, `PinInstancesMod
 
 ## Components (`components/`)
 
-`FloatingDock` (bottom nav: nav pills + state-aware center play/stop/create + pin row — **this is the nav, there is no Sidebar**), `Titlebar` (window controls, logo, title, account pill), `Dropdown` (styled select), `ModVersionPicker` (version list for one project, Portal-based panel), `Icons` (all SVGs), `PlayerHead`/`SkinAvatar`/`CapeChipThumb` (skin/cape renders), `PageSlider`, `JavaPathInput`, `KeybindCapture`, `ResizeHandles`, `Splash`, plus the modal/toast components listed above.
+`FloatingDock` (bottom nav: nav pills + state-aware center play/stop/create + pin row — **this is the nav, there is no Sidebar**), `PaginationDock` (multi-position pagination island with page stepping, position modes [bottom, left, right], and global mouse wheel scroll mode), `Titlebar` (window controls, logo, title, account pill), `Dropdown` (styled select), `ModVersionPicker` (version list for one project, Portal-based panel), `Icons` (all SVGs), `PlayerHead`/`SkinAvatar`/`CapeChipThumb` (skin/cape renders), `PageSlider`, `JavaPathInput`, `KeybindCapture`, `ResizeHandles`, `Splash`, plus the modal/toast components listed above.
 
 ### Mod detail overlay (Browse)
 
@@ -191,7 +191,7 @@ The version list inside it renders **inline**, not in a floating `<Portal>` pane
 
 ## Keybinds
 
-Defined in `lib/keybinds.ts` (`KEYBINDS`); user overrides in `LauncherSettings.keybinds`. Add an entry there, react in the `App.tsx` keydown handler via `matchesKeybind`/`resolveBinding`; the Settings → Keybinds tab renders rows automatically. Settings fires `vermeil-keybinds-changed` to refresh the handler's cache. Escape is hardcoded (universal "back out"). `toggle_pin_selector` (default Ctrl+P) morphs the dock into the pinned-instance carousel.
+Defined in `lib/keybinds.ts` (`KEYBINDS`); user overrides in `LauncherSettings.keybinds`. Add an entry there, react in the `App.tsx` keydown handler via `matchesKeybind`/`resolveBinding`; the Settings → Keybinds tab renders rows automatically. Settings fires `vermeil-keybinds-changed` to refresh the handler's cache. Escape is hardcoded (universal "back out"). `toggle_pin_selector` (default Ctrl+P) morphs the dock into the pinned-instance carousel. `toggle_scroll_mode` (default Z) toggles global mouse-wheel pagination scrolling across paginated grids.
 
 ## Don't
 

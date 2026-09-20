@@ -138,6 +138,7 @@ Vermeil/
 ### Parallel Implementation Rule:
 When modifying one variant of a concept, update all parallel surfaces:
 - **Content Sources:** Modrinth (`services/modrinth.rs`) ↔ CurseForge (`services/curseforge.rs`, `cf_*.rs`) ↔ Local Archives (`modpack.rs`, `cf_import.rs`).
+- **Skin Archives:** Mojang (`services/skins.rs`) ↔ Crafty.gg (`services/skins.rs` `sync_crafty_skin_history`).
 - **Loaders:** Fabric (`services/fabric.rs`) ↔ Quilt (`services/quilt.rs`) ↔ NeoForge/Forge (`services/neoforge.rs`).
 - **Accounts:** Microsoft (online) ↔ Offline accounts.
 - **Launch Entry Points:** `Home.tsx` ↔ `FloatingDock.tsx`.

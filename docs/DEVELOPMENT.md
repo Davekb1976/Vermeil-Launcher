@@ -189,7 +189,7 @@ Treat mod code as **unverified until built and run in-game**. Background,
 research notes, and the proof-of-concept plan live in
 [`docs/research/ingame-capes/`](research/ingame-capes/). Contributor conventions
 for the mod (Mixin discipline, mappings research, Java naming) are documented in
-the `minecraft-mod` skill under `.kiro/skills/`.
+the `minecraft-mod` skill under `.agents/skills/`.
 
 ## Project Structure
 
