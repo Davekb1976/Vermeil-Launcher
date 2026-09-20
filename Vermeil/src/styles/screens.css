@@ -1624,7 +1624,6 @@
   gap: 16px;
   width: 100%;
   box-sizing: border-box;
-  padding-bottom: 80px; /* breathing room above floating dock */
 }
 
 .account-grid {
@@ -4019,7 +4018,6 @@
 .create-custom-screen {
   width: 100%;
   box-sizing: border-box;
-  padding-bottom: 80px;
 }
 
 .create-custom-layout {
@@ -5618,7 +5616,6 @@
 .import-screen {
   width: 100%;
   box-sizing: border-box;
-  padding-bottom: 80px;
 }
 
 .import-layout {

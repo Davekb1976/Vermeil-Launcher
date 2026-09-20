@@ -131,6 +131,13 @@
 .content::-webkit-scrollbar { width: 4px; }
 .content::-webkit-scrollbar-thumb { background: var(--accent); border-radius: var(--radius-xs); }
 
+/* When dock is auto-hidden (globally via setting or on Logs/Skins), collapse
+   the 112px bottom clearance down to standard padding to maximize vertical space. */
+.content.dock-hidden {
+  padding-bottom: var(--space-5);
+  scroll-padding-bottom: 0;
+}
+
 /* The Skins screen is a full-height Character Studio — the floating dock
    auto-hides to give the figurine stage and side panels full vertical space.
    Flex column flow fills the exact remaining height without page-level scrollbars. */

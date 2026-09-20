@@ -536,6 +536,9 @@ export async function refreshPinnedInstanceIds() {
     if (typeof s.download_toasts === "boolean") {
       setDownloadToastsEnabled(s.download_toasts);
     }
+    if (typeof s.auto_hide_dock === "boolean") {
+      setAutoHideDockSetting(s.auto_hide_dock);
+    }
   } catch (e) {
     console.error("Failed to load sidebar pins:", e);
   }
@@ -553,12 +556,20 @@ export { pinnedInstanceIds };
 const [pinSelectorOpen, setPinSelectorOpen] = createSignal(false);
 export { pinSelectorOpen, setPinSelectorOpen };
 
+// Global dock auto-hide setting. When true, the floating dock auto-hides across
+// all screens until hovered, collapsing bottom clearance to maximize vertical space.
+const [autoHideDockSetting, setAutoHideDockSetting] = createSignal(false);
+export { autoHideDockSetting, setAutoHideDockSetting };
+
 // Dock auto-hide. Set true to slide the floating dock out of view (used on
 // the instance Logs tab so it doesn't cover log output). The dock reveals
 // itself when the cursor nears the bottom of the window regardless of this
 // flag, and screens reset it to false when they unmount.
 const [dockHidden, setDockHidden] = createSignal(false);
 export { dockHidden, setDockHidden };
+
+const isDockHidden = () => autoHideDockSetting() || dockHidden();
+export { isDockHidden };
 
 // Dock pagination. Screens that need page navigation set this to a descriptor
 // object; the floating dock renders the page controls inline. When the screen
@@ -877,7 +888,7 @@ const App: Component = () => {
           <div class="offline-banner">No internet connection</div>
         </Show>
         <Titlebar title={screenTitles[activeScreen()]} />
-        <div class="content">
+        <div class={`content ${isDockHidden() ? "dock-hidden" : ""}`}>
           <Show when={activeScreen() === "home"}><Home /></Show>
           <Show when={activeScreen() === "library"}><Library /></Show>
           <Show when={activeScreen() === "mods"}><InstanceMods /></Show>

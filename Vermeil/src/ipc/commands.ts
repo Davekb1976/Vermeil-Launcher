@@ -137,6 +137,11 @@ export interface LauncherSettings {
    * downloads button displays an active download count badge instead.
    */
   download_toasts: boolean;
+  /**
+   * Auto-hide the floating navigation dock across all screens by default.
+   * Reveals when hovering the bottom-center glowing trigger tab.
+   */
+  auto_hide_dock: boolean;
   concurrent_downloads: number;
   /**
    * Maximum simultaneous disk writes during batch downloads.

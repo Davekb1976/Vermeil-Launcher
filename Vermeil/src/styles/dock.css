@@ -569,11 +569,26 @@
 /* ============================================================
    Pagination island — iOS-style dot indicator pill above the dock.
    ============================================================ */
+.dock-island-wrap {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + 64px + 8px);
+  transform: translateX(-50%);
+  z-index: 31;
+  pointer-events: auto;
+  zoom: var(--dock-scale);
+  transition: bottom 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.dock-island-wrap.dock-hidden {
+  bottom: 14px;
+}
+
 .dock-page-island {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto var(--space-3);
+  margin: 0 auto;
   padding: var(--space-2) var(--space-3);
   width: fit-content;
   background: var(--surface-glass);

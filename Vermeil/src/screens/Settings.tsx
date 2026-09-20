@@ -1,6 +1,6 @@
 import { Component, createSignal, createResource, Show, For, onMount, onCleanup, createEffect } from "solid-js";
 import { getSettings, saveSettings, getCacheSize, purgeCache, getAppDirectory, openAppDirectory, LauncherSettings, detectJavaInstallations, validateJavaPath, setJavaPath, installRecommendedJava, deleteJavaInstall, pruneInvalidJavaPaths, getSystemMemory, JavaInstall } from "../ipc/commands";
-import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, instances, showToast, setDownloadToastsEnabled } from "../App";
+import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, instances, showToast, setDownloadToastsEnabled, setAutoHideDockSetting } from "../App";
 import { checkForUpdates } from "../services/updater";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -61,6 +61,7 @@ const Settings: Component = () => {
   const matchesLauncher = () => isGeneralSection() || matches(
     "Launcher", "Minimize to tray on launch", "Hides launcher when game starts", "tray", "minimize", "hide", "close",
     "Pop out logs on launch", "Opens the game log in a separate window", "logs", "popout", "console",
+    "Auto-hide dock", "Hide floating dock across all screens until hovered", "dock", "autohide", "floating dock",
     "Auto-update launcher", "Automatically checks for updates", "update", "updates", "updater",
     "Boot splash", "Show the animated logo splash on startup", "splash", "startup", "boot",
     "Discord Rich Presence", "Display playing status", "discord", "rpc", "rich presence",
@@ -368,6 +369,12 @@ const Settings: Component = () => {
     mutate(updated);
     try {
       await saveSettings(updated);
+      if (key === "download_toasts") {
+        setDownloadToastsEnabled(value as boolean);
+      }
+      if (key === "auto_hide_dock") {
+        setAutoHideDockSetting(value as boolean);
+      }
       // Notify the global keydown handler that the keybind cache is stale.
       // App.tsx listens for this event and re-reads settings.keybinds.
       if (key === "keybinds") {
@@ -534,6 +541,25 @@ const Settings: Component = () => {
                                 type="checkbox"
                                 checked={settings()!.popout_logs}
                                 onChange={(e) => updateSetting("popout_logs", e.currentTarget.checked)}
+                              />
+                              <span class="check-box"></span>
+                            </label>
+                          </div>
+                        </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Auto-hide dock", "Hide floating dock until hovered", "dock", "autohide", "floating dock")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Auto-hide dock</span>
+                            <span class="setting-desc">Reclaims vertical space by hiding dock until bottom-center is hovered</span>
+                          </div>
+                          <div class="setting-control">
+                            <label class="check check--lg">
+                              <input
+                                type="checkbox"
+                                checked={settings()!.auto_hide_dock}
+                                onChange={(e) => updateSetting("auto_hide_dock", e.currentTarget.checked)}
                               />
                               <span class="check-box"></span>
                             </label>

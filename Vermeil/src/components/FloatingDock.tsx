@@ -15,6 +15,7 @@ import {
   setPinSelectorOpen,
   setInitialInstanceTab,
   dockHidden,
+  autoHideDockSetting,
   dockPagination,
   clearGameLogs,
   activeDownloadCount,
@@ -182,6 +183,7 @@ const DockPaginationIsland: Component = () => {
 const FloatingDock: Component = () => {
   let dockEl: HTMLDivElement | undefined;
   const isActive = (screens: Screen[]) => screens.includes(activeScreen());
+  const effectiveDockHidden = () => autoHideDockSetting() || dockHidden();
 
   const [nearBottom, setNearBottom] = createSignal(false);
   let leaveTimer: number | undefined;
@@ -189,7 +191,7 @@ const FloatingDock: Component = () => {
   onMount(() => {
     const handler = (e: MouseEvent) => {
       // If dock isn't in auto-hide mode, reset nearBottom and bail
-      if (!dockHidden()) {
+      if (!effectiveDockHidden()) {
         if (nearBottom()) setNearBottom(false);
         return;
       }
@@ -198,8 +200,8 @@ const FloatingDock: Component = () => {
       const distFromBottom = window.innerHeight - e.clientY;
 
       if (!nearBottom()) {
-        // Precise bottom-centered trigger zone: 180px width (90px left/right of center) and bottom 32px
-        const inCenterTrigger = Math.abs(e.clientX - center) <= 90 && distFromBottom <= 32;
+        // Precise bottom-centered trigger zone: 180px width (90px left/right of center) and bottom 14px
+        const inCenterTrigger = Math.abs(e.clientX - center) <= 90 && distFromBottom <= 14;
         if (inCenterTrigger) {
           if (leaveTimer !== undefined) {
             clearTimeout(leaveTimer);
@@ -215,7 +217,7 @@ const FloatingDock: Component = () => {
           inDockArea =
             e.clientX >= rect.left - 40 &&
             e.clientX <= rect.right + 40 &&
-            e.clientY >= rect.top - 30 &&
+            e.clientY >= rect.top - 50 &&
             e.clientY <= window.innerHeight;
         } else {
           inDockArea = Math.abs(e.clientX - center) <= 240 && distFromBottom <= 100;
@@ -269,7 +271,7 @@ const FloatingDock: Component = () => {
     });
   });
 
-  const hidden = () => dockHidden() && !nearBottom() && !pinSelectorOpen();
+  const hidden = () => effectiveDockHidden() && !nearBottom() && !pinSelectorOpen();
 
   const showDownloadBadge = () => activeDownloadCount() > 0;
 
@@ -386,7 +388,7 @@ const FloatingDock: Component = () => {
   return (
     <>
       {/* Cut-off rectangular bottom-centered trigger tab — appears when dock is auto-hidden */}
-      <Show when={dockHidden() && !pinSelectorOpen()}>
+      <Show when={effectiveDockHidden() && !pinSelectorOpen()}>
         <div
           class={`dock-trigger-zone ${!nearBottom() ? "visible" : ""}`}
           onMouseEnter={() => {
@@ -401,12 +403,15 @@ const FloatingDock: Component = () => {
         />
       </Show>
 
-      <div class={`dock-wrap ${pinSelectorOpen() ? "pin-mode" : ""} ${hidden() ? "dock-hidden" : ""}`}>
-        <Show when={Boolean(dockPagination()) && !pinSelectorOpen()}>
-        <DockPaginationIsland />
+      {/* Pagination island — persists cleanly above the dock or rests at bottom when dock is hidden */}
+      <Show when={Boolean(dockPagination()) && !pinSelectorOpen()}>
+        <div class={`dock-island-wrap ${hidden() ? "dock-hidden" : ""}`}>
+          <DockPaginationIsland />
+        </div>
       </Show>
 
-      <div class="dock" ref={dockEl}>
+      <div class={`dock-wrap ${pinSelectorOpen() ? "pin-mode" : ""} ${hidden() ? "dock-hidden" : ""}`}>
+        <div class="dock" ref={dockEl}>
         {/* NAV MODE */}
         <Show when={!pinSelectorOpen()}>
           <div class="dock-row">

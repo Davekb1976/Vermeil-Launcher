@@ -25,6 +25,11 @@ pub struct LauncherSettings {
     /// displays an active download count badge instead.
     #[serde(default = "default_download_toasts")]
     pub download_toasts: bool,
+    /// Auto-hide the floating navigation dock across all screens by default.
+    /// The dock reveals itself when hovering the bottom-center glowing trigger tab.
+    /// Defaults to `false`.
+    #[serde(default = "default_auto_hide_dock")]
+    pub auto_hide_dock: bool,
     #[serde(default = "default_concurrent_downloads")]
     pub concurrent_downloads: u8,
     /// Maximum simultaneous disk writes. Separated from network concurrency so a slow
@@ -139,6 +144,7 @@ fn default_concurrent_writes() -> u8 { 10 }
 fn default_download_speed_limit_mb() -> u32 { 0 }
 fn default_splash_screen() -> bool { true }
 fn default_download_toasts() -> bool { true }
+fn default_auto_hide_dock() -> bool { false }
 
 /// In-game custom cape state (companion mod). The baked cape image lives at
 /// `<data>/ingame-cape.png`; this is just the toggle + which library cape.
@@ -168,6 +174,7 @@ impl Default for LauncherSettings {
             show_snapshots: false,
             splash_screen: true,
             download_toasts: true,
+            auto_hide_dock: false,
             concurrent_downloads: default_concurrent_downloads(),
             concurrent_writes: default_concurrent_writes(),
             download_speed_limit_mb: default_download_speed_limit_mb(),
