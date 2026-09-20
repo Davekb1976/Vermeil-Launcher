@@ -19,7 +19,7 @@ const CreateChoose: Component = () => {
           <div class="create-grid-icon" style="color:var(--info)"><IconLayers /></div>
           <div class="create-grid-text">
             <div class="create-grid-title">Install modpack</div>
-            <div class="create-grid-desc">Browse and install a modpack from Modrinth</div>
+            <div class="create-grid-desc">Browse and install modpacks from Modrinth or CurseForge</div>
           </div>
         </div>
         <div class="create-grid-card" onClick={() => setActiveScreen("create-import")}>
