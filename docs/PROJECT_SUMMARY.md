@@ -32,12 +32,15 @@ Vermeil is a custom Minecraft: Java Edition launcher built with **Rust (Tauri 2)
 
 ```
 Vermeil-Launcher/               # Repo root
-├── .github/workflows/          # CI/CD (release.yml)
-├── .agents/                    # Agent & pair-programming skills
+├── .agents/                    # Antigravity 2.0 agent skills
 │   └── skills/                 # add-screen, add-mod-loader, release-process, etc.
+├── .github/workflows/          # CI/CD (release.yml)
+├── .kiro/                      # Kiro AI IDE configuration & steering
+│   ├── skills/                 # Kiro agent skills
+│   └── steering/               # Coding standards, implementation process, etc.
 ├── Vermeil/                  # The actual app
 │   ├── src/                    # SolidJS frontend
-│   │   ├── components/         # Reusable UI (Sidebar, Titlebar, Icons, Dropdown, etc.)
+│   │   ├── components/         # Reusable UI (FloatingDock, Titlebar, Icons, Dropdown, etc.)
 │   │   ├── screens/            # Full-page views (Home, Library, Settings, Skins, etc.)
 │   │   ├── modals/             # Modal dialogs (CreateCustom, BrowseModpacks, etc.)
 │   │   ├── ipc/commands.ts     # ALL Tauri invoke wrappers (single source of truth)

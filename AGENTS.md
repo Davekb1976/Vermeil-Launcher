@@ -208,7 +208,7 @@ The launcher targets Windows (WebView2, Win32/DWM) and Linux (WebKitGTK, X11/Way
 
 ## 11. Available Workspace Skills
 
-Specialized skill instructions live in `.agents/skills/`:
+Specialized skill instructions live in `.agents/skills/` (for Antigravity 2.0) and `.kiro/skills/` (for Kiro AI IDE):
 - `add-mod-loader`: Adding new mod loader support.
 - `add-screen`: Adding a full-page view to the UI.
 - `add-tauri-command`: Connecting Rust services to SolidJS via Tauri IPC.

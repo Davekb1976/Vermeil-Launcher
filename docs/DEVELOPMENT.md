@@ -189,12 +189,14 @@ Treat mod code as **unverified until built and run in-game**. Background,
 research notes, and the proof-of-concept plan live in
 [`docs/research/ingame-capes/`](research/ingame-capes/). Contributor conventions
 for the mod (Mixin discipline, mappings research, Java naming) are documented in
-the `minecraft-mod` skill under `.agents/skills/`.
+the `minecraft-mod` skill under `.agents/skills/` (Antigravity 2.0) or `.kiro/skills/` (Kiro AI IDE).
 
 ## Project Structure
 
 ```
 Vermeil-Launcher/             # repo root
+├── .agents/                  # Antigravity 2.0 skills (.agents/skills/)
+├── .kiro/                    # Kiro AI IDE skills & steering (.kiro/skills/, .kiro/steering/)
 ├── Vermeil/                  # the launcher (Tauri app)
 │   ├── src/                  # SolidJS frontend
 │   ├── src-tauri/            # Rust backend (Tauri)
