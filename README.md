@@ -24,12 +24,10 @@
 
 ---
 
-> **Approaching 1.0.0.** The core feature set is largely in place. From here, new features are added only where they bring clear, practical value — the bulk of maintainer effort goes to bug hunting, testing, and stability in the run-up to the 1.0.0 release.
-
-> **Alpha software.** Vermeil is in active development. Features may change between versions. Expect rough edges.
-
-> **AI-generated codebase.** Built with AI assistance (Claude and GPT models) via Kiro IDE. May contain bugs or incomplete features. See [DISCLAIMER.md](DISCLAIMER.md).
-
+> **Vermeil 1.0.0.** The milestone general availability release of Vermeil Launcher.
+>
+> **AI-generated codebase.** Built with AI assistance (Claude, Gemini, and GPT models). May contain bugs or incomplete features. See [DISCLAIMER.md](DISCLAIMER.md).
+>
 > **Not code-signed.** Some antivirus software may flag the installer. No funds for a signing certificate — use as-is or build from source.
 
 ## Table of Contents
@@ -44,7 +42,7 @@
 
 ## Screenshots
 
-> Screenshots are from the upcoming **v1.0.0** release. The current stable release is **v0.8.5**.
+> Screenshots showcase the **v1.0.0** release.
 
 <p align="center">
   <img src="docs/images/screenshots/browse-mods.png" alt="Vermeil Instance & Content Browser" width="100%" />
