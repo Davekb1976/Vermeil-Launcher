@@ -405,7 +405,19 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry; position?: number }>
           <Show when={cardIcon()} fallback={
             <span class="dl-queue-icon-fallback">{cardName().charAt(0).toUpperCase()}</span>
           }>
-            <img src={cardIcon()!} alt="" draggable={false} />
+            <img
+              src={cardIcon()!}
+              alt=""
+              draggable={false}
+              onError={(e) => {
+                const fallback = dl().iconUrl?.startsWith("http") ? dl().iconUrl : undefined;
+                if (fallback && e.currentTarget.src !== fallback) {
+                  e.currentTarget.src = fallback;
+                } else {
+                  e.currentTarget.style.display = "none";
+                }
+              }}
+            />
           </Show>
         </div>
         <div class="dl-queue-info">
@@ -505,7 +517,19 @@ const DownloadCard: Component<{ entry: DownloadEntry; timeAgo: (ts: number) => s
           <Show when={cardIcon()} fallback={
             <span class="dl-card-icon-fallback">{cardName().charAt(0).toUpperCase()}</span>
           }>
-            <img src={cardIcon()!} alt="" draggable={false} />
+            <img
+              src={cardIcon()!}
+              alt=""
+              draggable={false}
+              onError={(e) => {
+                const fallback = dl().iconUrl?.startsWith("http") ? dl().iconUrl : undefined;
+                if (fallback && e.currentTarget.src !== fallback) {
+                  e.currentTarget.src = fallback;
+                } else {
+                  e.currentTarget.style.display = "none";
+                }
+              }}
+            />
           </Show>
         </div>
         <div class="dl-card-body">

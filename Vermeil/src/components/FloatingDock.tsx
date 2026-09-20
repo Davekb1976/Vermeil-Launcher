@@ -423,7 +423,14 @@ const FloatingDock: Component = () => {
                                 </span>
                               }
                             >
-                              <img src={iconSrc()!} alt="" draggable={false} />
+                              <img
+                                src={iconSrc()!}
+                                alt=""
+                                draggable={false}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
                             </Show>
                           </div>
                           <span class="dock-pin-tile-name">{inst.name}</span>

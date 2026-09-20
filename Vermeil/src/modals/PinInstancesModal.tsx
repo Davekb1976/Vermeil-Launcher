@@ -161,7 +161,14 @@ const PinInstancesModal: Component = () => {
                                 {inst.name.trim().charAt(0).toUpperCase() || "?"}
                               </div>
                             }>
-                              <img src={resolveAssetUrl(inst.icon)!} alt="" draggable={false} />
+                              <img
+                                src={resolveAssetUrl(inst.icon)!}
+                                alt=""
+                                draggable={false}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
                             </Show>
                           </div>
                           <div class="pin-instance-info">

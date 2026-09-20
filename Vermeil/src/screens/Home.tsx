@@ -369,7 +369,15 @@ const Home: Component = () => {
                         <div class="continue-hero-title">{heroWorld().worldName}</div>
                         <div class="continue-hero-sub">
                           <Show when={resolveAssetUrl(heroWorld().instanceIcon)}>
-                            <img class="world-card-inst-icon" src={resolveAssetUrl(heroWorld().instanceIcon)!} alt="" draggable={false} />
+                            <img
+                              class="world-card-inst-icon"
+                              src={resolveAssetUrl(heroWorld().instanceIcon)!}
+                              alt=""
+                              draggable={false}
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
                           </Show>
                           <span>{heroWorld().instanceName}</span>
                         </div>

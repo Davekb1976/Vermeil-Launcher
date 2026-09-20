@@ -1319,6 +1319,9 @@ const InstanceMods: Component = () => {
                         src={resolveAssetUrl(instance()?.icon)!}
                         alt=""
                         draggable={false}
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
                       />
                     </Show>
                   </div>
@@ -1906,7 +1909,20 @@ const InstanceMods: Component = () => {
                       <Show when={resolveIconUrl(mod as any)} fallback={
                         <span class="side-icon" style="width:20px;height:20px">{(mod as any).category === "resourcepack" ? <IconShirt /> : (mod as any).category === "shader" ? <IconWand /> : <IconCube />}</span>
                       }>
-                        <img src={resolveIconUrl(mod as any)!} style="width:100%;height:100%;border-radius:0;object-fit:cover" />
+                        <img
+                          src={resolveIconUrl(mod as any)!}
+                          alt=""
+                          draggable={false}
+                          style="width:100%;height:100%;border-radius:0;object-fit:cover"
+                          onError={(e) => {
+                            const fallback = (mod as any).icon_url;
+                            if (fallback && e.currentTarget.src !== fallback) {
+                              e.currentTarget.src = fallback;
+                            } else {
+                              e.currentTarget.style.display = "none";
+                            }
+                          }}
+                        />
                       </Show>
                     </div>
                     <div class="mod-card-name-wrap">

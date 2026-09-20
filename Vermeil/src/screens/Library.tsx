@@ -232,7 +232,14 @@ const Library: Component = () => {
                   <Show when={instanceIconUrl(inst)} fallback={
                     <span class="inst-card-thumb-letter">{(inst.name || "?").trim().charAt(0).toUpperCase() || "?"}</span>
                   }>
-                    <img src={instanceIconUrl(inst)!} alt="" draggable={false} />
+                    <img
+                      src={instanceIconUrl(inst)!}
+                      alt=""
+                      draggable={false}
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
                   </Show>
                   <Show when={selectMode()}>
                     <div class={`inst-card-check ${selected().has(inst.id) ? "is-selected" : ""}`}>

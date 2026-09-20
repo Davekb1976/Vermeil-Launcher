@@ -1412,7 +1412,14 @@ const Settings: Component = () => {
                                   <Show when={iconUrl} fallback={
                                     <span class="inst-card-thumb-letter">{inst.name.trim().charAt(0).toUpperCase() || "?"}</span>
                                   }>
-                                    <img src={iconUrl!} alt="" draggable={false} />
+                                    <img
+                                      src={iconUrl!}
+                                      alt=""
+                                      draggable={false}
+                                      onError={(e) => {
+                                        e.currentTarget.style.display = "none";
+                                      }}
+                                    />
                                   </Show>
                                 </div>
                                 <div class="inst-card-body">
