@@ -1,6 +1,6 @@
-﻿# Vermeil — Screenshot Gallery (v0.9.0 Preview)
+# Vermeil — Screenshot Gallery (v1.0.0 Preview)
 
-This gallery showcases the tactile UI design and major screen refactors planned for the **v0.9.0 release**.
+This gallery showcases the tactile UI design and major screen refactors planned for the **v1.0.0 release**.
 
 ---
 

@@ -1,4 +1,4 @@
-## 0.9.0 (Experimental Build 2)
+## 1.0.0 (Experimental Build 2)
 
 ### Added
 
