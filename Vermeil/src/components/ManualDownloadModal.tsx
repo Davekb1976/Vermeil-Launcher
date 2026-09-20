@@ -67,7 +67,7 @@ const ManualDownloadModal: Component = () => {
             <span class="modal-title">
               {entries().length === 1 ? "Manual download needed" : `${entries().length} manual downloads needed`}
             </span>
-            <button class="modal-close" title="Close" onClick={close}><IconX /></button>
+            <button class="modal-close tip-left" data-tip="Close" aria-label="Close" onClick={close}><IconX /></button>
           </div>
 
           <div class="modal-body manual-dl-body">
@@ -107,7 +107,6 @@ const ManualDownloadModal: Component = () => {
                             and it's long enough to be annoying to retype. */}
                         <button
                           class="btn btn--sm"
-                          title="Copy the file name"
                           onClick={() => {
                             navigator.clipboard.writeText(entry.file_name!).catch(() => {});
                             setCopiedFile(entry.file_name!);

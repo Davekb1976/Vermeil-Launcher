@@ -161,16 +161,16 @@ const LogsPopout: Component = () => {
             onInput={(e) => setSearch(e.currentTarget.value)}
           />
           <Show when={search()}>
-            <button class="log-toolbar-search-clear" onClick={() => setSearch("")} title="Clear search">
+            <button class="log-toolbar-search-clear tip-below" onClick={() => setSearch("")} data-tip="Clear search" aria-label="Clear search">
               <span class="side-icon"><IconX /></span>
             </button>
           </Show>
         </div>
 
-        <button class="log-toolbar-jump" onClick={jumpToTop} title="Jump to top">
+        <button class="log-toolbar-jump tip-below" onClick={jumpToTop} data-tip="Jump to top" aria-label="Jump to top">
           <IconArrowUp />
         </button>
-        <button class="log-toolbar-jump" onClick={jumpToBottom} title="Jump to latest">
+        <button class="log-toolbar-jump tip-below" onClick={jumpToBottom} data-tip="Jump to latest" aria-label="Jump to latest">
           <IconArrowDown />
         </button>
         <span class="log-toolbar-count">{filteredLines().length} lines</span>

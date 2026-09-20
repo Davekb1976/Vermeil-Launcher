@@ -455,7 +455,7 @@ const CreateCustom: Component = () => {
                                   >
                                     <span>{v.id}{latestVersionId() === v.id ? " (latest)" : ""}</span>
                                     <Show when={isCompanionSupported(v.id)}>
-                                      <img class="companion-version-mark" src="/logo.png" alt="" title="Vermeil companion mod supported" draggable={false} />
+                                      <img class="companion-version-mark tip-left" src="/logo.png" alt="" data-tip="Vermeil companion mod supported" draggable={false} />
                                     </Show>
                                   </div>
                                 )}

@@ -231,7 +231,7 @@ const ModDetailModal: Component<Props> = (props) => {
                   </Show>
                 </div>
               </div>
-              <button class="modal-close" title="Close" onClick={props.onClose}>
+              <button class="modal-close tip-left" data-tip="Close" aria-label="Close" onClick={props.onClose}>
                 <IconX />
               </button>
             </div>

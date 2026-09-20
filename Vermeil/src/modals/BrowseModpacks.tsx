@@ -196,7 +196,6 @@ const BrowseModpacks: Component = () => {
             type="button"
             class="btn modpack-back-btn"
             onClick={() => setActiveScreen("create-choose")}
-            title="Return to instance creation"
           >
             <IconArrowLeft /> Back
           </button>
@@ -236,7 +235,6 @@ const BrowseModpacks: Component = () => {
               type="button"
               class={`modpack-source-tab tab-mr ${modSource() === "modrinth" ? "active" : ""}`}
               onClick={() => handleSourceSelect("modrinth")}
-              title="Browse Modrinth community packs"
             >
               <IconModrinth />
               <span>Modrinth</span>
@@ -245,7 +243,6 @@ const BrowseModpacks: Component = () => {
               type="button"
               class={`modpack-source-tab tab-cf ${modSource() === "curseforge" ? "active" : ""}`}
               onClick={() => handleSourceSelect("curseforge")}
-              title="Browse CurseForge modpacks"
             >
               <IconCurseForge />
               <span>CurseForge</span>
@@ -270,9 +267,10 @@ const BrowseModpacks: Component = () => {
             <Show when={query().length > 0}>
               <button
                 type="button"
-                class="inst-search-clear"
+                class="inst-search-clear tip-below"
                 onClick={clearSearch}
-                title="Clear search query"
+                data-tip="Clear search"
+                aria-label="Clear search"
               >
                 <IconX />
               </button>
@@ -445,7 +443,6 @@ const BrowseModpacks: Component = () => {
                   <div
                     class="modpack-card"
                     onClick={() => setDetailPack(pack)}
-                    title="Click to view full modpack details and versions"
                   >
                     {/* Top card header */}
                     <div class="modpack-card-top">
@@ -460,7 +457,7 @@ const BrowseModpacks: Component = () => {
                         </Show>
                       </div>
                       <div class="modpack-card-info">
-                        <div class="modpack-card-title" title={pack.title}>
+                        <div class="modpack-card-title">
                           {pack.title}
                         </div>
                         <Show when={pack.author}>
@@ -492,7 +489,7 @@ const BrowseModpacks: Component = () => {
                         <span class="badge badge--version">{formatVersionRange(pack.versions)}</span>
                       </Show>
                       <Show when={pack.version_name}>
-                        <span class="badge badge--vnum" title={`Latest build: ${pack.version_name!}`}>
+                        <span class="badge badge--vnum tip-below" data-tip={`Latest build: ${pack.version_name!}`}>
                           {pack.version_name}
                         </span>
                       </Show>
@@ -501,10 +498,10 @@ const BrowseModpacks: Component = () => {
                     {/* Footer */}
                     <div class="modpack-card-footer">
                       <div class="modpack-card-meta">
-                        <span class="modpack-stat-item" title="Total Downloads">
+                        <span class="modpack-stat-item tip-below" data-tip="Total Downloads">
                           <IconDownload /> {formatDownloads(pack.downloads)}
                         </span>
-                        <span class="modpack-stat-item" title="Followers / Favorites">
+                        <span class="modpack-stat-item tip-below" data-tip="Followers / Favorites">
                           <IconHeart /> {formatDownloads(pack.follows)}
                         </span>
                       </div>
@@ -517,7 +514,6 @@ const BrowseModpacks: Component = () => {
                             e.stopPropagation();
                             handleInstallClick(pack);
                           }}
-                          title="Quick-install this modpack"
                         >
                           {isModpackQueuedOrActive(pack.project_id) ? "Queued" : "Install"}
                         </button>

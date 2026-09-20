@@ -274,7 +274,7 @@ const Home: Component = () => {
             onClick={() => setActiveScreen("account")}
             role="button"
             tabIndex={0}
-            title="Click to manage accounts and profiles"
+            aria-label="Click to manage accounts and profiles"
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
@@ -288,8 +288,8 @@ const Home: Component = () => {
                 <span class="home-telemetry-name">{displayName()}</span>
               </div>
               <div
-                class={`account-badge-active ${account()?.is_offline ? "account-badge--offline" : ""}`}
-                title={account()?.is_offline ? "Offline Minecraft profile" : "Signed in with Microsoft"}
+                class={`account-badge-active tip-below tip-right ${account()?.is_offline ? "account-badge--offline" : ""}`}
+                data-tip={account()?.is_offline ? "Offline Minecraft profile" : "Signed in with Microsoft"}
               >
                 <Show
                   when={!account()?.is_offline}

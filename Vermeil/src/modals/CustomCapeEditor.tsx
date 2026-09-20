@@ -702,7 +702,6 @@ const CustomCapeEditor: Component<Props> = (props) => {
                     class="skins-action-btn skins-action-btn--secondary cape-tool-btn"
                     onClick={rotateQuarter}
                     disabled={!hasImage()}
-                    title="Rotate 90° clockwise"
                   >
                     <IconRotate />
                     <span>Rotate 90°</span>
@@ -711,7 +710,6 @@ const CustomCapeEditor: Component<Props> = (props) => {
                     class="skins-action-btn skins-action-btn--secondary cape-tool-btn"
                     onClick={handleCenter}
                     disabled={!hasImage()}
-                    title="Center image in cape panel"
                   >
                     <span>Center Art</span>
                   </button>

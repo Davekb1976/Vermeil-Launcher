@@ -124,10 +124,11 @@ const KeybindCapture: Component<{
       </button>
       <button
         type="button"
-        class="keybind-reset"
+        class="keybind-reset tip-left"
         onClick={handleReset}
         disabled={isDefault()}
-        title="Reset to default"
+        data-tip="Reset to default"
+        aria-label="Reset to default"
       >
         <IconRotateCcw />
       </button>

@@ -87,6 +87,18 @@ Vermeil/
   - **Buttons:** Before adding a button, ask: *is the whole card or row already clickable?* If clicking the card selects or opens it, do not embed redundant "Select" or "Choose" buttons.
   - **Badges:** Badges are for concise, non-obvious metadata (`.mrpack`, `.zip`, `Fabric`, `1.20.1`). Never add badges that repeat what is already stated in the title or communicate state already visible from a color tint.
   - **Spatial flow:** Never use absolute positioning (e.g. `position: absolute; top: 8px; right: 8px;`) that collides with header tags, titles, or badges. Flow items naturally with flexbox/grid and explicit `gap`.
+  - **Tactile Tooltips (`data-tip`) & The Absolute Prohibition of Native `title`:**
+    - **NEVER use the native HTML `title="..."` attribute anywhere.** Native `title` triggers the browser/OS default tooltip popup (e.g. Windows white-bordered black boxes with sluggish hover delay) that completely clashes with Vermeil's tactile design.
+    - **ALWAYS use Vermeil's tactile tooltip system with `data-tip="..."`.**
+    - **Styles & Mechanics**: Defined in `src/styles/layout.css` on `[data-tip]`. Features sharp corners (`border-radius: 0`), dark surface (`var(--surface-panel)`), 1px border (`var(--border-strong)`), 2.5px purple accent left edge (`border-left: 2.5px solid var(--accent)`), and deep drop shadow (`box-shadow: 0 4px 16px rgba(0,0,0,0.65)`).
+    - **Positioning Classes**:
+      - Default (centered above element): `data-tip="..."`
+      - Below element: `class="... tip-below" data-tip="..."`
+      - Left-anchored: `class="... tip-left" data-tip="..."`
+      - Right-anchored: `class="... tip-right" data-tip="..."` (prevents right-edge viewport clipping)
+      - Bottom-right: `class="... tip-below tip-right" data-tip="..."`
+      - Bottom-left: `class="... tip-below tip-left" data-tip="..."`
+    - **Restraint Rule**: Only add `data-tip` to discrete interactive affordances (icon buttons, status badges, chips). Never place `data-tip` on large containers (e.g. full cards, panels, or telemetry plates) or buttons that already have clear visible text.
   - **Stay within the theme without overdoing it:** Adhere to SloppyKeys tactile tokens (`--bevel`, `--surface-panel`, `--surface-raised`, `#0f0e13` wells, hairline borders). Do not invent novel decorative doodads, corner stickers, or unneeded containers. Boring, clean, and restrained beats busy and cluttered every time.
 
 ---
@@ -169,6 +181,7 @@ The launcher targets Windows (WebView2, Win32/DWM) and Linux (WebKitGTK, X11/Way
 - Silently swallowing errors without logging.
 - Adding dependencies without verifying existing dependencies don't cover the need.
 - Using emoji or unicode glyphs as button or interactive icons.
+- Using native HTML `title="..."` attributes for tooltips (always use `data-tip="..."` with appropriate `.tip-*` positioning).
 - Exposing Windows `\\?\` prefix to frontend.
 - Using `#[allow(dead_code)]` or suppressing compiler warnings. Build must remain zero-warning.
 - Referencing other launcher codebases by name (original work policy; SloppyKeys is the creator's own companion project, not a launcher).

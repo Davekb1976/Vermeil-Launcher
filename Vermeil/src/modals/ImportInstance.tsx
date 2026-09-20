@@ -338,12 +338,13 @@ const ImportInstance: Component = () => {
                   </div>
                   <button
                     type="button"
-                    class="btn btn--sm btn--ghost"
+                    class="btn btn--sm btn--ghost tip-left"
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedPath(null);
                     }}
-                    title="Remove selected file"
+                    data-tip="Remove selected file"
+                    aria-label="Remove selected file"
                     style="color: var(--muted); padding: 4px 8px;"
                   >
                     <IconX />

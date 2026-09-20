@@ -64,6 +64,7 @@ Before adding buttons, badges, checkboxes, or visual indicators to any screen, m
 - **Button Necessity**: Before adding a button, ask: *is the whole card or row already clickable?* If clicking the card selects or opens it, do not embed redundant "Select" or "Choose" buttons.
 - **Badge Restraint**: Badges are for concise, non-obvious metadata (`.mrpack`, `.zip`, `Fabric`, `1.20.1`). Never add badges that repeat what is already stated in the title or communicate state already visible from a color tint.
 - **Spatial Flow**: Never use absolute positioning (`position: absolute; top: 8px; right: 8px;`) that collides with header tags, titles, or badges. Flow items naturally with flexbox/grid and explicit `gap`.
+- **Tactile Tooltips (`data-tip`) over Native `title`**: **NEVER use native HTML `title="..."` attributes.** They trigger ugly default OS/browser tooltips that break the theme. Always use `data-tip="..."` with appropriate positioning (`.tip-below`, `.tip-left`, `.tip-right`, `.tip-below.tip-right`). Only place on discrete icon buttons, chips, or badges—never on large card containers.
 - **Stay Within Theme Without Overdoing It**: Adhere strictly to the established SloppyKeys tokens (`--bevel`, `--surface-panel`, `--surface-raised`, `#0f0e13` wells, hairline borders). Do not invent novel decorative doodads, corner stickers, or unneeded containers. Boring, clean, and restrained beats busy and cluttered every time.
 
 ## Verification

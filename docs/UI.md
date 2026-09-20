@@ -112,6 +112,19 @@ Before adding, restyling, or modifying any interactive element (button, badge, t
 - Stay strictly within the SloppyKeys palette: sharp corners (`border-radius: 0`), chunky 3D bevels (`--bevel`, `--bevel-strong`), 3px left border on active plates, and recessed `#0f0e13` wells.
 - Do not invent novel decorative doodads, corner ribbons, or extra container wrappers. Clean, tactile, and restrained beats busy and cluttered every time.
 
+### 7. Tactile Tooltips (`data-tip`) & The Prohibition of Native `title`
+- **NEVER use the native HTML `title="..."` attribute anywhere.** Native `title` triggers the browser/OS default tooltip popup (e.g. Windows white-bordered black boxes with sluggish hover delay) that completely clashes with Vermeil's tactile design.
+- **ALWAYS use Vermeil's tactile tooltip system with `data-tip="..."`.**
+  - **Styles & Mechanics**: Defined in `src/styles/layout.css` on `[data-tip]`. Features sharp corners (`border-radius: 0`), dark surface (`var(--surface-panel)`), 1px border (`var(--border-strong)`), 2.5px purple accent left edge (`border-left: 2.5px solid var(--accent)`), and deep drop shadow (`box-shadow: 0 4px 16px rgba(0,0,0,0.65)`).
+  - **Positioning Classes**:
+    - Default (centered above element): `data-tip="..."`
+    - Below element: `class="... tip-below" data-tip="..."`
+    - Left-anchored: `class="... tip-left" data-tip="..."`
+    - Right-anchored: `class="... tip-right" data-tip="..."` (prevents right-edge viewport clipping)
+    - Bottom-right: `class="... tip-below tip-right" data-tip="..."`
+    - Bottom-left: `class="... tip-below tip-left" data-tip="..."`
+  - **Restraint Rule**: Only add `data-tip` to discrete interactive affordances (icon buttons, status badges, chips). Never place `data-tip` on large containers (e.g. full cards, panels, or telemetry plates) or buttons that already have clear visible text.
+
 ## Responsive contract
 
 `--content-min` (480px) is the minimum fully-supported content width. Card grids reflow via `.card-grid` (track narrower than 480px, so columns drop without clipping). Below 480px, `.content > *` carries `max-width:100%` + `min-width:0` and media is capped, so nothing overflows. **Don't override the grid template inline** — let `.card-grid` do the reflow.
@@ -185,5 +198,6 @@ Defined in `lib/keybinds.ts` (`KEYBINDS`); user overrides in `LauncherSettings.k
 - Call `invoke()` directly from a component.
 - Hardcode colors/sizes instead of tokens.
 - Use emoji/Unicode glyphs as icons — use `Icons.tsx`.
+- Use native HTML `title="..."` attributes for tooltips — use `data-tip="..."` with appropriate `.tip-*` class.
 - Override a `.card-grid` template inline.
 - Add a CSS module without updating `index.tsx` and this doc.

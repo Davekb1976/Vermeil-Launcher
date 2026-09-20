@@ -55,9 +55,10 @@ const UpdateBanner: Component = () => {
           <div class="update-banner-title">{phaseLabel()}</div>
           <Show when={!updateInstalling()}>
             <button
-              class="update-banner-dismiss"
+              class="update-banner-dismiss tip-left"
               onClick={() => dismissUpdate()}
-              title="Dismiss"
+              data-tip="Dismiss"
+              aria-label="Dismiss"
             >
               <IconX />
             </button>
@@ -81,7 +82,6 @@ const UpdateBanner: Component = () => {
                 onClick={() =>
                   openUrl(`${RELEASES_URL}/v${updateAvailable()?.version}`).catch(() => {})
                 }
-                title="Open release notes on GitHub"
               >
                 Release notes
               </button>

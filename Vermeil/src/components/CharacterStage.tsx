@@ -238,7 +238,7 @@ const CharacterStage: Component<Props> = (props) => {
     <div
       ref={containerRef}
       class={`character-stage-container ${props.class ?? ""}`}
-      title="Click and drag to rotate"
+      aria-label="Interactive 3D character, click and drag to rotate"
     >
       <canvas ref={canvasRef} class="character-stage-canvas" />
     </div>

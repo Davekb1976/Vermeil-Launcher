@@ -1932,7 +1932,7 @@ const InstanceMods: Component = () => {
                       </Show>
                       <span class="mod-tag mod-tag-version">{instance()!.game_version}</span>
                       <Show when={contentVersion((mod as any).version_number, mod.filename, instance()!.game_version)}>
-                        {(v) => <span class="mod-tag mod-tag-vnum" title={v()}>{v()}</span>}
+                        {(v) => <span class="mod-tag mod-tag-vnum">{v()}</span>}
                       </Show>
                       {/* A pinned entry is skipped by the update checker, so its
                           update pill never appears. Without this tag that looks
@@ -1940,8 +1940,8 @@ const InstanceMods: Component = () => {
                           given. */}
                       <Show when={(mod as any).pinned}>
                         <span
-                          class="mod-tag mod-tag-held"
-                          title="Held at this version because a mod that needs this exact build pulled it in, so update checks skip it. Pick a version from the Browse tab to change it anyway."
+                          class="mod-tag mod-tag-held tip-below"
+                          data-tip="Held at this version because a mod needs this exact build. Update checks skip it."
                         >
                           held
                         </span>
