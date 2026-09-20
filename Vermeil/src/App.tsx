@@ -853,7 +853,7 @@ const App: Component = () => {
       }
       if (
         matchesKeybind(e, resolveBinding("toggle_pagination_scroll", userBindings)) ||
-        matchesKeybind(e, "Alt+P")
+        matchesKeybind(e, "Z")
       ) {
         e.preventDefault();
         const pag = dockPagination();

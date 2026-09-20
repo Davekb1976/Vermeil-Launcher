@@ -50,7 +50,7 @@ export const KEYBINDS: KeybindAction[] = [
     id: "toggle_pagination_scroll",
     label: "Toggle pagination scroll mode",
     description: "Route scroll wheel anywhere on screen to page navigation",
-    default: "Alt+P",
+    default: "Z",
   },
 ];
 
