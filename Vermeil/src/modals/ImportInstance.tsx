@@ -301,13 +301,6 @@ const ImportInstance: Component = () => {
                     Supports native file drop or click anywhere in this zone to browse
                   </div>
                 </div>
-                <button
-                  type="button"
-                  class="btn btn--primary btn--sm"
-                  style="margin-top: 4px; pointer-events: none;"
-                >
-                  Choose {activePlatform() === "modrinth" ? ".mrpack file" : ".zip file"}
-                </button>
               </div>
 
               {/* Selected File Card */}
