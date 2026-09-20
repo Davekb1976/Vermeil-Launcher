@@ -822,6 +822,11 @@ const App: Component = () => {
     // Customizable shortcuts. Each lookup resolves to either the user's
     // override or the action's default. Supports keyboard shortcuts and mouse side buttons.
     const handleActionTrigger = (e: KeyboardEvent | MouseEvent) => {
+      // Ignore OS key repeating while a key is held down so toggles don't flap rapidly.
+      if ("repeat" in e && e.repeat) {
+        return;
+      }
+
       // Don't fire app shortcuts while the user is typing in a text field — a
       // keybind like "T" or "P" must type the character, not toggle a feature.
       // Escape (handled above) still works so users can back out of an input.
@@ -885,6 +890,7 @@ const App: Component = () => {
       // user-rebindable because users expect Escape to "back out" of UI
       // and remapping it would brick recovery from a stuck modal.
       if (e.key === "Escape") {
+        if (e.repeat) return;
         if (paginationScrollMode()) {
           setPaginationScrollMode(false);
           return;
