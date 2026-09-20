@@ -62,11 +62,42 @@ const DockPaginationIsland: Component = () => {
     if (scrollResetTimer !== undefined) window.clearTimeout(scrollResetTimer);
     scrollResetTimer = window.setTimeout(() => setScrolling(false), 600);
   };
-  onCleanup(() => {
-    if (scrollResetTimer !== undefined) window.clearTimeout(scrollResetTimer);
-  });
   let holdTimer: number | undefined;
   let islandEl: HTMLDivElement | undefined;
+  let lastWheelTime = 0;
+  const WHEEL_COOLDOWN_MS = 140;
+
+  const handleWheel = (e: WheelEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const pag = dockPagination();
+    if (!pag) return;
+
+    // Dominant scroll delta (supports standard vertical wheel and horizontal tilt / trackpad)
+    const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (Math.abs(delta) < 1) return;
+
+    const now = Date.now();
+    if (now - lastWheelTime < WHEEL_COOLDOWN_MS) return;
+    lastWheelTime = now;
+
+    flashScroll();
+
+    // Scrolling DOWN (delta > 0) / RIGHT advances to NEXT page
+    // Scrolling UP (delta < 0) / LEFT moves back to PREVIOUS page
+    if (delta > 0 && pag.current < pag.total) {
+      pag.onPageChange(pag.current + 1);
+      if (holding()) setInputValue((pag.current + 1).toString());
+    } else if (delta < 0 && pag.current > 1) {
+      pag.onPageChange(pag.current - 1);
+      if (holding()) setInputValue((pag.current - 1).toString());
+    }
+  };
+
+  onCleanup(() => {
+    if (scrollResetTimer !== undefined) window.clearTimeout(scrollResetTimer);
+    if (islandEl) islandEl.removeEventListener("wheel", handleWheel);
+  });
 
   const startHold = () => {
     const pag = dockPagination();
@@ -111,21 +142,7 @@ const DockPaginationIsland: Component = () => {
       class={`dock-page-island ${holding() ? "holding" : ""}`}
       ref={(el) => {
         islandEl = el;
-        const handler = (e: WheelEvent) => {
-          e.preventDefault();
-          e.stopPropagation();
-          const pag = dockPagination();
-          if (!pag) return;
-          flashScroll();
-          if (e.deltaY < 0 && pag.current < pag.total) {
-            pag.onPageChange(pag.current + 1);
-            if (holding()) setInputValue((pag.current + 1).toString());
-          } else if (e.deltaY > 0 && pag.current > 1) {
-            pag.onPageChange(pag.current - 1);
-            if (holding()) setInputValue((pag.current - 1).toString());
-          }
-        };
-        el.addEventListener("wheel", handler, { passive: false });
+        el.addEventListener("wheel", handleWheel, { passive: false });
       }}
       onMouseDown={startHold}
       onMouseUp={cancelHold}
