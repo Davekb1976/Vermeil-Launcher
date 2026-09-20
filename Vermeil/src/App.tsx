@@ -539,6 +539,9 @@ export async function refreshPinnedInstanceIds() {
     if (typeof s.auto_hide_dock === "boolean") {
       setAutoHideDockSetting(s.auto_hide_dock);
     }
+    if (s.pagination_position === "bottom" || s.pagination_position === "left" || s.pagination_position === "right") {
+      setPaginationPosition(s.pagination_position);
+    }
   } catch (e) {
     console.error("Failed to load sidebar pins:", e);
   }
@@ -560,6 +563,10 @@ export { pinSelectorOpen, setPinSelectorOpen };
 // all screens until hovered, collapsing bottom clearance to maximize vertical space.
 const [autoHideDockSetting, setAutoHideDockSetting] = createSignal(true);
 export { autoHideDockSetting, setAutoHideDockSetting };
+
+// Pagination dock position & orientation ("bottom" | "left" | "right").
+const [paginationPosition, setPaginationPosition] = createSignal<"bottom" | "left" | "right">("bottom");
+export { paginationPosition, setPaginationPosition };
 
 // Dock auto-hide. Set true to slide the floating dock out of view (used on
 // the instance Logs tab so it doesn't cover log output). The dock reveals

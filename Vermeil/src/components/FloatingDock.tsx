@@ -17,6 +17,7 @@ import {
   dockHidden,
   autoHideDockSetting,
   dockPagination,
+  paginationPosition,
   clearGameLogs,
   activeDownloadCount,
 } from "../App";
@@ -405,7 +406,7 @@ const FloatingDock: Component = () => {
 
       {/* Pagination island — persists cleanly above the dock or rests at bottom when dock is hidden */}
       <Show when={Boolean(dockPagination()) && !pinSelectorOpen()}>
-        <div class={`dock-island-wrap ${hidden() ? "dock-hidden" : ""}`}>
+        <div class={`dock-island-wrap pos-${paginationPosition()} ${hidden() ? "dock-hidden" : ""}`}>
           <DockPaginationIsland />
         </div>
       </Show>

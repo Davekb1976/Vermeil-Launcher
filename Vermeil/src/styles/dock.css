@@ -19,7 +19,7 @@
   bottom: 18px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 30;
+  z-index: 35;
   pointer-events: none;
   /* Fluid-scale the entire bottom dock with viewport width. Uses `zoom`
      instead of `transform: scale` because the wrap already owns the
@@ -571,17 +571,63 @@
    ============================================================ */
 .dock-island-wrap {
   position: fixed;
-  left: 50%;
-  bottom: calc(18px + 64px + 8px);
-  transform: translateX(-50%);
-  z-index: 31;
+  z-index: 30;
   pointer-events: auto;
   zoom: var(--dock-scale);
-  transition: bottom 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
+  transition:
+    bottom 0.3s cubic-bezier(0.34, 1.2, 0.64, 1),
+    top 0.3s cubic-bezier(0.34, 1.2, 0.64, 1),
+    left 0.3s ease,
+    right 0.3s ease,
+    transform 0.3s ease;
 }
 
-.dock-island-wrap.dock-hidden {
+/* Bottom-centered orientation (horizontal) */
+.dock-island-wrap.pos-bottom {
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: calc(18px + 64px + 32px);
+  transform: translateX(-50%);
+}
+
+.dock-island-wrap.pos-bottom.dock-hidden {
   bottom: 14px;
+}
+
+/* Left-centered orientation (vertical) */
+.dock-island-wrap.pos-left {
+  left: 16px;
+  right: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+/* Right-centered orientation (vertical) */
+.dock-island-wrap.pos-right {
+  right: 16px;
+  left: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+/* Vertical layout rules for left and right positions */
+.dock-island-wrap.pos-left .dock-page-dots,
+.dock-island-wrap.pos-right .dock-page-dots {
+  flex-direction: column;
+}
+
+.dock-island-wrap.pos-left .dock-page-island,
+.dock-island-wrap.pos-right .dock-page-island {
+  padding: var(--space-3) var(--space-2);
+}
+
+.dock-island-wrap.pos-left .dock-page-hold-input,
+.dock-island-wrap.pos-right .dock-page-hold-input {
+  flex-direction: column;
+  gap: 2px;
 }
 
 .dock-page-island {

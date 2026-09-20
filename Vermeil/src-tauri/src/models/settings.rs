@@ -27,9 +27,13 @@ pub struct LauncherSettings {
     pub download_toasts: bool,
     /// Auto-hide the floating navigation dock across all screens by default.
     /// The dock reveals itself when hovering the bottom-center glowing trigger tab.
-    /// Defaults to `false`.
+    /// Defaults to `true`.
     #[serde(default = "default_auto_hide_dock")]
     pub auto_hide_dock: bool,
+    /// Position and orientation of the pagination dock indicator.
+    /// Options: "bottom" (default, horizontal), "left" (vertical), "right" (vertical).
+    #[serde(default = "default_pagination_position")]
+    pub pagination_position: String,
     #[serde(default = "default_concurrent_downloads")]
     pub concurrent_downloads: u8,
     /// Maximum simultaneous disk writes. Separated from network concurrency so a slow
@@ -145,6 +149,7 @@ fn default_download_speed_limit_mb() -> u32 { 0 }
 fn default_splash_screen() -> bool { true }
 fn default_download_toasts() -> bool { true }
 fn default_auto_hide_dock() -> bool { true }
+fn default_pagination_position() -> String { "bottom".to_string() }
 
 /// In-game custom cape state (companion mod). The baked cape image lives at
 /// `<data>/ingame-cape.png`; this is just the toggle + which library cape.
@@ -175,6 +180,7 @@ impl Default for LauncherSettings {
             splash_screen: true,
             download_toasts: true,
             auto_hide_dock: true,
+            pagination_position: default_pagination_position(),
             concurrent_downloads: default_concurrent_downloads(),
             concurrent_writes: default_concurrent_writes(),
             download_speed_limit_mb: default_download_speed_limit_mb(),

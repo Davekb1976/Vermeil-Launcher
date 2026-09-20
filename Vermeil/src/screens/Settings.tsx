@@ -1,6 +1,6 @@
 import { Component, createSignal, createResource, Show, For, onMount, onCleanup, createEffect } from "solid-js";
 import { getSettings, saveSettings, getCacheSize, purgeCache, getAppDirectory, openAppDirectory, LauncherSettings, detectJavaInstallations, validateJavaPath, setJavaPath, installRecommendedJava, deleteJavaInstall, pruneInvalidJavaPaths, getSystemMemory, JavaInstall } from "../ipc/commands";
-import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, instances, showToast, setDownloadToastsEnabled, setAutoHideDockSetting } from "../App";
+import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, instances, showToast, setDownloadToastsEnabled, setAutoHideDockSetting, setPaginationPosition } from "../App";
 import { checkForUpdates } from "../services/updater";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -62,6 +62,7 @@ const Settings: Component = () => {
     "Launcher", "Minimize to tray on launch", "Hides launcher when game starts", "tray", "minimize", "hide", "close",
     "Pop out logs on launch", "Opens the game log in a separate window", "logs", "popout", "console",
     "Auto-hide dock", "Hide floating dock across all screens until hovered", "dock", "autohide", "floating dock",
+    "Pagination dock position", "Position and orientation of the pagination dock", "pagination", "page dock",
     "Auto-update launcher", "Automatically checks for updates", "update", "updates", "updater",
     "Boot splash", "Show the animated logo splash on startup", "splash", "startup", "boot",
     "Discord Rich Presence", "Display playing status", "discord", "rpc", "rich presence",
@@ -375,6 +376,9 @@ const Settings: Component = () => {
       if (key === "auto_hide_dock") {
         setAutoHideDockSetting(value as boolean);
       }
+      if (key === "pagination_position") {
+        setPaginationPosition(value as "bottom" | "left" | "right");
+      }
       // Notify the global keydown handler that the keybind cache is stale.
       // App.tsx listens for this event and re-reads settings.keybinds.
       if (key === "keybinds") {
@@ -563,6 +567,26 @@ const Settings: Component = () => {
                               />
                               <span class="check-box"></span>
                             </label>
+                          </div>
+                        </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Pagination dock position", "Position and orientation of the pagination dock", "pagination", "page dock")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Pagination dock position</span>
+                            <span class="setting-desc">Position and orientation of the page indicator island</span>
+                          </div>
+                          <div class="setting-control">
+                            <Dropdown
+                              value={settings()!.pagination_position || "bottom"}
+                              options={[
+                                { value: "bottom", label: "Bottom Centered" },
+                                { value: "left", label: "Left Centered (Vertical)" },
+                                { value: "right", label: "Right Centered (Vertical)" },
+                              ]}
+                              onChange={(val) => updateSetting("pagination_position", val as "bottom" | "left" | "right")}
+                            />
                           </div>
                         </div>
                       </Show>

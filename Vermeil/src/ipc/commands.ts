@@ -142,6 +142,10 @@ export interface LauncherSettings {
    * Reveals when hovering the bottom-center glowing trigger tab.
    */
   auto_hide_dock: boolean;
+  /**
+   * Position and orientation of the pagination dock indicator.
+   */
+  pagination_position: "bottom" | "left" | "right";
   concurrent_downloads: number;
   /**
    * Maximum simultaneous disk writes during batch downloads.
