@@ -188,6 +188,12 @@ const Account: Component = () => {
                         {acc.is_offline ? "Offline Profile" : "Microsoft"}
                       </div>
                     </div>
+                    <Show when={acc.needs_reauth}>
+                      <div class="account-badge-reauth tip-below tip-left" data-tip="Session expired. Sign in with Microsoft again.">
+                        <IconAlertTriangle />
+                        <span>Expired</span>
+                      </div>
+                    </Show>
                     <Show when={acc.active}>
                       <div class={`account-badge-active ${acc.is_offline ? "account-badge--offline" : ""}`}>
                         <Show

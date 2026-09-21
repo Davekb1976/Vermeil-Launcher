@@ -109,12 +109,18 @@ export interface ModSearchResult {
 export interface MinecraftProfile {
   id: string;
   name: string;
-  access_token: string;
-  refresh_token: string | null;
+  /**
+   * Omitted over IPC to protect credentials from WebView memory/script exposure.
+   * Kept optional for backward compatibility.
+   */
+  access_token?: string;
+  refresh_token?: string | null;
   expires_at: number;
   is_offline: boolean;
   skin_path: string | null;
   active: boolean;
+  /** True when Microsoft session refresh failed or token expired without a refresh token. */
+  needs_reauth?: boolean;
 }
 
 export interface LauncherSettings {

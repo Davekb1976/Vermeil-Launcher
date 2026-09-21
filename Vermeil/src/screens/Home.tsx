@@ -3,7 +3,7 @@ import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, setGameLau
 import { launchInstance, listInstanceWorlds, getJavaNews, getArticleBody, NewsArticle } from "../ipc/commands";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
-import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX, IconMicrosoft } from "../components/Icons";
+import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX, IconMicrosoft, IconAlertTriangle } from "../components/Icons";
 import CharacterStage from "../components/CharacterStage";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { resolveAssetUrl } from "../lib/assets";
@@ -333,6 +333,17 @@ const Home: Component = () => {
                 <span class="home-telemetry-salutation">{timeOfDayGreeting()},</span>
                 <span class="home-telemetry-name">{displayName()}</span>
               </div>
+              <Show when={account()?.needs_reauth}>
+                <div
+                  class="account-badge-reauth tip-below tip-right"
+                  data-tip="Session expired — open Accounts to sign in again"
+                  onClick={() => setActiveScreen("account")}
+                  style={{ cursor: "pointer" }}
+                >
+                  <IconAlertTriangle />
+                  <span>Expired</span>
+                </div>
+              </Show>
               <div
                 class={`account-badge-active tip-below tip-right ${account()?.is_offline ? "account-badge--offline" : ""}`}
                 data-tip={account()?.is_offline ? "Offline Minecraft profile" : "Signed in with Microsoft"}

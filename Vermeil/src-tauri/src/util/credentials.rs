@@ -65,3 +65,22 @@ pub fn decrypt_credential(stored: &str) -> Result<String, String> {
 pub fn is_encrypted(stored: &str) -> bool {
     stored.starts_with(ENC_PREFIX)
 }
+
+/// Set restrictive permissions (chmod 600, owner read/write only) on Unix.
+/// Safe no-op on non-Unix platforms (where DPAPI or OS ACLs protect user files).
+pub fn restrict_file_permissions(path: &std::path::Path) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if path.exists() {
+            let perms = std::fs::Permissions::from_mode(0o600);
+            if let Err(e) = std::fs::set_permissions(path, perms) {
+                tracing::warn!("Failed to set 0600 permissions on {}: {}", path.display(), e);
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+    }
+}

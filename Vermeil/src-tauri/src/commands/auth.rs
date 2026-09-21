@@ -1,4 +1,4 @@
-use crate::services::auth::{self, MinecraftProfile};
+use crate::services::auth::{self, MinecraftProfile, AccountSummary};
 use crate::util::{paths, credentials};
 use std::fs;
 use tauri::Manager;
@@ -65,7 +65,7 @@ pub async fn start_ms_login(app: tauri::AppHandle) -> Result<String, String> {
                     let _ = window.close();
                     let profile = auth::finish_login(&code, &flow).await?;
                     add_or_update_account(profile.clone())?;
-                    return Ok(serde_json::to_string(&profile).unwrap());
+                    return Ok(serde_json::to_string(&profile.to_summary(false)).unwrap());
                 }
 
                 if let Some(error) = current_url.query_pairs()
@@ -88,8 +88,9 @@ pub async fn start_ms_login(app: tauri::AppHandle) -> Result<String, String> {
 
 /// Get the currently active account (with auto-refresh if expired).
 #[tauri::command]
-pub async fn get_active_account() -> Result<Option<MinecraftProfile>, String> {
+pub async fn get_active_account() -> Result<Option<AccountSummary>, String> {
     let mut accounts = load_accounts();
+    let mut reauth_required = false;
 
     let needs_refresh = accounts.iter().find(|a| a.active).map(|a| {
         !a.is_offline && a.expires_at < chrono::Utc::now().timestamp() && a.refresh_token.is_some()
@@ -112,17 +113,27 @@ pub async fn get_active_account() -> Result<Option<MinecraftProfile>, String> {
             }
             Err(e) => {
                 tracing::error!("Token refresh failed: {}", e);
+                reauth_required = true;
             }
         }
     }
 
-    Ok(accounts.into_iter().find(|a| a.active))
+    let now = chrono::Utc::now().timestamp();
+    Ok(accounts.into_iter().find(|a| a.active).map(|a| {
+        let expired_without_refresh = !a.is_offline && a.expires_at < now && a.refresh_token.is_none();
+        a.to_summary(reauth_required || expired_without_refresh)
+    }))
 }
 
 /// Get all accounts.
 #[tauri::command]
-pub async fn get_all_accounts() -> Result<Vec<MinecraftProfile>, String> {
-    Ok(load_accounts())
+pub async fn get_all_accounts() -> Result<Vec<AccountSummary>, String> {
+    let now = chrono::Utc::now().timestamp();
+    let accounts = load_accounts();
+    Ok(accounts.into_iter().map(|a| {
+        let expired_without_refresh = !a.is_offline && a.expires_at < now && a.refresh_token.is_none();
+        a.to_summary(expired_without_refresh)
+    }).collect())
 }
 
 /// Set a specific account as active.
@@ -139,7 +150,7 @@ pub async fn set_active_account(id: String) -> Result<(), String> {
 
 /// Add an offline account.
 #[tauri::command]
-pub async fn add_offline_account(username: String) -> Result<MinecraftProfile, String> {
+pub async fn add_offline_account(username: String) -> Result<AccountSummary, String> {
     if username.trim().is_empty() || username.len() > 16 {
         return Err("Username must be 1-16 characters".to_string());
     }
@@ -158,7 +169,7 @@ pub async fn add_offline_account(username: String) -> Result<MinecraftProfile, S
     };
 
     add_or_update_account(profile.clone())?;
-    Ok(profile)
+    Ok(profile.to_summary(false))
 }
 
 /// Upload a skin for the active account.
@@ -216,6 +227,7 @@ fn load_accounts() -> Vec<MinecraftProfile> {
     if !accounts_path.exists() {
         return Vec::new();
     }
+    credentials::restrict_file_permissions(&accounts_path);
     let content = fs::read_to_string(&accounts_path).unwrap_or_default();
     let mut accounts: Vec<MinecraftProfile> = serde_json::from_str(&content).unwrap_or_default();
 
@@ -264,7 +276,9 @@ fn save_accounts(accounts: &[MinecraftProfile]) -> Result<(), String> {
     }).collect();
 
     let json = serde_json::to_string_pretty(&encrypted_accounts).map_err(|e| e.to_string())?;
-    fs::write(data_dir.join("accounts.json"), json).map_err(|e| e.to_string())?;
+    let accounts_path = data_dir.join("accounts.json");
+    fs::write(&accounts_path, json).map_err(|e| e.to_string())?;
+    credentials::restrict_file_permissions(&accounts_path);
     Ok(())
 }
 

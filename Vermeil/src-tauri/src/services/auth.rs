@@ -20,6 +20,7 @@ use std::fs;
 use uuid::Uuid;
 
 use crate::util::paths;
+use crate::util::credentials;
 
 // Xbox/Microsoft constants
 const MICROSOFT_CLIENT_ID: &str = "00000000402b5328";
@@ -38,6 +39,37 @@ pub struct MinecraftProfile {
     pub skin_path: Option<String>,
     #[serde(default = "default_true")]
     pub active: bool,
+}
+
+/// Sanitized account view exposed across IPC to the frontend.
+/// Redacts `access_token` and `refresh_token` to minimize the attack surface
+/// across the WebView JavaScript runtime.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountSummary {
+    pub id: String,
+    pub name: String,
+    pub expires_at: i64,
+    #[serde(default)]
+    pub is_offline: bool,
+    pub skin_path: Option<String>,
+    #[serde(default = "default_true")]
+    pub active: bool,
+    #[serde(default)]
+    pub needs_reauth: bool,
+}
+
+impl MinecraftProfile {
+    pub fn to_summary(&self, needs_reauth: bool) -> AccountSummary {
+        AccountSummary {
+            id: self.id.clone(),
+            name: self.name.clone(),
+            expires_at: self.expires_at,
+            is_offline: self.is_offline,
+            skin_path: self.skin_path.clone(),
+            active: self.active,
+            needs_reauth,
+        }
+    }
 }
 
 fn default_true() -> bool { true }
@@ -228,22 +260,36 @@ pub async fn refresh_token(refresh_token: &str) -> Result<MinecraftProfile, Stri
 
 fn get_or_create_device_key() -> Result<DeviceKey, String> {
     let key_path = paths::data_dir().join(".device_key.pem");
+    let id_path = paths::data_dir().join(".device_id");
 
     if key_path.exists() {
-        let pem = fs::read_to_string(&key_path).map_err(|e| format!("Read device key: {}", e))?;
+        let raw = fs::read_to_string(&key_path).map_err(|e| format!("Read device key: {}", e))?;
+        // Transparent decrypt: if raw starts with "enc:", DPAPI decrypts it.
+        // If raw is plaintext PEM, decrypt_credential returns raw unchanged.
+        let pem = credentials::decrypt_credential(&raw).unwrap_or_else(|_| raw.clone());
         let signing_key = SigningKey::from_pkcs8_pem(&pem)
             .map_err(|e| format!("Parse device key: {}", e))?;
         let public_key = VerifyingKey::from(&signing_key);
         let encoded = public_key.to_encoded_point(false);
 
+        // One-time migration: if stored as plaintext on Windows, encrypt it now
+        if !credentials::is_encrypted(&raw) {
+            if let Ok(enc) = credentials::encrypt_credential(&pem) {
+                let _ = fs::write(&key_path, enc);
+                tracing::info!("Migrated .device_key.pem: encrypted with DPAPI");
+            }
+        }
+        credentials::restrict_file_permissions(&key_path);
+
         // Load or generate UUID
-        let id_path = paths::data_dir().join(".device_id");
         let id = if id_path.exists() {
             let s = fs::read_to_string(&id_path).unwrap_or_default();
+            credentials::restrict_file_permissions(&id_path);
             Uuid::parse_str(s.trim()).unwrap_or_else(|_| Uuid::new_v4())
         } else {
             let id = Uuid::new_v4();
             let _ = fs::write(&id_path, id.to_string());
+            credentials::restrict_file_permissions(&id_path);
             id
         };
 
@@ -263,8 +309,11 @@ fn get_or_create_device_key() -> Result<DeviceKey, String> {
         let _ = fs::create_dir_all(paths::data_dir());
         let pem = signing_key.to_pkcs8_pem(LineEnding::LF)
             .map_err(|e| format!("Serialize key: {}", e))?;
-        fs::write(&key_path, pem.as_bytes()).map_err(|e| format!("Write key: {}", e))?;
-        let _ = fs::write(paths::data_dir().join(".device_id"), id.to_string());
+        let stored = credentials::encrypt_credential(&pem).unwrap_or_else(|_| pem.to_string());
+        fs::write(&key_path, stored.as_bytes()).map_err(|e| format!("Write key: {}", e))?;
+        let _ = fs::write(&id_path, id.to_string());
+        credentials::restrict_file_permissions(&key_path);
+        credentials::restrict_file_permissions(&id_path);
 
         Ok(DeviceKey {
             id,
