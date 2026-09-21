@@ -2672,6 +2672,13 @@ select.field-input[size] { appearance: none; }
 .custom-dropdown-arrow {
   color: var(--muted);
   transition: transform 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.custom-dropdown-arrow svg {
+  width: 14px;
+  height: 14px;
 }
 .custom-dropdown-arrow.open { transform: rotate(180deg); }
 .custom-dropdown-options {
@@ -2721,6 +2728,8 @@ select.field-input[size] { appearance: none; }
    positioning (set inline from the trigger's rect) so the modal's scroll
    container can't clip it. Holds a sticky search box above a scrolling list. */
 .custom-dropdown-options--floating {
+  top: auto;
+  bottom: auto;
   right: auto;
   z-index: 9999;
   overflow: hidden;

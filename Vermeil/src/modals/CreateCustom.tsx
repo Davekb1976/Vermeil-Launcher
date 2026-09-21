@@ -29,6 +29,7 @@ import {
   IconAlertTriangle,
   IconPlus,
   IconX,
+  IconChevronDown,
 } from "../components/Icons";
 
 interface LoaderInfo {
@@ -121,15 +122,21 @@ const CreateCustom: Component = () => {
 
   const makePanelStyle = (r: DOMRect | null) => {
     if (!r) return "";
+    if (r.bottom < 0 || r.top > window.innerHeight) {
+      return "display:none;";
+    }
     const margin = 4;
     const spaceBelow = window.innerHeight - r.bottom;
     const spaceAbove = r.top;
     const openAbove = spaceBelow < 220 && spaceAbove > spaceBelow;
-    const maxH = Math.max(160, Math.min(300, (openAbove ? spaceAbove : spaceBelow) - 12));
+    const availableSpace = (openAbove ? spaceAbove : spaceBelow) - margin - 8;
+    const maxH = Math.max(80, Math.min(300, Math.floor(availableSpace)));
     const vert = openAbove
-      ? `bottom:${Math.round(window.innerHeight - r.top + margin)}px`
-      : `top:${Math.round(r.bottom + margin)}px`;
-    return `position:fixed;left:${Math.round(r.left)}px;width:${Math.round(r.width)}px;${vert};max-height:${maxH}px`;
+      ? `top:auto;bottom:${Math.round(window.innerHeight - r.top + margin)}px`
+      : `top:${Math.round(r.bottom + margin)}px;bottom:auto`;
+    const panelWidth = Math.min(Math.round(r.width), window.innerWidth - 16);
+    const panelLeft = Math.max(8, Math.min(Math.round(r.left), window.innerWidth - panelWidth - 8));
+    return `position:fixed;left:${panelLeft}px;width:${panelWidth}px;${vert};max-height:${maxH}px;`;
   };
 
   const panelStyle = () => makePanelStyle(triggerRect());
@@ -429,7 +436,7 @@ const CreateCustom: Component = () => {
                             <IconShieldCheck /> Companion
                           </span>
                         </Show>
-                        <span class="custom-dropdown-arrow" classList={{ open: versionDropOpen() }}>▾</span>
+                        <span class="custom-dropdown-arrow" classList={{ open: versionDropOpen() }}><IconChevronDown /></span>
                       </div>
                       <Show when={versionDropOpen()}>
                         <Portal>
@@ -509,7 +516,7 @@ const CreateCustom: Component = () => {
                               <span class="loader-item-badge loader-item-badge--recommended">Recommended</span>
                             </Show>
                           </span>
-                          <span class="custom-dropdown-arrow" classList={{ open: loaderDropOpen() }}>▾</span>
+                          <span class="custom-dropdown-arrow" classList={{ open: loaderDropOpen() }}><IconChevronDown /></span>
                         </div>
                         <Show when={loaderDropOpen()}>
                           <Portal>
