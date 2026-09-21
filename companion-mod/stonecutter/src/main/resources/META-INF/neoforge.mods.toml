@@ -1,0 +1,22 @@
+modLoader = "javafml"
+loaderVersion = "*"
+license = "MIT"
+
+[[mods]]
+modId = "vermeil"
+version = "${version}"
+displayName = "Vermeil Companion"
+authors = "Vermeil Team"
+description = '''Companion mod for Vermeil Launcher'''
+logoFile = "assets/vermeil/icon.png"
+
+[[dependencies.vermeil]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[${minecraftVersionVirtual},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[mixins]]
+config = "vermeil.client.mixins.json"
+

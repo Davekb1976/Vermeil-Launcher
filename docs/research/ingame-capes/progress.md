@@ -253,3 +253,14 @@ Kept as a record so nobody spends the day again.
   would have needed the XDG portal's `Screenshot.PickColor` plus an X11
   root-window read). Presets cover the actual need — a decent solid colour in one
   click. The route is proven if it's ever wanted back.
+
+## 2026-09-21 · Modern multi-loader unification (Stonecraft + Stonecutter)
+- **Unified modern pipeline (`companion-mod/stonecutter/`)**:
+  - Adopted Stonecraft 1.13.1 + Stonecutter 0.9.8 + Architectury Loom to unify modern Minecraft releases (26.1, 26.2, 26.3, 1.21.11) across **both Fabric and NeoForge** from a single shared Java source tree.
+  - Multi-loader cape implementation (`VermeilCape.java`): transparent fallback between `net.fabricmc.loader.api.FabricLoader` and `net.neoforged.fml.loading.FMLPaths` for runtime data/game directories.
+  - DynamicTexture compatibility: omitted explicit `this.sampler` reassignment in `VermeilCapeTexture.java` (handled by DynamicTexture superclass defaults), yielding 100% clean compilation across 26.1, 26.2, and 26.3 without `com.mojang.blaze3d` vs `com.mojang.renderpearl` source breaks.
+  - Full matrix builds via `chiseledBuildAndCollect` cleanly emit all Fabric and NeoForge jars.
+  - Smoke-tested in-game via `runClient` on Java 25: user verified custom animated cape live in third-person ("W").
+- **Permanent Forge 1.8.9 isolation (`companion-mod/forge/1.8.9/`)**:
+  - Verified and proved Forge 1.8.9 cannot be unified into Stonecraft: requires Java 8, Gradle 3.1, ForgeGradle 2.1, MCP mappings, and an ASM coremod. Stonecraft internally hardcodes Java 17+ and Mojang official mappings (1.14.4+). Forge 1.8.9 remains strictly isolated in `companion-mod/forge/1.8.9/`.
+

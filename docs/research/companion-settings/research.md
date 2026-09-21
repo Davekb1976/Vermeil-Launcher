@@ -40,13 +40,11 @@ settings screen. Applies across all active companion projects.
 
 | Project | MC | Loader | Java | Cape | FOV effects | In-game UI |
 |---|---|---|---|---|---|---|
-| fabric/26.1-26.2 | 26.1–26.2 | Fabric | 25 | yes | native | none |
-| fabric/1.21.11 | 1.21.11 | Fabric | 21 | yes | native | yes |
+| stonecutter | 1.21.11, 26.1–26.3 | Fabric & NeoForge | 25 (21 for 1.21.x) | yes | native | none |
 | forge/1.8.9 | 1.8.9 | Forge | 8 | yes | backport | yes |
 
 FOV-effects backport is 1.8.9-only and correct (1.16+ native). Cape at parity.
-(`fabric/1.21-1.21.1`, the feature-renderer era, was archived to shrink the
-maintenance surface — supported Fabric is now 1.21.11 + 26.x only.)
+(Standalone Fabric eras were archived to `companion-mod/archive/fabric/` — supported modern mod is now unified in `companion-mod/stonecutter/`.)
 
 ## Decisions (settled)
 
@@ -107,7 +105,6 @@ maintenance surface — supported Fabric is now 1.21.11 + 26.x only.)
 
 ## Toolchain (verified present on the Windows dev box)
 
-- JDK 21 `C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot` — matches the
-  Fabric projects' `org.gradle.java.home` pin exactly (no edit needed).
-- JDK 25 `…\jdk-25.0.3.9-hotspot` — for fabric/26.1-26.2.
-- JDK 8 `…\jdk-8.0.492.9-hotspot` — for forge/1.8.9 (set JAVA_HOME to it).
+- JDK 25 `C:\Program Files\Eclipse Adoptium\jdk-25.0.3.9-hotspot` — for modern multi-loader (`stonecutter` 26.x and 1.21.x).
+- JDK 8 `C:\Program Files\Eclipse Adoptium\jdk-8.0.492.9-hotspot` — for legacy PvP Forge 1.8.9 (`companion-mod/forge/1.8.9`).
+

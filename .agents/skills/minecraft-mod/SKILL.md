@@ -55,20 +55,22 @@ alone from the repo root fails with "does not contain a Gradle build".
 - Use `git -C` for git; run `gradlew` with `-p`. PowerShell shell — chain with
   `;`, never `&&`.
 
-## Multi-version (separate projects per era/loader)
+## Architecture: Modern Multi-Loader vs Legacy Forge 1.8.9
 
-Stonecutter was tried and **dropped** — it caused too many problems. The mod
-targets multiple Minecraft eras, but **not from one codebase**: loader, mappings,
-Java version, and cape-render API differ too much to share a toolchain (Java 25
-Fabric vs Java 8 Forge can't even share a Gradle). So each `(era, loader)` is its
-**own standalone Gradle project** with its own wrapper and pinned toolchain.
+The companion mod uses a clear two-tier structure:
 
-Built projects:
+1. **Modern Multi-Loader (`companion-mod/stonecutter/`)**:
+   Powered by **Stonecraft** and **Stonecutter**. Unifies modern Minecraft versions across **Fabric** and **NeoForge** (26.1, 26.2, 26.3, 1.21.11) with a single shared Java codebase, conditional preprocessor comments (`//? if fabric`, `//? if neoforge`), and matrix collection via `chiseledBuildAndCollect`.
+   **Always use the `stonecraft` skill** when working on files under `companion-mod/stonecutter/`.
 
-| Project | Minecraft range | Loader | Java | Cape hook |
-|---------|-----------------|--------|------|-----------|
-| `companion-mod/fabric/26.1-26.2/` | 26.1–26.2 | Fabric | 25 | render-state (`AvatarRenderer.extractRenderState`, `CapeLayer.submit`) |
-| `companion-mod/fabric/1.21.11/` | 1.21.11 | Fabric | 21 | render-state (= 26.x client source: `Identifier` + sampler) |
+2. **Legacy PvP Forge 1.8.9 (`companion-mod/forge/1.8.9/`) — STRICTLY ISOLATED**:
+   Forge 1.8.9 requires Java 8, Gradle 3.1, ForgeGradle 2.1, MCP mappings, and an ASM Coremod. It CANNOT be unified with modern versions or run inside Stonecraft (Stonecraft requires Java 17+ and Mojang official mappings). It remains standalone in `companion-mod/forge/1.8.9/`.
+
+Active Projects:
+
+| Project | Minecraft range | Loader | Java | Hook mechanism |
+|---------|-----------------|--------|------|----------------|
+| `companion-mod/stonecutter/` | 26.1, 26.2, 26.3, 1.21.11 | Fabric & NeoForge | 25 (21 for 1.21.x) | render-state (`AvatarRenderer.extractRenderState`) |
 | `companion-mod/forge/1.8.9/` | 1.8.9 | Forge | 8 | coremod ASM redirect of `AbstractClientPlayer.getLocationCape` |
 
 The Forge 1.8.9 project is the legacy-PvP variant (that audience runs Forge for

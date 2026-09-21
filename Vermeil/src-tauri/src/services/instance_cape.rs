@@ -136,23 +136,29 @@ pub async fn get_ingame_cape() -> Option<IngameCapeSettings> {
 // ───────────────────────── Support gate + launch wiring ──────────────────
 
 /// MC versions the **Fabric/Quilt** companion jars target — the union of every
-/// Fabric project's `mc_versions`. Single source for both the support gate and
-/// the frontend "supported version" hints (instance-creator dropdown).
+/// Fabric target's supported Minecraft versions.
 const FABRIC_SUPPORTED: &[&str] = &[
-    // 26.x render-state era (companion-mod/fabric/26.1-26.2).
-    "26.1", "26.1.1", "26.1.2", "26.2",
-    // 1.21.11 render-state era (companion-mod/fabric/1.21.11).
+    "26.1", "26.1.1", "26.1.2", "26.2", "26.3",
+    "1.21.11",
+];
+
+/// MC versions the **NeoForge** companion jars target.
+const NEOFORGE_SUPPORTED: &[&str] = &[
+    "26.1", "26.1.1", "26.1.2", "26.2", "26.3",
     "1.21.11",
 ];
 
 /// MC versions the **Forge** companion jar targets (companion-mod/forge/1.8.9).
 const FORGE_SUPPORTED: &[&str] = &["1.8.9"];
 
-/// Minecraft versions the Fabric/Quilt companion jars support. Each render-era
-/// jar covers a range; keep `FABRIC_SUPPORTED` in lockstep with the jars CI
-/// publishes (the `mc_versions` lists in each Fabric project's `gradle.properties`).
+/// Minecraft versions the Fabric/Quilt companion jars support.
 fn fabric_version_supported(version: &str) -> bool {
     FABRIC_SUPPORTED.contains(&version)
+}
+
+/// Minecraft versions the NeoForge companion jars support.
+fn neoforge_version_supported(version: &str) -> bool {
+    NEOFORGE_SUPPORTED.contains(&version)
 }
 
 /// Minecraft versions the Forge companion jar targets. 1.8.9 only — the legacy
@@ -162,24 +168,26 @@ fn forge_version_supported(version: &str) -> bool {
 }
 
 /// Companion-supported MC versions for a loader, named as the frontend names it
-/// (`"fabric"`/`"quilt"`/`"forge"`/…). Drives the "supported" hint on the
+/// (`"fabric"`/`"quilt"`/`"neoforge"`/`"forge"`). Drives the "supported" hint on the
 /// instance creator's version dropdown. Empty for loaders with no companion build.
 pub fn supported_versions_for_loader(loader: &str) -> Vec<String> {
     match loader {
         "fabric" | "quilt" => FABRIC_SUPPORTED.iter().map(|s| s.to_string()).collect(),
+        "neoforge" => NEOFORGE_SUPPORTED.iter().map(|s| s.to_string()).collect(),
         "forge" => FORGE_SUPPORTED.iter().map(|s| s.to_string()).collect(),
         _ => Vec::new(),
     }
 }
 
 /// Whether the companion mod can render a cape on this instance. Support is
-/// loader-aware: the Fabric mod runs on Fabric (and Quilt, which runs Fabric
-/// mods) for the modern versions; the separate Forge build runs on 1.8.9.
+/// loader-aware: modern versions run on Fabric (and Quilt) or NeoForge;
+/// the separate legacy Forge build runs on 1.8.9.
 pub fn is_supported_loader(loader_type: &LoaderType, game_version: &str) -> bool {
     match loader_type {
         LoaderType::Fabric | LoaderType::Quilt => {
             fabric_version_supported(game_version)
         }
+        LoaderType::Neoforge => neoforge_version_supported(game_version),
         LoaderType::Forge => forge_version_supported(game_version),
         _ => false,
     }

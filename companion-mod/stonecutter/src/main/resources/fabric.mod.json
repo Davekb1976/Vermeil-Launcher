@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "vermeil",
+  "version": "${version}",
+  "name": "Vermeil Companion",
+  "description": "Companion mod for Vermeil Launcher",
+  "authors": [
+    "Vermeil Team"
+  ],
+  "license": "MIT",
+  "icon": "assets/vermeil/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.vermeil.VermeilMod"
+    ]
+  },
+  "mixins": [
+    "vermeil.client.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": "*",
+    "fabric-api": ">=${fabricVersion}",
+    "minecraft": ">=${minecraftVersionVirtual}"
+  }
+}

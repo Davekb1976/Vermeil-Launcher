@@ -9,20 +9,16 @@ that the launcher no longer ships:
 | `1.21.2-1.21.4/` | 1.21.2–1.21.4 | render-state, `ResourceLocation` + single-arg `DynamicTexture` |
 | `1.21.5-1.21.8/` | 1.21.5–1.21.8 | render-state, `DynamicTexture` label-ctor |
 | `1.21.9-1.21.10/` | 1.21.9–1.21.10 | 26.x-shaped hook, `ResourceLocation` + `setFilter` + `Tickable` |
+| `1.21.11/` | 1.21.11 | render-state (archived; now built by `companion-mod/stonecutter/`) |
+| `26.1-26.2/` | 26.1–26.2 | render-state (archived; now built by `companion-mod/stonecutter/`) |
 
 ## Why they're here
 
-Each render-era is its own source variant, so every new mod feature that touches
-the render/texture API has to be ported into each one. To keep that surface small,
-the launcher actively supports only two Fabric eras — `1.21.11` (= 26.x source)
-and `26.1-26.2` — plus the legacy Forge `1.8.9`. These older eras were moved out
-of `companion-mod/fabric/` so they're not built by CI, not advertised by the
-launcher, and not listed in the published manifest — but the source is kept,
-verified, ready to bring back.
-
-They live under `companion-mod/archive/` (not `companion-mod/fabric/`) on purpose:
-the CI manifest builder globs `companion-mod/fabric/*/`, so anything here is
-invisible to it.
+Modern Fabric & NeoForge mod development has been unified into `companion-mod/stonecutter/` using Stonecraft and Stonecutter.
+The older standalone Fabric projects were moved here to preserve their history and working configurations without cluttering active development.
+The active companion mod targets are now:
+- `companion-mod/stonecutter/`: Modern Fabric and NeoForge (1.21.11, 26.1, 26.2, 26.3)
+- `companion-mod/forge/1.8.9/`: Legacy PvP Forge 1.8.9 (strictly isolated)
 
 ## Restoring one
 

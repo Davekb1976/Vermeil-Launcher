@@ -1,0 +1,11 @@
+.gradle/
+build/
+out/
+classes/
+versions/**/build/
+versions/**/src/
+versions/**/.gradle/
+run/
+.idea/
+*.iml
+.agents/

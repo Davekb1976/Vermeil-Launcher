@@ -31,29 +31,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      # The companion mod spans toolchains: the modern Fabric eras need JDK 21/25,
-      # the legacy Forge 1.8.9 build needs JDK 8.
+      # The companion mod spans toolchains: the modern multi-loader (Fabric &
+      # NeoForge) builds on JDK 25 via Stonecutter, the legacy Forge 1.8.9 build
+      # needs JDK 8.
       - name: Setup JDKs
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: |
             8
-            21
             25
 
       - name: Build the mods
         run: |
           set -euo pipefail
-          chmod +x companion-mod/fabric/26.1-26.2/gradlew companion-mod/fabric/1.21.11/gradlew companion-mod/forge/1.8.9/gradlew
-          # Each era runs its Gradle daemon on a different JDK: 26.x on 25
-          # (Gradle 9.x), the 1.21.x projects on 21, Forge 1.8.9 on 8 (Gradle 3.1).
-          (cd companion-mod/fabric/26.1-26.2 && JAVA_HOME="$JAVA_HOME_25_X64" ./gradlew build --console=plain)
-          # The dev gradle.properties pin a local Windows JDK path for convenience;
-          # CI supplies its own JDK, so drop that line before building.
-          sed -i '/^org\.gradle\.java\.home=/d' companion-mod/fabric/1.21.11/gradle.properties
-          (cd companion-mod/fabric/1.21.11 && JAVA_HOME="$JAVA_HOME_21_X64" ./gradlew build --console=plain)
-          # Forge 1.8.9: classic ForgeGradle 2 on Gradle 3.1 + JDK 8. --no-daemon
+          chmod +x companion-mod/stonecutter/gradlew companion-mod/forge/1.8.9/gradlew
+          # Modern multi-loader (Fabric & NeoForge for 1.21.11, 26.1, 26.2, 26.3)
+          sed -i '/^org\.gradle\.java\.home=/d' companion-mod/stonecutter/gradle.properties
+          (cd companion-mod/stonecutter && JAVA_HOME="$JAVA_HOME_25_X64" ./gradlew chiseledBuildAndCollect --console=plain)
+          # Legacy Forge 1.8.9: classic ForgeGradle 2 on Gradle 3.1 + JDK 8. --no-daemon
           # because the old Gradle shouldn't linger; build pulls in the decomp
           # workspace automatically (3G heap is set in its gradle.properties).
           sed -i '/^org\.gradle\.java\.home=/d' companion-mod/forge/1.8.9/gradle.properties
@@ -65,46 +61,47 @@ jobs:
           set -euo pipefail
           TAG="${{ github.event.inputs.tag || github.ref_name }}"
           REPO="${{ github.repository }}"
-          MODVER=$(grep -E '^mod_version=' companion-mod/fabric/26.1-26.2/gradle.properties | cut -d= -f2 | tr -d '[:space:]')
+          MODVER=$(grep -E '^mod\.version=' companion-mod/stonecutter/gradle.properties | cut -d= -f2 | tr -d '[:space:]')
           echo "Publishing companion mod $MODVER under tag $TAG"
-
-          # Read a property from a project's gradle.properties (empty if absent).
-          prop() { grep -E "^$2=" "$1/gradle.properties" | cut -d= -f2 | tr -d '[:space:]' || true; }
 
           mkdir -p dist
           entries='[]'
           shopt -s nullglob
-          # One jar per render-era project, across both loader families. Each
-          # declares the Minecraft versions it supports (mc_versions) and the
-          # range label baked into its jar name (mc_range); the manifest lists
-          # every supported version pointing at the one jar, so the launcher
-          # matches an instance's exact version + loader to it.
-          for proj in companion-mod/fabric/*/ companion-mod/forge/*/; do
-            proj=${proj%/}
-            # Loaders this jar serves, by source family. The Fabric jar also runs
-            # on Quilt (Quilt loads Fabric mods); the Forge jar is Forge-only.
-            case "$proj" in
-              companion-mod/fabric/*) loaders='["fabric","quilt"]' ;;
-              companion-mod/forge/*)  loaders='["forge"]' ;;
-              *) echo "Unknown loader family for $proj" >&2; exit 1 ;;
-            esac
-            range=$(prop "$proj" mc_range)
-            [ -z "$range" ] && range=$(prop "$proj" minecraft_version)
-            versions=$(prop "$proj" mc_versions)
-            [ -z "$versions" ] && versions=$(prop "$proj" minecraft_version)
-            # Jar name uses only the lowest version (e.g. 1.21.5), matching build.gradle.
-            label=${range%%-*}
-            jar="$proj/build/libs/vermeil-${MODVER}+${label}.jar"
-            if [ ! -f "$jar" ]; then
-              echo "Expected jar not found for $proj: $jar" >&2
-              exit 1
-            fi
+
+          # 1. Stage modern multi-loader jars (Fabric & NeoForge) from Stonecutter
+          for jar in companion-mod/stonecutter/build/libs/*.jar; do
             file=$(basename "$jar")
+            case "$file" in
+              *fabric*)   loaders='["fabric","quilt"]' ;;
+              *neoforge*) loaders='["neoforge"]' ;;
+              *) echo "Unknown loader for $file" >&2; exit 1 ;;
+            esac
+            mc_ver="${file##*+mc}"
+            mc_ver="${mc_ver%.jar}"
+            extra=$(grep -E '^additional_versions=' "companion-mod/stonecutter/versions/dependencies/${mc_ver}.properties" 2>/dev/null | cut -d= -f2 | tr -d '[:space:]' || true)
+            if [ -n "$extra" ]; then
+              vjson=$(echo "$mc_ver,$extra" | jq -R 'split(",")')
+            else
+              vjson=$(jq -n --arg v "$mc_ver" '[$v]')
+            fi
             cp "$jar" "dist/$file"
             sha1=$(sha1sum "$jar" | cut -d' ' -f1)
             size=$(stat -c%s "$jar")
             url="https://github.com/${REPO}/releases/download/${TAG}/${file}"
-            vjson=$(echo "$versions" | jq -R 'split(",")')
+            entries=$(echo "$entries" | jq \
+              --argjson mcs "$vjson" --argjson loaders "$loaders" --arg file "$file" --arg url "$url" --arg sha1 "$sha1" --argjson size "$size" \
+              '. + [{minecraftVersions:$mcs, loaders:$loaders, file:$file, url:$url, sha1:$sha1, size:$size}]')
+          done
+
+          # 2. Stage legacy Forge 1.8.9 jar
+          for jar in companion-mod/forge/1.8.9/build/libs/vermeil-*.jar; do
+            file=$(basename "$jar")
+            loaders='["forge"]'
+            vjson='["1.8.9"]'
+            cp "$jar" "dist/$file"
+            sha1=$(sha1sum "$jar" | cut -d' ' -f1)
+            size=$(stat -c%s "$jar")
+            url="https://github.com/${REPO}/releases/download/${TAG}/${file}"
             entries=$(echo "$entries" | jq \
               --argjson mcs "$vjson" --argjson loaders "$loaders" --arg file "$file" --arg url "$url" --arg sha1 "$sha1" --argjson size "$size" \
               '. + [{minecraftVersions:$mcs, loaders:$loaders, file:$file, url:$url, sha1:$sha1, size:$size}]')

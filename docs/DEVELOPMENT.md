@@ -107,61 +107,46 @@ part of the launcher's Tauri/SolidJS build and are excluded from the `pnpm` and
   (`gradlew` / `gradlew.bat`). Fabric Loom (Fabric projects) or ForgeGradle
   (Forge project) drives the Gradle version.
 
-### Multi-version (separate projects per era/loader)
+### Multi-version Architecture (Modern Multi-Loader vs Legacy Forge)
 
-The mod targets multiple Minecraft eras, but **not from one codebase** — the
-loader, mappings, Java version, and cape-render API differ too much across eras
-to share a toolchain. So each `(era, loader)` is built as its **own standalone
-Gradle project** with its own wrapper and pinned toolchain, rather than a
-single-source preprocessor tree:
+The companion mod uses a clear two-tier structure:
+1. **Modern Multi-Loader (`companion-mod/stonecutter/`)**:
+   Powered by **Stonecraft** and **Stonecutter**. Unifies modern Minecraft versions across **Fabric** and **NeoForge** (1.21.11, 26.1, 26.2, 26.3) with a single shared Java codebase, conditional preprocessor comments (`//? if fabric`, `//? if neoforge`), and matrix collection via `chiseledBuildAndCollect`.
+2. **Legacy PvP Forge 1.8.9 (`companion-mod/forge/1.8.9/`) — STRICTLY ISOLATED**:
+   Forge 1.8.9 requires Java 8, Gradle 3.1, ForgeGradle 2.1, MCP mappings, and an ASM Coremod. It remains completely standalone in `companion-mod/forge/1.8.9/`.
+
+Active Projects:
 
 | Project | Minecraft range | Loader | Java | Cape hook era |
 |---------|-----------------|--------|------|---------------|
-| `companion-mod/fabric/26.1-26.2/` | 26.1–26.2 | Fabric | 25 | render-state (`Avatar*`) |
-| `companion-mod/fabric/1.21.11/` | 1.21.11 | Fabric | 21 | render-state (= 26.x client source) |
+| `companion-mod/stonecutter/` | 1.21.11, 26.1, 26.2, 26.3 | Fabric & NeoForge | 25 (21 for 1.21.x) | render-state (`AvatarRenderer.extractRenderState`) |
 | `companion-mod/forge/1.8.9/` | 1.8.9 | Forge | 8 | coremod redirect (`getLocationCape`) |
 
-The older 1.21.x eras — the feature-renderer 1.21–1.21.1 and the intermediate
-render-state eras (1.21.2–1.21.4, 1.21.5–1.21.8, 1.21.9–1.21.10) — are built and
-compile-verified but **archived** under `companion-mod/archive/fabric/` — out of
-the build/CI/support path to keep the maintenance surface small. See that folder's
-README to restore one.
-
-Each project ships **one jar covering a range** of Minecraft versions (a Fabric
-jar is intermediary-remapped, so it runs on every version where its Mixin targets
-are unchanged); the folder is named for the full version range it supports (the
-jar filename uses only the lowest version). The Fabric projects use **official
-Mojang mappings** with **no Fabric API dependency** (loader + Mixins only). The
-Forge 1.8.9 project uses classic **ForgeGradle 2** (Gradle 3.1, MCP mappings) and
-hooks the cape via an FML **coremod** bytecode transformer rather than a Mixin —
-1.8.9 predates the Mixin toolchain used elsewhere. Minecraft / loader / Java pins,
-plus the `mc_range` (version span) and `mc_versions` (exact supported list) live
-in each project's `gradle.properties`.
+Older standalone Fabric eras are preserved and archived under `companion-mod/archive/fabric/`.
 
 ### Building & running the mod
 
 Gradle resolves the project from the **current working directory**, not from where
-`gradlew` lives — so pass `-p <project-dir>` (or `cd` into it first). Running the
-wrapper by path alone from the repo root fails with "does not contain a Gradle build".
+`gradlew` lives — so pass `-p <project-dir>`.
 
 ```powershell
-# from repo root, on Windows. Swap the project folder (e.g. 1.21-1.21.1) as needed.
-$p = "companion-mod\fabric\26.1-26.2"
-.\$p\gradlew.bat -p $p build      # build the mod jar -> build/libs/vermeil-<modVersion>+<low>.jar
-.\$p\gradlew.bat -p $p runClient  # launch a dev client
-.\$p\gradlew.bat -p $p genSources # decompiled Mojang-mapped sources (research)
+# Modern multi-loader (Stonecutter) from repo root on Windows
+$p = "companion-mod\stonecutter"
+.\$p\gradlew.bat -p $p chiseledBuildAndCollect            # build all Fabric & NeoForge jars -> build/libs/
+.\$p\gradlew.bat -p $p "Set active project to 26.3-fabric" # switch active target
+.\$p\gradlew.bat -p $p buildActive                         # build only active target
+.\$p\gradlew.bat -p $p runClient                           # launch dev client for active target
+.\$p\gradlew.bat -p $p "Reset active project"              # reset to canonical vcsVersion
 ```
 
 ```bash
 # on Linux, from repo root
-p=companion-mod/fabric/26.1-26.2
-./$p/gradlew -p $p build
-./$p/gradlew -p $p runClient
+p=companion-mod/stonecutter
+./$p/gradlew -p $p chiseledBuildAndCollect
 ```
 
-The **Forge 1.8.9** project (`companion-mod/forge/1.8.9`) builds the same way but
-needs Java 8: pin it via `org.gradle.java.home` in its `gradle.properties` and run
-the wrapper with `JAVA_HOME` set to that JDK 8 (the launcher JVM that boots the old
+The **Forge 1.8.9** project (`companion-mod/forge/1.8.9`) builds with Java 8:
+pin it via `JAVA_HOME` pointing to JDK 8 (the launcher JVM that boots the old
 Gradle must be Java 8 too). Use `--no-daemon`, and `setupDecompWorkspace` instead of
 `genSources` to generate the MCP-mapped sources for research. `build` pulls the
 decomp workspace in automatically.
@@ -212,7 +197,8 @@ Vermeil-Launcher/             # repo root
 │   ├── package.json
 │   └── vite.config.ts
 ├── companion-mod/            # companion Minecraft mod (Java, separate builds)
-│   ├── fabric/               #   per-render-era Fabric projects: 26.1-26.2/, 1.21.11/
-│   └── forge/                #   legacy Forge project: 1.8.9/
+│   ├── stonecutter/          #   modern multi-loader (Fabric & NeoForge: 1.21.11, 26.1, 26.2, 26.3)
+│   ├── forge/                #   legacy Forge project: 1.8.9/
+│   └── archive/              #   archived standalone Fabric projects
 └── docs/                     # project docs + docs/research/ notes
 ```
