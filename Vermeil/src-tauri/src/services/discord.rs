@@ -174,8 +174,6 @@ pub fn sync_presence() {
                         .assets(|a| {
                             a.large_image("icon")
                                 .large_text("Vermeil Launcher")
-                                .small_image("play")
-                                .small_text("In Game")
                         })
                         .timestamps(|ts| ts.start(start_timestamp))
                 });
