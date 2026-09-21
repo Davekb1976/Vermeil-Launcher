@@ -333,7 +333,23 @@ const Home: Component = () => {
                 <span class="home-telemetry-salutation">{timeOfDayGreeting()},</span>
                 <span class="home-telemetry-name">{displayName()}</span>
               </div>
-              <Show when={account()?.needs_reauth}>
+              <Show
+                when={account()?.needs_reauth}
+                fallback={
+                  <div
+                    class={`account-badge-active tip-below tip-right ${account()?.is_offline ? "account-badge--offline" : ""}`}
+                    data-tip={account()?.is_offline ? "Offline Minecraft profile" : "Signed in with Microsoft"}
+                  >
+                    <Show
+                      when={!account()?.is_offline}
+                      fallback={<span class="account-badge-dot account-badge-dot--offline" />}
+                    >
+                      <IconMicrosoft class="account-badge-ms-icon" />
+                    </Show>
+                    <span>{account()?.is_offline ? "Offline" : "Microsoft"}</span>
+                  </div>
+                }
+              >
                 <div
                   class="account-badge-reauth tip-below tip-right"
                   data-tip="Session expired — open Accounts to sign in again"
@@ -341,21 +357,9 @@ const Home: Component = () => {
                   style={{ cursor: "pointer" }}
                 >
                   <IconAlertTriangle />
-                  <span>Expired</span>
+                  <span>Session Expired</span>
                 </div>
               </Show>
-              <div
-                class={`account-badge-active tip-below tip-right ${account()?.is_offline ? "account-badge--offline" : ""}`}
-                data-tip={account()?.is_offline ? "Offline Minecraft profile" : "Signed in with Microsoft"}
-              >
-                <Show
-                  when={!account()?.is_offline}
-                  fallback={<span class="account-badge-dot account-badge-dot--offline" />}
-                >
-                  <IconMicrosoft class="account-badge-ms-icon" />
-                </Show>
-                <span>{account()?.is_offline ? "Offline" : "Microsoft"}</span>
-              </div>
             </div>
 
             <div class="home-telemetry-stats">

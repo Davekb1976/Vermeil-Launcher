@@ -126,6 +126,12 @@ const Account: Component = () => {
     return skinCache()[acc.id] ?? null;
   };
 
+  const isAccountExpired = (acc: MinecraftProfile): boolean => {
+    const a = account();
+    if (a && a.id === acc.id && a.needs_reauth) return true;
+    return !!acc.needs_reauth;
+  };
+
   return (
     <div class="screen-enter account-screen">
       {/* Page Header */}
@@ -188,21 +194,25 @@ const Account: Component = () => {
                         {acc.is_offline ? "Offline Profile" : "Microsoft"}
                       </div>
                     </div>
-                    <Show when={acc.needs_reauth}>
+                    <Show
+                      when={isAccountExpired(acc)}
+                      fallback={
+                        <Show when={acc.active}>
+                          <div class={`account-badge-active ${acc.is_offline ? "account-badge--offline" : ""}`}>
+                            <Show
+                              when={!acc.is_offline}
+                              fallback={<span class="account-badge-dot account-badge-dot--offline" />}
+                            >
+                              <IconMicrosoft class="account-badge-ms-icon" />
+                            </Show>
+                            <span>Active</span>
+                          </div>
+                        </Show>
+                      }
+                    >
                       <div class="account-badge-reauth tip-below tip-left" data-tip="Session expired. Sign in with Microsoft again.">
                         <IconAlertTriangle />
                         <span>Expired</span>
-                      </div>
-                    </Show>
-                    <Show when={acc.active}>
-                      <div class={`account-badge-active ${acc.is_offline ? "account-badge--offline" : ""}`}>
-                        <Show
-                          when={!acc.is_offline}
-                          fallback={<span class="account-badge-dot account-badge-dot--offline" />}
-                        >
-                          <IconMicrosoft class="account-badge-ms-icon" />
-                        </Show>
-                        <span>Active</span>
                       </div>
                     </Show>
                     <button
