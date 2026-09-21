@@ -1,10 +1,13 @@
-## 1.0.2
+## 1.0.3
 
-### Added
+### Changed
 
-- Automatic cross-source mod resolution for CurseForge modpacks and single mods, locating third-party blocked files on Modrinth via bulk SHA-1 lookup and metadata matching to eliminate manual download prompts
+- Reworked Discord Rich Presence into an event-driven reactive state machine with immediate toggle synchronization and zero background polling
+- Cleaned up presence typography with human-friendly loader labels, mod counts, and dedicated idle state
+- Hardened Discord Rich Presence IPC with protocol boundary validation, length constraints, and non-blocking asynchronous dispatch
 
 ### Fixed
 
-- Resolved version selector dropdowns failing to appear on small window viewports by correcting fixed positioning clearance and viewport boundary clamping
-- Refined cross-source mod metadata enrichment and source platform tracking for imported instances
+- Resolved Discord Rich Presence requiring an app restart to detect settings changes
+- Fixed active Minecraft gameplay being lost if Discord connected mid-game or after launch
+- Aligned presence asset keys with Discord Developer Portal uploads to prevent asset resolution glitches
