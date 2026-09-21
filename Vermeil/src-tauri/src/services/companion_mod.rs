@@ -34,12 +34,12 @@ const JAR_PREFIX: &str = "vermeil-";
 /// so toggling the companion off then on needs no re-download.
 const DISABLED_SUFFIX: &str = ".disabled";
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct Manifest {
     entries: Vec<ManifestEntry>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct ManifestEntry {
     /// Every Minecraft version this single jar supports. One jar can cover a
     /// whole render-era range (e.g. `["26.1","26.1.1","26.1.2","26.2"]`), so the
@@ -66,6 +66,18 @@ struct GhRelease {
 struct GhAsset {
     name: String,
     browser_download_url: String,
+}
+
+fn companion_dir() -> PathBuf {
+    paths::data_dir().join("companion")
+}
+
+fn central_jars_dir() -> PathBuf {
+    companion_dir().join("jars")
+}
+
+fn manifest_cache_path() -> PathBuf {
+    companion_dir().join("manifest.json")
 }
 
 fn mods_dir(instance_id: &str) -> PathBuf {
@@ -146,14 +158,44 @@ pub async fn ensure_installed(instance: &Instance) -> CompanionStatus {
     }
 }
 
+/// Time-To-Live for the companion manifest cache (6 hours).
+const MANIFEST_TTL: std::time::Duration = std::time::Duration::from_secs(6 * 3600);
+
+/// Ensure the companion jar is present in the central `<data_dir>/companion/jars/`
+/// cache, downloading and SHA-1 verifying it if missing.
+async fn ensure_central_jar(entry: &ManifestEntry) -> Result<PathBuf, String> {
+    let jars_dir = central_jars_dir();
+    fs::create_dir_all(&jars_dir).map_err(|e| format!("create central jars dir: {}", e))?;
+    let central_jar = jars_dir.join(&entry.file);
+
+    // Exact build already in central cache with matching size → fast path.
+    if central_jar.exists() {
+        if let Ok(meta) = fs::metadata(&central_jar) {
+            if meta.len() == entry.size {
+                return Ok(central_jar);
+            }
+        }
+    }
+
+    let task = DownloadTask {
+        url: entry.url.clone(),
+        dest: central_jar.clone(),
+        expected_sha1: Some(entry.sha1.clone()),
+        expected_size: Some(entry.size),
+    };
+    download_file(&http::HTTP, &task).await?;
+    tracing::info!("Cached companion mod {} in central store", entry.file);
+    Ok(central_jar)
+}
+
 /// Fetch the manifest, pick the jar for this instance, ensure it's the active
 /// build in `mods/`, then prune any other managed jars. Returns the active
 /// filename.
 ///
-/// Order of cheap-first paths: the exact build already active → done; the exact
-/// build sitting disabled → rename it active (no download); otherwise download.
-/// Any other managed file (older version, active or disabled) is pruned so only
-/// the current build remains — that's how existing instances get updated.
+/// Order of cheap-first paths:
+/// 1. Exact build already active in instance `mods/` → return immediately (0 IO, 0 network).
+/// 2. Exact build sitting disabled → rename to active (0 network).
+/// 3. Otherwise obtain from central cache (or download to central cache), copy to instance `mods/`.
 async fn resolve_and_install(instance: &Instance, mods: &Path) -> Result<String, String> {
     let manifest = fetch_manifest().await?;
     let loader = instance.loader.loader_type.as_str();
@@ -174,7 +216,7 @@ async fn resolve_and_install(instance: &Instance, mods: &Path) -> Result<String,
     let dest = mods.join(&entry.file);
     let disabled = mods.join(format!("{}{}", entry.file, DISABLED_SUFFIX));
 
-    // Exact build already active → fast path, no network on the file itself.
+    // Exact build already active in instance mods/ → fast path, no IO, no network.
     if dest.exists() {
         prune_managed_except(mods, &entry.file);
         return Ok(entry.file);
@@ -188,21 +230,66 @@ async fn resolve_and_install(instance: &Instance, mods: &Path) -> Result<String,
         return Ok(entry.file);
     }
 
-    let task = DownloadTask {
-        url: entry.url.clone(),
-        dest: dest.clone(),
-        expected_sha1: Some(entry.sha1.clone()),
-        expected_size: Some(entry.size),
-    };
-    download_file(&http::HTTP, &task).await?;
+    // Missing from instance mods/ → obtain from central cache (downloading if missing)
+    let central_path = ensure_central_jar(&entry).await?;
+    fs::copy(&central_path, &dest).map_err(|e| format!("copy companion jar from central cache: {}", e))?;
 
     prune_managed_except(mods, &entry.file);
     tracing::info!("Installed companion mod {} into instance {}", entry.file, instance.id);
     Ok(entry.file)
 }
 
-/// Find the latest `mod-v*` GitHub release and read its `companion-manifest.json`.
+/// Fetch the manifest, using the locally cached copy if fresh (< 6 hours old),
+/// or querying GitHub releases if stale/missing. Falls back to stale cache if
+/// GitHub is unreachable or rate-limited.
 async fn fetch_manifest() -> Result<Manifest, String> {
+    let cache_file = manifest_cache_path();
+
+    // 1. Fresh local cache within TTL → fast path
+    if let Ok(meta) = fs::metadata(&cache_file) {
+        if let Ok(modified) = meta.modified() {
+            if let Ok(elapsed) = modified.elapsed() {
+                if elapsed < MANIFEST_TTL {
+                    if let Ok(content) = fs::read_to_string(&cache_file) {
+                        if let Ok(manifest) = serde_json::from_str::<Manifest>(&content) {
+                            return Ok(manifest);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Fetch the latest manifest from GitHub releases
+    match fetch_manifest_remote().await {
+        Ok(manifest) => {
+            if let Some(parent) = cache_file.parent() {
+                let _ = fs::create_dir_all(parent);
+            }
+            if let Ok(json) = serde_json::to_string_pretty(&manifest) {
+                let _ = fs::write(&cache_file, json);
+            }
+            Ok(manifest)
+        }
+        Err(net_err) => {
+            // 3. Fallback: if network fails (offline, 403 rate limit, etc.),
+            // use the cached manifest if available, even if older than TTL.
+            if let Ok(content) = fs::read_to_string(&cache_file) {
+                if let Ok(manifest) = serde_json::from_str::<Manifest>(&content) {
+                    tracing::warn!(
+                        "GitHub manifest fetch failed ({}); using cached companion manifest",
+                        net_err
+                    );
+                    return Ok(manifest);
+                }
+            }
+            Err(net_err)
+        }
+    }
+}
+
+/// Query GitHub releases API and download the published `companion-manifest.json`.
+async fn fetch_manifest_remote() -> Result<Manifest, String> {
     let api = format!("https://api.github.com/repos/{}/releases?per_page=50", REPO);
     let resp = http::send_with_retry(|| {
         http::HTTP.get(&api).header("Accept", "application/vnd.github+json")
@@ -293,4 +380,59 @@ fn read_dir_names(mods: &Path) -> Vec<String> {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_managed_jar_detection() {
+        // Modern multi-loader naming from Stonecutter
+        assert!(is_managed_active("vermeil-fabric-0.1.9+mc26.3.jar"));
+        assert!(is_managed_active("vermeil-neoforge-0.1.9+mc26.3.jar"));
+        assert!(is_managed_active("vermeil-fabric-0.1.9+mc1.21.11.jar"));
+
+        // Legacy Forge 1.8.9 naming
+        assert!(is_managed_active("vermeil-0.1.8+1.8.9.jar"));
+
+        // Disabled variants
+        assert!(is_managed_disabled("vermeil-fabric-0.1.9+mc26.3.jar.disabled"));
+        assert!(is_managed_disabled("vermeil-0.1.8+1.8.9.jar.disabled"));
+
+        // User mods must NEVER be matched as managed
+        assert!(!is_managed("sodium-fabric-0.5.8+mc1.20.4.jar"));
+        assert!(!is_managed("iris-1.7.0.jar"));
+        assert!(!is_managed("vermeil.jar")); // missing + version separator
+        assert!(!is_managed("vermeil-custom.jar"));
+    }
+
+    #[test]
+    fn test_manifest_serde_roundtrip() {
+        let json = r#"{
+            "entries": [
+                {
+                    "minecraftVersions": ["26.3", "26.2"],
+                    "loaders": ["fabric", "quilt"],
+                    "file": "vermeil-fabric-0.1.9+mc26.3.jar",
+                    "url": "https://example.com/mod.jar",
+                    "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                    "size": 54321
+                }
+            ]
+        }"#;
+
+        let manifest: Manifest = serde_json::from_str(json).expect("deserialize manifest");
+        assert_eq!(manifest.entries.len(), 1);
+        let entry = &manifest.entries[0];
+        assert_eq!(entry.file, "vermeil-fabric-0.1.9+mc26.3.jar");
+        assert_eq!(entry.loaders, vec!["fabric", "quilt"]);
+        assert_eq!(entry.minecraft_versions, vec!["26.3", "26.2"]);
+        assert_eq!(entry.size, 54321);
+
+        // Verify it serializes cleanly for caching
+        let serialized = serde_json::to_string_pretty(&manifest).expect("serialize manifest");
+        let parsed_back: Manifest = serde_json::from_str(&serialized).expect("re-parse manifest");
+        assert_eq!(parsed_back.entries[0].file, entry.file);
+    }
 }
