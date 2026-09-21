@@ -636,7 +636,7 @@ async fn build_mod_tasks(
                                         version_number: Some(version.version_number.clone()),
                                         enabled: true,
                                         pinned: false,
-                                        title: Some(version.name.clone()),
+                                        title: None,
                                         icon_url: None,
                                         local_icon_path: None,
                                         description: None,
@@ -657,17 +657,37 @@ async fn build_mod_tasks(
         }
 
         // ── Tier 2: Metadata / Search Fallback for Remaining Unresolved ──
+        let unresolved_cf_ids: Vec<String> = candidate_blocked
+            .iter()
+            .enumerate()
+            .filter(|(idx, _)| !resolved_indices.contains(idx))
+            .map(|(_, c)| c.project_id.clone())
+            .collect();
+
+        let cf_briefs = if !api_key.is_empty() && !unresolved_cf_ids.is_empty() {
+            crate::services::curseforge::fetch_projects_brief(api_key, &unresolved_cf_ids).await
+        } else {
+            std::collections::HashMap::new()
+        };
+
         for (idx, candidate) in candidate_blocked.iter().enumerate() {
             if resolved_indices.contains(&idx) {
                 continue;
             }
 
-            let clean_query = candidate
-                .file_name
-                .trim_end_matches(".jar")
-                .split(&['-', '_', '+'][..])
-                .next()
-                .unwrap_or(&candidate.file_name);
+            // Prefer project name from CurseForge metadata; fall back to filename prefix
+            let project_title = cf_briefs
+                .get(&candidate.project_id)
+                .and_then(|(name, _)| name.as_deref());
+
+            let clean_query = project_title.unwrap_or_else(|| {
+                candidate
+                    .file_name
+                    .trim_end_matches(".jar")
+                    .split(&['-', '_', '+'][..])
+                    .next()
+                    .unwrap_or(&candidate.file_name)
+            });
 
             if !clean_query.is_empty() && !game_version.is_empty() {
                 if let Ok(search_res) = crate::services::modrinth::search_mods(
@@ -719,7 +739,7 @@ async fn build_mod_tasks(
                                         version_number: Some(v.version_number.clone()),
                                         enabled: true,
                                         pinned: false,
-                                        title: Some(v.name.clone()),
+                                        title: Some(hit.title.clone()),
                                         icon_url: hit.icon_url.clone(),
                                         local_icon_path: None,
                                         description: Some(hit.description.clone()),
