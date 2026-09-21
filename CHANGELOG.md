@@ -1,10 +1,10 @@
-## 1.0.1
+## 1.1.0
 
-### Changed
+### Added
 
-- Streamlined import archive dropzone by removing redundant button in favor of the full interactive click-and-drag well
-- Clarified modpack creation card description to explicitly mention both Modrinth and CurseForge catalogs
+- Automatic cross-source mod resolution for CurseForge modpacks and single mods, locating third-party blocked files on Modrinth via bulk SHA-1 lookup and metadata matching to eliminate manual download prompts
 
 ### Fixed
 
-- Resolved singleplayer worlds not appearing in the Home screen's Continue Station on initial launch by binding world discovery reactively to instance resolution
+- Resolved version selector dropdowns failing to appear on small window viewports by correcting fixed positioning clearance and viewport boundary clamping
+- Refined cross-source mod metadata enrichment and source platform tracking for imported instances
