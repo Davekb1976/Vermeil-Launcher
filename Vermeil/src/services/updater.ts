@@ -117,10 +117,14 @@ export async function checkForUpdates(silent = false): Promise<boolean> {
   } catch (e) {
     console.error("Update check failed:", e);
     if (!silent) {
+      const raw = typeof e === "string" ? e : (e as Error).message ?? "Unknown error";
+      const isBuilding = raw.includes("fallback platforms") || raw.includes("platforms");
       showToast({
-        title: "Update check failed",
-        message: typeof e === "string" ? e : (e as Error).message ?? "Unknown error",
-        type: "error",
+        title: isBuilding ? "Update building" : "Update check failed",
+        message: isBuilding
+          ? "A new release was tagged, but the build for your operating system is still finishing on GitHub. Please check again in a few minutes."
+          : raw,
+        type: isBuilding ? "info" : "error",
         autoCloseMs: 6000,
       });
     }
