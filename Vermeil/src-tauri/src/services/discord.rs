@@ -48,8 +48,6 @@ pub fn set_enabled(enabled: bool) {
             client
                 .on_ready(|_ctx| {
                     tracing::info!("Discord RPC ready");
-                    CONNECTED.store(true, Ordering::SeqCst);
-                    std::thread::spawn(sync_presence);
                 })
                 .persist();
 
@@ -81,15 +79,17 @@ pub fn set_enabled(enabled: bool) {
         } else if !prev {
             drop(guard);
             if CONNECTED.load(Ordering::SeqCst) {
-                sync_presence();
+                std::thread::spawn(sync_presence);
             }
         }
     } else {
-        // Disabled: clear activity from Discord profile immediately
-        let mut guard = DISCORD.lock().unwrap();
-        if let Some(ref mut client) = *guard {
-            let _ = client.clear_activity();
-        }
+        // Disabled: clear activity from Discord profile immediately off the main thread
+        std::thread::spawn(|| {
+            let mut guard = DISCORD.lock().unwrap();
+            if let Some(ref mut client) = *guard {
+                let _ = client.clear_activity();
+            }
+        });
     }
 }
 
@@ -126,7 +126,7 @@ pub fn set_playing(instance_name: &str, game_version: &str, loader: &str, mod_co
         };
     }
 
-    sync_presence();
+    std::thread::spawn(sync_presence);
 }
 
 /// Reset presence back to idle (call when game exits).
@@ -136,7 +136,7 @@ pub fn set_stopped() {
         *act = ActivityState::Idle;
     }
 
-    sync_presence();
+    std::thread::spawn(sync_presence);
 }
 
 /// Push the current state (`CURRENT_ACTIVITY`) to Discord if enabled and connected.
@@ -159,13 +159,26 @@ pub fn sync_presence() {
                 mod_count,
                 start_timestamp,
             } => {
-                let details = instance_name;
-                let state = if loader.eq_ignore_ascii_case("vanilla") {
+                // Discord requires strings to be between 2 and 128 characters
+                let details = if instance_name.trim().is_empty() {
+                    "Minecraft".to_string()
+                } else if instance_name.trim().len() < 2 {
+                    format!("{} ", instance_name.trim())
+                } else {
+                    instance_name.chars().take(128).collect()
+                };
+
+                let state_str = if loader.eq_ignore_ascii_case("vanilla") {
                     format!("Minecraft {}", game_version)
                 } else if mod_count > 0 {
                     format!("{} {} · {} mods", loader, game_version, mod_count)
                 } else {
                     format!("{} {}", loader, game_version)
+                };
+                let state = if state_str.len() < 2 {
+                    format!("{} ", state_str)
+                } else {
+                    state_str.chars().take(128).collect()
                 };
 
                 let res = client.set_activity(|act| {
