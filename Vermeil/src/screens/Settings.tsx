@@ -344,14 +344,16 @@ const Settings: Component = () => {
   // either Rust function changes its constants, update this too.
   const adaptiveDefaultMax = (systemMb: number): number => {
     if (!systemMb) return 4096;
-    const [reserve, pct] = systemMb <= 6144
-      ? [1024, 0.90]
-      : systemMb <= 12288
-        ? [1536, 0.85]
-        : [4096, 0.75];
+    const [reserve, pct] = systemMb <= 4096
+      ? [1536, 0.70]
+      : systemMb <= 8192
+        ? [2048, 0.80]
+        : systemMb <= 16384
+          ? [4096, 0.75]
+          : [6144, 0.65];
     const usable = Math.max(0, systemMb - reserve);
     const aligned = Math.floor(Math.floor(usable * pct) / 256) * 256;
-    return Math.max(1024, Math.min(aligned, 16384));
+    return Math.max(1024, Math.min(aligned, 12288));
   };
 
   /** Format MB as "X.X GB" matching the rest of the launcher's memory text. */

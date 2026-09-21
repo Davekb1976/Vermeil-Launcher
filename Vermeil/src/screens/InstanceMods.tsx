@@ -10,7 +10,7 @@ import ModDetailModal from "../modals/ModDetailModal";
 import ChangeLoaderModal, { openChangeLoaderModal } from "../modals/ChangeLoaderModal";
 import { formatDownloads, formatSize, formatVersionRange } from "../lib/format";
 import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled, getInstance } from "../ipc/commands";
-import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconFolderOpen, IconChevronDown, IconImage } from "../components/Icons";
+import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconAlertTriangle, IconFolderOpen, IconChevronDown, IconImage } from "../components/Icons";
 import { enqueueInstallTask, isTaskQueuedOrActive, isTaskActive, isTaskQueued } from "../services/modpackQueue";
 
 import { resolveAssetUrl } from "../lib/assets";
@@ -124,6 +124,15 @@ const InstanceMods: Component = () => {
   // this is precise enough to verify the arithmetic at a glance.
   const formatBreakdownGb = (mb: number): string =>
     `${(mb / 1024).toFixed(2).replace(/\.?0+$/, "")} GB`;
+  const getBreakdownCategory = (label: string): { tag: string; cls: string } => {
+    const l = label.toLowerCase();
+    if (l.includes("base")) return { tag: "BASE", cls: "base" };
+    if (l.includes("runtime") || l.includes("fabric") || l.includes("forge") || l.includes("loader")) return { tag: "LOADER", cls: "loader" };
+    if (l.includes("mod")) return { tag: "MODS", cls: "mods" };
+    if (l.includes("shader") || l.includes("iris") || l.includes("optifine")) return { tag: "SHADERS", cls: "shaders" };
+    if (l.includes("resource") || l.includes("pack")) return { tag: "ASSETS", cls: "assets" };
+    return { tag: "SYS", cls: "base" };
+  };
   const [memoryDraft, setMemoryDraft] = createSignal<number | null>(null);
   const memoryValue = (): number => memoryDraft() ?? instance()?.java?.memory_max_mb ?? 4096;
   createEffect(() => {
@@ -1442,93 +1451,134 @@ const InstanceMods: Component = () => {
               </div>
 
               {/* Dynamic Allocated Display OR Manual Slider */}
-              <div class="setting-row full" style="flex-direction:column;align-items:stretch;gap:10px">
-                <Show
-                  when={isAdaptive()}
-                  fallback={
-                    <>
-                      {/* Manual slider */}
-                      <div class="setting-info" style="margin-bottom:6px">
-                        <span class="setting-name">Custom memory limit</span>
-                        <span class="setting-desc">Explicit maximum heap RAM passed via -Xmx</span>
-                      </div>
-                      <div>
-                        <input
-                          type="range"
-                          class="slider"
-                          min={512}
-                          max={manualMax()}
-                          step={256}
-                          value={memoryValue()}
-                          style={`--slider-pct: ${((memoryValue() - 512) / (manualMax() - 512)) * 100}%`}
-                          onInput={(e) => {
-                            const inst = instance();
-                            if (!inst) return;
-                            const snapped = Math.max(512, Math.round(parseInt(e.currentTarget.value) / 256) * 256);
-                            e.currentTarget.style.setProperty("--slider-pct", `${((snapped - 512) / (manualMax() - 512)) * 100}%`);
-                            setMemoryDraft(snapped);
-                            commitMemory(inst.id, snapped);
-                          }}
-                        />
-                        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px">
-                          <span>512 MB</span>
-                          <span style="color:var(--accent);font-weight:700;font-size:13px">{(memoryValue() / 1024).toFixed(1).replace('.0', '')} GB</span>
-                          <span>{Math.round(manualMax() / 1024)} GB</span>
-                        </div>
-                        <div style={`font-size:11px;font-weight:600;margin-top:6px;color:${memoryHint(memoryValue()).color}`}>
-                          {memoryHint(memoryValue()).text}
-                        </div>
-                      </div>
-                    </>
-                  }
-                >
-                  <div style="display:flex;align-items:center;justify-content:space-between">
-                    <div class="setting-info">
-                      <span class="setting-name">Calculated allocation</span>
-                      <span class="setting-desc">Formula-derived memory footprint</span>
+              <Show
+                when={isAdaptive()}
+                fallback={
+                  <div class="setting-row full" style="flex-direction:column;align-items:stretch;gap:10px">
+                    {/* Manual slider */}
+                    <div class="setting-info" style="margin-bottom:6px">
+                      <span class="setting-name">Custom memory limit</span>
+                      <span class="setting-desc">Explicit maximum heap RAM passed via -Xmx</span>
                     </div>
-                    <Show when={effectiveMemory()} fallback={<span class="settings-val">—</span>}>
-                      {(em) => (
-                        <div style="text-align:right">
-                          <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--text)">
-                            {(em().value_mb / 1024).toFixed(1).replace('.0', '')} GB
-                          </div>
-                          <Show when={em().capped}>
-                            <div style="font-size:var(--fs-2xs);color:var(--warn);margin-top:2px">
-                              capped at your max · pack suggests {(em().target_mb / 1024).toFixed(1).replace('.0', '')} GB
-                            </div>
-                          </Show>
-                          <Show when={em().value_mb > em().target_mb}>
-                            <div style="font-size:var(--fs-2xs);color:var(--muted);margin-top:2px">
-                              raised to your {(em().min_mb / 1024).toFixed(1).replace('.0', '')} GB minimum
-                            </div>
-                          </Show>
-                        </div>
-                      )}
-                    </Show>
-                  </div>
-
-                  {/* Memory breakdown table */}
-                  <Show when={effectiveMemory()}>
-                    {(em) => (
-                      <div class="mem-breakdown" style="border-radius:0;box-shadow:var(--bevel);margin-bottom:0">
-                        <For each={em().breakdown}>
-                          {(row) => (
-                            <div class="mem-row">
-                              <span class="mem-label">{row.label}</span>
-                              <span class="mem-val">{formatBreakdownGb(row.value_mb)}</span>
-                            </div>
-                          )}
-                        </For>
-                        <div class="mem-row mem-row--total">
-                          <span class="mem-label">Pack total</span>
-                          <span class="mem-val">{formatBreakdownGb(em().target_mb)}</span>
-                        </div>
+                    <div>
+                      <input
+                        type="range"
+                        class="slider"
+                        min={512}
+                        max={manualMax()}
+                        step={256}
+                        value={memoryValue()}
+                        style={`--slider-pct: ${((memoryValue() - 512) / (manualMax() - 512)) * 100}%`}
+                        onInput={(e) => {
+                          const inst = instance();
+                          if (!inst) return;
+                          const snapped = Math.max(512, Math.round(parseInt(e.currentTarget.value) / 256) * 256);
+                          e.currentTarget.style.setProperty("--slider-pct", `${((snapped - 512) / (manualMax() - 512)) * 100}%`);
+                          setMemoryDraft(snapped);
+                          commitMemory(inst.id, snapped);
+                        }}
+                      />
+                      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px">
+                        <span>512 MB</span>
+                        <span style="color:var(--accent);font-weight:700;font-size:13px">{(memoryValue() / 1024).toFixed(1).replace('.0', '')} GB</span>
+                        <span>{Math.round(manualMax() / 1024)} GB</span>
                       </div>
+                      <div style={`font-size:11px;font-weight:600;margin-top:6px;color:${memoryHint(memoryValue()).color}`}>
+                        {memoryHint(memoryValue()).text}
+                      </div>
+                    </div>
+                  </div>
+                }
+              >
+                <div class="setting-row full mem-telemetry-plate" style="flex-direction:column;align-items:stretch;gap:12px">
+                  <Show when={effectiveMemory()} fallback={<div class="setting-info"><span class="setting-name">Calculating footprint...</span></div>}>
+                    {(em) => (
+                      <>
+                        <div class="mem-telemetry-header">
+                          <div class="mem-telemetry-info">
+                            <span class="mem-telemetry-tag tag-settings-java">CALCULATED ALLOCATION</span>
+                            <span class="mem-telemetry-title">Adaptive Memory Telemetry</span>
+                            <span class="mem-telemetry-desc">Formula-derived memory footprint calibrated for modern mod stacks</span>
+                          </div>
+                          <div class="mem-hero-stat">
+                            <div class="mem-hero-val">
+                              {(em().value_mb / 1024).toFixed(1).replace('.0', '')} GB
+                            </div>
+                            <Show when={em().capped}>
+                              <span class="mem-status-badge mem-status-badge--capped">
+                                <IconAlertTriangle /> CAPPED
+                              </span>
+                              <span class="mem-hero-sub">
+                                Capped at limit · Pack suggests {(em().target_mb / 1024).toFixed(1).replace('.0', '')} GB
+                              </span>
+                            </Show>
+                            <Show when={!em().capped && em().value_mb > em().target_mb}>
+                              <span class="mem-status-badge mem-status-badge--floor">
+                                <IconBolt /> MIN FLOOR
+                              </span>
+                              <span class="mem-hero-sub">
+                                Raised to {(em().min_mb / 1024).toFixed(1).replace('.0', '')} GB floor
+                              </span>
+                            </Show>
+                            <Show when={!em().capped && em().value_mb <= em().target_mb}>
+                              <span class="mem-status-badge mem-status-badge--optimal">
+                                <IconCheck /> OPTIMAL
+                              </span>
+                              <span class="mem-hero-sub">
+                                Tiered allocation calibrated for current mod stack
+                              </span>
+                            </Show>
+                          </div>
+                        </div>
+
+                        {/* Multi-segment memory budget composition bar */}
+                        <div class="mem-budget-bar">
+                          <For each={em().breakdown}>
+                            {(row) => {
+                              const cat = getBreakdownCategory(row.label);
+                              const pct = Math.max(3, (row.value_mb / Math.max(1, em().target_mb)) * 100);
+                              return (
+                                <div
+                                  class={`mem-budget-seg mem-budget-seg--${cat.cls}`}
+                                  style={{ width: `${pct}%` }}
+                                  data-tip={`${row.label} · ${formatBreakdownGb(row.value_mb)}`}
+                                />
+                              );
+                            }}
+                          </For>
+                        </div>
+
+                        {/* 2-column tactical breakdown grid */}
+                        <div class="mem-breakdown-grid">
+                          <For each={em().breakdown}>
+                            {(row) => {
+                              const cat = getBreakdownCategory(row.label);
+                              return (
+                                <div class="mem-grid-cell">
+                                  <div class="mem-cell-left">
+                                    <span class={`mem-cell-badge mem-cell-badge--${cat.cls}`}>[{cat.tag}]</span>
+                                    <span class="mem-cell-label">{row.label}</span>
+                                  </div>
+                                  <span class="mem-cell-val">{formatBreakdownGb(row.value_mb)}</span>
+                                </div>
+                              );
+                            }}
+                          </For>
+                        </div>
+
+                        {/* Footer banner */}
+                        <div class="mem-footer-banner">
+                          <div style="display:flex;align-items:center">
+                            <span class="mem-footer-label">Calculated Pack Target:</span>
+                            <span class="mem-footer-hint">(rounded to 256 MB block, 10 GB formula ceiling)</span>
+                          </div>
+                          <span class="mem-footer-val">{formatBreakdownGb(em().target_mb)}</span>
+                        </div>
+                      </>
                     )}
                   </Show>
-                </Show>
-              </div>
+                </div>
+              </Show>
             </div>
           </div>
 

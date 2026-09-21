@@ -53,24 +53,25 @@ pub struct EffectiveMemory {
 
 // ─── System-RAM-derived defaults ─────────────────────────────────────────
 
-/// Default upper bound in MB given total system RAM. The reserve and
-/// percentage are tiered so a 4 GB system isn't told to dedicate 4 GB to
-/// "everything else" — that would leave nothing for the game. Hard cap at
-/// 16 GB because G1GC pause times degrade past that and most users don't
-/// realize they could be on ZGC.
+/// Default upper bound in MB given total system RAM.
+/// Calibrated for 2025-2026 systems to protect the host OS, prevent paging/swap
+/// lockups on low-RAM laptops, and prevent G1GC pause degradation above 12 GB.
+/// Note: Users can always set any higher value manually via Custom Memory Limit.
 pub fn default_max_for_system(system_mb: u32) -> u32 {
-    let (os_reserve, usable_pct) = if system_mb <= 6_144 {
-        (1_024u32, 0.90f64)
-    } else if system_mb <= 12_288 {
-        (1_536u32, 0.85f64)
-    } else {
+    let (os_reserve, usable_pct) = if system_mb <= 4_096 {
+        (1_536u32, 0.70f64)
+    } else if system_mb <= 8_192 {
+        (2_048u32, 0.80f64)
+    } else if system_mb <= 16_384 {
         (4_096u32, 0.75f64)
+    } else {
+        (6_144u32, 0.65f64)
     };
 
     let usable = system_mb.saturating_sub(os_reserve);
     let raw = (usable as f64 * usable_pct) as u32;
     let aligned = (raw / 256) * 256;
-    aligned.clamp(1_024, 16_384)
+    aligned.clamp(1_024, 12_288)
 }
 
 /// Default lower bound in MB. Scales with the user's max so a low-spec
@@ -78,7 +79,7 @@ pub fn default_max_for_system(system_mb: u32) -> u32 {
 /// below 1 GB (anything less crashes vanilla MC during world load).
 pub fn default_min_for_system(system_mb: u32) -> u32 {
     let max = default_max_for_system(system_mb);
-    let raw = (max as f64 * 0.40) as u32;
+    let raw = (max as f64 * 0.35) as u32;
     let aligned = (raw / 256) * 256;
     aligned.clamp(1_024, 4_096)
 }
@@ -121,12 +122,10 @@ fn compute_target(instance: &Instance) -> (u32, Vec<MemoryBreakdown>) {
     let mut rows: Vec<MemoryBreakdown> = Vec::new();
 
     // Vanilla baseline — 1.21+ chunk renderer adds ~250 MB over older
-    // versions. We use a single value for simplicity; if that ever proves
-    // insufficient on legacy versions, split here by parsing
-    // `instance.game_version`.
+    // versions. We use a single value for simplicity.
     let base = 1_280u32;
     rows.push(MemoryBreakdown {
-        label: "Base".into(),
+        label: "Base game".into(),
         value_mb: base,
     });
 
@@ -143,25 +142,47 @@ fn compute_target(instance: &Instance) -> (u32, Vec<MemoryBreakdown>) {
         });
     }
 
-    // Mod count overhead. Below 25 mods we treat the pack as "negligible"
-    // — JIT startup amortization swallows the per-mod cost. Above that,
-    // 30 MB/mod is calibrated from cross-pack heap measurements.
+    // Mod count overhead with diminishing returns.
+    // In modern 2025-2026 modding, large modpacks contain shared libraries,
+    // utility mods, and optimization mods (FerriteCore, ModernFix, Sodium)
+    // that amortize memory rather than scaling linearly.
     let mod_count = instance
         .mods
         .iter()
         .filter(|m| m.category == "mod")
         .count() as u32;
-    let mod_overhead = if mod_count <= 25 { 0 } else { mod_count * 30 };
+
+    let mod_overhead = if mod_count <= 25 {
+        0
+    } else {
+        let mut total = 0u32;
+        // Tier 1: Mods 26..=100 (core content additions): 20 MB each (max 1,500 MB)
+        let t1 = mod_count.saturating_sub(25).min(75);
+        total += t1 * 20;
+
+        // Tier 2: Mods 101..=250 (medium expansion): 15 MB each (max 2,250 MB)
+        let t2 = mod_count.saturating_sub(100).min(150);
+        total += t2 * 15;
+
+        // Tier 3: Mods 251..=400 (heavy tech/worldgen): 10 MB each (max 1,500 MB)
+        let t3 = mod_count.saturating_sub(250).min(150);
+        total += t3 * 10;
+
+        // Tier 4: Mods 401+ (addons / mega kitchen-sink): 5 MB each
+        let t4 = mod_count.saturating_sub(400);
+        total += t4 * 5;
+
+        total
+    };
+
     if mod_overhead > 0 {
         rows.push(MemoryBreakdown {
-            label: format!("{} mods × 30 MB", mod_count),
+            label: format!("{} mods (tiered)", mod_count),
             value_mb: mod_overhead,
         });
     }
 
-    // Resource packs. Hi-res atlases blow up VRAM but also leak into heap
-    // during texture stitching. A single bump rather than a size-based
-    // factor keeps the formula stable across reinstalls.
+    // Resource packs. Hi-res atlases consume heap during texture stitching.
     let has_resource_pack = instance.mods.iter().any(|m| m.category == "resourcepack");
     if has_resource_pack {
         rows.push(MemoryBreakdown {
@@ -170,8 +191,7 @@ fn compute_target(instance: &Instance) -> (u32, Vec<MemoryBreakdown>) {
         });
     }
 
-    // Shader pack present (separate from the loader mod). Iris/Sodium's
-    // shader pipeline keeps its own framebuffer set in heap.
+    // Shader pack present (separate from the loader mod).
     let has_shader_pack = instance.mods.iter().any(|m| m.category == "shader");
     if has_shader_pack {
         rows.push(MemoryBreakdown {
@@ -180,8 +200,7 @@ fn compute_target(instance: &Instance) -> (u32, Vec<MemoryBreakdown>) {
         });
     }
 
-    // Iris/OptiFine even without an active pack — the loader allocates
-    // shader-related state at startup.
+    // Iris/OptiFine even without an active pack — allocates framebuffer state.
     if has_shader_loader(instance) {
         rows.push(MemoryBreakdown {
             label: "Iris/OptiFine".into(),
@@ -190,7 +209,9 @@ fn compute_target(instance: &Instance) -> (u32, Vec<MemoryBreakdown>) {
     }
 
     let raw: u32 = rows.iter().map(|r| r.value_mb).sum();
-    let target = round_up_256(raw);
+    // Round up to nearest 256 MB, with a 10 GB target ceiling to prevent
+    // G1GC pause degradation on massive modpacks.
+    let target = round_up_256(raw).min(10_240);
     (target, rows)
 }
 
@@ -266,4 +287,101 @@ pub fn system_memory_mb() -> u32 {
     }
     let mb = bytes / 1024 / 1024;
     mb.min(u32::MAX as u64) as u32
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::instance::{Instance, JavaConfig, LoaderConfig, LoaderType, ModEntry, WindowConfig};
+
+    fn make_test_instance(loader: LoaderType, mod_count: usize, has_shader: bool) -> Instance {
+        let mut mods = Vec::new();
+        for i in 0..mod_count {
+            mods.push(ModEntry {
+                id: format!("mod-{}", i),
+                source: "modrinth".into(),
+                project_id: format!("proj-{}", i),
+                version_id: format!("ver-{}", i),
+                filename: format!("mod_{}.jar", i),
+                version_number: None,
+                enabled: true,
+                pinned: false,
+                title: None,
+                icon_url: None,
+                local_icon_path: None,
+                description: None,
+                author: None,
+                category: "mod".into(),
+            });
+        }
+        if has_shader {
+            mods.push(ModEntry {
+                id: "shader-1".into(),
+                source: "modrinth".into(),
+                project_id: "shader-p".into(),
+                version_id: "shader-v".into(),
+                filename: "complementary.zip".into(),
+                version_number: None,
+                enabled: true,
+                pinned: false,
+                title: None,
+                icon_url: None,
+                local_icon_path: None,
+                description: None,
+                author: None,
+                category: "shader".into(),
+            });
+        }
+        Instance {
+            format_version: 1,
+            id: "test".into(),
+            name: "Test".into(),
+            icon: "cube".into(),
+            icon_custom: None,
+            created_at: "now".into(),
+            last_played: None,
+            total_play_seconds: 0,
+            game_version: "1.21.1".into(),
+            loader: LoaderConfig { loader_type: loader, version: None },
+            java: JavaConfig::default(),
+            window: WindowConfig::default(),
+            mods,
+            source_project_id: None,
+            source_platforms: Vec::new(),
+            source_version: None,
+            companion_enabled: true,
+        }
+    }
+
+    #[test]
+    fn test_system_ram_ceilings() {
+        assert_eq!(default_max_for_system(4096), 1792);
+        assert_eq!(default_max_for_system(8192), 4864);
+        assert_eq!(default_max_for_system(16384), 9216);
+        assert_eq!(default_max_for_system(32768), 12288);
+        assert_eq!(default_max_for_system(65536), 12288);
+    }
+
+    #[test]
+    fn test_compute_target_tiered() {
+        // Vanilla (0 mods) -> 1280 MB
+        let inst_vanilla = make_test_instance(LoaderType::Vanilla, 0, false);
+        let (target, _) = compute_target(&inst_vanilla);
+        assert_eq!(target, 1280);
+
+        // 435 mods on Fabric with shaders -> ~7.75 GB to 8.5 GB (7936 MB without Iris, 8448 with Iris)
+        let inst_435 = make_test_instance(LoaderType::Fabric, 435, true);
+        let (target, _) = compute_target(&inst_435);
+        assert!(target >= 7680 && target <= 8704, "Target was {} MB", target);
+
+        // 600 mods on Forge -> ~9.5 GB (9728 MB)
+        let inst_600 = make_test_instance(LoaderType::Forge, 600, true);
+        let (target, _) = compute_target(&inst_600);
+        assert_eq!(target, 9728);
+
+        // 800+ mega pack -> clamped at 10240 MB ceiling
+        let inst_800 = make_test_instance(LoaderType::Forge, 800, true);
+        let (target, _) = compute_target(&inst_800);
+        assert_eq!(target, 10240);
+    }
 }
