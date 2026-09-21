@@ -2351,13 +2351,14 @@
 /* ============================================================
    Adaptive Memory Telemetry Panel (SloppyKeys Tactile Redesign)
    ============================================================ */
+.card-section-body .setting-row.mem-telemetry-plate,
 .mem-telemetry-plate {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   background: var(--surface-panel);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-left: 3px solid var(--accent);
   border-radius: 0;
   margin-bottom: var(--space-1);
@@ -2409,6 +2410,8 @@
 .card-section-body .setting-row.mem-telemetry-plate:hover {
   transform: none;
   background: var(--surface-panel);
+  border-color: var(--border-strong);
+  border-left-color: var(--accent);
 }
 
 .mem-status-badge {
@@ -2462,7 +2465,7 @@
   width: 100%;
   height: 6px;
   background: #0b0a10;
-  border: 1px solid #23202f;
+  border: 1px solid var(--border-strong);
   overflow: hidden;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
 }
@@ -2484,7 +2487,7 @@
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: var(--space-2);
   background: #0d0c12;
-  border: 1px solid #1e1b29;
+  border: 1px solid var(--border-strong);
   padding: var(--space-2);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
 }
@@ -2496,12 +2499,12 @@
   gap: var(--space-2);
   padding: 7px 12px;
   background: #14121b;
-  border: 1px solid #23202f;
+  border: 1px solid var(--border);
   transition: border-color 0.12s, background 0.12s;
 }
 
 .mem-grid-cell:hover {
-  border-color: #3b364c;
+  border-color: var(--border-hover);
   background: #181621;
 }
 
@@ -2550,8 +2553,7 @@
   justify-content: space-between;
   padding: 8px 12px;
   background: #110f17;
-  border: 1px solid #1e1b29;
-  border-top: 1px solid var(--border-strong);
+  border: 1px solid var(--border-strong);
   font-size: 11px;
 }
 
