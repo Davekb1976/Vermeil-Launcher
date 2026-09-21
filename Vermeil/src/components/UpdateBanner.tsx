@@ -9,7 +9,6 @@ import {
 import { downloadUpdate, applyUpdate, dismissUpdate } from "../services/updater";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
-  IconX,
   IconArrowUpCircle,
   IconDownload,
   IconExternalLink,
@@ -61,16 +60,6 @@ const UpdateBanner: Component = () => {
             <IconArrowUpCircle />
           </div>
           <div class="update-banner-title">{phaseLabel()}</div>
-          <Show when={!updateInstalling()}>
-            <button
-              class="update-banner-dismiss tip-left"
-              onClick={() => dismissUpdate()}
-              data-tip="Dismiss"
-              aria-label="Dismiss"
-            >
-              <IconX />
-            </button>
-          </Show>
         </div>
 
         <div class="update-banner-body">

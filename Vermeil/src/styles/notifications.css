@@ -621,8 +621,9 @@
   position: fixed;
   top: 56px;
   right: 16px;
-  width: 380px;
-  max-width: calc(100vw - 32px);
+  width: fit-content;
+  min-width: 310px;
+  max-width: 340px;
   background: var(--surface-panel);
   border: 1px solid var(--border-strong);
   border-left: 3px solid var(--accent);
@@ -666,29 +667,6 @@
   color: var(--text);
   letter-spacing: 0.2px;
   line-height: 1.2;
-}
-.update-banner-dismiss {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 0;
-  color: var(--text-faint);
-  cursor: pointer;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 0.12s, background 0.12s, color 0.12s;
-  flex-shrink: 0;
-}
-.update-banner-dismiss:hover {
-  border-color: var(--border-hover);
-  background: var(--surface-raised);
-  color: var(--text);
-}
-.update-banner-dismiss svg {
-  width: 14px;
-  height: 14px;
 }
 .update-banner-body {
   display: flex;
