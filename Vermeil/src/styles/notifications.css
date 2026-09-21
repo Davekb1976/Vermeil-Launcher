@@ -614,23 +614,27 @@
 }
 
 
-/* Auto-updater banner — top-right corner overlay. State machine:
-     available → downloading → downloaded → installing.
-   Keeps real progress visible during the in-app phase; falls back to an
-   indeterminate spinner during the brief moment between the user clicking
-   "Restart and install" and the window closing for the install. */
+/* Auto-updater banner — top-right corner overlay (SloppyKeys tactile design).
+   State machine: available → downloading → downloaded → installing.
+   Sharp corners, panel surface, 3px accent left border, tactile buttons & badges. */
 .update-banner {
   position: fixed;
   top: 56px;
   right: 16px;
   width: 380px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4) var(--space-4);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
-  z-index: 80;
-  animation: fadeIn .18s ease;
+  max-width: calc(100vw - 32px);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: 0;
+  padding: var(--space-3) var(--space-4);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), var(--bevel);
+  z-index: 120;
+  animation: update-banner-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes update-banner-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .update-banner-header {
   display: flex;
@@ -644,77 +648,128 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-md);
-  background: var(--accent-tint);
+  border-radius: 0;
+  background: var(--accent-soft);
+  border: 1px solid rgba(139, 92, 246, 0.35);
   color: var(--accent);
+  box-shadow: var(--bevel);
   flex-shrink: 0;
+}
+.update-banner-icon svg {
+  width: 16px;
+  height: 16px;
 }
 .update-banner-title {
   flex: 1;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
   color: var(--text);
+  letter-spacing: 0.2px;
+  line-height: 1.2;
 }
 .update-banner-dismiss {
   background: transparent;
-  border: none;
-  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 0;
+  color: var(--text-faint);
   cursor: pointer;
-  font-size: 12px;
-  line-height: 1;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-xs);
-  transition: background .12s, color .12s;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s, background 0.12s, color 0.12s;
+  flex-shrink: 0;
 }
 .update-banner-dismiss:hover {
-  background: var(--bg3);
+  border-color: var(--border-hover);
+  background: var(--surface-raised);
   color: var(--text);
+}
+.update-banner-dismiss svg {
+  width: 14px;
+  height: 14px;
 }
 .update-banner-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
+}
+.update-banner-version-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 1px;
+}
+.update-version-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 0;
+  line-height: 1.2;
+  box-shadow: var(--bevel);
+}
+.update-version-badge--old {
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.update-version-badge--new {
+  background: var(--accent-soft);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  color: var(--accent);
+}
+.update-version-arrow {
+  color: var(--text-faint);
+  font-size: 11px;
+  user-select: none;
 }
 .update-banner-meta {
   font-size: 11px;
-  color: var(--muted);
-  line-height: 1.5;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 .update-banner-actions {
   display: flex;
+  align-items: center;
   gap: var(--space-2);
-}
-.update-banner-actions .btn {
-  font-size: 11px;
-  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-1);
 }
 .update-banner-bar-track {
   width: 100%;
-  height: 4px;
-  background: var(--bg);
-  border-radius: var(--radius-xs);
+  height: 6px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
   overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 .update-banner-bar-fill {
   height: 100%;
   background: var(--accent);
-  border-radius: var(--radius-xs);
+  border-radius: 0;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
   transition: width 0.2s ease;
 }
 .update-banner-installing {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  padding: var(--space-1) 0;
 }
 .update-banner-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--border);
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-strong);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.9s linear infinite;
   flex-shrink: 0;
 }
+
 @keyframes spin {
   to { transform: rotate(360deg); }
 }

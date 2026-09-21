@@ -200,6 +200,25 @@ export const IconArrowDown: Component = () => (
   </svg>
 );
 
+// Arrow-up-circle — Feather Icons (MIT). https://github.com/feathericons/feather
+// Used for software updates and upgrades.
+export const IconArrowUpCircle: Component<{ class?: string }> = (props) => (
+  <svg class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <polyline points="16 12 12 8 8 12"/>
+    <line x1="12" y1="16" x2="12" y2="8"/>
+  </svg>
+);
+
+// External-link — Feather Icons (MIT). https://github.com/feathericons/feather
+export const IconExternalLink: Component<{ class?: string }> = (props) => (
+  <svg class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+    <polyline points="15 3 21 3 21 9"/>
+    <line x1="10" y1="14" x2="21" y2="3"/>
+  </svg>
+);
+
 // Minus / dash — Feather Icons (MIT). Used on the sidebar's pin-manage
 // button when one or more instances are already pinned, signalling the
 // user can deselect them.

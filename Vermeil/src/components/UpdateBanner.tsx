@@ -8,9 +8,20 @@ import {
 } from "../App";
 import { downloadUpdate, applyUpdate, dismissUpdate } from "../services/updater";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { IconX } from "./Icons";
+import {
+  IconX,
+  IconArrowUpCircle,
+  IconDownload,
+  IconExternalLink,
+  IconRotate,
+} from "./Icons";
 
 const RELEASES_URL = "https://github.com/Davekb1976/Vermeil-Launcher/releases/tag";
+
+const fmtVer = (v?: string) => {
+  if (!v) return "";
+  return v.startsWith("v") ? v : `v${v}`;
+};
 
 /**
  * Auto-update prompt rendered as a centered fixed-position card matching the
@@ -47,10 +58,7 @@ const UpdateBanner: Component = () => {
       <div class="update-banner">
         <div class="update-banner-header">
           <div class="update-banner-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-              <polyline points="21 3 21 8 16 8" />
-            </svg>
+            <IconArrowUpCircle />
           </div>
           <div class="update-banner-title">{phaseLabel()}</div>
           <Show when={!updateInstalling()}>
@@ -67,25 +75,33 @@ const UpdateBanner: Component = () => {
 
         <div class="update-banner-body">
           <Show when={!updateDownloading() && !updateDownloaded() && !updateInstalling()}>
-            <div class="update-banner-meta">
-              From {updateAvailable()?.currentVersion} → {updateAvailable()?.version}
+            <div class="update-banner-version-row">
+              <span class="update-version-badge update-version-badge--old">
+                {fmtVer(updateAvailable()?.currentVersion)}
+              </span>
+              <span class="update-version-arrow">→</span>
+              <span class="update-version-badge update-version-badge--new">
+                {fmtVer(updateAvailable()?.version)}
+              </span>
             </div>
             <div class="update-banner-actions">
               <button
-                class="btn btn--primary"
+                class="btn btn--primary btn--sm"
                 onClick={() => downloadUpdate().catch((e) => console.error(e))}
               >
-                Download
+                <IconDownload />
+                <span>Download</span>
               </button>
               <button
-                class="btn btn--ghost"
+                class="btn btn--neutral btn--sm"
                 onClick={() =>
                   openUrl(`${RELEASES_URL}/v${updateAvailable()?.version}`).catch(() => {})
                 }
               >
-                Release notes
+                <IconExternalLink />
+                <span>Release notes</span>
               </button>
-              <button class="btn btn--ghost" onClick={() => dismissUpdate()}>
+              <button class="btn btn--subtle btn--sm" onClick={() => dismissUpdate()}>
                 Later
               </button>
             </div>
@@ -106,12 +122,13 @@ const UpdateBanner: Component = () => {
             </div>
             <div class="update-banner-actions">
               <button
-                class="btn btn--primary"
+                class="btn btn--primary btn--sm"
                 onClick={() => applyUpdate().catch((e) => console.error(e))}
               >
-                Restart and install
+                <IconRotate />
+                <span>Restart and install</span>
               </button>
-              <button class="btn btn--ghost" onClick={() => dismissUpdate()}>
+              <button class="btn btn--subtle btn--sm" onClick={() => dismissUpdate()}>
                 Later
               </button>
             </div>
