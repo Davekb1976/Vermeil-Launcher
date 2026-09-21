@@ -466,23 +466,6 @@ export {
   setUpdateProgress,
 };
 
-if (import.meta.env.DEV) {
-  (window as any).__testUpdate = (
-    phase: "available" | "downloading" | "downloaded" | "installing" = "available"
-  ) => {
-    setUpdateAvailable({
-      version: "1.0.4",
-      currentVersion: "1.0.3",
-      body: "Test release notes",
-      date: new Date().toISOString(),
-    });
-    setUpdateDownloading(phase === "downloading");
-    setUpdateDownloaded(phase === "downloaded");
-    setUpdateInstalling(phase === "installing");
-    if (phase === "downloading") setUpdateProgress(0.68);
-  };
-}
-
 /**
  * Pre-launch check. If no account exists, shows modal and returns false.
  * Caller should bail out of the launch if this returns false.

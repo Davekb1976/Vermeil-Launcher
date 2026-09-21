@@ -717,14 +717,6 @@ const Settings: Component = () => {
                           </div>
                           <div class="setting-control">
                             <button class="btn btn--sm" onClick={() => checkForUpdates(false)}>Check now</button>
-                            <Show when={import.meta.env.DEV}>
-                              <button
-                                class="btn btn--sm btn--neutral"
-                                onClick={() => (window as any).__testUpdate?.("available")}
-                              >
-                                Preview banner
-                              </button>
-                            </Show>
                           </div>
                         </div>
                       </Show>
