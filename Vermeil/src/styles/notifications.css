@@ -688,7 +688,6 @@
   font-weight: 600;
   border-radius: 0;
   line-height: 1.2;
-  box-shadow: var(--bevel);
 }
 .update-version-badge--old {
   background: var(--surface-sunken);
