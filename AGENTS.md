@@ -99,6 +99,19 @@ Vermeil/
       - Bottom-right: `class="... tip-below tip-right" data-tip="..."`
       - Bottom-left: `class="... tip-below tip-left" data-tip="..."`
     - **Restraint Rule**: Only add `data-tip` to discrete interactive affordances (icon buttons, status badges, chips). Never place `data-tip` on large containers (e.g. full cards, panels, or telemetry plates) or buttons that already have clear visible text.
+  - **Chunky 3D Bevels (`--bevel`, `--bevel-strong`) — Strict Restraint & Purpose:**
+    - **Physical Keycap Metaphor**: In SloppyKeys, `--bevel` represents the mechanical bevel of a physical keycap or pushable button.
+    - **WHEN TO USE `--bevel`:**
+      - **Action Buttons & Triggers**: `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-ghost:active`, `.modal-close`, icon buttons that perform actions.
+      - **Interactive Keycaps & Chips**: Physical hotkey pills (like SloppyKeys `F1`/`F2` pills), clickable channel pills (`.mod-channel-pill.active`), selectable mode chips.
+      - **Interactive Toggles / Inputs**: Square checkboxes (`.check-box`).
+      - **Clickable Cards that Press Down**: Only cards with explicit click handlers and physical `:active` depression (`transform: translateY(1px)`).
+    - **WHEN NEVER TO USE `--bevel`:**
+      - **Informational / Telemetry Plates**: Setting rows, telemetry cards, telemetry plates, and info boxes are non-clickable display surfaces. Giving them bevels makes them look like bloated, unclickable fake buttons.
+      - **Data Grid Cells & Table Rows**: Cells inside a data grid or recessed well (`#0f0e13`) must be flat tiles with hairline borders (`1px solid var(--border)` / `#23202f`), subtle backgrounds, and hover tints—never button bevels.
+      - **Status Badges & Category Tags**: Badges (`[BASE]`, `[OPTIMAL]`, `[CAPPED]`, `Fabric`, version badges) are metadata labels, NOT keys. They must be flat with hairline borders and soft background tints.
+      - **Footers, Headers & Banners**: Summary rows, calculation footers, and progress banners are static readouts. Use hairline dividers (`border-top: 1px solid var(--border)`).
+    - **The Gold Rule**: *If the user cannot click and physically depress the element to execute an action or toggle state, it MUST NOT have a bevel shadow.*
   - **Stay within the theme without overdoing it:** Adhere to SloppyKeys tactile tokens (`--bevel`, `--surface-panel`, `--surface-raised`, `#0f0e13` wells, hairline borders). Do not invent novel decorative doodads, corner stickers, or unneeded containers. Boring, clean, and restrained beats busy and cluttered every time.
 
 ---

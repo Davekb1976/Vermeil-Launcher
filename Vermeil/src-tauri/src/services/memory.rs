@@ -110,6 +110,9 @@ fn round_up_256(mb: u32) -> u32 {
 /// installs (project IDs differ per platform).
 fn has_shader_loader(instance: &Instance) -> bool {
     instance.mods.iter().any(|m| {
+        if !m.enabled {
+            return false;
+        }
         let f = m.filename.to_lowercase();
         f.contains("iris") || f.contains("optifine") || f.contains("oculus")
     })
@@ -146,10 +149,11 @@ fn compute_target(instance: &Instance) -> (u32, Vec<MemoryBreakdown>) {
     // In modern 2025-2026 modding, large modpacks contain shared libraries,
     // utility mods, and optimization mods (FerriteCore, ModernFix, Sodium)
     // that amortize memory rather than scaling linearly.
+    // Only enabled mods are counted.
     let mod_count = instance
         .mods
         .iter()
-        .filter(|m| m.category == "mod")
+        .filter(|m| m.category == "mod" && m.enabled)
         .count() as u32;
 
     let mod_overhead = if mod_count <= 25 {
@@ -183,7 +187,7 @@ fn compute_target(instance: &Instance) -> (u32, Vec<MemoryBreakdown>) {
     }
 
     // Resource packs. Hi-res atlases consume heap during texture stitching.
-    let has_resource_pack = instance.mods.iter().any(|m| m.category == "resourcepack");
+    let has_resource_pack = instance.mods.iter().any(|m| m.category == "resourcepack" && m.enabled);
     if has_resource_pack {
         rows.push(MemoryBreakdown {
             label: "Resource packs".into(),
@@ -192,7 +196,7 @@ fn compute_target(instance: &Instance) -> (u32, Vec<MemoryBreakdown>) {
     }
 
     // Shader pack present (separate from the loader mod).
-    let has_shader_pack = instance.mods.iter().any(|m| m.category == "shader");
+    let has_shader_pack = instance.mods.iter().any(|m| m.category == "shader" && m.enabled);
     if has_shader_pack {
         rows.push(MemoryBreakdown {
             label: "Shader pack".into(),
@@ -383,5 +387,13 @@ mod tests {
         let inst_800 = make_test_instance(LoaderType::Forge, 800, true);
         let (target, _) = compute_target(&inst_800);
         assert_eq!(target, 10240);
+
+        // Disabled mods are excluded from calculation
+        let mut inst_partial = make_test_instance(LoaderType::Fabric, 435, false);
+        for m in inst_partial.mods.iter_mut().take(300) {
+            m.enabled = false;
+        }
+        let (target_partial, _) = compute_target(&inst_partial);
+        assert!(target_partial < 5120, "Expected target < 5120, got {}", target_partial);
     }
 }

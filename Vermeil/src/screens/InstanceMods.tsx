@@ -122,8 +122,10 @@ const InstanceMods: Component = () => {
   // Breakdown rows in GB. Two decimals (trailing zeros trimmed) so the rows
   // visibly sum to the pack total — every contribution is 256 MB-aligned, so
   // this is precise enough to verify the arithmetic at a glance.
-  const formatBreakdownGb = (mb: number): string =>
+  const formatMemGb = (mb: number): string =>
     `${(mb / 1024).toFixed(2).replace(/\.?0+$/, "")} GB`;
+  const formatBreakdownGb = (mb: number): string =>
+    `${(mb / 1024).toFixed(2)} GB`;
   const getBreakdownCategory = (label: string): { tag: string; cls: string } => {
     const l = label.toLowerCase();
     if (l.includes("base")) return { tag: "BASE", cls: "base" };
@@ -1496,20 +1498,19 @@ const InstanceMods: Component = () => {
                       <>
                         <div class="mem-telemetry-header">
                           <div class="mem-telemetry-info">
-                            <span class="mem-telemetry-tag tag-settings-java">CALCULATED ALLOCATION</span>
-                            <span class="mem-telemetry-title">Adaptive Memory Telemetry</span>
-                            <span class="mem-telemetry-desc">Formula-derived memory footprint calibrated for modern mod stacks</span>
+                            <span class="mem-telemetry-title">Adaptive Memory Footprint</span>
+                            <span class="mem-telemetry-desc">Dynamic allocation calculated from installed mods, active loader, and system headroom</span>
                           </div>
                           <div class="mem-hero-stat">
                             <div class="mem-hero-val">
-                              {(em().value_mb / 1024).toFixed(1).replace('.0', '')} GB
+                              {formatMemGb(em().value_mb)}
                             </div>
                             <Show when={em().capped}>
                               <span class="mem-status-badge mem-status-badge--capped">
                                 <IconAlertTriangle /> CAPPED
                               </span>
                               <span class="mem-hero-sub">
-                                Capped at limit · Pack suggests {(em().target_mb / 1024).toFixed(1).replace('.0', '')} GB
+                                Capped at limit · Pack suggests {formatMemGb(em().target_mb)}
                               </span>
                             </Show>
                             <Show when={!em().capped && em().value_mb > em().target_mb}>
@@ -1517,7 +1518,7 @@ const InstanceMods: Component = () => {
                                 <IconBolt /> MIN FLOOR
                               </span>
                               <span class="mem-hero-sub">
-                                Raised to {(em().min_mb / 1024).toFixed(1).replace('.0', '')} GB floor
+                                Raised to {formatMemGb(em().min_mb)} floor
                               </span>
                             </Show>
                             <Show when={!em().capped && em().value_mb <= em().target_mb}>
@@ -1572,7 +1573,7 @@ const InstanceMods: Component = () => {
                             <span class="mem-footer-label">Calculated Pack Target:</span>
                             <span class="mem-footer-hint">(rounded to 256 MB block, 10 GB formula ceiling)</span>
                           </div>
-                          <span class="mem-footer-val">{formatBreakdownGb(em().target_mb)}</span>
+                          <span class="mem-footer-val">{formatMemGb(em().target_mb)}</span>
                         </div>
                       </>
                     )}

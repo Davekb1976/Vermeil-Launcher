@@ -2357,9 +2357,8 @@
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   background: var(--surface-panel);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
-  box-shadow: var(--bevel);
   border-radius: 0;
   margin-bottom: var(--space-1);
 }
@@ -2375,19 +2374,6 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-}
-
-.mem-telemetry-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  width: fit-content;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  padding: 2px 6px;
-  border-radius: 0;
-  margin-bottom: 2px;
 }
 
 .mem-telemetry-title {
@@ -2432,10 +2418,9 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.03em;
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: 0;
   margin-top: 4px;
-  box-shadow: var(--bevel);
 }
 
 .mem-status-badge svg {
@@ -2445,19 +2430,19 @@
 }
 
 .mem-status-badge--optimal {
-  background: rgba(16, 185, 129, 0.15);
+  background: rgba(16, 185, 129, 0.12);
   color: #6ee7b7;
   border: 1px solid rgba(16, 185, 129, 0.35);
 }
 
 .mem-status-badge--capped {
-  background: rgba(234, 179, 8, 0.15);
+  background: rgba(234, 179, 8, 0.12);
   color: #fde047;
   border: 1px solid rgba(234, 179, 8, 0.35);
 }
 
 .mem-status-badge--floor {
-  background: rgba(59, 130, 246, 0.15);
+  background: rgba(59, 130, 246, 0.12);
   color: #93c5fd;
   border: 1px solid rgba(59, 130, 246, 0.35);
 }
@@ -2476,8 +2461,8 @@
   display: flex;
   width: 100%;
   height: 6px;
-  background: var(--surface-sunken);
-  border: 1px solid var(--border-strong);
+  background: #0b0a10;
+  border: 1px solid #23202f;
   overflow: hidden;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
 }
@@ -2489,19 +2474,19 @@
 
 .mem-budget-seg--base { background: #3b82f6; }
 .mem-budget-seg--loader { background: #8b5cf6; }
-.mem-budget-seg--mods { background: #a855f7; box-shadow: 0 0 6px rgba(168, 85, 247, 0.5); }
+.mem-budget-seg--mods { background: #a855f7; box-shadow: 0 0 6px rgba(168, 85, 247, 0.4); }
 .mem-budget-seg--shaders { background: #f59e0b; }
 .mem-budget-seg--assets { background: #10b981; }
 
-/* 2-column tactical breakdown grid */
+/* 2-column/3-column tactical breakdown grid */
 .mem-breakdown-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: var(--space-2);
-  background: #0f0e13;
-  border: 1px solid var(--border-strong);
+  background: #0d0c12;
+  border: 1px solid #1e1b29;
   padding: var(--space-2);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .mem-grid-cell {
@@ -2509,10 +2494,15 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: 6px 10px;
-  background: var(--surface-panel);
-  border: 1px solid var(--border);
-  box-shadow: var(--bevel);
+  padding: 7px 12px;
+  background: #14121b;
+  border: 1px solid #23202f;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.mem-grid-cell:hover {
+  border-color: #3b364c;
+  background: #181621;
 }
 
 .mem-cell-left {
@@ -2525,20 +2515,21 @@
 .mem-cell-badge {
   font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 1px 5px;
+  letter-spacing: 0.05em;
+  padding: 1.5px 5px;
   border-radius: 0;
   flex-shrink: 0;
+  line-height: 1.2;
 }
 
-.mem-cell-badge--base    { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4); }
-.mem-cell-badge--loader  { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.4); }
-.mem-cell-badge--mods    { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.4); }
-.mem-cell-badge--shaders { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4); }
-.mem-cell-badge--assets  { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
+.mem-cell-badge--base    { background: rgba(59, 130, 246, 0.15); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.35); }
+.mem-cell-badge--loader  { background: rgba(139, 92, 246, 0.15); color: #c4b5fd; border: 1px solid rgba(139, 92, 246, 0.35); }
+.mem-cell-badge--mods    { background: rgba(168, 85, 247, 0.15); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.35); }
+.mem-cell-badge--shaders { background: rgba(245, 158, 11, 0.15); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.35); }
+.mem-cell-badge--assets  { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35); }
 
 .mem-cell-label {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -2547,7 +2538,7 @@
 
 .mem-cell-val {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text);
   flex-shrink: 0;
@@ -2557,10 +2548,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border-strong);
-  box-shadow: var(--bevel);
+  padding: 8px 12px;
+  background: #110f17;
+  border: 1px solid #1e1b29;
+  border-top: 1px solid var(--border-strong);
   font-size: 11px;
 }
 

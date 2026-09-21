@@ -65,6 +65,10 @@ Before adding buttons, badges, checkboxes, or visual indicators to any screen, m
 - **Badge Restraint**: Badges are for concise, non-obvious metadata (`.mrpack`, `.zip`, `Fabric`, `1.20.1`). Never add badges that repeat what is already stated in the title or communicate state already visible from a color tint.
 - **Spatial Flow**: Never use absolute positioning (`position: absolute; top: 8px; right: 8px;`) that collides with header tags, titles, or badges. Flow items naturally with flexbox/grid and explicit `gap`.
 - **Tactile Tooltips (`data-tip`) over Native `title`**: **NEVER use native HTML `title="..."` attributes.** They trigger ugly default OS/browser tooltips that break the theme. Always use `data-tip="..."` with appropriate positioning (`.tip-below`, `.tip-left`, `.tip-right`, `.tip-below.tip-right`). Only place on discrete icon buttons, chips, or badges—never on large card containers.
+- **Chunky 3D Bevels (`--bevel`, `--bevel-strong`) — Strict Restraint & Purpose**:
+  - **Only for clickable/interactive items**: Buttons (`.btn`), mechanical hotkey keycaps, square checkboxes (`.check-box`), and cards with physical depression on `:active` (`transform: translateY(1px)`).
+  - **Never on static informational surfaces**: Telemetry plates, setting rows, data grid cells, stat panels, status badges/chips, footer banners, or labels. Static containers must be flat with hairline borders (`1px solid var(--border)` / `#23202f`), subtle backgrounds, and hover tints.
+  - **The Gold Rule**: *If the user cannot click and physically depress the element to execute an action or toggle state, it MUST NOT have a bevel shadow.*
 - **Stay Within Theme Without Overdoing It**: Adhere strictly to the established SloppyKeys tokens (`--bevel`, `--surface-panel`, `--surface-raised`, `#0f0e13` wells, hairline borders). Do not invent novel decorative doodads, corner stickers, or unneeded containers. Boring, clean, and restrained beats busy and cluttered every time.
 
 ## Verification
