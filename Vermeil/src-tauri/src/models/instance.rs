@@ -22,6 +22,17 @@ impl LoaderType {
             LoaderType::Quilt => "quilt",
         }
     }
+
+    /// Human-friendly capitalized loader name (e.g. for UI, logs, Discord RPC).
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            LoaderType::Vanilla => "Vanilla",
+            LoaderType::Fabric => "Fabric",
+            LoaderType::Forge => "Forge",
+            LoaderType::Neoforge => "NeoForge",
+            LoaderType::Quilt => "Quilt",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

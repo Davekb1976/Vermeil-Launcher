@@ -110,11 +110,10 @@ pub async fn launch_instance(
     }
 
     // Set Discord Rich Presence to "Playing"
-    let loader_name = format!("{:?}", instance.loader.loader_type).to_lowercase();
     crate::services::discord::set_playing(
         &instance.name,
         &instance.game_version,
-        &loader_name,
+        instance.loader.loader_type.display_name(),
         instance.mods.len(),
     );
 
