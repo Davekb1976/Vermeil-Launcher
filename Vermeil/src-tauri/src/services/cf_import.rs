@@ -187,13 +187,25 @@ pub async fn import_zip(
     let mods_dir = minecraft_dir.join("mods");
     fs::create_dir_all(&mods_dir).map_err(|e| e.to_string())?;
 
+    let loader_str = match loader_type {
+        LoaderType::Fabric => "fabric",
+        LoaderType::Forge => "forge",
+        LoaderType::Neoforge => "neoforge",
+        LoaderType::Quilt => "quilt",
+        LoaderType::Vanilla => "vanilla",
+    };
+
     // Resolve and prepare mod download tasks (no actual downloading yet — that
     // happens inside `prepare_with_extras` so the progress bar is unified).
-    // `blocked` are files whose authors opted out of third-party distribution.
-    // The pack installs without them and they're reported afterwards, so the
-    // install isn't lost to one un-fetchable mod.
+    // `blocked` are files whose authors opted out of third-party distribution on CurseForge
+    // and could not be cross-resolved via Modrinth.
     let (mod_tasks, mod_entries, blocked) =
-        build_mod_tasks(&manifest.files, &mods_dir, api_key).await?;
+        build_mod_tasks(&manifest.files, &mods_dir, api_key, &manifest.minecraft.version, loader_str).await?;
+
+    let mut source_platforms = vec!["curseforge".to_string()];
+    if mod_entries.iter().any(|m| m.source == "modrinth") {
+        source_platforms.push("modrinth".to_string());
+    }
 
     // Build instance metadata
     let instance = Instance {
@@ -223,7 +235,7 @@ pub async fn import_zip(
         total_play_seconds: 0,
         created_at: chrono::Utc::now().to_rfc3339(),
         source_project_id,
-        source_platforms: vec!["curseforge".to_string()],
+        source_platforms,
         source_version: manifest.version.clone(),
         companion_enabled: true,
     };
@@ -371,8 +383,21 @@ pub async fn import_profile_code(
             let mods_dir = minecraft_dir.join("mods");
             fs::create_dir_all(&mods_dir).map_err(|e| e.to_string())?;
 
+            let loader_str = match loader_type {
+                LoaderType::Fabric => "fabric",
+                LoaderType::Forge => "forge",
+                LoaderType::Neoforge => "neoforge",
+                LoaderType::Quilt => "quilt",
+                LoaderType::Vanilla => "vanilla",
+            };
+
             let (mod_tasks, mod_entries, blocked) =
-                build_mod_tasks(&files, &mods_dir, api_key).await?;
+                build_mod_tasks(&files, &mods_dir, api_key, &game_version, loader_str).await?;
+
+            let mut source_platforms = vec!["curseforge".to_string()];
+            if mod_entries.iter().any(|m| m.source == "modrinth") {
+                source_platforms.push("modrinth".to_string());
+            }
 
             let instance = Instance {
                 format_version: 1,
@@ -389,7 +414,7 @@ pub async fn import_profile_code(
                 total_play_seconds: 0,
                 created_at: chrono::Utc::now().to_rfc3339(),
                 source_project_id: None,
-                source_platforms: vec!["curseforge".to_string()],
+                source_platforms,
                 source_version: None,
                 companion_enabled: true,
             };
@@ -466,6 +491,8 @@ async fn build_mod_tasks(
     files: &[CfFile],
     mods_dir: &PathBuf,
     api_key: &str,
+    game_version: &str,
+    loader: &str,
 ) -> Result<
     (
         Vec<DownloadTask>,
@@ -487,6 +514,13 @@ async fn build_mod_tasks(
     let mut mod_entries: Vec<ModEntry> = Vec::new();
     let mut blocked: Vec<BlockedFile> = Vec::new();
 
+    struct CandidateBlocked {
+        project_id: String,
+        file_name: String,
+        sha1: Option<String>,
+    }
+    let mut candidate_blocked: Vec<CandidateBlocked> = Vec::new();
+
     for info in &file_infos {
         let project_id_of = |id: u64| {
             files
@@ -497,14 +531,21 @@ async fn build_mod_tasks(
         };
 
         // `download_url: null` means the author opted out of third-party
-        // distribution. This used to reconstruct a CDN URL from the file id and
-        // download it anyway; now the file is skipped and reported so the user
-        // can fetch it themselves. The rest of the pack still installs, and
-        // `mod_install::sync_manual_mods` picks the jar up once it's dropped in.
+        // distribution on CurseForge. We queue them for cross-source resolution
+        // on Modrinth (where distribution is allowed) before giving up and prompting the user.
         let url = match &info.download_url {
             Some(u) => u.clone(),
             None => {
-                blocked.push((project_id_of(info.id), info.file_name.clone()));
+                let sha1 = info
+                    .hashes
+                    .iter()
+                    .find(|h| h.algo == 1)
+                    .map(|h| h.value.clone());
+                candidate_blocked.push(CandidateBlocked {
+                    project_id: project_id_of(info.id),
+                    file_name: info.file_name.clone(),
+                    sha1,
+                });
                 continue;
             }
         };
@@ -541,6 +582,171 @@ async fn build_mod_tasks(
             category: "mod".to_string(),
             author: None,
         });
+    }
+
+    // Attempt cross-source resolution via Modrinth for CurseForge blocked files
+    if !candidate_blocked.is_empty() {
+        tracing::info!(
+            "Attempting cross-source resolution on Modrinth for {} blocked CurseForge modpack files...",
+            candidate_blocked.len()
+        );
+
+        let mut resolved_indices = std::collections::HashSet::new();
+
+        // ── Tier 1: Bulk Cryptographic SHA-1 Match (100% bit-for-bit identical) ──
+        let sha1_list: Vec<String> = candidate_blocked
+            .iter()
+            .filter_map(|c| c.sha1.clone())
+            .collect();
+
+        if !sha1_list.is_empty() {
+            match crate::services::modrinth::get_versions_by_hashes(&sha1_list).await {
+                Ok(hash_map) => {
+                    for (idx, candidate) in candidate_blocked.iter().enumerate() {
+                        if let Some(sha1) = &candidate.sha1 {
+                            if let Some(version) = hash_map.get(sha1) {
+                                let matched_file = version
+                                    .files
+                                    .iter()
+                                    .find(|f| f.hashes.sha1.as_deref() == Some(sha1))
+                                    .or_else(|| version.files.iter().find(|f| f.primary))
+                                    .or_else(|| version.files.first());
+
+                                if let Some(file) = matched_file {
+                                    tracing::info!(
+                                        "Cross-source resolved {} via Modrinth SHA-1 match (project: {}, version: {})",
+                                        candidate.file_name,
+                                        version.project_id,
+                                        version.version_number
+                                    );
+
+                                    tasks.push(DownloadTask {
+                                        url: file.url.clone(),
+                                        dest: mods_dir.join(&file.filename),
+                                        expected_sha1: Some(sha1.clone()),
+                                        expected_size: Some(file.size),
+                                    });
+
+                                    mod_entries.push(ModEntry {
+                                        id: uuid::Uuid::new_v4().to_string(),
+                                        source: "modrinth".to_string(),
+                                        project_id: version.project_id.clone(),
+                                        version_id: version.id.clone(),
+                                        filename: file.filename.clone(),
+                                        version_number: Some(version.version_number.clone()),
+                                        enabled: true,
+                                        pinned: false,
+                                        title: Some(version.name.clone()),
+                                        icon_url: None,
+                                        local_icon_path: None,
+                                        description: None,
+                                        category: "mod".to_string(),
+                                        author: None,
+                                    });
+
+                                    resolved_indices.insert(idx);
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("Modrinth hash lookup failed during cross-source resolution: {}", e);
+                }
+            }
+        }
+
+        // ── Tier 2: Metadata / Search Fallback for Remaining Unresolved ──
+        for (idx, candidate) in candidate_blocked.iter().enumerate() {
+            if resolved_indices.contains(&idx) {
+                continue;
+            }
+
+            let clean_query = candidate
+                .file_name
+                .trim_end_matches(".jar")
+                .split(&['-', '_', '+'][..])
+                .next()
+                .unwrap_or(&candidate.file_name);
+
+            if !clean_query.is_empty() && !game_version.is_empty() {
+                if let Ok(search_res) = crate::services::modrinth::search_mods(
+                    clean_query,
+                    loader,
+                    game_version,
+                    0,
+                    5,
+                    "relevance",
+                    "mod",
+                )
+                .await
+                {
+                    let mut matched = false;
+                    for hit in search_res.hits {
+                        if let Ok(versions) = crate::services::modrinth::get_project_versions(
+                            &hit.project_id,
+                            loader,
+                            game_version,
+                        )
+                        .await
+                        {
+                            for v in versions {
+                                let hit_file = v.files.iter().find(|f| {
+                                    f.filename.eq_ignore_ascii_case(&candidate.file_name)
+                                });
+
+                                if let Some(file) = hit_file {
+                                    tracing::info!(
+                                        "Cross-source resolved {} via Modrinth metadata search (project: {}, version: {})",
+                                        candidate.file_name,
+                                        hit.project_id,
+                                        v.version_number
+                                    );
+
+                                    tasks.push(DownloadTask {
+                                        url: file.url.clone(),
+                                        dest: mods_dir.join(&file.filename),
+                                        expected_sha1: file.hashes.sha1.clone(),
+                                        expected_size: Some(file.size),
+                                    });
+
+                                    mod_entries.push(ModEntry {
+                                        id: uuid::Uuid::new_v4().to_string(),
+                                        source: "modrinth".to_string(),
+                                        project_id: hit.project_id.clone(),
+                                        version_id: v.id.clone(),
+                                        filename: file.filename.clone(),
+                                        version_number: Some(v.version_number.clone()),
+                                        enabled: true,
+                                        pinned: false,
+                                        title: Some(v.name.clone()),
+                                        icon_url: hit.icon_url.clone(),
+                                        local_icon_path: None,
+                                        description: Some(hit.description.clone()),
+                                        category: "mod".to_string(),
+                                        author: hit.author.clone(),
+                                    });
+
+                                    resolved_indices.insert(idx);
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if matched {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Remaining unresolved files must be reported as blocked
+        for (idx, candidate) in candidate_blocked.into_iter().enumerate() {
+            if !resolved_indices.contains(&idx) {
+                blocked.push((candidate.project_id, candidate.file_name));
+            }
+        }
     }
 
     Ok((tasks, mod_entries, blocked))

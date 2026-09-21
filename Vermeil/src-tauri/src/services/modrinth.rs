@@ -308,3 +308,63 @@ pub async fn get_project_versions(
         .await
         .map_err(|e| format!("Parse Modrinth versions: {}", e))
 }
+
+/// Bulk lookup Modrinth versions by file SHA-1 hashes (up to 1,000 hashes per request).
+pub async fn get_versions_by_hashes(
+    hashes: &[String],
+) -> Result<std::collections::HashMap<String, ModrinthVersion>, String> {
+    if hashes.is_empty() {
+        return Ok(std::collections::HashMap::new());
+    }
+
+    let url = format!("{}/version_files", MODRINTH_API);
+    let body = serde_json::json!({
+        "hashes": hashes,
+        "algorithm": "sha1"
+    });
+
+    let resp = crate::util::http::HTTP
+        .post(&url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Modrinth version_files failed: {}", e))?;
+
+    if !resp.status().is_success() {
+        let text = resp.text().await.unwrap_or_default();
+        return Err(format!("Modrinth version_files error: {}", text));
+    }
+
+    resp.json::<std::collections::HashMap<String, ModrinthVersion>>()
+        .await
+        .map_err(|e| format!("Parse Modrinth version_files response: {}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn empty_hashes_returns_empty_map_without_network() {
+        let result = get_versions_by_hashes(&[]).await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn known_sha1_resolves_exact_version_file() {
+        // Entity Culling 1.11.1 Forge for 1.20.1
+        let sha1 = "0932b2cf25d7667abbaab4f1859435adc5480621";
+        let result = get_versions_by_hashes(&[sha1.to_string()]).await;
+        assert!(result.is_ok(), "Expected Modrinth version_files to succeed: {:?}", result);
+        let map = result.unwrap();
+        assert!(map.contains_key(sha1), "Map should contain requested SHA-1");
+        let version = &map[sha1];
+        assert_eq!(version.version_number, "1.11.1");
+        assert!(version.loaders.contains(&"forge".to_string()));
+        assert!(version.game_versions.contains(&"1.20.1".to_string()));
+        assert!(version.files.iter().any(|f| f.filename == "entityculling-forge-1.11.1-mc1.20.1.jar"));
+    }
+}
+
+

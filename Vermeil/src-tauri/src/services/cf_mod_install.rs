@@ -332,28 +332,56 @@ async fn install_cf_one(
     }
 
     // === Download ===
-    let download_url = match file.download_url.as_ref() {
-        Some(u) => u,
+    let (download_url, resolved_source) = match file.download_url.as_ref() {
+        Some(u) => (u.clone(), "curseforge".to_string()),
         None => {
-            let meta = get_or_fetch_meta(api_key, mod_id, meta_cache).await;
-            let title = meta.name.clone().unwrap_or_else(|| mod_id.to_string());
-            let website = meta.website_url.clone();
-            crate::services::manual_download::notify(
-                window,
-                crate::services::manual_download::ManualDownload {
-                    kind: "mod".to_string(),
-                    title: title.clone(),
-                    file_name: Some(file.file_name.clone()),
-                    url: website,
-                    instance_id: Some(instance_id.to_string()),
-                },
-            );
-            return Err(format!(
-                "{} can't be downloaded automatically — its author disabled \
-                 third-party downloads. Get {} from CurseForge and drop it into the \
-                 instance's mods folder.",
-                title, file.file_name
-            ));
+            // Check if Modrinth has this exact file via SHA-1
+            let mut cross_resolved: Option<(String, String)> = None;
+            if let Some(sha1) = file.hashes.first() {
+                if let Ok(map) = crate::services::modrinth::get_versions_by_hashes(&[sha1.clone()]).await {
+                    if let Some(version) = map.get(sha1) {
+                        let matched_file = version
+                            .files
+                            .iter()
+                            .find(|f| f.hashes.sha1.as_ref() == Some(sha1))
+                            .or_else(|| version.files.iter().find(|f| f.primary))
+                            .or_else(|| version.files.first());
+                        if let Some(f) = matched_file {
+                            tracing::info!(
+                                "Cross-source resolved single mod {} via Modrinth SHA-1 (project: {})",
+                                file.file_name,
+                                version.project_id
+                            );
+                            cross_resolved = Some((f.url.clone(), "modrinth".to_string()));
+                        }
+                    }
+                }
+            }
+
+            match cross_resolved {
+                Some(resolved) => resolved,
+                None => {
+                    let meta = get_or_fetch_meta(api_key, mod_id, meta_cache).await;
+                    let title = meta.name.clone().unwrap_or_else(|| mod_id.to_string());
+                    let website = meta.website_url.clone();
+                    crate::services::manual_download::notify(
+                        window,
+                        crate::services::manual_download::ManualDownload {
+                            kind: "mod".to_string(),
+                            title: title.clone(),
+                            file_name: Some(file.file_name.clone()),
+                            url: website,
+                            instance_id: Some(instance_id.to_string()),
+                        },
+                    );
+                    return Err(format!(
+                        "{} can't be downloaded automatically — its author disabled \
+                         third-party downloads. Get {} from CurseForge and drop it into the \
+                         instance's mods folder.",
+                        title, file.file_name
+                    ));
+                }
+            }
         }
     };
 
@@ -381,7 +409,7 @@ async fn install_cf_one(
 
     let mut mod_entry = ModEntry {
         id: file_version_id.clone(),
-        source: "curseforge".to_string(),
+        source: resolved_source.clone(),
         project_id: mod_id.to_string(),
         version_id: file_version_id,
         filename: file.file_name.clone(),
@@ -405,6 +433,10 @@ async fn install_cf_one(
         fs::read_to_string(&meta_path).map_err(|e| format!("Read instance.json: {}", e))?;
     let mut instance: Instance =
         serde_json::from_str(&content).map_err(|e| format!("Parse instance.json: {}", e))?;
+
+    if !instance.source_platforms.contains(&resolved_source) {
+        instance.source_platforms.push(resolved_source);
+    }
 
     match instance.mods.iter().position(|m| m.project_id == mod_id) {
         Some(pos) => {
