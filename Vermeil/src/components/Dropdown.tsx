@@ -45,7 +45,9 @@ const Dropdown: Component<DropdownProps> = (props) => {
         class="custom-dropdown-selected"
         onClick={() => { if (!props.disabled) setOpen(!open()); }}
       >
-        <span>{props.prefix ? props.prefix : ""}{selectedLabel()}</span>
+        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          {props.prefix ? props.prefix : ""}{selectedLabel()}
+        </span>
         <span class="custom-dropdown-arrow" classList={{ open: open() }}><IconChevronDown /></span>
       </div>
       <Show when={open() && !props.disabled}>

@@ -46,7 +46,7 @@ const SORT_OPTIONS = [
 ];
 
 const LOADER_OPTIONS = [
-  { value: "", label: "All loaders" },
+  { value: "", label: "All" },
   { value: "fabric", label: "Fabric" },
   { value: "neoforge", label: "NeoForge" },
   { value: "forge", label: "Forge" },
@@ -325,7 +325,7 @@ const BrowseModpacks: Component = () => {
                 setLoaderFilter(v);
                 handleFilterChange();
               }}
-              width="145px"
+              width="140px"
             />
             <Dropdown
               prefix="Sort: "
