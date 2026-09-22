@@ -2,17 +2,21 @@ package com.vermeil.client.gui;
 
 import com.vermeil.VermeilMod;
 import com.vermeil.client.VermeilSettingsStore;
+import com.vermeil.client.cape.VermeilCape;
 //? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 //?}
 //? if <=1.21.11 {
 /*import net.minecraft.client.gui.GuiGraphics;
 *///?}
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
 
 /**
  * In-game Vermeil settings screen — gamey client-settings look (left category
@@ -23,9 +27,13 @@ public class VermeilSettingsScreen extends Screen {
 	private static final int PANEL = 0xF2131119;
 	private static final int SIDEBAR = 0xF20F0E13;
 	private static final int CARD = 0xFF1C1A23;
+	private static final int CARD_HOVER = 0xFF23202C;
 	private static final int BORDER = 0xFF322F3D;
+	private static final int BORDER_HOVER = 0xFF4A455A;
 	private static final int ACCENT = 0xFF8B5CF6;
+	private static final int ACCENT_HOVER = 0xFF9E77F8;
 	private static final int OFF = 0xFF3A3744;
+	private static final int OFF_HOVER = 0xFF494656;
 	private static final int FIELD = 0xFF15141A;
 	private static final int HOVER = 0x18FFFFFF;
 	private static final int TEXT = 0xFFECE9F2;
@@ -104,15 +112,22 @@ public class VermeilSettingsScreen extends Screen {
 	@Override
 	public boolean mouseClicked(final MouseButtonEvent event, final boolean doubled) {
 		if (event.button() == 0) {
+			if (doubled) {
+				return true;
+			}
 			final double mouseX = event.x();
 			final double mouseY = event.y();
 			searchFocused = inRect(mouseX, mouseY, contentX, searchY, contentRight - contentX, searchH);
 			if (searchFocused) {
 				return true;
 			}
-			if (capeVisible() && inRect(mouseX, mouseY, contentRight - 44, rowY + 11, 32, 18)) {
+			if (capeVisible() && inRect(mouseX, mouseY, contentX, rowY, contentRight - contentX, rowH)) {
 				capeEnabled = !capeEnabled;
 				VermeilSettingsStore.setCapeEnabled(capeEnabled);
+				if (this.minecraft != null) {
+					VermeilCape.refresh(this.minecraft);
+					this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+				}
 				return true;
 			}
 		}
@@ -171,10 +186,13 @@ public class VermeilSettingsScreen extends Screen {
 		drawSearch(gfx);
 
 		if (capeVisible()) {
-			gfx.fill(contentX, rowY, contentRight, rowY + rowH, CARD);
+			final boolean rowHovered = inRect(mouseX, mouseY, contentX, rowY, contentRight - contentX, rowH);
+			gfx.fill(contentX, rowY, contentRight, rowY + rowH, rowHovered ? CARD_HOVER : CARD);
+			outline(gfx, contentX, rowY, contentRight, rowY + rowH, rowHovered ? BORDER_HOVER : BORDER);
 			scaledText(gfx, "Custom cape", contentX + 12, rowY + 9, TEXT, 1.2F, true);
 			scaledText(gfx, "Show your Vermeil cape in-game", contentX + 12, rowY + 25, MUTED, 1.0F, false);
-			drawPill(gfx, contentRight - 44, rowY + 11, 32, 18, capeEnabled);
+			final boolean pillHovered = inRect(mouseX, mouseY, contentRight - 44, rowY + 11, 32, 18);
+			drawPill(gfx, contentRight - 44, rowY + 11, 32, 18, capeEnabled, pillHovered || rowHovered);
 		}
 
 		super.extractRenderState(gfx, mouseX, mouseY, delta);
@@ -192,8 +210,12 @@ public class VermeilSettingsScreen extends Screen {
 		}
 	}
 
-	private void drawPill(final GuiGraphicsExtractor gfx, final int x, final int y, final int w, final int h, final boolean on) {
-		gfx.fill(x, y, x + w, y + h, on ? ACCENT : OFF);
+	private void drawPill(final GuiGraphicsExtractor gfx, final int x, final int y, final int w, final int h, final boolean on, final boolean hovered) {
+		final int bg = on ? (hovered ? ACCENT_HOVER : ACCENT) : (hovered ? OFF_HOVER : OFF);
+		gfx.fill(x, y, x + w, y + h, bg);
+		if (hovered) {
+			outline(gfx, x, y, x + w, y + h, on ? 0xFFC4B5FD : 0xFF6B6580);
+		}
 		String s = on ? "ON" : "OFF";
 		scaledText(gfx, s, x + (w - this.font.width(s)) / 2, y + (h - lineH(1.0F)) / 2, on ? 0xFFFFFFFF : MUTED, 1.0F, false);
 	}
@@ -234,10 +256,13 @@ public class VermeilSettingsScreen extends Screen {
 		drawSearch(gfx);
 
 		if (capeVisible()) {
-			gfx.fill(contentX, rowY, contentRight, rowY + rowH, CARD);
+			final boolean rowHovered = inRect(mouseX, mouseY, contentX, rowY, contentRight - contentX, rowH);
+			gfx.fill(contentX, rowY, contentRight, rowY + rowH, rowHovered ? CARD_HOVER : CARD);
+			outline(gfx, contentX, rowY, contentRight, rowY + rowH, rowHovered ? BORDER_HOVER : BORDER);
 			scaledText(gfx, "Custom cape", contentX + 12, rowY + 9, TEXT, 1.2F, true);
 			scaledText(gfx, "Show your Vermeil cape in-game", contentX + 12, rowY + 25, MUTED, 1.0F, false);
-			drawPill(gfx, contentRight - 44, rowY + 11, 32, 18, capeEnabled);
+			final boolean pillHovered = inRect(mouseX, mouseY, contentRight - 44, rowY + 11, 32, 18);
+			drawPill(gfx, contentRight - 44, rowY + 11, 32, 18, capeEnabled, pillHovered || rowHovered);
 		}
 
 		super.render(gfx, mouseX, mouseY, delta);
@@ -255,8 +280,12 @@ public class VermeilSettingsScreen extends Screen {
 		}
 	}
 
-	private void drawPill(final GuiGraphics gfx, final int x, final int y, final int w, final int h, final boolean on) {
-		gfx.fill(x, y, x + w, y + h, on ? ACCENT : OFF);
+	private void drawPill(final GuiGraphics gfx, final int x, final int y, final int w, final int h, final boolean on, final boolean hovered) {
+		final int bg = on ? (hovered ? ACCENT_HOVER : ACCENT) : (hovered ? OFF_HOVER : OFF);
+		gfx.fill(x, y, x + w, y + h, bg);
+		if (hovered) {
+			outline(gfx, x, y, x + w, y + h, on ? 0xFFC4B5FD : 0xFF6B6580);
+		}
 		String s = on ? "ON" : "OFF";
 		scaledText(gfx, s, x + (w - this.font.width(s)) / 2, y + (h - lineH(1.0F)) / 2, on ? 0xFFFFFFFF : MUTED, 1.0F, false);
 	}

@@ -65,10 +65,13 @@ public final class VermeilSettingsStore {
 	private static void write(final JsonObject root) {
 		Path file = file();
 		try {
-			Files.createDirectories(file.getParent());
+			if (file.getParent() != null) {
+				Files.createDirectories(file.getParent());
+			}
 			try (Writer writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
 				new GsonBuilder().setPrettyPrinting().create().toJson(root, writer);
 			}
+			VermeilMod.LOGGER.info("Saved Vermeil settings to {}.", file);
 		} catch (Exception e) {
 			VermeilMod.LOGGER.error("Failed to write {}; in-game change not saved.", file, e);
 		}

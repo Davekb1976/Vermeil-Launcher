@@ -86,6 +86,14 @@ public final class VermeilCape {
 		reload(minecraft);
 	}
 
+	public static void refresh(final Minecraft minecraft) {
+		if (minecraft == null) {
+			return;
+		}
+		lastSignature = currentSignature();
+		reload(minecraft);
+	}
+
 	private static void reload(final Minecraft minecraft) {
 		Path capeFile = capeDir().resolve(CAPE_SUBDIR).resolve(CAPE_FILE);
 		CapeSettings settings = readSettings();
