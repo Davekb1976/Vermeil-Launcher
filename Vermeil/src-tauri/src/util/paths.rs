@@ -248,4 +248,15 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&temp);
     }
+
+    #[test]
+    fn test_dir_size() {
+        let temp = std::env::temp_dir().join(format!("vermeil_test_dir_size_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&temp);
+        std::fs::create_dir_all(temp.join("nested")).unwrap();
+        std::fs::write(temp.join("a.txt"), b"12345").unwrap(); // 5 bytes
+        std::fs::write(temp.join("nested").join("b.txt"), b"1234567").unwrap(); // 7 bytes
+        assert_eq!(dir_size(&temp), 12);
+        let _ = std::fs::remove_dir_all(&temp);
+    }
 }

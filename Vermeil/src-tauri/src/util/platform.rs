@@ -131,7 +131,7 @@ pub fn update_windows_estimated_size() {
         let data_dir = crate::util::paths::data_dir();
         if data_dir.exists() {
             let size_bytes = crate::util::paths::dir_size(&data_dir);
-            let size_kb = (size_bytes / 1024) as u32;
+            let size_kb = (size_bytes / 1024).min(u32::MAX as u64) as u32;
             let _ = uninstall_key.set_value("EstimatedSize", &size_kb);
             tracing::debug!("Updated Windows uninstall EstimatedSize to {} KB", size_kb);
         }
