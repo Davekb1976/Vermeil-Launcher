@@ -1,9 +1,11 @@
 package com.vermeil.client.gui;
 
 import com.vermeil.VermeilMod;
+import com.vermeil.client.VermeilCape;
 import com.vermeil.client.VermeilSettingsStore;
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.util.ResourceLocation;
@@ -135,9 +137,13 @@ public class VermeilSettingsScreen extends GuiScreen {
 			}
 		}
 		for (Row row : rows) {
-			if ("cape".equals(row.key) && inRect(mouseX, mouseY, contentRight - 44, row.y + 8, 44, 20)) {
+			if ("cape".equals(row.key) && inRect(mouseX, mouseY, contentX, row.y, contentRight - contentX, row.h)) {
 				capeEnabled = !capeEnabled;
 				VermeilSettingsStore.setCapeEnabled(capeEnabled);
+				if (this.mc != null) {
+					VermeilCape.refresh(this.mc);
+					this.mc.getSoundHandler().playSound(PositionedSoundRecord.create(new ResourceLocation("gui.button.press"), 1.0F));
+				}
 				return;
 			}
 			if ("fov".equals(row.key) && inRect(mouseX, mouseY, contentX + 12, row.y + row.h - 20, contentRight - contentX - 24, 18)) {

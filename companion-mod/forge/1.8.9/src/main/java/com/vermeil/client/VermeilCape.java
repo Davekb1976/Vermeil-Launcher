@@ -101,6 +101,14 @@ public final class VermeilCape {
 		return INSTANCE.capeFor(player);
 	}
 
+	public static void refresh(final Minecraft mc) {
+		if (mc == null) {
+			return;
+		}
+		INSTANCE.lastSignature = INSTANCE.currentSignature();
+		INSTANCE.reload(mc);
+	}
+
 	/**
 	 * Whether to force the local player's cape off — the cape was explicitly
 	 * disabled in Vermeil settings, so vanilla's real-cape fallback must be
