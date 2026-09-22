@@ -49,6 +49,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: Vermeil/src-tauri
+          shared-key: "vermeil-${{ matrix.target }}"
 
       - name: Install frontend dependencies
         working-directory: Vermeil

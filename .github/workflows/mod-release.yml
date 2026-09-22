@@ -42,6 +42,9 @@ jobs:
             8
             25
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Build the mods
         run: |
           set -euo pipefail
