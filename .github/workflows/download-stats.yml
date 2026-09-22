@@ -1,9 +1,14 @@
-name: Update Download Stats
+name: Update Repository Badges
 
 on:
   schedule:
     - cron: '0 */6 * * *'
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Vermeil/**'
   release:
     types: [published, edited, deleted]
   workflow_run:
@@ -70,6 +75,38 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Calculate lines of code in Vermeil
+        run: |
+          node - << 'EOF'
+          const { execSync } = require('child_process');
+          const fs = require('fs');
+
+          // Track only launcher code files in Vermeil/ (Rust, TS/TSX, CSS, HTML).
+          // Strictly excludes markdown (.md), JSON, images, companion-mod, docs, and build artifacts.
+          const files = execSync('git ls-files Vermeil', { encoding: 'utf8' })
+            .split('\n')
+            .map(f => f.trim())
+            .filter(f => /\.(rs|ts|tsx|css|html)$/i.test(f));
+
+          let total = 0;
+          for (const f of files) {
+            if (fs.existsSync(f)) {
+              total += fs.readFileSync(f, 'utf8').split('\n').length;
+            }
+          }
+
+          const formatted = total >= 1000 ? (total / 1000).toFixed(1) + 'k' : String(total);
+          const badge = {
+            schemaVersion: 1,
+            label: 'lines of code',
+            message: formatted,
+            color: '8b5cf6'
+          };
+
+          fs.writeFileSync('/tmp/lines-of-code.json', JSON.stringify(badge, null, 2) + '\n');
+          console.log(`Calculated lines of code: ${total} (${formatted}) across ${files.length} files`);
+          EOF
+
       - name: Deploy to badges branch
         run: |
           git config user.name "github-actions[bot]"
@@ -78,6 +115,7 @@ jobs:
           git rm -rf .
           mv /tmp/download-count.json download-count.json
           mv /tmp/download-stats.json download-stats.json
-          git add download-count.json download-stats.json
-          git commit -m "chore: update download stats badge [skip ci]"
+          mv /tmp/lines-of-code.json lines-of-code.json
+          git add download-count.json download-stats.json lines-of-code.json
+          git commit -m "chore: update repository badges [skip ci]"
           git push origin HEAD:badges --force
