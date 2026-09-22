@@ -158,8 +158,8 @@ pub async fn ensure_installed(instance: &Instance) -> CompanionStatus {
     }
 }
 
-/// Time-To-Live for the companion manifest cache (6 hours).
-const MANIFEST_TTL: std::time::Duration = std::time::Duration::from_secs(6 * 3600);
+/// Time-To-Live for the companion manifest cache (10 minutes).
+const MANIFEST_TTL: std::time::Duration = std::time::Duration::from_secs(10 * 60);
 
 /// Ensure the companion jar is present in the central `<data_dir>/companion/jars/`
 /// cache, downloading and SHA-1 verifying it if missing.
