@@ -10,13 +10,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest"><img src="https://img.shields.io/github/v/release/Vermeil-Launcher/Vermeil-Launcher?style=flat-square&label=release&color=8b5cf6" alt="Release" /></a>
-  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Vermeil-Launcher/Vermeil-Launcher/badges/download-count.json&style=flat-square" alt="Downloads" /></a>
-  <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Vermeil-Launcher/Vermeil-Launcher/badges/lines-of-code.json&style=flat-square" alt="Lines of Code" />
-  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/actions"><img src="https://img.shields.io/github/actions/workflow/status/Vermeil-Launcher/Vermeil-Launcher/release.yml?style=flat-square&label=build" alt="Build" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License" /></a>
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational?style=flat-square" alt="Platform" />
-  <img src="https://img.shields.io/badge/status-stable-8b5cf6?style=flat-square" alt="Status" />
+  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest"><img src="https://img.shields.io/github/v/release/Vermeil-Launcher/Vermeil-Launcher?style=flat-square&label=release&color=8b5cf6&labelColor=181622" alt="Release" /></a>
+  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Vermeil-Launcher/Vermeil-Launcher/badges/download-count.json&style=flat-square&color=8b5cf6&labelColor=181622" alt="Downloads" /></a>
+  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/actions"><img src="https://img.shields.io/github/actions/workflow/status/Vermeil-Launcher/Vermeil-Launcher/release.yml?style=flat-square&label=build&color=10b981&labelColor=181622" alt="Build" /></a>
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-2c2738?style=flat-square&labelColor=181622" alt="Platform" />
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2c2738?style=flat-square&labelColor=181622" alt="License" /></a>
+  <img src="https://img.shields.io/badge/status-stable-8b5cf6?style=flat-square&labelColor=181622" alt="Status" />
 </p>
 
 <p align="center">
