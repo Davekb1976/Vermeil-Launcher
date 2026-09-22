@@ -1,15 +1,17 @@
-## 1.1.0 (Experimental Build 1)
+## 1.1.0 (Experimental Build 2)
 
 ### Added
 
-- Hardened account credential storage with OS-level encryption and token redaction across communication layers
-- Unified modern Fabric and NeoForge companion mod support across Minecraft versions 1.21.11 through 26.3
+- Terminal prompt prefixes and latest-line highlighting on game log viewers
+- Unified cache management consolidating icon, archive, and manifest storage with full purge support
 
 ### Changed
 
-- Centralized companion mod jar caching and manifest caching for instant sub-millisecond game launches
-- Streamlined account status badges to eliminate redundant visual stacking
+- Overhauled log viewer scroll tracking and filter controls with active auto-scroll status indicators
+- Reduced companion mod manifest cache refresh interval for faster update detection
 
 ### Fixed
 
-- Simplified modpack filter dropdown button labels and added Vermeil badges to supported version selections
+- Restored the in-game companion mod settings button and screen across Fabric and NeoForge
+- Removed companion compatibility badges when selecting the Vanilla loader and removed redundant loader checkmarks
+- Eliminated outer page scroll overflow on the instance logs tab
