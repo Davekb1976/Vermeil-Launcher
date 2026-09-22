@@ -336,28 +336,25 @@
 }
 
 .onboarding-or {
-  text-align: center;
+  display: flex;
+  align-items: center;
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--text-faint);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin: var(--space-4) 0;
-  position: relative;
+  gap: 12px;
+  white-space: nowrap;
 }
 
 .onboarding-or::before,
 .onboarding-or::after {
   content: "";
-  position: absolute;
-  top: 50%;
-  width: calc(50% - 30px);
+  flex: 1;
   height: 1px;
   background: var(--border);
 }
-
-.onboarding-or::before { left: 0; }
-.onboarding-or::after { right: 0; }
 
 .onboarding-error {
   margin-top: var(--space-3);

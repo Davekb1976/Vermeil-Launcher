@@ -19,6 +19,7 @@ import {
   getSkinProfile,
 } from "../ipc/commands";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
+import { getVersion } from "@tauri-apps/api/app";
 import {
   IconDownload,
   IconSearch,
@@ -85,6 +86,7 @@ async function markOnboarded() {
 const JAVA_SLOTS: number[] = [25, 21, 17, 8];
 
 const OnboardingWizard: Component = () => {
+  const [appVersion] = createResource(getVersion);
   const [loggingIn, setLoggingIn] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [offlineUsername, setOfflineUsername] = createSignal("");
@@ -357,7 +359,9 @@ const OnboardingWizard: Component = () => {
           <div class="onboarding-header">
             <div class="onboarding-brand">
               <span class="onboarding-brand-title">Vermeil</span>
-              <span class="card-section-tag tag-settings-general">v1.0.0</span>
+              <span class="card-section-tag tag-settings-general">
+                {appVersion() ? `v${appVersion()}` : "v..."}
+              </span>
             </div>
             <button
               class="modal-close tip-below tip-left"
