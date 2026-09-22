@@ -54,7 +54,7 @@ fn sanitize_instance_json(instance: &mut Instance, meta_path: &std::path::Path) 
         if let Some((_header, b64)) = instance.icon.split_once(',') {
             use base64::Engine;
             if let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(b64) {
-                let icons_dir = paths::data_dir().join("icons");
+                let icons_dir = paths::icons_cache_dir();
                 let _ = fs::create_dir_all(&icons_dir);
                 use sha1::{Digest, Sha1};
                 let mut hasher = Sha1::new();

@@ -122,7 +122,7 @@ pub async fn prepare_with_extras(
     // 2. Client jar
     if let Some(ref downloads) = version.downloads {
         if let Some(ref client) = downloads.client {
-            let versions_dir = paths::data_dir().join("versions");
+            let versions_dir = paths::versions_cache_dir();
             let jar_path = versions_dir.join(format!("{}.jar", version.id));
             all_tasks.push(DownloadTask {
                 url: client.url.clone(),
@@ -371,7 +371,7 @@ async fn collect_loader_tasks(instance: &Instance) -> Vec<DownloadTask> {
         crate::models::instance::LoaderType::Neoforge => {
             if let Some(ref ver) = instance.loader.version {
                 let url = crate::services::neoforge::resolve_neoforge_installer_url(ver);
-                let cache_dir = paths::data_dir().join("cache").join("installers");
+                let cache_dir = paths::installers_cache_dir();
                 let filename = url.rsplit('/').next().unwrap_or("loader-installer.jar");
                 let dest = cache_dir.join(filename);
                 if !dest.exists() {
@@ -382,7 +382,7 @@ async fn collect_loader_tasks(instance: &Instance) -> Vec<DownloadTask> {
         crate::models::instance::LoaderType::Forge => {
             if let Some(ref ver) = instance.loader.version {
                 let url = crate::services::neoforge::resolve_forge_installer_url(&instance.game_version, ver).await;
-                let cache_dir = paths::data_dir().join("cache").join("installers");
+                let cache_dir = paths::installers_cache_dir();
                 let filename = url.rsplit('/').next().unwrap_or("loader-installer.jar");
                 let dest = cache_dir.join(filename);
                 if !dest.exists() {

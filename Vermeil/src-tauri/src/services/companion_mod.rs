@@ -68,16 +68,16 @@ struct GhAsset {
     browser_download_url: String,
 }
 
-fn companion_dir() -> PathBuf {
-    paths::data_dir().join("companion")
+fn companion_cache_dir() -> PathBuf {
+    paths::cache_dir().join("companion")
 }
 
 fn central_jars_dir() -> PathBuf {
-    companion_dir().join("jars")
+    companion_cache_dir().join("jars")
 }
 
 fn manifest_cache_path() -> PathBuf {
-    companion_dir().join("manifest.json")
+    companion_cache_dir().join("manifest.json")
 }
 
 fn mods_dir(instance_id: &str) -> PathBuf {

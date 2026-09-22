@@ -31,7 +31,7 @@ pub async fn cache_remote_icon(url: &str) -> Option<String> {
         return None;
     }
 
-    let icons_dir = paths::data_dir().join("icons");
+    let icons_dir = paths::icons_cache_dir();
     if let Err(e) = tokio::fs::create_dir_all(&icons_dir).await {
         tracing::debug!("icon cache: create_dir_all failed for {:?}: {}", icons_dir, e);
         return None;
@@ -145,7 +145,7 @@ pub async fn cache_icon_bytes(bytes: &[u8], ext: &str) -> Option<String> {
         return None;
     }
 
-    let icons_dir = paths::data_dir().join("icons");
+    let icons_dir = paths::icons_cache_dir();
     if let Err(e) = tokio::fs::create_dir_all(&icons_dir).await {
         tracing::debug!("icon cache: create_dir_all failed for {:?}: {}", icons_dir, e);
         return None;

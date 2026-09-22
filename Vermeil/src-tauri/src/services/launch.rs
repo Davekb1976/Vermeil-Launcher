@@ -563,7 +563,7 @@ pub async fn ensure_natives(version: &VersionJson, instance_id: &str) -> Result<
 
 /// Download the client JAR
 pub async fn ensure_client_jar(version: &VersionJson) -> Result<PathBuf, String> {
-    let versions_dir = paths::data_dir().join("versions");
+    let versions_dir = paths::versions_cache_dir();
     let jar_path = versions_dir.join(format!("{}.jar", version.id));
 
     if jar_path.exists() {

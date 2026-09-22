@@ -42,10 +42,8 @@ use std::fs;
 /// Calculate the total size of all purgeable caches.
 ///
 /// Includes:
-/// - `meta/` — version metadata JSONs, loader metadata
-/// - `loader-scratch/` — Forge/NeoForge installer artifacts and processor outputs
-/// - `icons/` — cached project icon images
-/// - `versions/` — cached vanilla client JARs
+/// - `<data>/cache/` — all unified caches (installers, scratch, icons, meta, versions, companion)
+/// - Any lingering legacy root cache directories (`loader-scratch`, `icons`, `versions`, `meta`)
 /// - `assets/indexes/` — asset index JSONs
 ///
 /// Does NOT include (too expensive to re-download or user data):
@@ -54,36 +52,31 @@ use std::fs;
 /// - `java/` — Java runtimes
 /// - `instances/` — user worlds, mods, configs
 /// - `accounts.json`, `config.json` — user credentials and settings
+/// - `skins/`, `capes/` — user skin and cape libraries
 #[tauri::command]
 pub async fn get_cache_size() -> Result<u64, String> {
-    let data = paths::data_dir();
     let mut total: u64 = 0;
 
-    // Version + loader metadata
-    let meta_dir = paths::meta_dir();
-    if meta_dir.exists() {
-        total += dir_size(&meta_dir);
+    // 1. Unified cache directory (<data>/cache)
+    let cache_dir = paths::cache_dir();
+    if cache_dir.exists() {
+        total += dir_size(&cache_dir);
     }
 
-    // Loader scratch directories (installer artifacts, processor outputs)
-    let scratch_dir = data.join("loader-scratch");
-    if scratch_dir.exists() {
-        total += dir_size(&scratch_dir);
+    // 2. Lingering legacy root-level cache directories
+    let data = paths::data_dir();
+    for legacy in ["loader-scratch", "icons", "versions", "meta"] {
+        let dir = data.join(legacy);
+        if dir.exists() {
+            total += dir_size(&dir);
+        }
+    }
+    let legacy_comp_jars = data.join("companion").join("jars");
+    if legacy_comp_jars.exists() {
+        total += dir_size(&legacy_comp_jars);
     }
 
-    // Cached project icons
-    let icons_dir = data.join("icons");
-    if icons_dir.exists() {
-        total += dir_size(&icons_dir);
-    }
-
-    // Cached vanilla client JARs
-    let versions_dir = data.join("versions");
-    if versions_dir.exists() {
-        total += dir_size(&versions_dir);
-    }
-
-    // Asset index JSONs (not the objects — those are too large)
+    // 3. Asset index JSONs (not the objects — those are 1-2 GB)
     let indexes_dir = paths::assets_dir().join("indexes");
     if indexes_dir.exists() {
         total += dir_size(&indexes_dir);
@@ -99,44 +92,45 @@ pub async fn get_cache_size() -> Result<u64, String> {
 /// Forge/NeoForge instances will re-run their installer on next launch.
 #[tauri::command]
 pub async fn purge_cache() -> Result<u64, String> {
-    let data = paths::data_dir();
     let mut freed: u64 = 0;
 
-    // Version + loader metadata
-    let meta_dir = paths::meta_dir();
-    if meta_dir.exists() {
-        freed += dir_size(&meta_dir);
-        let _ = fs::remove_dir_all(&meta_dir);
+    // 1. Unified cache directory (<data>/cache)
+    let cache_dir = paths::cache_dir();
+    if cache_dir.exists() {
+        freed += dir_size(&cache_dir);
+        if let Err(e) = fs::remove_dir_all(&cache_dir) {
+            tracing::warn!("Failed to remove cache dir {:?}: {}", cache_dir, e);
+        }
+        let _ = fs::create_dir_all(&cache_dir);
     }
 
-    // Loader scratch directories
-    let scratch_dir = data.join("loader-scratch");
-    if scratch_dir.exists() {
-        freed += dir_size(&scratch_dir);
-        let _ = fs::remove_dir_all(&scratch_dir);
+    // 2. Sweep lingering legacy root-level cache directories
+    let data = paths::data_dir();
+    for legacy in ["loader-scratch", "icons", "versions", "meta"] {
+        let dir = data.join(legacy);
+        if dir.exists() {
+            freed += dir_size(&dir);
+            if let Err(e) = fs::remove_dir_all(&dir) {
+                tracing::warn!("Failed to remove legacy cache {:?}: {}", dir, e);
+            }
+        }
+    }
+    let legacy_comp_jars = data.join("companion").join("jars");
+    if legacy_comp_jars.exists() {
+        freed += dir_size(&legacy_comp_jars);
+        let _ = fs::remove_dir_all(&legacy_comp_jars);
     }
 
-    // Cached project icons
-    let icons_dir = data.join("icons");
-    if icons_dir.exists() {
-        freed += dir_size(&icons_dir);
-        let _ = fs::remove_dir_all(&icons_dir);
-    }
-
-    // Cached vanilla client JARs
-    let versions_dir = data.join("versions");
-    if versions_dir.exists() {
-        freed += dir_size(&versions_dir);
-        let _ = fs::remove_dir_all(&versions_dir);
-    }
-
-    // Asset index JSONs
+    // 3. Asset index JSONs
     let indexes_dir = paths::assets_dir().join("indexes");
     if indexes_dir.exists() {
         freed += dir_size(&indexes_dir);
-        let _ = fs::remove_dir_all(&indexes_dir);
+        if let Err(e) = fs::remove_dir_all(&indexes_dir) {
+            tracing::warn!("Failed to remove asset indexes dir {:?}: {}", indexes_dir, e);
+        }
     }
 
+    tracing::info!("Purged launcher cache: freed {} bytes", freed);
     Ok(freed)
 }
 
@@ -180,4 +174,25 @@ pub async fn save_download_history(json: String) -> Result<(), String> {
     let path = paths::data_dir().join("download_history.json");
     fs::create_dir_all(paths::data_dir()).map_err(|e| e.to_string())?;
     fs::write(&path, json).map_err(|e| format!("Failed to write download history: {}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_cache_size_and_purge() {
+        let cache = paths::cache_dir();
+        let test_subdir = cache.join("installers");
+        std::fs::create_dir_all(&test_subdir).unwrap();
+        let test_file = test_subdir.join("test_installer.jar");
+        std::fs::write(&test_file, vec![0u8; 1024]).unwrap();
+
+        let size = get_cache_size().await.unwrap();
+        assert!(size >= 1024);
+
+        let freed = purge_cache().await.unwrap();
+        assert!(freed >= 1024);
+        assert!(!test_file.exists());
+    }
 }

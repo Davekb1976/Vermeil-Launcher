@@ -51,6 +51,9 @@ pub fn run() {
             }
         }))
         .setup(|app| {
+            // Migrate any legacy root-level cache directories to <data_dir>/cache/
+            crate::util::paths::migrate_legacy_cache_dirs();
+
             // Create the companion mod's data scaffold (folders + default
             // vermeil-settings.json) up front, so the layout and a fully-populated
             // settings file always exist regardless of whether a cape is set.

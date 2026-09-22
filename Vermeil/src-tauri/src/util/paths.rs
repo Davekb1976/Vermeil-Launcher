@@ -14,6 +14,15 @@ pub fn data_dir() -> PathBuf {
     base.join("Vermeil")
 }
 
+/// Returns the root cache directory for temporary, purgeable, and re-downloadable files.
+///
+/// - Windows: `%LOCALAPPDATA%/Vermeil/cache`
+/// - macOS: `~/Library/Application Support/Vermeil/cache`
+/// - Linux: `~/.local/share/Vermeil/cache`
+pub fn cache_dir() -> PathBuf {
+    data_dir().join("cache")
+}
+
 /// Returns the instances directory.
 pub fn instances_dir() -> PathBuf {
     data_dir().join("instances")
@@ -34,9 +43,108 @@ pub fn java_dir() -> PathBuf {
     data_dir().join("java")
 }
 
-/// Returns the metadata cache directory.
+/// Returns the metadata cache directory (`<cache>/meta`).
 pub fn meta_dir() -> PathBuf {
-    data_dir().join("meta")
+    cache_dir().join("meta")
+}
+
+/// Returns the cached vanilla client JARs directory (`<cache>/versions`).
+pub fn versions_cache_dir() -> PathBuf {
+    cache_dir().join("versions")
+}
+
+/// Returns the cached loader installers directory (`<cache>/installers`).
+pub fn installers_cache_dir() -> PathBuf {
+    cache_dir().join("installers")
+}
+
+/// Returns the loader installer scratch working directory (`<cache>/scratch`).
+pub fn scratch_dir() -> PathBuf {
+    cache_dir().join("scratch")
+}
+
+/// Returns the project icon cache directory (`<cache>/icons`).
+pub fn icons_cache_dir() -> PathBuf {
+    cache_dir().join("icons")
+}
+
+/// Migrate legacy root-level cache folders (`icons`, `meta`, `versions`, `loader-scratch`,
+/// `companion/jars`) to `<data_dir>/cache/`.
+///
+/// Runs once at startup. Fast and best-effort: moves folders across the same filesystem.
+pub fn migrate_legacy_cache_dirs() {
+    let data = data_dir();
+    let cache = cache_dir();
+
+    if let Err(e) = std::fs::create_dir_all(&cache) {
+        tracing::warn!("Failed to create cache directory {:?}: {}", cache, e);
+        return;
+    }
+
+    // 1. Migrate icons: <data>/icons -> <cache>/icons
+    let legacy_icons = data.join("icons");
+    let target_icons = icons_cache_dir();
+    migrate_dir(&legacy_icons, &target_icons);
+
+    // 2. Migrate meta: <data>/meta -> <cache>/meta
+    let legacy_meta = data.join("meta");
+    let target_meta = meta_dir();
+    migrate_dir(&legacy_meta, &target_meta);
+
+    // 3. Migrate versions: <data>/versions -> <cache>/versions
+    let legacy_versions = data.join("versions");
+    let target_versions = versions_cache_dir();
+    migrate_dir(&legacy_versions, &target_versions);
+
+    // 4. Migrate loader-scratch: <data>/loader-scratch -> <cache>/scratch
+    let legacy_scratch = data.join("loader-scratch");
+    let target_scratch = scratch_dir();
+    migrate_dir(&legacy_scratch, &target_scratch);
+
+    // 5. Migrate companion jars & manifest: <data>/companion/jars -> <cache>/companion/jars
+    let legacy_companion_jars = data.join("companion").join("jars");
+    let target_companion_jars = cache.join("companion").join("jars");
+    if legacy_companion_jars.exists() {
+        if let Some(parent) = target_companion_jars.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        migrate_dir(&legacy_companion_jars, &target_companion_jars);
+    }
+    let legacy_companion_manifest = data.join("companion").join("manifest.json");
+    let target_companion_manifest = cache.join("companion").join("manifest.json");
+    if legacy_companion_manifest.exists() && !target_companion_manifest.exists() {
+        if let Some(parent) = target_companion_manifest.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let _ = std::fs::rename(&legacy_companion_manifest, &target_companion_manifest);
+    }
+}
+
+/// Helper to move `from` directory to `to`. If `to` already exists, merges contents
+/// then removes `from`.
+fn migrate_dir(from: &std::path::Path, to: &std::path::Path) {
+    if !from.exists() {
+        return;
+    }
+    if !to.exists() {
+        if let Err(e) = std::fs::rename(from, to) {
+            tracing::debug!("Could not rename {:?} to {:?}: {}", from, to, e);
+        } else {
+            tracing::info!("Migrated cache {:?} -> {:?}", from, to);
+            return;
+        }
+    }
+    // Target already exists — move individual children
+    if let Ok(entries) = std::fs::read_dir(from) {
+        let _ = std::fs::create_dir_all(to);
+        for entry in entries.flatten() {
+            let dest = to.join(entry.file_name());
+            if !dest.exists() {
+                let _ = std::fs::rename(entry.path(), dest);
+            }
+        }
+        let _ = std::fs::remove_dir_all(from);
+    }
 }
 
 /// Atomically write `contents` to `path`.
@@ -83,4 +191,45 @@ pub fn atomic_write<P: AsRef<std::path::Path>>(path: P, contents: &[u8]) -> std:
 
     std::fs::rename(&tmp, path)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cache_hierarchy_structure() {
+        let cache = cache_dir();
+        assert_eq!(meta_dir(), cache.join("meta"));
+        assert_eq!(versions_cache_dir(), cache.join("versions"));
+        assert_eq!(installers_cache_dir(), cache.join("installers"));
+        assert_eq!(scratch_dir(), cache.join("scratch"));
+        assert_eq!(icons_cache_dir(), cache.join("icons"));
+    }
+
+    #[test]
+    fn test_migrate_dir_rename_and_merge() {
+        let temp = std::env::temp_dir().join(format!("vermeil_test_migrate_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&temp);
+        let from = temp.join("from");
+        let to = temp.join("to");
+
+        std::fs::create_dir_all(&from).unwrap();
+        std::fs::write(from.join("a.txt"), "hello").unwrap();
+
+        // 1. Initial migration (rename)
+        migrate_dir(&from, &to);
+        assert!(!from.exists());
+        assert!(to.join("a.txt").exists());
+
+        // 2. Secondary migration (merge when target exists)
+        std::fs::create_dir_all(&from).unwrap();
+        std::fs::write(from.join("b.txt"), "world").unwrap();
+        migrate_dir(&from, &to);
+        assert!(!from.exists());
+        assert!(to.join("a.txt").exists());
+        assert!(to.join("b.txt").exists());
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
 }

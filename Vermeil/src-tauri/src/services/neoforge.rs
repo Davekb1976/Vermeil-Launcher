@@ -582,7 +582,7 @@ async fn ensure_installer_ran(
 
         // Download installer to a shared cache so multiple instances using
         // the same loader version don't re-download the 15-40MB JAR.
-        let cache_dir = paths::data_dir().join("cache").join("installers");
+        let cache_dir = paths::installers_cache_dir();
         fs::create_dir_all(&cache_dir).map_err(|e| format!("Create installer cache dir: {}", e))?;
         let cache_filename = installer_url
             .rsplit('/')
@@ -667,7 +667,7 @@ async fn ensure_installer_ran(
 
             let target_jar = mc_versions_dir.join(format!("{}.jar", game_version));
             if !target_jar.exists() {
-                let shared_jar = paths::data_dir().join("versions").join(format!("{}.jar", game_version));
+                let shared_jar = paths::versions_cache_dir().join(format!("{}.jar", game_version));
                 if shared_jar.exists() {
                     if fs::hard_link(&shared_jar, &target_jar).is_err() {
                         let _ = fs::copy(&shared_jar, &target_jar);
@@ -859,7 +859,7 @@ pub async fn ensure_neoforge_libraries(
     instance_name: &str,
 ) -> Result<(String, Vec<PathBuf>, Vec<String>, Vec<String>), String> {
     let installer_url = resolve_neoforge_installer_url(loader_version);
-    let scratch = paths::data_dir().join("loader-scratch").join(format!("neoforge-{}", loader_version));
+    let scratch = paths::scratch_dir().join(format!("neoforge-{}", loader_version));
     let java_exe = ensure_java_for_loader(game_version).await?;
 
     ensure_installer_ran(&installer_url, &scratch, &java_exe, "neoforge", app, instance_name, game_version).await
@@ -874,7 +874,7 @@ pub async fn ensure_forge_libraries(
 ) -> Result<(String, Vec<PathBuf>, Vec<String>, Vec<String>), String> {
     let full_version = canonical_forge_version(game_version, loader_version);
     let installer_url = resolve_forge_installer_url(game_version, loader_version).await;
-    let scratch = paths::data_dir().join("loader-scratch").join(format!("forge-{}", full_version));
+    let scratch = paths::scratch_dir().join(format!("forge-{}", full_version));
     let java_exe = ensure_java_for_loader(game_version).await?;
 
     ensure_installer_ran(&installer_url, &scratch, &java_exe, "forge", app, instance_name, game_version).await
