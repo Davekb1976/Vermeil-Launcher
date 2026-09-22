@@ -175,7 +175,7 @@ pub fn supported_versions_for_loader(loader: &str) -> Vec<String> {
         "fabric" | "quilt" => FABRIC_SUPPORTED.iter().map(|s| s.to_string()).collect(),
         "neoforge" => NEOFORGE_SUPPORTED.iter().map(|s| s.to_string()).collect(),
         "forge" => FORGE_SUPPORTED.iter().map(|s| s.to_string()).collect(),
-        "all" | "any" | "vanilla" | "" => {
+        "all" | "any" | "" => {
             let mut all = Vec::new();
             for v in FABRIC_SUPPORTED {
                 if !all.contains(&v.to_string()) {

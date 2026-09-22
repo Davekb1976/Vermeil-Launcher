@@ -24,7 +24,6 @@ import {
   IconBolt,
   IconWand,
   IconPuzzle,
-  IconCheck,
   IconAlertTriangle,
   IconPlus,
   IconX,
@@ -185,8 +184,8 @@ const CreateCustom: Component = () => {
   const [neoforgeGameVersions] = createResource(getNeoforgeGameVersions);
   const [forgeGameVersions] = createResource(getForgeGameVersions);
 
-  const [companionVersions] = createResource(() => loader(), (l) => companionSupportedVersions(l));
-  const isCompanionSupported = (id: string) => !!id && (companionVersions() || []).includes(id);
+  const [companionVersions] = createResource(() => loader(), (l) => l === "vanilla" ? Promise.resolve([]) : companionSupportedVersions(l));
+  const isCompanionSupported = (id: string) => loader() !== "vanilla" && !!id && (companionVersions() || []).includes(id);
 
   const isLegacyVersion = () => {
     const gv = selectedGameVersion();
@@ -398,11 +397,6 @@ const CreateCustom: Component = () => {
                           </div>
                           <div class="loader-card-desc">{item.desc}</div>
                         </div>
-                        <Show when={isSelected()}>
-                          <div class="loader-card-check">
-                            <IconCheck />
-                          </div>
-                        </Show>
                       </div>
                     );
                   }}
@@ -433,7 +427,7 @@ const CreateCustom: Component = () => {
                         <Show when={isCompanionSupported(selectedGameVersion())}>
                           <span
                             class="companion-tag tip-below"
-                            data-tip={loader() === "vanilla" ? "Vermeil companion mod available (requires Fabric, NeoForge, or Forge)" : "Vermeil companion mod supported"}
+                            data-tip="Vermeil companion mod supported"
                           >
                             <img class="companion-version-mark" src="/logo.png" alt="Vermeil" draggable={false} /> Companion
                           </span>
@@ -468,7 +462,7 @@ const CreateCustom: Component = () => {
                                         class="companion-version-mark tip-left"
                                         src="/logo.png"
                                         alt="Vermeil"
-                                        data-tip={loader() === "vanilla" ? "Vermeil companion mod available (requires Fabric, NeoForge, or Forge)" : "Vermeil companion mod supported"}
+                                        data-tip="Vermeil companion mod supported"
                                         draggable={false}
                                       />
                                     </Show>
@@ -585,21 +579,12 @@ const CreateCustom: Component = () => {
               </Show>
 
               {/* Companion Mod Status Notice */}
-              <Show when={isCompanionSupported(selectedGameVersion()) && loader() !== "vanilla"}>
+              <Show when={isCompanionSupported(selectedGameVersion())}>
                 <div class="create-companion-banner">
                   <img src="/logo.png" alt="Vermeil" class="companion-version-mark" style="width: 20px; height: 20px; object-fit: contain; margin-top: 2px;" draggable={false} />
                   <div class="create-companion-text">
                     <span class="create-companion-title">Vermeil Companion Mod Supported</span>
                     <span class="create-companion-desc">In-game skin & cape sync, rich presence, and performance telemetry will be active for this instance.</span>
-                  </div>
-                </div>
-              </Show>
-              <Show when={isCompanionSupported(selectedGameVersion()) && loader() === "vanilla"}>
-                <div class="create-companion-banner create-companion-banner--info">
-                  <img src="/logo.png" alt="Vermeil" class="companion-version-mark" style="width: 20px; height: 20px; object-fit: contain; margin-top: 2px;" draggable={false} />
-                  <div class="create-companion-text">
-                    <span class="create-companion-title">Vermeil Companion Mod Available</span>
-                    <span class="create-companion-desc">This version supports the Vermeil Companion Mod. Switch loader above to Fabric, NeoForge, or Forge to enable in-game skin & cape sync.</span>
                   </div>
                 </div>
               </Show>

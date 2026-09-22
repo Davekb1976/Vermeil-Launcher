@@ -20,7 +20,6 @@ import {
   IconBolt,
   IconWand,
   IconPuzzle,
-  IconCheck,
   IconAlertTriangle,
   IconX,
   IconChevronDown,
@@ -363,11 +362,6 @@ const ChangeLoaderModal: Component = () => {
                             {compatible() ? item.desc : `Not available for MC ${inst()?.game_version}`}
                           </div>
                         </div>
-                        <Show when={isSelected()}>
-                          <div class="loader-card-check" style="position: absolute; top: 6px; right: 6px;">
-                            <IconCheck />
-                          </div>
-                        </Show>
                       </div>
                     );
                   }}
