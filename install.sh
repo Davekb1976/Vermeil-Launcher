@@ -154,7 +154,17 @@ fi
 
 echo ""
 echo "  Fetching latest release..."
-LATEST=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep -Po '"tag_name": "\K[^"]+')
+LATEST=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null | grep -Po '"tag_name": "\K[^"]+' || true)
+if [ -z "$LATEST" ]; then
+  LATEST=$(curl -fsSL "https://github.com/$REPO/releases/latest/download/latest.json" 2>/dev/null | grep -Po '"version": "\K[^"]+' || true)
+  if [ -n "$LATEST" ]; then
+    LATEST="v$LATEST"
+  fi
+fi
+if [ -z "$LATEST" ]; then
+  echo "  Error: Could not determine latest release version." >&2
+  exit 1
+fi
 VERSION="${LATEST#v}"
 echo "  Latest version: $VERSION"
 
