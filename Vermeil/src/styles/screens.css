@@ -1210,12 +1210,14 @@
   letter-spacing: -0.01em;
 }
 
-.account-badge-active.account-badge--offline {
+.account-badge-active.account-badge--offline,
+.account-badge-active.account-badge--none {
   background: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.14);
   color: var(--muted);
 }
-.account-badge-active.account-badge--offline .account-badge-dot {
+.account-badge-active.account-badge--offline .account-badge-dot,
+.account-badge-active.account-badge--none .account-badge-dot {
   background: var(--muted);
   box-shadow: none;
   animation: none;

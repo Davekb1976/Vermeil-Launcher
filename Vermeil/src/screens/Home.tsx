@@ -334,31 +334,46 @@ const Home: Component = () => {
                 <span class="home-telemetry-name">{displayName()}</span>
               </div>
               <Show
-                when={account()?.needs_reauth}
+                when={account()}
                 fallback={
                   <div
-                    class={`account-badge-active tip-below tip-right ${account()?.is_offline ? "account-badge--offline" : ""}`}
-                    data-tip={account()?.is_offline ? "Offline Minecraft profile" : "Signed in with Microsoft"}
+                    class="account-badge-active account-badge--none tip-below tip-right"
+                    data-tip="No active account — click to sign in or add a profile"
                   >
-                    <Show
-                      when={!account()?.is_offline}
-                      fallback={<span class="account-badge-dot account-badge-dot--offline" />}
-                    >
-                      <IconMicrosoft class="account-badge-ms-icon" />
-                    </Show>
-                    <span>{account()?.is_offline ? "Offline" : "Microsoft"}</span>
+                    <span class="account-badge-dot account-badge-dot--offline" />
+                    <span>Not Signed In</span>
                   </div>
                 }
               >
-                <div
-                  class="account-badge-reauth tip-below tip-right"
-                  data-tip="Session expired — open Accounts to sign in again"
-                  onClick={() => setActiveScreen("account")}
-                  style={{ cursor: "pointer" }}
-                >
-                  <IconAlertTriangle />
-                  <span>Session Expired</span>
-                </div>
+                {(acc) => (
+                  <Show
+                    when={acc().needs_reauth}
+                    fallback={
+                      <div
+                        class={`account-badge-active tip-below tip-right ${acc().is_offline ? "account-badge--offline" : ""}`}
+                        data-tip={acc().is_offline ? "Offline Minecraft profile" : "Signed in with Microsoft"}
+                      >
+                        <Show
+                          when={!acc().is_offline}
+                          fallback={<span class="account-badge-dot account-badge-dot--offline" />}
+                        >
+                          <IconMicrosoft class="account-badge-ms-icon" />
+                        </Show>
+                        <span>{acc().is_offline ? "Offline" : "Microsoft"}</span>
+                      </div>
+                    }
+                  >
+                    <div
+                      class="account-badge-reauth tip-below tip-right"
+                      data-tip="Session expired — open Accounts to sign in again"
+                      onClick={() => setActiveScreen("account")}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <IconAlertTriangle />
+                      <span>Session Expired</span>
+                    </div>
+                  </Show>
+                )}
               </Show>
             </div>
 
