@@ -1,10 +1,11 @@
 {
 	"required": true,
 	"package": "com.vermeil.client.mixin",
-	"compatibilityLevel": "JAVA_25",
+	"compatibilityLevel": "JAVA_21",
 	"client": [
 		"AvatarRendererMixin",
-		"MinecraftClientMixin"
+		"MinecraftClientMixin",
+		"VermeilMenuButtonMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
