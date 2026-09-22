@@ -4,10 +4,20 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'Vermeil/**'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches:
       - main
+    paths:
+      - 'Vermeil/**'
+      - '.github/workflows/ci.yml'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
