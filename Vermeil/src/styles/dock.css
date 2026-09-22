@@ -803,6 +803,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex-shrink: 0;
 }
 .keybind-capture {
   background: var(--bg4);
@@ -816,6 +817,7 @@
   cursor: pointer;
   min-width: 110px;
   text-align: center;
+  white-space: nowrap;
   transition: border-color 0.12s, background 0.12s;
 }
 .keybind-capture:hover {
@@ -833,6 +835,7 @@
 }
 .keybind-keys, .keybind-capturing-text {
   display: inline-block;
+  white-space: nowrap;
 }
 .keybind-reset {
   background: transparent;

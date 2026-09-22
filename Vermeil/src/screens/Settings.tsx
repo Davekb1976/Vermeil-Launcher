@@ -1130,7 +1130,7 @@ const Settings: Component = () => {
                                   return (
                                     <Show when={ownsCurrent}>
                                         <button
-                                          class="btn btn--sm btn--danger tip-left"
+                                          class="btn btn--sm btn--danger tip-right"
                                           onClick={() => runDelete(major)}
                                           disabled={busy() !== null}
                                           data-tip="Delete Vermeil's downloaded copy"
@@ -1860,7 +1860,7 @@ const Settings: Component = () => {
                 </div>
 
                 <div class="card-section-body">
-                  <div class="setting-card-grid">
+                  <div class="setting-card-grid setting-card-grid--2col">
                     <For each={KEYBINDS}>
                       {(action) => (
                         <Show when={isKeybindsSection() || matches(action.label, action.description, action.default)}>

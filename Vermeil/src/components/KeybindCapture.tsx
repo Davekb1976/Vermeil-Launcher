@@ -112,9 +112,10 @@ const KeybindCapture: Component<{
       <button
         ref={captureRef}
         type="button"
-        class={`keybind-capture ${capturing() ? "capturing" : ""}`}
+        class={`keybind-capture tip-below ${capturing() ? "capturing" : ""}`}
         onClick={startCapture}
-        title={capturing() ? "Press keys or mouse side button… (Escape to cancel)" : "Click to change"}
+        data-tip={capturing() ? "Press keys or mouse button… (Escape to cancel)" : "Click to change"}
+        aria-label={capturing() ? "Press keys or mouse button… (Escape to cancel)" : "Click to change"}
       >
         {capturing() ? (
           <span class="keybind-capturing-text">Press keys or mouse button…</span>
@@ -124,7 +125,7 @@ const KeybindCapture: Component<{
       </button>
       <button
         type="button"
-        class="keybind-reset tip-left"
+        class="keybind-reset tip-right"
         onClick={handleReset}
         disabled={isDefault()}
         data-tip="Reset to default"

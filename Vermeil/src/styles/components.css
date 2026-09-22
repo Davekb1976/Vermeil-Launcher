@@ -1836,7 +1836,7 @@
   flex: 1;
   min-width: 0;
   padding-left: var(--space-4);
-  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .settings-no-results {
@@ -2109,6 +2109,7 @@
   transition: border-color 0.12s, background 0.12s, transform 0.12s, box-shadow 0.12s;
   box-sizing: border-box;
   min-height: 52px;
+  min-width: 0;
 }
 
 .card-section-body .setting-row:hover,
