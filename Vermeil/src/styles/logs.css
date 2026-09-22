@@ -21,6 +21,21 @@
 }
 .logs-popout-body .log-viewer-frame { flex: 1; min-height: 0; }
 
+/* Instance screen logs tab — fills remaining vertical space without page-level scrolling */
+.instance-screen--logs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.inst-logs-tab {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Logs-tab placeholder shown in the main window while the logs are detached
    into the popout. Centered prompt + a button to reattach. */
 .logs-detached {
@@ -30,7 +45,8 @@
   justify-content: center;
   text-align: center;
   gap: 14px;
-  height: calc(100vh - 140px);
+  flex: 1;
+  min-height: 0;
   color: var(--muted);
 }
 .logs-detached .btn { align-self: center; }

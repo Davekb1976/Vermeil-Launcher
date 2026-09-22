@@ -150,6 +150,14 @@
   flex-direction: column;
 }
 
+/* The Logs tab on an Instance screen is a full-height console — fills the exact
+   remaining height without page-level scrollbars so only the log viewer scrolls. */
+.content:has(.instance-screen--logs) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 /* =====================================================================
    Responsive_Layout (Requirements 8.1, 8.2, 8.3, 8.4, 8.6)
    ---------------------------------------------------------------------

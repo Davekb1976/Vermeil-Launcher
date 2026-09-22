@@ -1184,7 +1184,7 @@ const InstanceMods: Component = () => {
   };
 
   return (
-    <div class="screen-enter">
+    <div class={`screen-enter instance-screen ${mainTab() === "logs" ? "instance-screen--logs" : ""}`}>
       <Show when={instance()} fallback={
         <div style="text-align:center;color:var(--muted);padding:40px;font-size:var(--fs-sm)">
           <div style="margin-bottom:8px">No instance selected.</div>
@@ -2406,7 +2406,7 @@ const InstanceMods: Component = () => {
             );
           }
           return (
-            <div style="display:flex;flex-direction:column;height:calc(100vh - 140px)">
+            <div class="inst-logs-tab">
               <div class="log-toolbar">
                 {/* Filter chips on the left */}
                 <div class="log-toolbar-filters">

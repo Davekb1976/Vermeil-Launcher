@@ -1553,6 +1553,7 @@
   gap: var(--space-2);
   margin-bottom: var(--space-3);
   flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 .log-toolbar-filters {
   display: flex;
