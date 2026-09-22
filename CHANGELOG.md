@@ -1,17 +1,22 @@
-## 1.1.0 (Experimental Build 2)
+## 1.1.0
 
 ### Added
 
-- Terminal prompt prefixes and latest-line highlighting on game log viewers
-- Unified cache management consolidating icon, archive, and manifest storage with full purge support
+- Real-time disk footprint synchronization to Windows installed apps list
+- Terminal prompt prefixes, latest-line highlighting, and overhauls for game log viewers
+- Consolidated cache architecture merging icons, archives, and metadata with disk purge support
+- Unified modern Minecraft 1.21.1–1.21.4 companion mod architecture supporting both Fabric and NeoForge
+- Hardened credential security with encrypted credential persistence and token IPC redaction
 
 ### Changed
 
-- Overhauled log viewer scroll tracking and filter controls with active auto-scroll status indicators
-- Reduced companion mod manifest cache refresh interval for faster update detection
+- Streamlined log viewer auto-scroll tracking and search filter controls
+- Centralized companion mod JAR caching and optimized manifest refresh interval for faster launches
+- Refined account status badges and simplified version filter dropdowns
 
 ### Fixed
 
-- Restored the in-game companion mod settings button and screen across Fabric and NeoForge
-- Removed companion compatibility badges when selecting the Vanilla loader and removed redundant loader checkmarks
-- Eliminated outer page scroll overflow on the instance logs tab
+- Restored the in-game companion mod settings button and configuration screen across Fabric and NeoForge
+- Removed companion indicators when configuring Vanilla instances and removed redundant loader checkmarks
+- Eliminated outer scroll overflow on instance log tabs
+- Resolved cross-platform compilation warnings across Linux and Windows targets
