@@ -131,22 +131,15 @@ pub async fn purge_cache() -> Result<u64, String> {
     }
 
     tracing::info!("Purged launcher cache: freed {} bytes", freed);
+    #[cfg(windows)]
+    tauri::async_runtime::spawn_blocking(|| {
+        crate::util::platform::update_windows_estimated_size();
+    });
     Ok(freed)
 }
 
 fn dir_size(path: &std::path::Path) -> u64 {
-    let mut size: u64 = 0;
-    if let Ok(entries) = fs::read_dir(path) {
-        for entry in entries.flatten() {
-            let p = entry.path();
-            if p.is_dir() {
-                size += dir_size(&p);
-            } else if let Ok(meta) = p.metadata() {
-                size += meta.len();
-            }
-        }
-    }
-    size
+    crate::util::paths::dir_size(path)
 }
 
 /// Get total system memory in MB.

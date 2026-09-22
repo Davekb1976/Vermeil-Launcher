@@ -31,6 +31,16 @@
 ; -----------------------------------------------------------------------------
 
 Var DeleteUserData
+Var DataFolderMB
+
+!macro NSIS_HOOK_POSTINSTALL
+    ; Recalculate true directory size in KB (including existing instances/assets if updating)
+    ; and update EstimatedSize in the registry so Windows Settings shows the real disk usage.
+    ${If} ${FileExists} "$INSTDIR\*.*"
+        ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
+        WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Vermeil" "EstimatedSize" $0
+    ${EndIf}
+!macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
     ; Default: don't touch user data.
@@ -39,8 +49,13 @@ Var DeleteUserData
     ; If the user opted in via Tauri's confirm-page checkbox, ask them to
     ; double-confirm — this is destructive and worth the extra click.
     ${If} $DeleteAppDataCheckboxState == "1"
+        StrCpy $DataFolderMB "0"
+        ${If} ${FileExists} "$LOCALAPPDATA\Vermeil\*.*"
+            ${GetSize} "$LOCALAPPDATA\Vermeil" "/S=0M" $0 $1 $2
+            StrCpy $DataFolderMB $0
+        ${EndIf}
         MessageBox MB_YESNO|MB_ICONEXCLAMATION|MB_DEFBUTTON2 \
-            "This will permanently delete your Vermeil data folder including all instances, accounts, settings, and downloads stored in:$\r$\n$LOCALAPPDATA\Vermeil$\r$\n$\r$\nAre you sure?" \
+            "This will permanently delete your Vermeil data folder (approximately $DataFolderMB MB) including all instances, accounts, settings, and downloads stored in:$\r$\n$LOCALAPPDATA\Vermeil$\r$\n$\r$\nAre you sure?" \
             /SD IDNO \
             IDNO skip
         StrCpy $DeleteUserData "1"

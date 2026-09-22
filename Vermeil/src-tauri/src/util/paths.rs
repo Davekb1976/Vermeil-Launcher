@@ -193,6 +193,22 @@ pub fn atomic_write<P: AsRef<std::path::Path>>(path: P, contents: &[u8]) -> std:
     Ok(())
 }
 
+/// Recursively calculates the total size in bytes of all files within a directory.
+pub fn dir_size(path: &std::path::Path) -> u64 {
+    let mut size: u64 = 0;
+    if let Ok(entries) = std::fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_dir() {
+                size += dir_size(&p);
+            } else if let Ok(meta) = p.metadata() {
+                size += meta.len();
+            }
+        }
+    }
+    size
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

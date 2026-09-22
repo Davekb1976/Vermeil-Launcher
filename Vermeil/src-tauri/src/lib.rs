@@ -198,6 +198,12 @@ pub fn run() {
                 })
                 .build(app)?;
 
+            // Keep Windows "Installed Apps" EstimatedSize in sync with true disk footprint
+            #[cfg(windows)]
+            tauri::async_runtime::spawn_blocking(|| {
+                crate::util::platform::update_windows_estimated_size();
+            });
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
