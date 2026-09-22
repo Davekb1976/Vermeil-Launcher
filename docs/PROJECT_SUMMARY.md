@@ -233,7 +233,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for full prerequisites and build instructio
 ## Git Conventions
 
 - **Branch:** `main` only
-- **Commits:** `release: X.Y.Z` for releases, `feat:` / `fix:` / `chore:` / `docs:` for everything else
-- **Tags:** `vX.Y.Z` (triggers CI)
+- **Commits:** `release: X.Y.Z` for full releases, `release: X.Y.Z (experimental build N)` for experimental pre-releases, `feat:` / `fix:` / `chore:` / `docs:` for everything else
+- **Tags:** `vX.Y.Z` for full releases, `vX.Y.Z-experimental-N` for experimental pre-releases (triggers CI)
 - **Version cadence:** 0.X.0 through 0.X.9, then roll to 0.(X+1).0 (single-digit patches only)
 - **Never** commit without explicit approval for releases

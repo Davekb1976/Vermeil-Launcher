@@ -247,6 +247,8 @@ These apply to the whole app — backend and frontend, every feature and code pa
 ## Releases
 
 See the `release-process` skill for version bumping, changelog format, and tagging rules.
+- **Full release:** Commit `release: X.Y.Z`, changelog header `## X.Y.Z`, tag `vX.Y.Z`.
+- **Pre-release / Experimental build:** When the user requests a pre-release or experimental build (e.g. "experimental build N"), the commit message **MUST** include it: `release: X.Y.Z (experimental build N)`, changelog header `## X.Y.Z (Experimental Build N)`, tag `vX.Y.Z-experimental-N`.
 
 ### Original work
 

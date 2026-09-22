@@ -116,19 +116,25 @@ While in pre-1.0 development, anything goes — use MINOR for any meaningful cha
 ### Step-by-Step Release Flow
 
 1. Confirm working tree is clean and pushed (`git status`, `git log origin/main..HEAD` should be empty)
-2. Bump version in `Vermeil/package.json` and `Vermeil/src-tauri/tauri.conf.json`
+2. Bump version in `Vermeil/package.json`, `Vermeil/src-tauri/tauri.conf.json`, and `Vermeil/src-tauri/Cargo.toml`
 3. Generate `CHANGELOG.md` from the conventional commits since the last tag:
    - Run `git log <last-tag>..HEAD --oneline` to list commits
    - Group by type into `### Added` (feat), `### Changed` (refactor/perf), `### Fixed` (fix)
    - Replace `CHANGELOG.md` contents with the new section (don't prepend)
-4. Commit: `release: X.Y.Z` (this is the one commit that uses the `release:` prefix)
+   - Header is `## X.Y.Z` for full releases, or `## X.Y.Z (Experimental Build N)` for pre-release builds
+4. Commit:
+   - **Full release:** `release: X.Y.Z` (e.g. `release: 1.1.0`)
+   - **Experimental pre-release build:** When the user requests an experimental build (e.g. "experimental build N", "test pre-release", etc.), the commit message **MUST explicitly include it**: `release: X.Y.Z (experimental build N)` (e.g. `release: 1.1.0 (experimental build 1)`).
 5. Push: `git push`
-6. Tag: `git tag vX.Y.Z`
-7. Push tag: `git push origin vX.Y.Z`
+6. Tag:
+   - **Full release:** `git tag vX.Y.Z`
+   - **Experimental pre-release build:** `git tag vX.Y.Z-experimental-N` (e.g. `git tag v1.1.0-experimental-1`)
+7. Push tag: `git push origin <tag>`
 8. The release workflow publishes a plain `vX.Y.Z` tag as a **full latest
    release** automatically (drops nothing, marked latest, served by the
-   auto-updater). To ship an **experimental** build that the updater won't push
-   to users, tag it with a pre-release suffix instead — see below.
+   auto-updater). A tag with a pre-release suffix (such as `-experimental-N`) is
+   published as an **experimental pre-release** that the updater won't push to
+   users — see below.
 
 **After pushing the tag, stop.** Do not poll or monitor the CI run (`gh run list`,
 `gh run watch`, re-opening the release, etc.) — the user watches the workflow and
@@ -155,8 +161,26 @@ When generating the changelog from conventional commits since the last tag:
 
 ### Changelog Format
 
+Full release:
 ```markdown
 ## X.Y.Z
+
+### Added
+
+- New user-visible thing (from feat: commits)
+
+### Changed
+
+- Behavior tweak (from refactor:/perf: commits)
+
+### Fixed
+
+- Bug fix (from fix: commits)
+```
+
+Experimental pre-release build:
+```markdown
+## X.Y.Z (Experimental Build N)
 
 ### Added
 
@@ -180,7 +204,7 @@ Replace file contents on each release. Don't prepend.
 
 ## Tagging Rules
 
-- Always `v` prefix: `v0.2.3`
+- Always `v` prefix: `v0.2.3` (or `vX.Y.Z-experimental-N` for experimental pre-releases)
 - Never bump/tag without explicit user approval (the `release:` commit requires confirmation)
 - Tags are immutable — never reuse a tag once pushed
 
@@ -188,7 +212,7 @@ Replace file contents on each release. Don't prepend.
 
 **A plain `vX.Y.Z` tag ships as a full release** (not a pre-release, marked
 "latest"). `release.yml` decides from the tag name: a tag with a **pre-release
-suffix** (any hyphen — `vX.Y.Z-experimental`, `-beta`, `-rc.1`) is published as a
+suffix** (any hyphen — `vX.Y.Z-experimental-N`, `-beta`, `-rc.1`) is published as a
 pre-release titled `Vermeil <tag> EXPERIMENTAL` (`prerelease: true`); a plain
 `vX.Y.Z` is a full release titled `Vermeil vX.Y.Z`. No manual step after the tag
 push either way.
@@ -198,13 +222,18 @@ the auto-updater serves its `latest.json` to every user. A pre-release is exclud
 from `releases/latest`, so the updater skips it — that's what an experimental build
 wants.
 
-- **Full release (default):** `git tag vX.Y.Z` → push. Done.
-- **Experimental build:** tag with a pre-release suffix, e.g.
-  `git tag v0.6.8-experimental` → push. Ships as a pre-release; the updater
-  ignores it.
+- **Full release (default):**
+  - Commit: `release: X.Y.Z`
+  - Changelog: `## X.Y.Z`
+  - Tag: `git tag vX.Y.Z` → push. Done.
+- **Experimental pre-release build:**
+  - Commit: `release: X.Y.Z (experimental build N)` (e.g. `release: 1.1.0 (experimental build 1)`). **Always include `(experimental build N)` in the commit message.**
+  - Changelog: `## X.Y.Z (Experimental Build N)` (e.g. `## 1.1.0 (Experimental Build 1)`).
+  - Tag: `git tag vX.Y.Z-experimental-N` (e.g. `git tag v1.1.0-experimental-1`) → push. Ships as a pre-release; the updater ignores it.
 
 The version in `package.json` / `tauri.conf.json` / `Cargo.toml` stays the plain
-`X.Y.Z`; only the **git tag** carries the optional `-experimental` suffix.
+`X.Y.Z`; only the **git tag** carries the `-experimental-N` suffix, while the
+**commit message** and **changelog header** explicitly reflect `(experimental build N)`.
 
 To flip an already-published release after the fact:
 - Pre-release → full: `gh release edit <tag> --prerelease=false --latest --title "Vermeil <tag>"`

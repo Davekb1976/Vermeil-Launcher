@@ -215,6 +215,9 @@ The launcher targets Windows (WebView2, Win32/DWM) and Linux (WebKitGTK, X11/Way
    - Conventional Commits: `type(scope): summary` (under ~70 chars, lowercase).
    - Push directly to `main` (linear history).
    - **Never rewrite pushed history** (no amend, no force push).
+   - **Release Commits:**
+     - Full release: `release: X.Y.Z` (e.g. `release: 1.1.0`).
+     - Pre-release / Experimental build: When the user requests an experimental build or pre-release (e.g. "experimental build N"), the commit message **MUST explicitly include it**: `release: X.Y.Z (experimental build N)` (e.g., `release: 1.1.0 (experimental build 1)`).
 6. **Definition of Done:** Code works, tests pass, zero warnings, parallel surfaces updated, living research docs (`docs/research/<feature>/progress.md`) updated, committed and pushed.
 
 ---
