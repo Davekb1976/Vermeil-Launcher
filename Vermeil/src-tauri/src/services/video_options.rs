@@ -36,8 +36,17 @@ pub mod defaults {
     pub const GUI_SCALE: u32 = 0; // 0 = Auto
     pub const FOV: f64 = 0.0; // 0.0 = 70 degrees
     pub const FOV_EFFECTS: f64 = 1.0;
+    pub const GAMMA: f64 = 1.0; // 1.0 = Bright
+    pub const SHOW_SUBTITLES: bool = false;
+    pub const MOUSE_SENSITIVITY: f64 = 0.5; // 0.5 = 100%
+    pub const INVERT_Y_MOUSE: bool = false;
+    pub const AUTO_JUMP: bool = false;
     pub const MASTER_VOLUME: f64 = 1.0;
     pub const MUSIC_VOLUME: f64 = 1.0;
+    pub const WEATHER_VOLUME: f64 = 1.0;
+    pub const HOSTILE_VOLUME: f64 = 1.0;
+    pub const BLOCK_VOLUME: f64 = 1.0;
+    pub const PLAYER_VOLUME: f64 = 1.0;
 }
 
 /// Resolve each mirrored field to a concrete value, falling back to the vanilla
@@ -51,8 +60,17 @@ fn resolved(vs: &GlobalVideoSettings) -> Resolved {
         gui_scale: vs.gui_scale.unwrap_or(defaults::GUI_SCALE),
         fov: vs.fov.unwrap_or(defaults::FOV),
         fov_effects: vs.fov_effects.unwrap_or(defaults::FOV_EFFECTS),
+        gamma: vs.gamma.unwrap_or(defaults::GAMMA),
+        show_subtitles: vs.show_subtitles.unwrap_or(defaults::SHOW_SUBTITLES),
+        mouse_sensitivity: vs.mouse_sensitivity.unwrap_or(defaults::MOUSE_SENSITIVITY),
+        invert_y_mouse: vs.invert_y_mouse.unwrap_or(defaults::INVERT_Y_MOUSE),
+        auto_jump: vs.auto_jump.unwrap_or(defaults::AUTO_JUMP),
         master_volume: vs.master_volume.unwrap_or(defaults::MASTER_VOLUME),
         music_volume: vs.music_volume.unwrap_or(defaults::MUSIC_VOLUME),
+        weather_volume: vs.weather_volume.unwrap_or(defaults::WEATHER_VOLUME),
+        hostile_volume: vs.hostile_volume.unwrap_or(defaults::HOSTILE_VOLUME),
+        block_volume: vs.block_volume.unwrap_or(defaults::BLOCK_VOLUME),
+        player_volume: vs.player_volume.unwrap_or(defaults::PLAYER_VOLUME),
     }
 }
 
@@ -63,8 +81,17 @@ struct Resolved {
     gui_scale: u32,
     fov: f64,
     fov_effects: f64,
+    gamma: f64,
+    show_subtitles: bool,
+    mouse_sensitivity: f64,
+    invert_y_mouse: bool,
+    auto_jump: bool,
     master_volume: f64,
     music_volume: f64,
+    weather_volume: f64,
+    hostile_volume: f64,
+    block_volume: f64,
+    player_volume: f64,
 }
 
 fn bool_str(b: bool) -> &'static str {
@@ -73,22 +100,53 @@ fn bool_str(b: bool) -> &'static str {
 
 /// Write every mirrored video setting into `content` (the text of an
 /// `options.txt`), replacing existing lines in place or appending new ones, and
-/// return the updated text. Always writes concrete values.
-///
-/// `fovEffectScale` is written on every version: 1.16+ reads it natively. On
-/// pre-1.16 it's an inert unknown key to vanilla (harmless); the companion mod
-/// reads its own `vermeil-settings.json` for that value instead, not this file.
+/// return the updated text. Always writes concrete values in a single streaming pass.
 pub fn apply(content: &str, vs: &GlobalVideoSettings) -> String {
     let r = resolved(vs);
-    let mut out = content.to_string();
-    set_line(&mut out, "maxFps", &r.max_fps.to_string());
-    set_line(&mut out, "enableVsync", bool_str(r.vsync));
-    set_line(&mut out, "bobView", bool_str(r.view_bobbing));
-    set_line(&mut out, "guiScale", &r.gui_scale.to_string());
-    set_line(&mut out, "fov", &format!("{:.6}", r.fov));
-    set_line(&mut out, "fovEffectScale", &format!("{:.6}", r.fov_effects));
-    set_line(&mut out, "soundCategory_master", &format!("{:.6}", r.master_volume));
-    set_line(&mut out, "soundCategory_music", &format!("{:.6}", r.music_volume));
+
+    let entries: [(&str, String); 17] = [
+        ("maxFps", r.max_fps.to_string()),
+        ("enableVsync", bool_str(r.vsync).to_string()),
+        ("bobView", bool_str(r.view_bobbing).to_string()),
+        ("guiScale", r.gui_scale.to_string()),
+        ("fov", format!("{:.6}", r.fov)),
+        ("fovEffectScale", format!("{:.6}", r.fov_effects)),
+        ("gamma", format!("{:.6}", r.gamma)),
+        ("showSubtitles", bool_str(r.show_subtitles).to_string()),
+        ("mouseSensitivity", format!("{:.6}", r.mouse_sensitivity)),
+        ("invertYMouse", bool_str(r.invert_y_mouse).to_string()),
+        ("autoJump", bool_str(r.auto_jump).to_string()),
+        ("soundCategory_master", format!("{:.6}", r.master_volume)),
+        ("soundCategory_music", format!("{:.6}", r.music_volume)),
+        ("soundCategory_weather", format!("{:.6}", r.weather_volume)),
+        ("soundCategory_hostile", format!("{:.6}", r.hostile_volume)),
+        ("soundCategory_block", format!("{:.6}", r.block_volume)),
+        ("soundCategory_player", format!("{:.6}", r.player_volume)),
+    ];
+
+    let mut written = [false; 17];
+    let mut out = String::with_capacity(content.len() + 512);
+
+    for line in content.lines() {
+        if let Some((k, _)) = line.split_once(':') {
+            if let Some(idx) = entries.iter().position(|(ek, _)| *ek == k) {
+                if !written[idx] {
+                    out.push_str(&format!("{}:{}\n", entries[idx].0, entries[idx].1));
+                    written[idx] = true;
+                }
+                continue;
+            }
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+
+    for (idx, (k, v)) in entries.iter().enumerate() {
+        if !written[idx] {
+            out.push_str(&format!("{}:{}\n", k, v));
+        }
+    }
+
     out
 }
 
@@ -97,23 +155,33 @@ pub fn apply(content: &str, vs: &GlobalVideoSettings) -> String {
 /// Fields whose key is absent or unparseable are left `None`, so the caller can
 /// merge only what the game actually wrote and keep its prior value otherwise.
 pub fn read_back(content: &str) -> GlobalVideoSettings {
-    let get = |key: &str| line_value(content, key);
-    GlobalVideoSettings {
-        max_fps: get("maxFps").and_then(|v| v.parse::<u32>().ok()),
-        vsync: get("enableVsync").and_then(parse_bool),
-        view_bobbing: get("bobView").and_then(parse_bool),
-        gui_scale: get("guiScale").and_then(|v| v.parse::<u32>().ok()),
-        fov: get("fov").and_then(|v| v.parse::<f64>().ok()),
-        fov_effects: get("fovEffectScale").and_then(|v| v.parse::<f64>().ok()),
-        master_volume: get("soundCategory_master").and_then(|v| v.parse::<f64>().ok()),
-        music_volume: get("soundCategory_music").and_then(|v| v.parse::<f64>().ok()),
-        // Window settings are launcher-managed (not in options.txt), so they
-        // never come back from the game — leave them None and let the caller
-        // preserve its stored values.
-        window_width: None,
-        window_height: None,
-        start_maximized: None,
+    let mut vs = GlobalVideoSettings::default();
+    for line in content.lines() {
+        if let Some((k, v)) = line.split_once(':') {
+            let v = v.trim();
+            match k {
+                "maxFps" => vs.max_fps = v.parse().ok(),
+                "enableVsync" => vs.vsync = parse_bool(v),
+                "bobView" => vs.view_bobbing = parse_bool(v),
+                "guiScale" => vs.gui_scale = v.parse().ok(),
+                "fov" => vs.fov = v.parse().ok(),
+                "fovEffectScale" => vs.fov_effects = v.parse().ok(),
+                "gamma" => vs.gamma = v.parse().ok(),
+                "showSubtitles" => vs.show_subtitles = parse_bool(v),
+                "mouseSensitivity" => vs.mouse_sensitivity = v.parse().ok(),
+                "invertYMouse" => vs.invert_y_mouse = parse_bool(v),
+                "autoJump" => vs.auto_jump = parse_bool(v),
+                "soundCategory_master" => vs.master_volume = v.parse().ok(),
+                "soundCategory_music" => vs.music_volume = v.parse().ok(),
+                "soundCategory_weather" => vs.weather_volume = v.parse().ok(),
+                "soundCategory_hostile" => vs.hostile_volume = v.parse().ok(),
+                "soundCategory_block" => vs.block_volume = v.parse().ok(),
+                "soundCategory_player" => vs.player_volume = v.parse().ok(),
+                _ => {}
+            }
+        }
     }
+    vs
 }
 
 /// Merge the values the game wrote (`from_game`) into `target`, overwriting only
@@ -126,22 +194,30 @@ pub fn merge_into(target: &mut GlobalVideoSettings, from_game: GlobalVideoSettin
     if from_game.gui_scale.is_some() { target.gui_scale = from_game.gui_scale; }
     if from_game.fov.is_some() { target.fov = from_game.fov; }
     if from_game.fov_effects.is_some() { target.fov_effects = from_game.fov_effects; }
+    if from_game.gamma.is_some() { target.gamma = from_game.gamma; }
+    if from_game.show_subtitles.is_some() { target.show_subtitles = from_game.show_subtitles; }
+    if from_game.mouse_sensitivity.is_some() { target.mouse_sensitivity = from_game.mouse_sensitivity; }
+    if from_game.invert_y_mouse.is_some() { target.invert_y_mouse = from_game.invert_y_mouse; }
+    if from_game.auto_jump.is_some() { target.auto_jump = from_game.auto_jump; }
     if from_game.master_volume.is_some() { target.master_volume = from_game.master_volume; }
     if from_game.music_volume.is_some() { target.music_volume = from_game.music_volume; }
+    if from_game.weather_volume.is_some() { target.weather_volume = from_game.weather_volume; }
+    if from_game.hostile_volume.is_some() { target.hostile_volume = from_game.hostile_volume; }
+    if from_game.block_volume.is_some() { target.block_volume = from_game.block_volume; }
+    if from_game.player_volume.is_some() { target.player_volume = from_game.player_volume; }
 }
 
-fn parse_bool(v: String) -> Option<bool> {
-    match v.as_str() {
+fn parse_bool(v: &str) -> Option<bool> {
+    match v {
         "true" => Some(true),
         "false" => Some(false),
         _ => None,
     }
 }
 
-/// Return the value of `key` in an `options.txt` body, if present. Lines are
-/// `key:value`; we match the whole key before the first colon so `fov` doesn't
-/// match `fovEffectScale`.
-fn line_value(content: &str, key: &str) -> Option<String> {
+/// Return the value of `key` in an `options.txt` body, if present. Used in unit tests.
+#[cfg(test)]
+pub fn line_value(content: &str, key: &str) -> Option<String> {
     for line in content.lines() {
         if let Some((k, v)) = line.split_once(':') {
             if k == key {
@@ -150,30 +226,6 @@ fn line_value(content: &str, key: &str) -> Option<String> {
         }
     }
     None
-}
-
-/// Replace the `key:` line in `content` in place, or append it if absent.
-/// Matches the whole key before the colon to avoid `fov` clobbering
-/// `fovEffectScale`.
-fn set_line(content: &mut String, key: &str, value: &str) {
-    let new_line = format!("{}:{}", key, value);
-    let mut result = String::with_capacity(content.len() + new_line.len() + 1);
-    let mut replaced = false;
-    for line in content.lines() {
-        let matches = line.split_once(':').map(|(k, _)| k == key).unwrap_or(false);
-        if matches && !replaced {
-            result.push_str(&new_line);
-            replaced = true;
-        } else {
-            result.push_str(line);
-        }
-        result.push('\n');
-    }
-    if !replaced {
-        result.push_str(&new_line);
-        result.push('\n');
-    }
-    *content = result;
 }
 
 #[cfg(test)]
@@ -189,8 +241,17 @@ mod tests {
             gui_scale: Some(2),
             fov: Some(0.5),
             fov_effects: Some(0.25),
+            gamma: Some(0.8),
+            show_subtitles: Some(true),
+            mouse_sensitivity: Some(0.65),
+            invert_y_mouse: Some(true),
+            auto_jump: Some(true),
             master_volume: Some(0.8),
             music_volume: Some(0.1),
+            weather_volume: Some(0.4),
+            hostile_volume: Some(0.7),
+            block_volume: Some(0.9),
+            player_volume: Some(0.75),
             window_width: None,
             window_height: None,
             start_maximized: None,
@@ -203,8 +264,17 @@ mod tests {
         assert_eq!(back.gui_scale, Some(2));
         assert_eq!(back.fov, Some(0.5));
         assert_eq!(back.fov_effects, Some(0.25));
+        assert_eq!(back.gamma, Some(0.8));
+        assert_eq!(back.show_subtitles, Some(true));
+        assert_eq!(back.mouse_sensitivity, Some(0.65));
+        assert_eq!(back.invert_y_mouse, Some(true));
+        assert_eq!(back.auto_jump, Some(true));
         assert_eq!(back.master_volume, Some(0.8));
         assert_eq!(back.music_volume, Some(0.1));
+        assert_eq!(back.weather_volume, Some(0.4));
+        assert_eq!(back.hostile_volume, Some(0.7));
+        assert_eq!(back.block_volume, Some(0.9));
+        assert_eq!(back.player_volume, Some(0.75));
     }
 
     #[test]
@@ -214,6 +284,10 @@ mod tests {
         assert_eq!(back.max_fps, Some(defaults::MAX_FPS));
         assert_eq!(back.vsync, Some(defaults::VSYNC));
         assert_eq!(back.fov_effects, Some(defaults::FOV_EFFECTS));
+        assert_eq!(back.gamma, Some(defaults::GAMMA));
+        assert_eq!(back.show_subtitles, Some(defaults::SHOW_SUBTITLES));
+        assert_eq!(back.mouse_sensitivity, Some(defaults::MOUSE_SENSITIVITY));
+        assert_eq!(back.auto_jump, Some(defaults::AUTO_JUMP));
     }
 
     #[test]

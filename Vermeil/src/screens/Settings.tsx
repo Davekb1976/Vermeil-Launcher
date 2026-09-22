@@ -91,10 +91,16 @@ const Settings: Component = () => {
 
   const matchesVideo = () => isInstancesSection() || matches(
     "Video", "Display", "Rendering", "Max FPS", "fps", "framerate", "VSync", "vertical sync",
-    "View Bobbing", "bobbing", "GUI Scale", "scale", "FOV", "field of view", "FOV Effects", "effects"
+    "GUI Scale", "scale", "FOV", "field of view", "Brightness", "gamma"
+  );
+  const matchesAccessibility = () => isInstancesSection() || matches(
+    "Accessibility", "Motion", "View Bobbing", "bobbing", "FOV Effects", "effects", "Subtitles", "show subtitles"
+  );
+  const matchesControls = () => isInstancesSection() || matches(
+    "Controls", "Mouse", "Sensitivity", "mouse sensitivity", "Invert", "invert mouse", "Auto-Jump", "autojump", "jump"
   );
   const matchesAudio = () => isInstancesSection() || matches(
-    "Sound", "Audio", "Volume", "Master Volume", "Music Volume", "sound", "music", "master"
+    "Sound", "Audio", "Volume", "Master Volume", "Music Volume", "Weather", "Hostile", "Blocks", "Players", "sound", "music", "master"
   );
   const matchesWindow = () => isInstancesSection() || matches(
     "Window", "Resolution", "Dimensions", "width", "height", "Start Maximized", "maximized", "fullscreen"
@@ -105,7 +111,7 @@ const Settings: Component = () => {
 
   const matchesGeneral = () => matchesLauncher() || matchesAbout();
   const matchesResources = () => matchesStorage() || matchesPerformance() || matchesJava();
-  const matchesInstances = () => matchesVideo() || matchesAudio() || matchesWindow() || matchesMemory() ||
+  const matchesInstances = () => matchesVideo() || matchesAccessibility() || matchesControls() || matchesAudio() || matchesWindow() || matchesMemory() ||
     (instances() || []).some(i => matches(i.name, i.game_version, i.loader.type));
   const matchesKeybinds = () => isKeybindsSection() || KEYBINDS.some(a => matches(a.label, a.description, a.default));
 
@@ -1157,7 +1163,28 @@ const Settings: Component = () => {
                 <div class="page-subtitle">Default video, audio, window, and memory configurations applied to all instances</div>
               </div>
               <button class="btn btn--sm" onClick={() => {
-                updateVideoSettings({ max_fps: 120, vsync: true, view_bobbing: true, gui_scale: 0, fov: 0.0, fov_effects: 1.0, master_volume: 1.0, music_volume: 1.0, window_width: null, window_height: null, start_maximized: null });
+                updateVideoSettings({
+                  max_fps: 120,
+                  vsync: true,
+                  gui_scale: 0,
+                  gamma: 1.0,
+                  fov: 0.0,
+                  view_bobbing: true,
+                  fov_effects: 1.0,
+                  show_subtitles: false,
+                  mouse_sensitivity: 0.5,
+                  invert_y_mouse: false,
+                  auto_jump: false,
+                  master_volume: 1.0,
+                  music_volume: 1.0,
+                  weather_volume: 1.0,
+                  hostile_volume: 1.0,
+                  block_volume: 1.0,
+                  player_volume: 1.0,
+                  window_width: null,
+                  window_height: null,
+                  start_maximized: null,
+                });
               }}>Reset All</button>
             </div>
 
@@ -1168,7 +1195,7 @@ const Settings: Component = () => {
                   <div class="card-section-header">
                     <span class="card-section-tag tag-settings-video">VIDEO</span>
                     <span class="card-section-label">Display & Rendering</span>
-                    <span class="card-section-desc">Framerate, VSync, FOV, and visual effects</span>
+                    <span class="card-section-desc">Framerate, VSync, GUI scale, brightness, and FOV</span>
                   </div>
                   <div class="card-section-body">
                     <div class="setting-card-grid">
@@ -1220,28 +1247,6 @@ const Settings: Component = () => {
                         </div>
                       </Show>
 
-                      {/* View Bobbing */}
-                      <Show when={isInstancesSection() || matches("view bobbing", "camera motion", "walking")}>
-                        <div class="setting-row">
-                          <div class="setting-info">
-                            <span class="setting-name">View Bobbing</span>
-                            <span class="setting-desc">Camera motion while walking</span>
-                          </div>
-                          <div class="setting-control">
-                            <Dropdown
-                              value={(vs().view_bobbing ?? true) ? "true" : "false"}
-                              options={[
-                                { value: "true", label: "On" },
-                                { value: "false", label: "Off" },
-                              ]}
-                              onChange={(val) => {
-                                updateVideoSettings({ view_bobbing: val === "true" });
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </Show>
-
                       {/* GUI Scale */}
                       <Show when={isInstancesSection() || matches("gui scale", "ui scale", "interface scale")}>
                         <div class="setting-row">
@@ -1261,6 +1266,32 @@ const Settings: Component = () => {
                               ]}
                               onChange={(val) => {
                                 updateVideoSettings({ gui_scale: parseInt(val) });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* Brightness */}
+                      <Show when={isInstancesSection() || matches("brightness", "gamma", "light")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Brightness</span>
+                            <span class="setting-desc">{Math.round((vs().gamma ?? 1) * 100) === 0 ? "Moody (0%)" : Math.round((vs().gamma ?? 1) * 100) === 100 ? "Bright (100%)" : `${Math.round((vs().gamma ?? 1) * 100)}%`}</span>
+                          </div>
+                          <div class="setting-control">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={vs().gamma === null ? 100 : Math.round(vs().gamma! * 100)}
+                              class="slider vs-slider"
+                              style={`--slider-pct:${(vs().gamma === null ? 100 : Math.round(vs().gamma! * 100))}%`}
+                              onInput={(e) => {
+                                const pct = parseInt(e.currentTarget.value);
+                                e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
+                                updateVideoSettings({ gamma: pct / 100 });
                               }}
                             />
                           </div>
@@ -1293,9 +1324,45 @@ const Settings: Component = () => {
                           </div>
                         </div>
                       </Show>
+                    </div>
+                  </div>
+                </div>
+              </Show>
+
+              {/* Accessibility & Motion Panel */}
+              <Show when={!isSearching() || matchesAccessibility()}>
+                <div class="card-gamemode-section">
+                  <div class="card-section-header">
+                    <span class="card-section-tag tag-settings-accessibility">ACCESSIBILITY</span>
+                    <span class="card-section-label">Accessibility & Motion</span>
+                    <span class="card-section-desc">View bobbing, sprint/potion FOV zoom, and directional subtitles</span>
+                  </div>
+                  <div class="card-section-body">
+                    <div class="setting-card-grid">
+                      {/* View Bobbing */}
+                      <Show when={isInstancesSection() || matches("view bobbing", "camera motion", "walking", "bobbing")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">View Bobbing</span>
+                            <span class="setting-desc">Camera motion while walking</span>
+                          </div>
+                          <div class="setting-control">
+                            <Dropdown
+                              value={(vs().view_bobbing ?? true) ? "true" : "false"}
+                              options={[
+                                { value: "true", label: "On" },
+                                { value: "false", label: "Off" },
+                              ]}
+                              onChange={(val) => {
+                                updateVideoSettings({ view_bobbing: val === "true" });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
 
                       {/* FOV Effects */}
-                      <Show when={isInstancesSection() || matches("fov effects", "distortion", "effects")}>
+                      <Show when={isInstancesSection() || matches("fov effects", "distortion", "effects", "zoom")}>
                         <div class="setting-row">
                           <div class="setting-info">
                             <span class="setting-name">FOV Effects</span>
@@ -1319,6 +1386,112 @@ const Settings: Component = () => {
                           </div>
                         </div>
                       </Show>
+
+                      {/* Show Subtitles */}
+                      <Show when={isInstancesSection() || matches("subtitles", "show subtitles", "captions")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Show Subtitles</span>
+                            <span class="setting-desc">Directional sound captions on screen</span>
+                          </div>
+                          <div class="setting-control">
+                            <Dropdown
+                              value={(vs().show_subtitles ?? false) ? "true" : "false"}
+                              options={[
+                                { value: "false", label: "Off" },
+                                { value: "true", label: "On" },
+                              ]}
+                              onChange={(val) => {
+                                updateVideoSettings({ show_subtitles: val === "true" });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+                    </div>
+                  </div>
+                </div>
+              </Show>
+
+              {/* Controls & Mouse Panel */}
+              <Show when={!isSearching() || matchesControls()}>
+                <div class="card-gamemode-section">
+                  <div class="card-section-header">
+                    <span class="card-section-tag tag-settings-controls">CONTROLS</span>
+                    <span class="card-section-label">Controls & Mouse</span>
+                    <span class="card-section-desc">Mouse sensitivity, axis inversion, and movement assists</span>
+                  </div>
+                  <div class="card-section-body">
+                    <div class="setting-card-grid">
+                      {/* Mouse Sensitivity */}
+                      <Show when={isInstancesSection() || matches("mouse sensitivity", "sensitivity", "aim", "mouse")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Mouse Sensitivity</span>
+                            <span class="setting-desc">{Math.round((vs().mouse_sensitivity ?? 0.5) * 200) === 200 ? "Hyperspeed" : `${Math.round((vs().mouse_sensitivity ?? 0.5) * 200)}%`}</span>
+                          </div>
+                          <div class="setting-control">
+                            <input
+                              type="range"
+                              min="0"
+                              max="200"
+                              step="5"
+                              value={vs().mouse_sensitivity === null ? 100 : Math.round(vs().mouse_sensitivity! * 200)}
+                              class="slider vs-slider"
+                              style={`--slider-pct:${(vs().mouse_sensitivity === null ? 100 : Math.round(vs().mouse_sensitivity! * 200)) / 2}%`}
+                              onInput={(e) => {
+                                const pct = parseInt(e.currentTarget.value);
+                                e.currentTarget.style.setProperty('--slider-pct', `${pct / 2}%`);
+                                updateVideoSettings({ mouse_sensitivity: pct / 200 });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* Invert Mouse */}
+                      <Show when={isInstancesSection() || matches("invert mouse", "invert y", "axis")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Invert Mouse</span>
+                            <span class="setting-desc">Invert vertical looking axis</span>
+                          </div>
+                          <div class="setting-control">
+                            <Dropdown
+                              value={(vs().invert_y_mouse ?? false) ? "true" : "false"}
+                              options={[
+                                { value: "false", label: "Off" },
+                                { value: "true", label: "On" },
+                              ]}
+                              onChange={(val) => {
+                                updateVideoSettings({ invert_y_mouse: val === "true" });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* Auto-Jump */}
+                      <Show when={isInstancesSection() || matches("auto-jump", "autojump", "jump")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Auto-Jump</span>
+                            <span class="setting-desc">Automatically jump up step blocks</span>
+                          </div>
+                          <div class="setting-control">
+                            <Dropdown
+                              value={(vs().auto_jump ?? false) ? "true" : "false"}
+                              options={[
+                                { value: "false", label: "Off" },
+                                { value: "true", label: "On" },
+                              ]}
+                              onChange={(val) => {
+                                updateVideoSettings({ auto_jump: val === "true" });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
                     </div>
                   </div>
                 </div>
@@ -1330,7 +1503,7 @@ const Settings: Component = () => {
                   <div class="card-section-header">
                     <span class="card-section-tag tag-settings-audio">AUDIO</span>
                     <span class="card-section-label">Sound Levels</span>
-                    <span class="card-section-desc">Master and music volume levels</span>
+                    <span class="card-section-desc">Master, music, weather, and creature volume levels</span>
                   </div>
                   <div class="card-section-body">
                     <div class="setting-card-grid setting-card-grid--2col">
@@ -1380,6 +1553,110 @@ const Settings: Component = () => {
                                 const pct = parseInt(e.currentTarget.value);
                                 e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
                                 updateVideoSettings({ music_volume: pct / 100 });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* Weather Volume */}
+                      <Show when={isInstancesSection() || matches("weather volume", "weather", "rain", "thunder")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Weather</span>
+                            <span class="setting-desc">{`${Math.round((vs().weather_volume ?? 1) * 100)}%`}</span>
+                          </div>
+                          <div class="setting-control">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={vs().weather_volume === null ? 100 : Math.round(vs().weather_volume! * 100)}
+                              class="slider vs-slider"
+                              style={`--slider-pct:${(vs().weather_volume === null ? 100 : Math.round(vs().weather_volume! * 100))}%`}
+                              onInput={(e) => {
+                                const pct = parseInt(e.currentTarget.value);
+                                e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
+                                updateVideoSettings({ weather_volume: pct / 100 });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* Hostile Creatures */}
+                      <Show when={isInstancesSection() || matches("hostile volume", "hostile", "monsters", "mobs")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Hostile Creatures</span>
+                            <span class="setting-desc">{`${Math.round((vs().hostile_volume ?? 1) * 100)}%`}</span>
+                          </div>
+                          <div class="setting-control">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={vs().hostile_volume === null ? 100 : Math.round(vs().hostile_volume! * 100)}
+                              class="slider vs-slider"
+                              style={`--slider-pct:${(vs().hostile_volume === null ? 100 : Math.round(vs().hostile_volume! * 100))}%`}
+                              onInput={(e) => {
+                                const pct = parseInt(e.currentTarget.value);
+                                e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
+                                updateVideoSettings({ hostile_volume: pct / 100 });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* Blocks */}
+                      <Show when={isInstancesSection() || matches("block volume", "blocks", "placing", "breaking")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Blocks</span>
+                            <span class="setting-desc">{`${Math.round((vs().block_volume ?? 1) * 100)}%`}</span>
+                          </div>
+                          <div class="setting-control">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={vs().block_volume === null ? 100 : Math.round(vs().block_volume! * 100)}
+                              class="slider vs-slider"
+                              style={`--slider-pct:${(vs().block_volume === null ? 100 : Math.round(vs().block_volume! * 100))}%`}
+                              onInput={(e) => {
+                                const pct = parseInt(e.currentTarget.value);
+                                e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
+                                updateVideoSettings({ block_volume: pct / 100 });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </Show>
+
+                      {/* Players */}
+                      <Show when={isInstancesSection() || matches("player volume", "players", "footsteps")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Players</span>
+                            <span class="setting-desc">{`${Math.round((vs().player_volume ?? 1) * 100)}%`}</span>
+                          </div>
+                          <div class="setting-control">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="1"
+                              value={vs().player_volume === null ? 100 : Math.round(vs().player_volume! * 100)}
+                              class="slider vs-slider"
+                              style={`--slider-pct:${(vs().player_volume === null ? 100 : Math.round(vs().player_volume! * 100))}%`}
+                              onInput={(e) => {
+                                const pct = parseInt(e.currentTarget.value);
+                                e.currentTarget.style.setProperty('--slider-pct', `${pct}%`);
+                                updateVideoSettings({ player_volume: pct / 100 });
                               }}
                             />
                           </div>

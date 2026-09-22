@@ -122,6 +122,33 @@ pub struct GlobalVideoSettings {
     /// FOV Effects scale (0.0 to 1.0). Controls how much speed/slowness affects
     /// the field of view (accessibility setting: fovEffectScale). None = don't override.
     pub fov_effects: Option<f64>,
+    /// Brightness/gamma (0.0=Moody to 1.0=Bright). Maps to `gamma` in options.txt.
+    #[serde(default)]
+    pub gamma: Option<f64>,
+    /// Show directional sound subtitles on screen. Maps to `showSubtitles` in options.txt.
+    #[serde(default)]
+    pub show_subtitles: Option<bool>,
+    /// Mouse sensitivity (0.0 to 1.0, where 0.5 is 100%). Maps to `mouseSensitivity` in options.txt.
+    #[serde(default)]
+    pub mouse_sensitivity: Option<f64>,
+    /// Invert mouse Y-axis looking. Maps to `invertYMouse` in options.txt.
+    #[serde(default)]
+    pub invert_y_mouse: Option<bool>,
+    /// Auto-jump when moving into blocks. Maps to `autoJump` in options.txt.
+    #[serde(default)]
+    pub auto_jump: Option<bool>,
+    /// Weather/rain volume (0.0 to 1.0). Maps to `soundCategory_weather` in options.txt.
+    #[serde(default)]
+    pub weather_volume: Option<f64>,
+    /// Hostile mobs volume (0.0 to 1.0). Maps to `soundCategory_hostile` in options.txt.
+    #[serde(default)]
+    pub hostile_volume: Option<f64>,
+    /// Block interactions/placing volume (0.0 to 1.0). Maps to `soundCategory_block` in options.txt.
+    #[serde(default)]
+    pub block_volume: Option<f64>,
+    /// Other players volume (0.0 to 1.0). Maps to `soundCategory_player` in options.txt.
+    #[serde(default)]
+    pub player_volume: Option<f64>,
     /// Master volume (0.0 to 1.0). Maps to `soundCategory_master` in options.txt.
     /// None = don't override.
     #[serde(default)]

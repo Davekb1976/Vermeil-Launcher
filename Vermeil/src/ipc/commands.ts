@@ -196,8 +196,17 @@ export interface LauncherSettings {
     gui_scale: number | null;
     fov: number | null;
     fov_effects: number | null;
+    gamma: number | null;
+    show_subtitles: boolean | null;
+    mouse_sensitivity: number | null;
+    invert_y_mouse: boolean | null;
+    auto_jump: boolean | null;
     master_volume: number | null;
     music_volume: number | null;
+    weather_volume: number | null;
+    hostile_volume: number | null;
+    block_volume: number | null;
+    player_volume: number | null;
     window_width: number | null;
     window_height: number | null;
     start_maximized: boolean | null;

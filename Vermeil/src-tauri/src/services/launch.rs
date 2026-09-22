@@ -924,6 +924,44 @@ mod tests {
     }
 }
 
+async fn sync_options_from_game_session(
+    instance_id: &str,
+    instance_version: &str,
+    window: Option<&tauri::WebviewWindow>,
+) -> Option<crate::models::settings::GlobalVideoSettings> {
+    use tauri::Emitter;
+    let options_path = paths::instances_dir()
+        .join(instance_id)
+        .join(".minecraft")
+        .join("options.txt");
+
+    let content = std::fs::read_to_string(&options_path).ok()?;
+    let mut settings = crate::services::settings_service::load().await.ok()?;
+    let from_game = crate::services::video_options::read_back(&content);
+    crate::services::video_options::merge_into(&mut settings.video_settings, from_game);
+
+    if let Some(vs) = crate::services::companion_settings::read_back() {
+        settings.ingame_cape.enabled = vs.cape.enabled;
+        if let Some(ftm) = vs.cape.frame_time_ms {
+            settings.ingame_cape.frame_time_ms = Some(ftm);
+        }
+        if !mc_version_at_least(instance_version, 1, 16) {
+            settings.video_settings.fov_effects = Some(vs.fov_effects_scale);
+        }
+    }
+
+    if let Err(e) = crate::services::settings_service::save(&settings).await {
+        tracing::error!("Failed to save video settings synced from options.txt: {}", e);
+        return None;
+    }
+
+    if let Some(win) = window {
+        let _ = win.emit("video-settings-synced", &settings.video_settings);
+    }
+
+    Some(settings.video_settings)
+}
+
 /// Launch Minecraft for an instance
 pub async fn launch(
     instance: &Instance,
@@ -1561,8 +1599,38 @@ pub async fn launch(
             }
         });
 
-        // Wait for process to exit
-        let exit_status = child.wait();
+        // Options.txt watcher: check timestamp every 500ms while the game runs
+        let options_path = paths::instances_dir()
+            .join(&instance_id)
+            .join(".minecraft")
+            .join("options.txt");
+
+        let mut last_mtime = std::fs::metadata(&options_path)
+            .and_then(|m| m.modified())
+            .ok();
+
+        // Monitor options.txt while game is running; exit loop when child terminates.
+        let exit_status = loop {
+            match child.try_wait() {
+                Ok(Some(status)) => break Ok(status),
+                Err(e) => break Err(e),
+                Ok(None) => {
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    if let Ok(metadata) = std::fs::metadata(&options_path) {
+                        if let Ok(mtime) = metadata.modified() {
+                            if last_mtime != Some(mtime) {
+                                last_mtime = Some(mtime);
+                                sync_options_from_game_session(
+                                    &instance_id,
+                                    &instance_version,
+                                    window.as_ref(),
+                                ).await;
+                            }
+                        }
+                    }
+                }
+            }
+        };
         let _ = stdout_handle.join();
         let _ = stderr_handle.join();
 
@@ -1595,51 +1663,13 @@ pub async fn launch(
         // natural crashes are still detected.
         let user_stopped = crate::commands::launch::take_user_stopped();
 
-        // Sync any in-game video-settings changes back into the launcher. The
-        // game rewrites options.txt on quit; read the mirrored keys and merge
-        // them into stored settings so the launcher's sliders reflect what the
-        // user changed in-game. Best-effort — never blocks or fails the exit
-        // path. The emit below tells an open Settings screen to refresh live.
-        let synced_video = {
-            let options_path = paths::instances_dir()
-                .join(&instance_id)
-                .join(".minecraft")
-                .join("options.txt");
-            match (
-                std::fs::read_to_string(&options_path),
-                crate::services::settings_service::load().await,
-            ) {
-                (Ok(content), Ok(mut settings)) => {
-                    let from_game = crate::services::video_options::read_back(&content);
-                    crate::services::video_options::merge_into(&mut settings.video_settings, from_game);
-                    // Companion mod settings the mod may have changed in-game.
-                    // capeEnabled is cross-version (the mod owns the cape on/off
-                    // everywhere). fovEffectsScale only comes from the mod on
-                    // pre-1.16 — on 1.16+ FOV effects round-trips via options.txt
-                    // above, so reading it here too would clobber that with a
-                    // stale value.
-                    if let Some(vs) = crate::services::companion_settings::read_back() {
-                        settings.ingame_cape.enabled = vs.cape.enabled;
-                        if let Some(ftm) = vs.cape.frame_time_ms {
-                            settings.ingame_cape.frame_time_ms = Some(ftm);
-                        }
-                        // FOV effects only round-trips to the launcher on pre-1.16;
-                        // on 1.16+ the native value comes back via options.txt above.
-                        if !mc_version_at_least(&instance_version, 1, 16) {
-                            settings.video_settings.fov_effects = Some(vs.fov_effects_scale);
-                        }
-                    }
-                    match crate::services::settings_service::save(&settings).await {
-                        Ok(()) => Some(settings.video_settings),
-                        Err(e) => {
-                            tracing::error!("Failed to save video settings synced from options.txt: {}", e);
-                            None
-                        }
-                    }
-                }
-                _ => None,
-            }
-        };
+        // Sync any in-game video-settings changes back into the launcher.
+        // Final sync pass on exit to ensure any last-second changes are captured.
+        let synced_video = sync_options_from_game_session(
+            &instance_id,
+            &instance_version,
+            window.as_ref(),
+        ).await;
 
         // Game exited — restore window and notify frontend
         if let Some(win) = window {
