@@ -131,10 +131,7 @@ pub async fn purge_cache() -> Result<u64, String> {
     }
 
     tracing::info!("Purged launcher cache: freed {} bytes", freed);
-    #[cfg(windows)]
-    tauri::async_runtime::spawn_blocking(|| {
-        crate::util::platform::update_windows_estimated_size();
-    });
+    crate::util::platform::update_windows_estimated_size();
     Ok(freed)
 }
 

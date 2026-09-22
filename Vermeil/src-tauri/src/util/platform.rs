@@ -118,25 +118,25 @@ pub fn extract_java_archive(archive_path: &std::path::Path, dest_dir: &std::path
 ///
 /// Without this, Windows Settings ("Installed Apps") only displays the initial static
 /// ~26 MB size of the unpacked `vermeil.exe` from install time rather than the true disk usage.
-#[cfg(windows)]
+/// On non-Windows platforms, this is a compile-time no-op.
 pub fn update_windows_estimated_size() {
-    use winreg::enums::{HKEY_CURRENT_USER, KEY_WRITE};
-    use winreg::RegKey;
+    #[cfg(windows)]
+    tauri::async_runtime::spawn_blocking(|| {
+        use winreg::enums::{HKEY_CURRENT_USER, KEY_WRITE};
+        use winreg::RegKey;
 
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    if let Ok(uninstall_key) = hkcu.open_subkey_with_flags(
-        r"Software\Microsoft\Windows\CurrentVersion\Uninstall\Vermeil",
-        KEY_WRITE,
-    ) {
-        let data_dir = crate::util::paths::data_dir();
-        if data_dir.exists() {
-            let size_bytes = crate::util::paths::dir_size(&data_dir);
-            let size_kb = (size_bytes / 1024).min(u32::MAX as u64) as u32;
-            let _ = uninstall_key.set_value("EstimatedSize", &size_kb);
-            tracing::debug!("Updated Windows uninstall EstimatedSize to {} KB", size_kb);
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        if let Ok(uninstall_key) = hkcu.open_subkey_with_flags(
+            r"Software\Microsoft\Windows\CurrentVersion\Uninstall\Vermeil",
+            KEY_WRITE,
+        ) {
+            let data_dir = crate::util::paths::data_dir();
+            if data_dir.exists() {
+                let size_bytes = crate::util::paths::dir_size(&data_dir);
+                let size_kb = (size_bytes / 1024).min(u32::MAX as u64) as u32;
+                let _ = uninstall_key.set_value("EstimatedSize", &size_kb);
+                tracing::debug!("Updated Windows uninstall EstimatedSize to {} KB", size_kb);
+            }
         }
-    }
+    });
 }
-
-#[cfg(not(windows))]
-pub fn update_windows_estimated_size() {}
