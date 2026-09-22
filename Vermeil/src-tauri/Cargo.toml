@@ -1,6 +1,6 @@
 [package]
 name = "vermeil"
-version = "1.1.0"
+version = "1.0.5"
 description = "A full-featured Minecraft launcher"
 authors = ["Vermeil-Launcher"]
 edition = "2021"
