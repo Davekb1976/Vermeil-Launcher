@@ -72,15 +72,96 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--space-3);
-  font-family: var(--font-mono); font-size: 11px; line-height: 1.6;
-  user-select: text; -webkit-user-select: text;
+  padding: var(--space-2) 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  user-select: text;
+  -webkit-user-select: text;
 }
 .log-viewer::-webkit-scrollbar { width: 4px; }
 .log-viewer::-webkit-scrollbar-thumb { background: var(--accent); border-radius: var(--radius-xs); }
-.log-line { color: var(--muted); padding: var(--space-0) 0; white-space: pre-wrap; word-break: break-all; position: relative; z-index: 1; }
-.log-line.log-error { color: var(--danger); }
-.log-line.log-warn { color: var(--yellow); }
+
+/* Each log line layout */
+.log-line {
+  display: flex;
+  align-items: flex-start;
+  color: var(--muted);
+  padding: 1.5px var(--space-3) 1.5px calc(var(--space-3) - 2.5px);
+  border-left: 2.5px solid transparent;
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  transition: background 0.1s ease;
+}
+.log-line:hover:not(:last-child) {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.log-prompt {
+  color: var(--muted);
+  opacity: 0.55;
+  user-select: none;
+  -webkit-user-select: none;
+  margin-right: 8px;
+  flex-shrink: 0;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.log-text {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.log-line.log-error .log-text { color: var(--danger); }
+.log-line.log-error .log-prompt { color: var(--danger); opacity: 0.8; }
+.log-line.log-error.log-trace .log-text { color: rgba(239, 68, 68, 0.85); }
+.log-line.log-error.log-trace .log-prompt { color: rgba(239, 68, 68, 0.5); }
+
+.log-line.log-warn .log-text { color: var(--yellow); }
+.log-line.log-warn .log-prompt { color: var(--yellow); opacity: 0.8; }
+
+/* Latest line highlight — matches tactile reference with 2.5px purple accent bar & soft background glow */
+.log-line:last-child {
+  background: rgba(139, 92, 246, 0.12);
+  border-left-color: var(--accent);
+}
+.log-line:last-child .log-prompt {
+  color: var(--accent);
+  opacity: 0.9;
+}
+.log-line:last-child .log-text {
+  color: var(--text);
+}
+
+.log-line.log-error:last-child {
+  background: rgba(239, 68, 68, 0.12);
+  border-left-color: var(--danger);
+}
+.log-line.log-error:last-child .log-prompt {
+  color: var(--danger);
+  opacity: 0.9;
+}
+.log-line.log-error:last-child .log-text {
+  color: var(--danger);
+}
+
+.log-line.log-warn:last-child {
+  background: rgba(234, 179, 8, 0.12);
+  border-left-color: var(--yellow);
+}
+.log-line.log-warn:last-child .log-prompt {
+  color: var(--yellow);
+  opacity: 0.9;
+}
+.log-line.log-warn:last-child .log-text {
+  color: var(--yellow);
+}
 
 /* Anime girl backdrop ASCII — pinned to the (non-scrolling) frame so it
    stays centered on the visible viewport regardless of how many log lines
@@ -112,9 +193,18 @@
 }
 
 .log-filter-btn {
-  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: var(--space-1) var(--space-3); font-size: 11px; font-weight: 500; color: var(--muted);
-  cursor: pointer; transition: all .12s;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
+  font-size: 11px;
+  font-family: inherit;
+  line-height: 1.2;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  outline: none;
+  transition: all .12s;
 }
 .log-filter-btn:hover { color: var(--text); }
 .log-filter-btn.active { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }

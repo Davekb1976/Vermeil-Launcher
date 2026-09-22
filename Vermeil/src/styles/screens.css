@@ -1624,12 +1624,18 @@
   color: var(--muted);
   cursor: pointer;
   flex-shrink: 0;
-  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  transition: border-color 0.12s, color 0.12s, background 0.12s, box-shadow 0.12s;
 }
 .log-toolbar-jump:hover {
   background: var(--bg4);
   color: var(--text);
   border-color: var(--border-hover);
+}
+.log-toolbar-jump.active {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.35);
 }
 .log-toolbar-jump svg { width: 13px; height: 13px; }
 .log-toolbar-count {

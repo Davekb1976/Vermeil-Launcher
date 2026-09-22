@@ -367,9 +367,58 @@ const InstanceMods: Component = () => {
 
   // Auto-scroll state for the Logs tab. True = follow new output (snap to
   // bottom on each new line). Flips to false when the user scrolls up to
-  // read earlier output, and back to true when they return to the bottom
-  // (via the jump button or by scrolling down themselves).
+  // read earlier output, and back to true when they return to the bottom.
   const [autoScrollLogs, setAutoScrollLogs] = createSignal(true);
+  let viewerEl: HTMLDivElement | undefined;
+  let isProgrammaticScroll = false;
+  let programmaticScrollTimeout: number | undefined;
+
+  const scrollTo = (top: number, autoFollow: boolean) => {
+    if (!viewerEl) return;
+    setAutoScrollLogs(autoFollow);
+    if (programmaticScrollTimeout !== undefined) {
+      clearTimeout(programmaticScrollTimeout);
+    }
+    isProgrammaticScroll = true;
+    viewerEl.scrollTo({ top, behavior: "smooth" });
+    programmaticScrollTimeout = window.setTimeout(() => {
+      isProgrammaticScroll = false;
+      if (autoFollow && viewerEl) {
+        viewerEl.scrollTop = viewerEl.scrollHeight;
+      }
+    }, 320);
+  };
+
+  const jumpToTop = () => scrollTo(0, false);
+  const jumpToBottom = () => {
+    if (!viewerEl) return;
+    scrollTo(viewerEl.scrollHeight, true);
+  };
+
+  const onViewerScroll = () => {
+    if (!viewerEl || isProgrammaticScroll) return;
+    const distance = viewerEl.scrollHeight - viewerEl.scrollTop - viewerEl.clientHeight;
+    setAutoScrollLogs(distance < 40);
+  };
+
+  // Auto-scroll to bottom when new log lines arrive while following
+  createEffect(() => {
+    if (mainTab() !== "logs") return;
+    const count = filteredLogs().length;
+    if (count > 0 && autoScrollLogs() && viewerEl && !isProgrammaticScroll) {
+      requestAnimationFrame(() => {
+        if (viewerEl && autoScrollLogs() && !isProgrammaticScroll) {
+          viewerEl.scrollTop = viewerEl.scrollHeight;
+        }
+      });
+    }
+  });
+
+  onCleanup(() => {
+    if (programmaticScrollTimeout !== undefined) {
+      clearTimeout(programmaticScrollTimeout);
+    }
+  });
 
   // Hide the floating dock while on the instance screen so it doesn't cover
   // cards, controls, or log output. The dock still reveals on cursor-near-bottom.
@@ -1148,40 +1197,118 @@ const InstanceMods: Component = () => {
     return { loader, tag };
   };
 
+  const getLineSeverity = (line: string): "error" | "warn" | "none" => {
+    if (
+      line.includes("/ERROR") ||
+      line.includes("/FATAL") ||
+      line.includes("[ERROR]") ||
+      line.includes("[FATAL]") ||
+      line.includes("ERROR:") ||
+      line.includes("FATAL:") ||
+      line.startsWith("Exception in thread")
+    ) {
+      return "error";
+    }
+    if (
+      line.includes("/WARN") ||
+      line.includes("/WARNING") ||
+      line.includes("[WARN]") ||
+      line.includes("[WARNING]") ||
+      line.includes("WARN:") ||
+      line.includes("WARNING:")
+    ) {
+      return "warn";
+    }
+    return "none";
+  };
+
+  const isContinuationLine = (line: string): boolean => {
+    return (
+      line.startsWith("\tat ") ||
+      line.startsWith("    at ") ||
+      line.startsWith("\t...") ||
+      line.startsWith("    ...") ||
+      line.startsWith("Caused by:") ||
+      line.startsWith("\tSuppressed:")
+    );
+  };
+
+  const getLineClass = (line: string): string => {
+    const sev = getLineSeverity(line);
+    if (sev === "error") return "log-error";
+    if (sev === "warn") return "log-warn";
+    if (isContinuationLine(line)) return "log-error log-trace";
+    return "";
+  };
+
   const toggleLogFilter = (filter: string) => {
     const current = new Set(logFilters());
     if (filter === "all") {
       setLogFilters(new Set(["all"]));
-      return;
-    }
-    current.delete("all");
-    if (current.has(filter)) {
-      current.delete(filter);
-      if (current.size === 0) current.add("all");
     } else {
-      current.add(filter);
+      current.delete("all");
+      if (current.has(filter)) {
+        current.delete(filter);
+        if (current.size === 0) current.add("all");
+      } else {
+        current.add(filter);
+      }
+      setLogFilters(current);
     }
-    setLogFilters(current);
+    requestAnimationFrame(() => {
+      if (!viewerEl) return;
+      if (autoScrollLogs()) {
+        viewerEl.scrollTop = viewerEl.scrollHeight;
+      } else {
+        viewerEl.scrollTop = 0;
+      }
+    });
   };
 
-  const filteredLogs = () => {
+  const filteredLogs = createMemo(() => {
     const filters = logFilters();
     const search = logSearch().trim().toLowerCase();
+    const allLines = logs();
 
-    let lines = logs();
-    if (!filters.has("all")) {
-      lines = lines.filter(l => {
-        if (filters.has("error") && (l.includes("ERROR") || l.includes("FATAL"))) return true;
-        if (filters.has("warn") && (l.includes("WARN") || l.includes("WARNING"))) return true;
-        if (filters.has("info") && l.includes("INFO")) return true;
-        return false;
-      });
+    const filterAll = filters.has("all");
+    const filterError = filters.has("error");
+    const filterWarn = filters.has("warn");
+
+    if (filterAll && !search) {
+      return allLines;
     }
-    if (search) {
-      lines = lines.filter(l => l.toLowerCase().includes(search));
+
+    const result: string[] = [];
+    let keepContinuation = false;
+
+    for (let i = 0; i < allLines.length; i++) {
+      const line = allLines[i];
+      let matches = false;
+
+      if (filterAll) {
+        matches = true;
+      } else {
+        const sev = getLineSeverity(line);
+        if (sev === "error" && filterError) {
+          matches = true;
+          keepContinuation = true;
+        } else if (sev === "warn" && filterWarn) {
+          matches = true;
+          keepContinuation = true;
+        } else if (keepContinuation && isContinuationLine(line)) {
+          matches = true;
+        } else {
+          keepContinuation = false;
+        }
+      }
+
+      if (matches && (!search || line.toLowerCase().includes(search))) {
+        result.push(line);
+      }
     }
-    return lines;
-  };
+
+    return result;
+  });
 
   return (
     <div class={`screen-enter instance-screen ${mainTab() === "logs" ? "instance-screen--logs" : ""}`}>
@@ -2381,151 +2508,153 @@ const InstanceMods: Component = () => {
 
       {/* ═══ LOGS TAB ═══ */}
       <Show when={mainTab() === "logs"}>
-        {(() => {
-          // Stable handle to the scrollable log element for the jump buttons.
-          let viewerEl: HTMLDivElement | undefined;
-          const jumpToTop = () => {
-            // Reading earlier output → stop following new lines.
-            setAutoScrollLogs(false);
-            viewerEl?.scrollTo({ top: 0, behavior: "smooth" });
-          };
-          const jumpToBottom = () => {
-            // Returning to latest → resume following.
-            setAutoScrollLogs(true);
-            if (viewerEl) viewerEl.scrollTo({ top: viewerEl.scrollHeight, behavior: "smooth" });
-          };
-          // While the logs are detached into the popout window, the tab shows
-          // a placeholder instead of a duplicate viewer. Closing that window
-          // (button or native close) reattaches and restores the viewer.
-          if (logsPoppedOut()) {
-            return (
-              <div class="logs-detached">
-                <div style="font-size:var(--fs-sm)">Logs are open in a separate window.</div>
-                <button class="btn" onClick={() => closeLogsWindow()}>Bring logs back</button>
-              </div>
-            );
+        <Show
+          when={!logsPoppedOut()}
+          fallback={
+            <div class="logs-detached">
+              <div style="font-size:var(--fs-sm)">Logs are open in a separate window.</div>
+              <button class="btn" onClick={() => closeLogsWindow()}>Bring logs back</button>
+            </div>
           }
-          return (
-            <div class="inst-logs-tab">
-              <div class="log-toolbar">
-                {/* Filter chips on the left */}
-                <div class="log-toolbar-filters">
-                  <div class={`log-filter-btn ${logFilters().has("all") ? "active" : ""}`} onClick={() => toggleLogFilter("all")}>All</div>
-                  <div class={`log-filter-btn error ${logFilters().has("error") ? "active" : ""}`} onClick={() => toggleLogFilter("error")}>Errors</div>
-                  <div class={`log-filter-btn warn ${logFilters().has("warn") ? "active" : ""}`} onClick={() => toggleLogFilter("warn")}>Warnings</div>
-                </div>
-
-                {/* Search input — case-insensitive substring match across log lines. */}
-                <div class="log-toolbar-search">
-                  <span class="log-toolbar-search-icon"><IconSearch /></span>
-                  <input
-                    class="log-toolbar-search-input"
-                    type="text"
-                    spellcheck={false}
-                    placeholder="Search logs..."
-                    value={logSearch()}
-                    onInput={(e) => setLogSearch(e.currentTarget.value)}
-                  />
-                  <Show when={logSearch()}>
-                    <button
-                      class="log-toolbar-search-clear"
-                      onClick={() => setLogSearch("")}
-                      aria-label="Clear search"
-                    >
-                      <span class="side-icon"><IconX /></span>
-                    </button>
-                  </Show>
-                </div>
-
-                {/* Jump-to-top / jump-to-bottom + line count on the right */}
-                <button class="log-toolbar-jump tip-below" onClick={jumpToTop} data-tip="Jump to top">
-                  <IconArrowUp />
+        >
+          <div class="inst-logs-tab">
+            <div class="log-toolbar">
+              {/* Filter chips on the left */}
+              <div class="log-toolbar-filters">
+                <button
+                  type="button"
+                  class={`log-filter-btn ${logFilters().has("all") ? "active" : ""}`}
+                  onClick={() => toggleLogFilter("all")}
+                >
+                  All
                 </button>
-                <button class="log-toolbar-jump tip-below" onClick={jumpToBottom} data-tip="Jump to latest">
-                  <IconArrowDown />
+                <button
+                  type="button"
+                  class={`log-filter-btn error ${logFilters().has("error") ? "active" : ""}`}
+                  onClick={() => toggleLogFilter("error")}
+                >
+                  Errors
                 </button>
-                <span class="log-toolbar-count">{filteredLogs().length} lines</span>
+                <button
+                  type="button"
+                  class={`log-filter-btn warn ${logFilters().has("warn") ? "active" : ""}`}
+                  onClick={() => toggleLogFilter("warn")}
+                >
+                  Warnings
+                </button>
               </div>
+
+              {/* Search input — case-insensitive substring match across log lines. */}
+              <div class="log-toolbar-search">
+                <span class="log-toolbar-search-icon"><IconSearch /></span>
+                <input
+                  class="log-toolbar-search-input"
+                  type="text"
+                  spellcheck={false}
+                  placeholder="Search logs..."
+                  value={logSearch()}
+                  onInput={(e) => setLogSearch(e.currentTarget.value)}
+                />
+                <Show when={logSearch()}>
+                  <button
+                    type="button"
+                    class="log-toolbar-search-clear tip-below"
+                    onClick={() => setLogSearch("")}
+                    data-tip="Clear search"
+                    aria-label="Clear search"
+                  >
+                    <span class="side-icon"><IconX /></span>
+                  </button>
+                </Show>
+              </div>
+
+              {/* Jump-to-top / jump-to-bottom + line count on the right */}
+              <button
+                type="button"
+                class="log-toolbar-jump tip-below"
+                onClick={jumpToTop}
+                data-tip="Jump to top"
+                aria-label="Jump to top"
+              >
+                <IconArrowUp />
+              </button>
+              <button
+                type="button"
+                class={`log-toolbar-jump tip-below ${autoScrollLogs() ? "active" : ""}`}
+                onClick={jumpToBottom}
+                data-tip={autoScrollLogs() ? "Auto-scroll active (click to lock)" : "Jump to latest (resume auto-scroll)"}
+                aria-label="Jump to latest"
+              >
+                <IconArrowDown />
+              </button>
+              <span class="log-toolbar-count">
+                <Show when={filteredLogs().length !== logs().length} fallback={`${logs().length} lines`}>
+                  {filteredLogs().length} / {logs().length} lines
+                </Show>
+              </span>
+            </div>
+
+            <div class="log-viewer-frame">
+              {/* Log placeholder — Feather-style terminal icon (MIT).
+                  Pinned to the frame so it stays centered regardless of log scroll.
+                  Disappears as soon as any log line is present. */}
+              <Show when={filteredLogs().length === 0}>
+                <div class="log-ascii-backdrop">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 24 24" fill="none" stroke="url(#log-grad)" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round">
+                    <defs>
+                      <linearGradient id="log-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="var(--accent-cyan)" />
+                        <stop offset="100%" stop-color="var(--accent)" />
+                      </linearGradient>
+                    </defs>
+                    <rect x="2" y="3" width="20" height="18" rx="2" />
+                    <polyline points="7 8 10 11 7 14" />
+                    <line x1="13" y1="14" x2="17" y2="14" />
+                  </svg>
+                </div>
+              </Show>
 
               <div
-                class="log-viewer-frame"
+                class="log-viewer"
                 ref={(el) => {
-                  const scroller = el.querySelector<HTMLDivElement>(".log-viewer");
-                  if (!scroller) return;
-                  viewerEl = scroller;
-
-                  // Track whether the user is at the bottom. When they scroll
-                  // up to read earlier output we stop following; when they
-                  // return to the bottom we resume. A small threshold absorbs
-                  // sub-pixel rounding and the in-flight smooth-scroll.
-                  const onScroll = () => {
-                    const atBottom =
-                      scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 40;
-                    setAutoScrollLogs(atBottom);
-                  };
-                  scroller.addEventListener("scroll", onScroll, { passive: true });
-
-                  // On new log lines, snap to bottom only while following.
-                  const observer = new MutationObserver(() => {
-                    if (autoScrollLogs()) {
-                      scroller.scrollTop = scroller.scrollHeight;
+                  viewerEl = el;
+                  el.addEventListener("scroll", onViewerScroll, { passive: true });
+                  requestAnimationFrame(() => {
+                    if (viewerEl && autoScrollLogs()) {
+                      viewerEl.scrollTop = viewerEl.scrollHeight;
                     }
                   });
-                  observer.observe(scroller, { childList: true });
-
-                  // Start pinned to the bottom.
-                  scroller.scrollTop = scroller.scrollHeight;
                 }}
               >
-                {/* Log placeholder — Feather-style terminal icon (MIT).
-                    Pinned to the frame so it stays centered regardless of log scroll.
-                    Disappears as soon as any log line is present. */}
                 <Show when={filteredLogs().length === 0}>
-                  <div class="log-ascii-backdrop">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 24 24" fill="none" stroke="url(#log-grad)" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round">
-                      <defs>
-                        <linearGradient id="log-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stop-color="var(--accent-cyan)" />
-                          <stop offset="100%" stop-color="var(--accent)" />
-                        </linearGradient>
-                      </defs>
-                      <rect x="2" y="3" width="20" height="18" rx="2" />
-                      <polyline points="7 8 10 11 7 14" />
-                      <line x1="13" y1="14" x2="17" y2="14" />
-                    </svg>
+                  <div class="log-empty-hint">
+                    <Show
+                      when={gameRunning()}
+                      fallback={
+                        <Show
+                          when={logSearch()}
+                          fallback={<span>No logs yet. Launch the game to see output here.</span>}
+                        >
+                          <span>No matches for "{logSearch()}".</span>
+                        </Show>
+                      }
+                    >
+                      <span>Waiting for game output...</span>
+                    </Show>
                   </div>
                 </Show>
-
-                <div class="log-viewer">
-                  <Show when={filteredLogs().length === 0}>
-                    <div class="log-empty-hint">
-                      <Show
-                        when={gameRunning()}
-                        fallback={
-                          <Show
-                            when={logSearch()}
-                            fallback={<span>No logs yet. Launch the game to see output here.</span>}
-                          >
-                            <span>No matches for "{logSearch()}".</span>
-                          </Show>
-                        }
-                      >
-                        <span>Waiting for game output...</span>
-                      </Show>
+                <For each={filteredLogs()}>
+                  {(line) => (
+                    <div class={`log-line ${getLineClass(line)}`}>
+                      <span class="log-prompt" aria-hidden="true">&gt;</span>
+                      <span class="log-text">{line}</span>
                     </div>
-                  </Show>
-                  <For each={filteredLogs()}>
-                    {(line) => (
-                      <div class={`log-line ${line.includes("ERROR") || line.includes("FATAL") ? "log-error" : (line.includes("WARN") || line.includes("WARNING")) ? "log-warn" : ""}`}>
-                        {line}
-                      </div>
-                    )}
-                  </For>
-                </div>
+                  )}
+                </For>
               </div>
             </div>
-          );
-        })()}
+          </div>
+        </Show>
       </Show>
 
       </Show>
