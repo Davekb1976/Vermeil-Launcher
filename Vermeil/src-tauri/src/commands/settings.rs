@@ -3,6 +3,7 @@ use crate::services::settings_service;
 
 #[tauri::command]
 pub async fn get_settings() -> Result<LauncherSettings, String> {
+    crate::util::platform::update_windows_estimated_size();
     settings_service::load()
         .await
         .map_err(|e| e.to_string())

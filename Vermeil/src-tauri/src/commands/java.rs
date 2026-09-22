@@ -50,6 +50,7 @@ pub async fn install_recommended_java(major: u8) -> Result<JavaInstall, String> 
     settings_service::save(&settings)
         .await
         .map_err(|e| e.to_string())?;
+    crate::util::platform::update_windows_estimated_size();
     Ok(install)
 }
 
@@ -78,6 +79,7 @@ pub async fn delete_java_install(major: u8) -> Result<String, String> {
             .await
             .map_err(|e| e.to_string())?;
     }
+    crate::util::platform::update_windows_estimated_size();
     Ok(deleted)
 }
 

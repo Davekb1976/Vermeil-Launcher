@@ -140,23 +140,28 @@ pub fn run() {
                 let win_for_events = window.clone();
                 window.on_window_event(move |event| {
                     use tauri::WindowEvent;
-                    if !matches!(event, WindowEvent::Resized(_)) {
-                        return;
-                    }
-                    if let (Ok(scale), Ok(inner)) =
-                        (win_for_events.scale_factor(), win_for_events.inner_size())
-                    {
-                        if inner.width > 0 && inner.height > 0 {
-                            let logical = inner.to_logical::<f64>(scale);
-                            if logical.width < MIN_WIDTH || logical.height < MIN_HEIGHT {
-                                let _ = win_for_events.set_size(tauri::Size::Logical(
-                                    tauri::LogicalSize {
-                                        width: logical.width.max(MIN_WIDTH),
-                                        height: logical.height.max(MIN_HEIGHT),
-                                    },
-                                ));
+                    match event {
+                        WindowEvent::Destroyed | WindowEvent::CloseRequested { .. } => {
+                            crate::util::platform::update_windows_estimated_size();
+                        }
+                        WindowEvent::Resized(_) => {
+                            if let (Ok(scale), Ok(inner)) =
+                                (win_for_events.scale_factor(), win_for_events.inner_size())
+                            {
+                                if inner.width > 0 && inner.height > 0 {
+                                    let logical = inner.to_logical::<f64>(scale);
+                                    if logical.width < MIN_WIDTH || logical.height < MIN_HEIGHT {
+                                        let _ = win_for_events.set_size(tauri::Size::Logical(
+                                            tauri::LogicalSize {
+                                                width: logical.width.max(MIN_WIDTH),
+                                                height: logical.height.max(MIN_HEIGHT),
+                                            },
+                                        ));
+                                    }
+                                }
                             }
                         }
+                        _ => {}
                     }
                 });
             }
@@ -182,6 +187,7 @@ pub fn run() {
                             }
                         }
                         "quit" => {
+                            crate::util::platform::update_windows_estimated_size();
                             app.exit(0);
                         }
                         _ => {}

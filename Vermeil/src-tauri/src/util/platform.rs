@@ -121,7 +121,7 @@ pub fn extract_java_archive(archive_path: &std::path::Path, dest_dir: &std::path
 /// On non-Windows platforms, this is a compile-time no-op.
 pub fn update_windows_estimated_size() {
     #[cfg(windows)]
-    tauri::async_runtime::spawn_blocking(|| {
+    std::thread::spawn(|| {
         use winreg::enums::{HKEY_CURRENT_USER, KEY_WRITE};
         use winreg::RegKey;
 
@@ -134,9 +134,13 @@ pub fn update_windows_estimated_size() {
             if data_dir.exists() {
                 let size_bytes = crate::util::paths::dir_size(&data_dir);
                 let size_kb = (size_bytes / 1024).min(u32::MAX as u64) as u32;
-                let _ = uninstall_key.set_value("EstimatedSize", &size_kb);
-                tracing::debug!("Updated Windows uninstall EstimatedSize to {} KB", size_kb);
+                if let Err(e) = uninstall_key.set_value("EstimatedSize", &size_kb) {
+                    tracing::warn!("Failed to set Windows uninstall EstimatedSize: {}", e);
+                } else {
+                    tracing::info!("Updated Windows uninstall EstimatedSize to {} KB", size_kb);
+                }
             }
         }
     });
 }
+
