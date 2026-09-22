@@ -105,6 +105,8 @@ version on every outbound request:
 2. `Vermeil/src-tauri/tauri.conf.json` → `"version"` field
 3. `Vermeil/src-tauri/Cargo.toml` → `version = "..."` under `[package]`
 
+> **Note on UI Version Strings:** Launcher UI surfaces (such as `OnboardingWizard.tsx` and title badges) dynamically resolve the runtime version via `@tauri-apps/api/app` (`getVersion`). You do not need to search for or manually edit version strings in `.tsx` files. Updating the 3 files above (`package.json`, `tauri.conf.json`, and `Cargo.toml`) is exhaustive.
+
 ### Version Increment Rules (semver)
 
 - **PATCH** (`0.1.0` → `0.1.1`): Bug fixes only, no new features, no breaking changes

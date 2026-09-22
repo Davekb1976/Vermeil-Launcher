@@ -68,6 +68,7 @@ Vermeil/
   - Create parent directories before writing: `fs::create_dir_all(parent)`.
   - Format human-readable JSON files with `serde_json::to_string_pretty`.
   - Strip Windows `\\?\` extended prefix using `services::java::strip_extended_prefix` before sending paths across IPC.
+- **Platform Integrations (Windows Storage Footprint):** To ensure Windows "Installed Apps" reports genuine disk usage instead of the installer's static binary size, call `crate::util::platform::update_windows_estimated_size()`. It calculates `%LOCALAPPDATA%\Vermeil` size in KB and writes `EstimatedSize` under `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Vermeil`. Guarded by an atomic flag (`IS_UPDATING_ESTIMATED_SIZE`) and executed asynchronously via `std::thread::spawn` to avoid duplicate I/O or blocking the runtime. On non-Windows platforms, it compiles into an empty inline no-op without dead code warnings. Trigger on instance creation/deletion, modpack/Java install, cache purge, settings load, and during app close/tray exit.
 - **Error Handling:** Descriptive error messages with context (`format!("Failed to download {}: {}", url, e)`). Log errors at point of origin. Never silently swallow errors with `let _ =` without an explanatory comment. Zero compiler warnings at all times (no `#[allow(dead_code)]` workarounds).
 
 ---
@@ -86,7 +87,8 @@ Vermeil/
   - **Semantics (Radio vs Checkbox):** Mutually exclusive 1-of-N choices (e.g. Modrinth vs CurseForge import formats, loader selection) are **tab / radio cards**, NOT checkboxes. Never put a square checkbox or `<IconCheck>` on a single-select card. Checkboxes are strictly for multi-selection (0 to N items).
   - **Buttons:** Before adding a button, ask: *is the whole card or row already clickable?* If clicking the card selects or opens it, do not embed redundant "Select" or "Choose" buttons.
   - **Badges:** Badges are for concise, non-obvious metadata (`.mrpack`, `.zip`, `Fabric`, `1.20.1`). Never add badges that repeat what is already stated in the title or communicate state already visible from a color tint.
-  - **Spatial flow:** Never use absolute positioning (e.g. `position: absolute; top: 8px; right: 8px;`) that collides with header tags, titles, or badges. Flow items naturally with flexbox/grid and explicit `gap`.
+  - **Dynamic Version Resolution:** Never hardcode application version strings (e.g. `v1.0.0`) in modals, headers, or badges. Always query Tauri's runtime app version dynamically (`const [appVersion] = createResource(getVersion);` from `@tauri-apps/api/app`) so UI badges stay in sync across all releases automatically.
+  - **Spatial flow & Labeled Dividers:** Never use absolute positioning (e.g. `position: absolute; top: 8px; right: 8px;`) that collides with header tags, titles, or badges. For labeled dividers (e.g. `// OR OFFLINE PROFILE`), never use fragile pixel-offset math (`width: calc(50% - 30px)`); always use flexbox (`display: flex; align-items: center; gap: 12px; white-space: nowrap`) with `flex: 1` hairline divider pseudo-elements (`::before`, `::after`) that automatically stretch to fill space without intersecting or cutting through text.
   - **Tactile Tooltips (`data-tip`) & The Absolute Prohibition of Native `title`:**
     - **NEVER use the native HTML `title="..."` attribute anywhere.** Native `title` triggers the browser/OS default tooltip popup (e.g. Windows white-bordered black boxes with sluggish hover delay) that completely clashes with Vermeil's tactile design.
     - **ALWAYS use Vermeil's tactile tooltip system with `data-tip="..."`.**
@@ -163,7 +165,7 @@ When modifying one variant of a concept, update all parallel surfaces:
 Content flows from three sources: **Modrinth API**, **CurseForge API**, and **Local Archives** (`.mrpack`, `.zip`). Any change to install, import, or browse flows must verify the entire 5-stage pipeline:
 1. **Queueing (`modpackQueue.ts`, `trackDownload`)**: Set clean `title` and sanitized `meta` (`iconUrl`, `loader`, `gameVersion`, `versionNumber`, `author`). **Invariant**: `loader` must ONLY ever be a real Minecraft loader (`"fabric"`, `"forge"`, `"neoforge"`, `"quilt"`, `"vanilla"`, or `undefined`) — **never** a platform name like `"modrinth"` or `"curseforge"`.
 2. **In-Flight UI (`installProgress.ts`, `FloatingDock.tsx`, `Downloads.tsx`)**: Verify `install-progress` events, dock badge count, toast messages, and `dl-active-card` fallback icons.
-3. **Backend Resolution (`modpack.rs`, `cf_import.rs`, `icon_cache.rs`)**: Resolve icons through the hierarchy (embedded archive icon → API SHA-1 lookup → API title search → `"cube"` fallback). Set `LoaderConfig`, `source_project_id`, `source_platforms`, `source_version`, and auto-pin via `settings_service::auto_pin_instance`.
+3. **Backend Resolution (`modpack.rs`, `cf_import.rs`, `icon_cache.rs`)**: Resolve icons through the hierarchy (embedded archive icon → API SHA-1 lookup → API title search → `"cube"` fallback). Set `LoaderConfig`, `source_project_id`, `source_platforms`, `source_version`, and auto-pin via `settings_service::auto_pin_instance`. Trigger `platform::update_windows_estimated_size()` to synchronize the Windows uninstaller storage footprint.
 4. **Completion Contract (`completeDownload`)**: Pass `(id, nameOverride, versionNumber, metaUpdates)` containing `iconUrl`, `loader`, `gameVersion`, `author`, and `instanceId`. Trigger immediate disk persistence (`persistDownloads(true)`).
 5. **Downstream UI (`Downloads.tsx`, `Library.tsx`, `InstanceMods.tsx`)**: History cards (`DownloadCard`) must dynamically resolve missing assets via `matchingInstance()`. Instance tiles and installed mod lists must reflect clean names, cached icons, and styled loader pills. Full details in `.agents/skills/content-source-parity/SKILL.md`.
 
@@ -175,6 +177,7 @@ The launcher targets Windows (WebView2, Win32/DWM) and Linux (WebKitGTK, X11/Way
 - Enforce window constraints, focus, and sizing in application code rather than relying on OS window manager defaults.
 - WebKitGTK differences: stroke rendering weight, CSS support, timing/microtasks.
 - If physical testing on Linux is not possible in the current session, reason explicitly about the Linux execution path and verify cross-platform assumptions.
+- **Platform-Specific Function Hygiene:** Never declare split `#[cfg(windows)]` and `#[cfg(not(windows))]` function signatures if callers gate the call site behind `#[cfg(windows)]` — doing so leaves the non-Windows stub unused and triggers `dead_code` compiler warnings on Linux CI. Instead, declare a single unified public function whose internal body uses `#[cfg(windows)] { ... }` and compiles down to an empty inline no-op on non-Windows, called uniformly across all platforms.
 
 ---
 
@@ -211,6 +214,8 @@ The launcher targets Windows (WebView2, Win32/DWM) and Linux (WebKitGTK, X11/Way
    - Frontend check: `pnpm exec tsc --noEmit`
    - Frontend build: `pnpm run build`
    - Backend check: `cargo check` (zero warnings)
+   - Backend tests: `cargo test`
+   - CI Matrix: `.github/workflows/ci.yml` runs full frontend and backend check/test suites on Ubuntu and Windows with auto-cancelling concurrency (`cancel-in-progress: true`).
 5. **Commit & Push (Per Change):**
    - Conventional Commits: `type(scope): summary` (under ~70 chars, lowercase).
    - Push directly to `main` (linear history).

@@ -8,8 +8,8 @@ Vermeil is a custom Minecraft: Java Edition launcher built with **Rust (Tauri 2)
 **Website:** https://vermeillauncher.app/
 **Author:** Vermeil-Launcher
 **License:** MIT
-**Current Version:** 1.0.0
-**Status:** Milestone Release (1.0.0 GA)
+**Current Version:** 1.1.1
+**Status:** General Availability Release (1.1.1 GA)
 
 ---
 
@@ -87,6 +87,7 @@ Vermeil-Launcher/               # Repo root
 - Discord Rich Presence (shows what you're playing)
 - Auto-updater (Windows NSIS, Linux AppImage)
 - System tray with minimize-to-tray on game launch
+- Real-time Windows uninstaller storage synchronization (`EstimatedSize` DWORD) reflecting true disk usage across instances, assets, cache, and Java runtimes
 
 ### Mod Loaders
 - Fabric (all versions including Legacy Fabric)
@@ -155,7 +156,7 @@ Vermeil-Launcher/               # Repo root
 - Slider controls for FPS, FOV, memory
 - Toast notification system
 - Install progress popup with real-time streaming
-- Onboarding wizard for first-run
+- Onboarding wizard for first-run with dynamic version resolution and flexbox labeled divider styling
 - Escape key closes modals/tools
 - News feed from Mojang launcher content API
 

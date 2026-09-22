@@ -107,12 +107,18 @@ Before adding, restyling, or modifying any interactive element (button, badge, t
 ### 5. Spatial Flow & Absolute Positioning Ban
 - **Never absolute-position affordances over dynamic content.** Never use `position: absolute; top: 8px; right: 8px;` inside cards whose headers use `justify-content: space-between` or dynamic text/badges. This guarantees collisions on different screen sizes or badge lengths.
 - All headers, titles, tags, and controls must participate in the natural flexbox or grid flow with explicit `gap`.
+- **Labeled Dividers (`display: flex` + `flex: 1` Lines):** When styling labeled dividers (e.g. `// OR OFFLINE PROFILE`), never use fragile pixel-offset math (`width: calc(50% - 30px); position: absolute;`). Pixel offsets cut through text longer than ~60px. Always style the container as a flex row (`display: flex; align-items: center; gap: 12px; white-space: nowrap`) with `flex: 1` hairline pseudo-elements (`::before`, `::after`) that stretch to fill available horizontal space without clipping.
 
-### 6. Stay Within the Theme Without Overdoing It (Boring over Clever)
+### 6. Dynamic Version Resolution (Zero Hardcoded Versions)
+- **Never hardcode application version strings** (e.g. `v1.0.0`, `1.1.1`) in JSX markup, modal headers, or badges.
+- Always resolve the runtime version dynamically from Tauri using `getVersion` from `@tauri-apps/api/app` wrapped in SolidJS `createResource` (`const [appVersion] = createResource(getVersion);`).
+- This guarantees all onboarding wizard headers, status pills, and about dialogs stay perfectly synchronized with releases without manual edits to `.tsx` components.
+
+### 7. Stay Within the Theme Without Overdoing It (Boring over Clever)
 - Stay strictly within the SloppyKeys palette: sharp corners (`border-radius: 0`), chunky 3D bevels (`--bevel`, `--bevel-strong`), 3px left border on active plates, and recessed `#0f0e13` wells.
 - Do not invent novel decorative doodads, corner ribbons, or extra container wrappers. Clean, tactile, and restrained beats busy and cluttered every time.
 
-### 7. Tactile Tooltips (`data-tip`) & The Prohibition of Native `title`
+### 8. Tactile Tooltips (`data-tip`) & The Prohibition of Native `title`
 - **NEVER use the native HTML `title="..."` attribute anywhere.** Native `title` triggers the browser/OS default tooltip popup (e.g. Windows white-bordered black boxes with sluggish hover delay) that completely clashes with Vermeil's tactile design.
 - **ALWAYS use Vermeil's tactile tooltip system with `data-tip="..."`.**
   - **Styles & Mechanics**: Defined in `src/styles/layout.css` on `[data-tip]`. Features sharp corners (`border-radius: 0`), dark surface (`var(--surface-panel)`), 1px border (`var(--border-strong)`), 2.5px purple accent left edge (`border-left: 2.5px solid var(--accent)`), and deep drop shadow (`box-shadow: 0 4px 16px rgba(0,0,0,0.65)`).

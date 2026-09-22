@@ -88,6 +88,14 @@ Outputs:
 | `pnpm build` | `Vermeil/` | Build frontend only (Vite) |
 | `cargo check` | `Vermeil/src-tauri/` | Type-check Rust backend |
 | `cargo build --release` | `Vermeil/src-tauri/` | Build Rust backend only |
+| `cargo test` | `Vermeil/src-tauri/` | Run Rust unit & integration tests |
+
+## Continuous Integration (CI)
+
+Every push and pull request touching `Vermeil/**` triggers `.github/workflows/ci.yml`:
+- **Matrix validation**: Builds and verifies the codebase across both **Windows** (`windows-2022`) and **Linux** (`ubuntu-24.04` with WebKit2GTK).
+- **Checks performed**: Runs `pnpm run build` (Vite frontend compilation & asset bundling), `cargo check` (Rust compiler & clippy check), and `cargo test` (unit and integration tests).
+- **Concurrency control**: Configured with `cancel-in-progress: true` keyed by Git ref (`${{ github.workflow }}-${{ github.ref }}`). Rapid successive commits on `main` automatically cancel obsolete in-flight checks to preserve Actions runner minutes.
 
 ## Companion Mod
 
