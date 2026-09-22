@@ -2,9 +2,9 @@
 
 This software is provided **as-is**, without warranty of any kind.
 
-## Alpha Software
+## Active Development
 
-Vermeil is in **alpha** — early, active development. Features are incomplete or still changing, behavior may change between versions, and breaking changes can land without notice. Treat it as experimental and don't rely on it for anything you can't afford to lose.
+Vermeil is under **active development**. While the 1.0.0 milestone established a stable foundation with core launcher capabilities and automated tests in place, ongoing improvements and enhancements continue to be introduced. Treat your data with care and backup important worlds as with any custom software.
 
 ## AI-Generated Codebase
 

@@ -16,7 +16,7 @@
   <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/actions"><img src="https://img.shields.io/github/actions/workflow/status/Vermeil-Launcher/Vermeil-Launcher/release.yml?style=flat-square&label=build" alt="Build" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License" /></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-informational?style=flat-square" alt="Platform" />
-  <img src="https://img.shields.io/badge/status-alpha-orange?style=flat-square" alt="Status" />
+  <img src="https://img.shields.io/badge/status-stable-8b5cf6?style=flat-square" alt="Status" />
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 
 ---
 
-> **Vermeil 1.0.0.** The milestone general availability release of Vermeil Launcher.
+> **Vermeil 1.x.** General availability stable release of Vermeil Launcher.
 >
 > **AI-generated codebase.** Built with AI assistance (Claude, Gemini, and GPT models). May contain bugs or incomplete features. See [DISCLAIMER.md](DISCLAIMER.md).
 >
