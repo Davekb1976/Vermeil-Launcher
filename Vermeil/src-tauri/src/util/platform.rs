@@ -112,6 +112,9 @@ pub fn extract_java_archive(archive_path: &std::path::Path, dest_dir: &std::path
     Ok(())
 }
 
+#[cfg(windows)]
+static IS_UPDATING_ESTIMATED_SIZE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 /// On Windows, updates the `EstimatedSize` registry DWORD (in KB) under
 /// `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Vermeil`
 /// to reflect the true size of `%LOCALAPPDATA%\Vermeil` (instances, assets, cache, java).
@@ -121,26 +124,45 @@ pub fn extract_java_archive(archive_path: &std::path::Path, dest_dir: &std::path
 /// On non-Windows platforms, this is a compile-time no-op.
 pub fn update_windows_estimated_size() {
     #[cfg(windows)]
-    std::thread::spawn(|| {
-        use winreg::enums::{HKEY_CURRENT_USER, KEY_WRITE};
-        use winreg::RegKey;
+    {
+        use std::sync::atomic::Ordering;
+        if IS_UPDATING_ESTIMATED_SIZE
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_err()
+        {
+            // Another background sizing pass is already running; avoid duplicate I/O
+            return;
+        }
 
-        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-        if let Ok(uninstall_key) = hkcu.open_subkey_with_flags(
-            r"Software\Microsoft\Windows\CurrentVersion\Uninstall\Vermeil",
-            KEY_WRITE,
-        ) {
-            let data_dir = crate::util::paths::data_dir();
-            if data_dir.exists() {
-                let size_bytes = crate::util::paths::dir_size(&data_dir);
-                let size_kb = (size_bytes / 1024).min(u32::MAX as u64) as u32;
-                if let Err(e) = uninstall_key.set_value("EstimatedSize", &size_kb) {
-                    tracing::warn!("Failed to set Windows uninstall EstimatedSize: {}", e);
-                } else {
-                    tracing::info!("Updated Windows uninstall EstimatedSize to {} KB", size_kb);
+        std::thread::spawn(|| {
+            struct Guard;
+            impl Drop for Guard {
+                fn drop(&mut self) {
+                    IS_UPDATING_ESTIMATED_SIZE.store(false, Ordering::SeqCst);
                 }
             }
-        }
-    });
+            let _guard = Guard;
+
+            use winreg::enums::{HKEY_CURRENT_USER, KEY_WRITE};
+            use winreg::RegKey;
+
+            let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+            if let Ok(uninstall_key) = hkcu.open_subkey_with_flags(
+                r"Software\Microsoft\Windows\CurrentVersion\Uninstall\Vermeil",
+                KEY_WRITE,
+            ) {
+                let data_dir = crate::util::paths::data_dir();
+                if data_dir.exists() {
+                    let size_bytes = crate::util::paths::dir_size(&data_dir);
+                    let size_kb = (size_bytes / 1024).min(u32::MAX as u64) as u32;
+                    if let Err(e) = uninstall_key.set_value("EstimatedSize", &size_kb) {
+                        tracing::warn!("Failed to set Windows uninstall EstimatedSize: {}", e);
+                    } else {
+                        tracing::info!("Updated Windows uninstall EstimatedSize to {} KB", size_kb);
+                    }
+                }
+            }
+        });
+    }
 }
 
