@@ -2619,6 +2619,10 @@ const InstanceMods: Component = () => {
                 ref={(el) => {
                   viewerEl = el;
                   el.addEventListener("scroll", onViewerScroll, { passive: true });
+                  onCleanup(() => {
+                    el.removeEventListener("scroll", onViewerScroll);
+                    if (viewerEl === el) viewerEl = undefined;
+                  });
                   requestAnimationFrame(() => {
                     if (viewerEl && autoScrollLogs()) {
                       viewerEl.scrollTop = viewerEl.scrollHeight;

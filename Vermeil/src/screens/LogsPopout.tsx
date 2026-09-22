@@ -361,6 +361,10 @@ const LogsPopout: Component = () => {
             ref={(el) => {
               viewerEl = el;
               el.addEventListener("scroll", onViewerScroll, { passive: true });
+              onCleanup(() => {
+                el.removeEventListener("scroll", onViewerScroll);
+                if (viewerEl === el) viewerEl = undefined;
+              });
               requestAnimationFrame(() => {
                 if (viewerEl && autoScroll()) {
                   viewerEl.scrollTop = viewerEl.scrollHeight;
