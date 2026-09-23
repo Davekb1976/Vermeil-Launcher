@@ -104,6 +104,12 @@ pub async fn get_active_account() -> Result<Option<AccountSummary>, String> {
         match auth::refresh_token(&refresh_token).await {
             Ok(refreshed) => {
                 if let Some(active) = accounts.iter_mut().find(|a| a.active) {
+                    let creds = credentials::AccountCredentials {
+                        access_token: refreshed.access_token.clone(),
+                        refresh_token: refreshed.refresh_token.clone(),
+                    };
+                    let _ = credentials::save_account_credentials(&active.id, &creds);
+
                     active.access_token = refreshed.access_token;
                     active.refresh_token = refreshed.refresh_token;
                     active.expires_at = refreshed.expires_at;
@@ -197,6 +203,8 @@ pub async fn set_account_skin(skin_file_path: String) -> Result<String, String> 
 /// Remove a specific account. If it was active, activate the next one.
 #[tauri::command]
 pub async fn remove_account(id: String) -> Result<(), String> {
+    let _ = credentials::delete_account_credentials(&id);
+
     let mut accounts = load_accounts();
     let was_active = accounts.iter().find(|a| a.id == id).map(|a| a.active).unwrap_or(false);
 
@@ -210,9 +218,10 @@ pub async fn remove_account(id: String) -> Result<(), String> {
     save_accounts(&accounts)
 }
 
-/// Legacy logout — removes all accounts.
+/// Legacy logout — removes all accounts and wipes the credential vault.
 #[tauri::command]
 pub async fn logout() -> Result<(), String> {
+    let _ = credentials::clear_all_credentials();
     let accounts_path = paths::data_dir().join("accounts.json");
     if accounts_path.exists() {
         fs::remove_file(&accounts_path).map_err(|e| e.to_string())?;
@@ -231,27 +240,36 @@ fn load_accounts() -> Vec<MinecraftProfile> {
     let content = fs::read_to_string(&accounts_path).unwrap_or_default();
     let mut accounts: Vec<MinecraftProfile> = serde_json::from_str(&content).unwrap_or_default();
 
-    // Decrypt tokens in memory and migrate plaintext → encrypted on disk
     let mut needs_migration = false;
     for account in accounts.iter_mut() {
-        if !credentials::is_encrypted(&account.access_token) && account.access_token != "offline" && account.access_token != "0" && !account.access_token.is_empty() {
+        // One-time migration: If legacy tokens are still present inside accounts.json, move them to credentials.enc
+        if !account.is_offline && (!account.access_token.is_empty() && account.access_token != "offline" && account.access_token != "0" || account.refresh_token.is_some()) {
+            let access = credentials::decrypt_credential(&account.access_token).unwrap_or_else(|_| account.access_token.clone());
+            let refresh = account.refresh_token.as_ref().map(|rt| {
+                credentials::decrypt_credential(rt).unwrap_or_else(|_| rt.clone())
+            });
+
+            let creds = credentials::AccountCredentials {
+                access_token: access,
+                refresh_token: refresh,
+            };
+            let _ = credentials::save_account_credentials(&account.id, &creds);
             needs_migration = true;
         }
-        // Decrypt for in-memory use
-        if let Ok(decrypted) = credentials::decrypt_credential(&account.access_token) {
-            account.access_token = decrypted;
-        }
-        if let Some(ref rt) = account.refresh_token {
-            if let Ok(decrypted) = credentials::decrypt_credential(rt) {
-                account.refresh_token = Some(decrypted);
+
+        // Hydrate in-memory profile from the secure credentials vault
+        if !account.is_offline {
+            if let Ok(Some(creds)) = credentials::get_account_credentials(&account.id) {
+                account.access_token = creds.access_token;
+                account.refresh_token = creds.refresh_token;
             }
         }
     }
 
-    // If any tokens were plaintext, re-save with encryption (one-time migration)
+    // Rewrite accounts.json with clean metadata only (stripping legacy tokens)
     if needs_migration {
         let _ = save_accounts(&accounts);
-        tracing::info!("Migrated accounts.json: encrypted plaintext tokens with DPAPI");
+        tracing::info!("Migrated accounts.json: moved authentication tokens to secure vault credentials.enc");
     }
 
     accounts
@@ -261,29 +279,31 @@ fn save_accounts(accounts: &[MinecraftProfile]) -> Result<(), String> {
     let data_dir = paths::data_dir();
     fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
 
-    // Encrypt sensitive fields before writing to disk
-    let encrypted_accounts: Vec<MinecraftProfile> = accounts.iter().map(|a| {
+    // Store ONLY clean metadata in accounts.json — zero tokens written to accounts.json
+    let metadata_accounts: Vec<MinecraftProfile> = accounts.iter().map(|a| {
         let mut account = a.clone();
-        if let Ok(enc) = credentials::encrypt_credential(&account.access_token) {
-            account.access_token = enc;
-        }
-        if let Some(ref rt) = account.refresh_token {
-            if let Ok(enc) = credentials::encrypt_credential(rt) {
-                account.refresh_token = Some(enc);
-            }
-        }
+        account.access_token = if account.is_offline { "offline".to_string() } else { String::new() };
+        account.refresh_token = None;
         account
     }).collect();
 
-    let json = serde_json::to_string_pretty(&encrypted_accounts).map_err(|e| e.to_string())?;
+    let json = serde_json::to_string_pretty(&metadata_accounts).map_err(|e| e.to_string())?;
     let accounts_path = data_dir.join("accounts.json");
-    fs::write(&accounts_path, json).map_err(|e| e.to_string())?;
-    credentials::restrict_file_permissions(&accounts_path);
+    credentials::atomic_write(&accounts_path, json.as_bytes())?;
     Ok(())
 }
 
 /// Add a new account or update an existing one (by ID). Sets it as active.
 fn add_or_update_account(mut profile: MinecraftProfile) -> Result<(), String> {
+    // If online account, persist credentials to the dedicated vault
+    if !profile.is_offline && (!profile.access_token.is_empty() || profile.refresh_token.is_some()) {
+        let creds = credentials::AccountCredentials {
+            access_token: profile.access_token.clone(),
+            refresh_token: profile.refresh_token.clone(),
+        };
+        credentials::save_account_credentials(&profile.id, &creds)?;
+    }
+
     let mut accounts = load_accounts();
 
     // Deactivate all others
@@ -323,4 +343,47 @@ fn generate_offline_uuid(username: &str) -> String {
         u16::from_be_bytes([bytes[8], bytes[9]]),
         u64::from_be_bytes([0, 0, bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]])
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_generate_offline_uuid() {
+        let u1 = generate_offline_uuid("TestPlayer");
+        let u2 = generate_offline_uuid("TestPlayer");
+        let u3 = generate_offline_uuid("OtherPlayer");
+        assert_eq!(u1, u2);
+        assert_ne!(u1, u3);
+        assert_eq!(u1.len(), 36);
+        assert_eq!(&u1[14..15], "3"); // UUID version 3
+    }
+
+    #[test]
+    fn test_metadata_serialization_scrubs_tokens() {
+        let profile = MinecraftProfile {
+            id: "test-uuid-1".to_string(),
+            name: "TestUser".to_string(),
+            access_token: "super_secret_mc_token".to_string(),
+            refresh_token: Some("super_secret_ms_refresh".to_string()),
+            expires_at: 123456789,
+            is_offline: false,
+            skin_path: None,
+            active: true,
+        };
+
+        let accounts = vec![profile];
+        let metadata_accounts: Vec<MinecraftProfile> = accounts.iter().map(|a| {
+            let mut account = a.clone();
+            account.access_token = if account.is_offline { "offline".to_string() } else { String::new() };
+            account.refresh_token = None;
+            account
+        }).collect();
+
+        let json = serde_json::to_string(&metadata_accounts).unwrap();
+        assert!(!json.contains("super_secret_mc_token"));
+        assert!(!json.contains("super_secret_ms_refresh"));
+        assert!(json.contains("TestUser"));
+    }
 }

@@ -31,7 +31,9 @@ const REQUESTED_SCOPE: &str = "service::user.auth.xboxlive.com::MBI_SSL";
 pub struct MinecraftProfile {
     pub id: String,
     pub name: String,
+    #[serde(default)]
     pub access_token: String,
+    #[serde(default)]
     pub refresh_token: Option<String>,
     pub expires_at: i64,
     #[serde(default)]

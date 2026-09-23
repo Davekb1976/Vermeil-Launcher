@@ -53,21 +53,23 @@ pub async fn launch_instance(
     let accounts_path = paths::data_dir().join("accounts.json");
     let (username, uuid, token) = if accounts_path.exists() {
         let content = fs::read_to_string(&accounts_path).map_err(|e| e.to_string())?;
-        let mut accounts: Vec<MinecraftProfile> = serde_json::from_str(&content)
+        let accounts: Vec<MinecraftProfile> = serde_json::from_str(&content)
             .map_err(|e| e.to_string())?;
 
-        // Decrypt tokens stored encrypted on disk
-        for a in accounts.iter_mut() {
-            if let Ok(dec) = credentials::decrypt_credential(&a.access_token) {
-                a.access_token = dec;
-            }
-        }
-
         if let Some(account) = accounts.iter().find(|a| a.active).or(accounts.first()) {
+            let token = if account.is_offline {
+                "0".to_string()
+            } else if let Ok(Some(creds)) = credentials::get_account_credentials(&account.id) {
+                creds.access_token
+            } else if let Ok(dec) = credentials::decrypt_credential(&account.access_token) {
+                dec
+            } else {
+                account.access_token.clone()
+            };
             (
                 account.name.clone(),
                 account.id.clone(),
-                if account.is_offline { "0".to_string() } else { account.access_token.clone() },
+                token,
             )
         } else {
             return Err("No account found. Please sign in first.".to_string());

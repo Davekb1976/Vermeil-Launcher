@@ -17,25 +17,26 @@ fn active_microsoft_account() -> Result<MinecraftProfile, String> {
     let accounts_path = paths::data_dir().join("accounts.json");
     let raw = fs::read_to_string(&accounts_path)
         .map_err(|_| "No accounts file — sign in first".to_string())?;
-    let mut accounts: Vec<MinecraftProfile> =
+    let accounts: Vec<MinecraftProfile> =
         serde_json::from_str(&raw).map_err(|e| format!("Accounts JSON parse: {}", e))?;
-    // Decrypt tokens that are stored encrypted on disk
-    for account in accounts.iter_mut() {
-        if let Ok(dec) = credentials::decrypt_credential(&account.access_token) {
-            account.access_token = dec;
-        }
-        if let Some(ref rt) = account.refresh_token {
-            if let Ok(dec) = credentials::decrypt_credential(rt) {
-                account.refresh_token = Some(dec);
-            }
-        }
-    }
-    let active = accounts
+    let mut active = accounts
         .into_iter()
         .find(|a| a.active)
         .ok_or_else(|| "No active account".to_string())?;
     if active.is_offline {
         return Err("Skin features require a Microsoft account.".to_string());
+    }
+
+    if let Ok(Some(creds)) = credentials::get_account_credentials(&active.id) {
+        active.access_token = creds.access_token;
+        active.refresh_token = creds.refresh_token;
+    } else if let Ok(dec) = credentials::decrypt_credential(&active.access_token) {
+        active.access_token = dec;
+        if let Some(ref rt) = active.refresh_token {
+            if let Ok(dec_rt) = credentials::decrypt_credential(rt) {
+                active.refresh_token = Some(dec_rt);
+            }
+        }
     }
     Ok(active)
 }
@@ -182,20 +183,19 @@ pub async fn get_account_skin(account_id: String) -> Result<Option<String>, Stri
     let accounts_path = paths::data_dir().join("accounts.json");
     let raw = fs::read_to_string(&accounts_path)
         .map_err(|_| "No accounts file".to_string())?;
-    let mut accounts: Vec<MinecraftProfile> =
+    let accounts: Vec<MinecraftProfile> =
         serde_json::from_str(&raw).map_err(|e| format!("Accounts JSON parse: {}", e))?;
-    // Decrypt tokens stored encrypted on disk
-    for a in accounts.iter_mut() {
-        if let Ok(dec) = credentials::decrypt_credential(&a.access_token) {
-            a.access_token = dec;
-        }
-    }
-    let account = accounts
+    let mut account = accounts
         .into_iter()
         .find(|a| a.id == account_id)
         .ok_or_else(|| format!("Account {} not found", account_id))?;
     if account.is_offline {
         return Ok(None);
+    }
+    if let Ok(Some(creds)) = credentials::get_account_credentials(&account.id) {
+        account.access_token = creds.access_token;
+    } else if let Ok(dec) = credentials::decrypt_credential(&account.access_token) {
+        account.access_token = dec;
     }
     let profile = skins::fetch_profile(&account).await?;
     let active = profile
