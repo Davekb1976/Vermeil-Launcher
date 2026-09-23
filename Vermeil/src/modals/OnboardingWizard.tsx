@@ -35,7 +35,7 @@ import {
   IconCube,
   IconChevronDown,
   IconChevronRight,
-  IconCloud,
+  IconGoogleCloud,
 } from "../components/Icons";
 import PlayerHead from "../components/PlayerHead";
 import JavaPathInput from "../components/JavaPathInput";
@@ -555,7 +555,7 @@ const OnboardingWizard: Component = () => {
                         class="btn btn--neutral onboarding-cloud-btn"
                         onClick={handleCloudConnect}
                       >
-                        <IconCloud />
+                        <IconGoogleCloud />
                         <span>Restore from Google Cloud</span>
                       </button>
                     }

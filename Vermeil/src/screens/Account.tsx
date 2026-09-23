@@ -15,7 +15,7 @@ import {
   getLastCloudBackupTime,
 } from "../ipc/commands";
 import PlayerHead from "../components/PlayerHead";
-import { IconX, IconTrash, IconPlus, IconUser, IconShieldCheck, IconAlertTriangle, IconMicrosoft, IconCloud } from "../components/Icons";
+import { IconX, IconTrash, IconPlus, IconUser, IconShieldCheck, IconAlertTriangle, IconMicrosoft, IconGoogleCloud } from "../components/Icons";
 import type { MinecraftProfile } from "../ipc/commands";
 
 /**
@@ -432,7 +432,7 @@ const Account: Component = () => {
           <div class="account-cloud-strip">
             <div class="account-cloud-strip-left">
               <div class="account-cloud-strip-icon">
-                <IconCloud />
+                <IconGoogleCloud />
               </div>
               <div class="account-cloud-strip-info">
                 <div class="account-cloud-strip-title-row">
@@ -463,7 +463,7 @@ const Account: Component = () => {
                         class="btn btn--primary"
                         onClick={handleConnectGoogle}
                       >
-                        <IconCloud />
+                        <IconGoogleCloud />
                         <span>Sign in with Google</span>
                       </button>
                     }

@@ -32,6 +32,28 @@ export const IconCloud: Component = () => (
   </svg>
 );
 
+export const IconGoogleCloud: Component<{ class?: string }> = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={props.class}>
+    <defs>
+      <linearGradient id="google-cloud-rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#4285F4" />
+        <stop offset="35%" stop-color="#EA4335" />
+        <stop offset="70%" stop-color="#FBBC05" />
+        <stop offset="100%" stop-color="#34A853" />
+        <animateTransform
+          attributeName="gradientTransform"
+          type="rotate"
+          from="0 0.5 0.5"
+          to="360 0.5 0.5"
+          dur="4s"
+          repeatCount="indefinite"
+        />
+      </linearGradient>
+    </defs>
+    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="url(#google-cloud-rainbow)" />
+  </svg>
+);
+
 export const IconSettings: Component = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="3"/>

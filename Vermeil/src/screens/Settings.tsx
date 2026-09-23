@@ -5,7 +5,7 @@ import { checkForUpdates } from "../services/updater";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
-import { IconDownload, IconSearch, IconFolderOpen, IconTrash, IconModrinth, IconCurseForge, IconChevronRight, IconGlobe, IconSettings as IconSettingsIcon, IconLayers, IconCube, IconMonitor, IconBolt, IconX, IconCloud } from "../components/Icons";
+import { IconDownload, IconSearch, IconFolderOpen, IconTrash, IconModrinth, IconCurseForge, IconChevronRight, IconGlobe, IconSettings as IconSettingsIcon, IconLayers, IconCube, IconMonitor, IconBolt, IconX, IconGoogleCloud } from "../components/Icons";
 import JavaPathInput from "../components/JavaPathInput";
 import JavaChooserModal from "../modals/JavaChooserModal";
 import Dropdown from "../components/Dropdown";
@@ -1015,7 +1015,7 @@ const Settings: Component = () => {
                                   class="btn btn--primary btn--sm"
                                   onClick={handleConnectGoogle}
                                 >
-                                  <IconCloud />
+                                  <IconGoogleCloud />
                                   <span>Sign in with Google</span>
                                 </button>
                               }
