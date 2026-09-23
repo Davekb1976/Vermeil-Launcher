@@ -20,8 +20,6 @@ use aes_gcm::{
     aead::{Aead, KeyInit},
     Aes256Gcm, Nonce,
 };
-#[cfg(any(test, not(windows)))]
-use aes_gcm::aead::{AeadCore, OsRng};
 use sha2::{Sha256, Digest};
 
 const ENC_PREFIX: &str = "enc:";
@@ -56,7 +54,11 @@ fn encrypt_aead(plaintext: &str) -> Result<String, String> {
     let key_bytes = derive_platform_key();
     let cipher = Aes256Gcm::new_from_slice(&key_bytes)
         .map_err(|e| format!("AES-GCM key init failed: {}", e))?;
-    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+
+    let mut nonce_bytes = [0u8; 12];
+    use rand::RngCore;
+    rand::rng().fill_bytes(&mut nonce_bytes);
+    let nonce = Nonce::from(nonce_bytes);
 
     let ciphertext = cipher.encrypt(&nonce, plaintext.as_bytes())
         .map_err(|e| format!("AES-GCM encrypt failed: {}", e))?;
