@@ -7,9 +7,20 @@ just the code.
 
 ## Layout
 
-- One subfolder per feature/topic (e.g. `ingame-capes/`).
+- One subfolder per feature/topic (e.g. `ingame-capes/`, `secure-credentials-vault/`).
 - A folder may hold a `research.md` (findings), a `poc.md` (proof-of-concept
   scope), and whatever else helps — design sketches, open questions, decisions.
+
+## Topics
+
+- [Secure Credential Vault](secure-credentials-vault/research.md): Operating-system-level encrypted vault, cross-platform AEAD, atomic writes, and token isolation
+- [Google Cloud Settings Sync](google-cloud-sync/research.md): Zero-telemetry settings backup and restore using Google Drive appDataFolder
+- [In-Game Capes](ingame-capes/research.md): Companion mod cape rendering and Mojang/Crafty sync
+- [Companion Settings](companion-settings/research.md): In-game companion mod configuration and IPC
+- [Mod Version Resolution](mod-version-resolution/research.md): Algorithm for resolving compatible mod files across loaders
+- [FOV Effects 1.8.9](fov-effects-1.8.9/research.md): Legacy FOV effects backport and video options patching
+- [Legacy LWJGL Linux](legacy-lwjgl-linux/research.md): Handling legacy LWJGL on modern Linux Wayland/X11
+- [Uninstaller Optimization](uninstaller-optimization/research.md): Windows storage footprint synchronization
 
 ## Ground rules
 
