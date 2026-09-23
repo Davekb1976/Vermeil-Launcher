@@ -41,7 +41,7 @@ zip = "2"
 discord-presence = "3"
 lazy_static = "1"
 p256 = { version = "0.13", features = ["ecdsa", "pkcs8"] }
-ring = "0.17"
+aes-gcm = "0.10"
 sysinfo = { version = "0.37", default-features = false, features = ["system"] }
 ammonia = "4"
 flate2 = "1"

@@ -1,7 +1,7 @@
 //! Credential encryption/decryption and secure vault management.
 //!
 //! - On Windows: uses DPAPI (tied to current Windows logon session).
-//! - On Linux/macOS: uses authenticated AEAD (AES-256-GCM via `ring`) with key derived
+//! - On Linux/macOS: uses authenticated AEAD (AES-256-GCM via `aes-gcm` / RustCrypto) with key derived
 //!   from machine-id + user session, combined with strict Unix file permissions (chmod 600).
 //!
 //! Provides an isolated, atomic token vault (`credentials.enc`) decoupling
@@ -16,9 +16,12 @@ use std::path::{Path, PathBuf};
 #[cfg(windows)]
 use windows_dpapi::{encrypt_data, decrypt_data, Scope};
 
-#[cfg(not(windows))]
-use ring::aead::{OpeningKey, SealingKey, BoundKey, Nonce, NonceSequence, AES_256_GCM, UnboundKey, NONCE_LEN};
-#[cfg(not(windows))]
+use aes_gcm::{
+    aead::{Aead, KeyInit},
+    Aes256Gcm, Nonce,
+};
+#[cfg(any(test, not(windows)))]
+use aes_gcm::aead::{AeadCore, OsRng};
 use sha2::{Sha256, Digest};
 
 const ENC_PREFIX: &str = "enc:";
@@ -33,7 +36,6 @@ pub struct AccountCredentials {
     pub refresh_token: Option<String>,
 }
 
-#[cfg(not(windows))]
 fn derive_platform_key() -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(b"vermeil-credential-vault-v1:");
@@ -49,60 +51,42 @@ fn derive_platform_key() -> [u8; 32] {
     hasher.finalize().into()
 }
 
-#[cfg(not(windows))]
-struct SingleNonce(Option<[u8; NONCE_LEN]>);
-
-#[cfg(not(windows))]
-impl NonceSequence for SingleNonce {
-    fn advance(&mut self) -> Result<Nonce, ring::error::Unspecified> {
-        self.0.take().map(Nonce::assume_unique_for_key).ok_or(ring::error::Unspecified)
-    }
-}
-
-#[cfg(not(windows))]
+#[cfg(any(test, not(windows)))]
 fn encrypt_aead(plaintext: &str) -> Result<String, String> {
     let key_bytes = derive_platform_key();
-    let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes)
-        .map_err(|e| format!("AEAD unbound key: {}", e))?;
+    let cipher = Aes256Gcm::new_from_slice(&key_bytes)
+        .map_err(|e| format!("AES-GCM key init failed: {}", e))?;
+    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
 
-    let mut nonce_bytes = [0u8; NONCE_LEN];
-    use rand::RngCore;
-    rand::rng().fill_bytes(&mut nonce_bytes);
+    let ciphertext = cipher.encrypt(&nonce, plaintext.as_bytes())
+        .map_err(|e| format!("AES-GCM encrypt failed: {}", e))?;
 
-    let mut sealing_key = SealingKey::new(unbound_key, SingleNonce(Some(nonce_bytes)));
-    let mut in_out = plaintext.as_bytes().to_vec();
-    sealing_key.seal_in_place_append_tag(ring::aead::Aad::empty(), &mut in_out)
-        .map_err(|e| format!("AEAD seal failed: {}", e))?;
-
-    let mut combined = Vec::with_capacity(NONCE_LEN + in_out.len());
-    combined.extend_from_slice(&nonce_bytes);
-    combined.extend_from_slice(&in_out);
+    let mut combined = Vec::with_capacity(nonce.len() + ciphertext.len());
+    combined.extend_from_slice(&nonce);
+    combined.extend_from_slice(&ciphertext);
 
     Ok(format!("{}{}", AEAD_PREFIX, BASE64.encode(&combined)))
 }
 
-#[cfg(not(windows))]
 fn decrypt_aead(stored: &str) -> Result<String, String> {
     if let Some(b64) = stored.strip_prefix(AEAD_PREFIX) {
         let data = BASE64.decode(b64).map_err(|e| format!("Base64 decode: {}", e))?;
-        if data.len() < NONCE_LEN + 16 {
+        if data.len() < 12 + 16 {
             return Err("AEAD payload too short".to_string());
         }
 
-        let (nonce_slice, ciphertext) = data.split_at(NONCE_LEN);
-        let mut nonce_bytes = [0u8; NONCE_LEN];
-        nonce_bytes.copy_from_slice(nonce_slice);
-
+        let (nonce_bytes, ciphertext) = data.split_at(12);
         let key_bytes = derive_platform_key();
-        let unbound_key = UnboundKey::new(&AES_256_GCM, &key_bytes)
-            .map_err(|e| format!("AEAD unbound key: {}", e))?;
+        let cipher = Aes256Gcm::new_from_slice(&key_bytes)
+            .map_err(|e| format!("AES-GCM key init failed: {}", e))?;
+        let nonce_arr: [u8; 12] = nonce_bytes.try_into()
+            .map_err(|_| "Invalid AEAD nonce length".to_string())?;
+        let nonce = Nonce::from(nonce_arr);
 
-        let mut opening_key = OpeningKey::new(unbound_key, SingleNonce(Some(nonce_bytes)));
-        let mut in_out = ciphertext.to_vec();
-        let decrypted = opening_key.open_in_place(ring::aead::Aad::empty(), &mut in_out)
-            .map_err(|_| "AEAD decryption failed (key mismatch or corrupted data)".to_string())?;
+        let decrypted = cipher.decrypt(&nonce, ciphertext)
+            .map_err(|_| "AES-GCM decryption failed (key mismatch or corrupted data)".to_string())?;
 
-        return String::from_utf8(decrypted.to_vec())
+        return String::from_utf8(decrypted)
             .map_err(|e| format!("UTF-8 decode failed: {}", e));
     }
 
@@ -151,11 +135,8 @@ pub fn decrypt_credential(stored: &str) -> Result<String, String> {
         }
     }
 
-    #[cfg(not(windows))]
-    {
-        if stored.starts_with(AEAD_PREFIX) {
-            return decrypt_aead(stored);
-        }
+    if stored.starts_with(AEAD_PREFIX) {
+        return decrypt_aead(stored);
     }
 
     // Plaintext — legacy storage or unencrypted fallback
@@ -366,6 +347,17 @@ mod tests {
         assert_eq!(loaded, map);
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn test_aes_gcm_aead_roundtrip() {
+        let secret = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.secret_refresh_token_xyz_12345";
+        let encrypted = encrypt_aead(secret).expect("AEAD encryption failed");
+        assert!(encrypted.starts_with(AEAD_PREFIX));
+        assert_ne!(encrypted, secret);
+
+        let decrypted = decrypt_aead(&encrypted).expect("AEAD decryption failed");
+        assert_eq!(decrypted, secret);
     }
 }
 
