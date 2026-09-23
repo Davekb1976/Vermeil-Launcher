@@ -21,7 +21,7 @@
 </p>
 
 <p align="center">
-  <a href="https://vermeillauncher.app/">Website</a> · <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest">Download</a> · <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/issues">Issues</a>
+  <a href="https://vermeillauncher.app/">Website</a> · <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest">Download</a> · <a href="PRIVACY.md">Privacy</a> · <a href="TERMS.md">Terms</a> · <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/issues">Issues</a>
 </p>
 
 ---
@@ -115,9 +115,10 @@ Built with [Tauri 2](https://tauri.app/) (Rust) and [SolidJS](https://www.solidj
 
 See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for setup instructions and build commands.
 
-## Privacy
+## Privacy & Terms
 
-No data is collected or sent anywhere. All credentials, settings, and game data stay on your machine. See [PRIVACY.md](PRIVACY.md).
+- **Privacy Policy:** No data is collected or sent anywhere. Local-first storage with sandboxed Google Drive settings backup. See [PRIVACY.md](PRIVACY.md).
+- **Terms of Service:** Open-source MIT guidelines, acceptable use, and third-party integration policies. See [TERMS.md](TERMS.md).
 
 ## AI Disclosure
 
