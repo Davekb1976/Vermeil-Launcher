@@ -54,6 +54,7 @@ Vermeil offers an optional cloud backup feature for launcher preferences using G
 
 - **Sandboxed Directory:** Vermeil requests access only to the Google Drive Application Data folder (`https://www.googleapis.com/auth/drive.appdata`). This is an isolated, private sandbox.
 - **No Personal File Access:** Vermeil has zero access to your personal files, spreadsheets, photos, or documents stored in Google Drive.
+- **Hardware Settings Excluded:** Machine-specific parameters (such as JVM RAM allocation, window dimensions, and Java paths) are strictly filtered out and kept on local disk to prevent cross-device conflicts.
 - **User Revocation:** You may sign out locally or completely revoke authorization on Google's servers at any time via Vermeil Settings or through your [Google Account Security Settings](https://myaccount.google.com/permissions).
 - **Google API Services User Data Policy Compliance:** Vermeil adheres strictly to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements. Your data is never sold, shared, used for advertising, or used to train machine learning models.
 
