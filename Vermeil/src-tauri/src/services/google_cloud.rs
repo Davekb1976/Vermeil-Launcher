@@ -363,8 +363,36 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
               border-color: #a78bfa;\
               box-shadow: 0 0 6px rgba(139, 92, 246, 0.6);\
             }\
+            .shortcut-pill {\
+              display: none;\
+              align-items: center;\
+              justify-content: center;\
+              gap: 8px;\
+              margin: 18px 0 0 0;\
+              background: #0f0e13;\
+              border: 1px solid #3c384a;\
+              padding: 10px 18px;\
+              font-family: 'DM Mono', monospace;\
+              font-size: 11.5px;\
+              color: #c4b5fd;\
+              transition: border-color 0.2s ease, box-shadow 0.2s ease;\
+            }\
+            .shortcut-pill.flash {\
+              border-color: #8b5cf6;\
+              box-shadow: 0 0 12px rgba(139, 92, 246, 0.45);\
+            }\
+            .key-cap {\
+              background: #25222f;\
+              border: 1px solid #4d475f;\
+              border-bottom: 2px solid #15141c;\
+              color: #ece9f2;\
+              padding: 2px 7px;\
+              font-size: 11px;\
+              font-weight: 600;\
+              border-radius: 2px;\
+            }\
             .btn-close {\
-              margin-top: 16px;\
+              margin-top: 14px;\
               display: none;\
               width: 100%;\
               background: #28252f;\
@@ -403,20 +431,37 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
                 <span class=\"sq-dot active\" id=\"dot-3\"></span>\
               </span>\
             </div>\
-            <button type=\"button\" class=\"btn-close\" id=\"btn-close\" onclick=\"closeTab()\">Close Tab</button>\
+            <div class=\"shortcut-pill\" id=\"shortcut-pill\">\
+              <span>Press</span>\
+              <kbd class=\"key-cap\" id=\"cmd-key\">Ctrl</kbd> + <kbd class=\"key-cap\">W</kbd>\
+              <span>to close tab</span>\
+            </div>\
+            <button type=\"button\" class=\"btn-close\" id=\"btn-close\" onclick=\"handleCloseClick()\">Return to Vermeil</button>\
           </div>\
           <script>\
             if (window.history.replaceState) {\
               window.history.replaceState({}, document.title, window.location.pathname);\
             }\
+            var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;\
+            var keyEl = document.getElementById('cmd-key');\
+            if (keyEl && isMac) keyEl.textContent = '⌘';\
             var remaining = 3;\
             function closeTab() {\
               try { window.open('', '_self', ''); window.close(); } catch (e) {}\
+            }\
+            function handleCloseClick() {\
+              closeTab();\
+              var pill = document.getElementById('shortcut-pill');\
+              if (pill) {\
+                pill.classList.add('flash');\
+                setTimeout(function() { pill.classList.remove('flash'); }, 600);\
+              }\
             }\
             function updateUI() {\
               var secEl = document.getElementById('sec');\
               var labelEl = document.getElementById('countdown-label');\
               var btnEl = document.getElementById('btn-close');\
+              var pillEl = document.getElementById('shortcut-pill');\
               if (secEl) secEl.textContent = remaining;\
               for (var i = 1; i <= 3; i++) {\
                 var dot = document.getElementById('dot-' + i);\
@@ -427,9 +472,10 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
               }\
               if (remaining <= 0) {\
                 clearInterval(timer);\
-                if (labelEl) labelEl.textContent = 'Ready to close · Return to launcher';\
+                if (labelEl) labelEl.textContent = 'All set! You can return to Vermeil.';\
                 var dotsEl = document.getElementById('dots');\
                 if (dotsEl) dotsEl.style.display = 'none';\
+                if (pillEl) pillEl.style.display = 'inline-flex';\
                 if (btnEl) btnEl.classList.add('visible');\
                 closeTab();\
               }\

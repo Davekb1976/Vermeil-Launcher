@@ -33,20 +33,28 @@ export const IconCloud: Component = () => (
 );
 
 export const IconGoogleCloud: Component<{ class?: string }> = (props) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={props.class}>
+  <svg
+    viewBox="0 0 24 24"
+    fill="url(#cloud-theme-sway-fill)"
+    stroke-width="2.3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    class={`icon-cloud-sync ${props.class || ""}`}
+  >
     <defs>
+      {/* High-luminance stroke gradient that pops against dark wells AND purple primary buttons */}
       <linearGradient id="cloud-theme-sway" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#00f0ff">
-          <animate attributeName="stop-color" values="#00f0ff;#8b5cf6;#d946ef;#0284c7;#00f0ff" dur="4.5s" repeatCount="indefinite" />
+        <stop offset="0%" stop-color="#00f5ff">
+          <animate attributeName="stop-color" values="#00f5ff;#ffffff;#ff60b0;#38bdf8;#00f5ff" dur="4.2s" repeatCount="indefinite" />
         </stop>
-        <stop offset="30%" stop-color="#0284c7">
-          <animate attributeName="stop-color" values="#0284c7;#00f0ff;#8b5cf6;#d946ef;#0284c7" dur="4.5s" repeatCount="indefinite" />
+        <stop offset="30%" stop-color="#38bdf8">
+          <animate attributeName="stop-color" values="#38bdf8;#00f5ff;#ffffff;#ff60b0;#38bdf8" dur="4.2s" repeatCount="indefinite" />
         </stop>
-        <stop offset="65%" stop-color="#8b5cf6">
-          <animate attributeName="stop-color" values="#8b5cf6;#d946ef;#0284c7;#00f0ff;#8b5cf6" dur="4.5s" repeatCount="indefinite" />
+        <stop offset="65%" stop-color="#ffffff">
+          <animate attributeName="stop-color" values="#ffffff;#ff60b0;#38bdf8;#00f5ff;#ffffff" dur="4.2s" repeatCount="indefinite" />
         </stop>
-        <stop offset="100%" stop-color="#d946ef">
-          <animate attributeName="stop-color" values="#d946ef;#0284c7;#00f0ff;#8b5cf6;#d946ef" dur="4.5s" repeatCount="indefinite" />
+        <stop offset="100%" stop-color="#ff60b0">
+          <animate attributeName="stop-color" values="#ff60b0;#38bdf8;#00f5ff;#ffffff;#ff60b0" dur="4.2s" repeatCount="indefinite" />
         </stop>
         <animateTransform
           attributeName="gradientTransform"
@@ -56,6 +64,13 @@ export const IconGoogleCloud: Component<{ class?: string }> = (props) => (
           dur="4s"
           repeatCount="indefinite"
         />
+      </linearGradient>
+
+      {/* Luminous semi-transparent body fill so the cloud has a visible silhouette instead of just a thin wire */}
+      <linearGradient id="cloud-theme-sway-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#00f5ff" stop-opacity="0.35" />
+        <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.22" />
+        <stop offset="100%" stop-color="#ff60b0" stop-opacity="0.30" />
       </linearGradient>
     </defs>
     <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="url(#cloud-theme-sway)" />

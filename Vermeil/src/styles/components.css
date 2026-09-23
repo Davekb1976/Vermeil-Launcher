@@ -393,6 +393,11 @@
   box-shadow: none;
 }
 .btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+.btn svg.icon-cloud-sync {
+  width: 16px;
+  height: 16px;
+  filter: drop-shadow(0 0 4px rgba(0, 245, 255, 0.45));
+}
 
 /* Size variants */
 .btn--sm {

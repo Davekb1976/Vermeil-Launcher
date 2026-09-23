@@ -2,10 +2,17 @@ use crate::services::google_cloud::{
     self, CloudBackupSummary, CloudConnectSummary, CloudRestoreSummary,
 };
 use crate::services::settings_service;
+use tauri::Manager;
 
 #[tauri::command]
-pub async fn connect_google_cloud() -> Result<CloudConnectSummary, String> {
-    google_cloud::connect_google_account().await
+pub async fn connect_google_cloud(app: tauri::AppHandle) -> Result<CloudConnectSummary, String> {
+    let summary = google_cloud::connect_google_account().await?;
+    if let Some(win) = app.get_webview_window("main") {
+        let _ = win.unminimize();
+        let _ = win.show();
+        let _ = win.set_focus();
+    }
+    Ok(summary)
 }
 
 #[tauri::command]
