@@ -602,14 +602,18 @@ pub async fn backup_to_google_cloud() -> Result<CloudBackupSummary, String> {
     backup_result
 }
 
-/// Strips all local-only settings, keeping ONLY:
+/// Strips all hardware-dependent and machine-specific settings, keeping ONLY portable preferences:
 /// 1. General settings (launcher lifecycle, splash, toasts, dock, Discord RPC, auto-update, snapshots)
 /// 2. Display settings (max_fps, vsync, gui_scale, brightness/gamma, fov)
 /// 3. Sound level settings (master, music, weather, hostile, block, player volume)
-/// 4. Window and memory defaults (window_width, window_height, start_maximized, default_memory_mb, adaptive_ram, adaptive_ram_min_mb, adaptive_ram_max_mb)
+/// 4. Custom keybinds (muscle-memory keyboard shortcuts)
 ///
-/// Everything else (Java runtime, Java paths, GC preset, concurrency, speed limits,
-/// accessibility/controls, custom keybinds, pinned shortcuts, API keys) is saved LOCALLY ONLY.
+/// Hardware-dependent settings are strictly LOCAL ONLY and never uploaded to cloud:
+/// - RAM allocation & Adaptive RAM (default_memory_mb, adaptive_ram, min/max)
+/// - Window dimensions (window_width, window_height, start_maximized)
+/// - Java runtime, paths, and GC presets (java_runtime, java_paths, gc_preset)
+/// - Concurrency & bandwidth limits (concurrent_downloads, concurrent_writes, speed limits)
+/// - Mouse controls & accessibility (mouse_sensitivity, invert_y, auto_jump, view_bobbing, subtitles)
 pub fn sanitize_settings_for_cloud(source: &LauncherSettings) -> LauncherSettings {
     let defaults = LauncherSettings::default();
 
