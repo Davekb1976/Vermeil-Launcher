@@ -9,6 +9,7 @@
 - Independent Google Cloud session controls with separate local Sign Out and full OAuth Disconnect
 - Tactile Google OAuth authorization callback landing page with live status feedback and auto-closing tab handler
 - Animated theme sway indicator for cloud synchronization status in the header
+- High-speed NSIS uninstaller bulk deletion with native tree unlinking, instant trash renaming, and dynamic disk footprint reporting
 
 ### Changed
 
@@ -28,3 +29,4 @@
 
 - [Secure Credential Vault Architecture](docs/research/secure-credentials-vault/research.md): Technical specification, security models, Mermaid architecture diagrams, and atomic I/O guarantees
 - [Google Cloud Settings Sync Architecture](docs/research/google-cloud-sync/research.md): RFC 8252/7636 security model, sandboxed storage flows, and privacy policy disclosures
+- [Windows Uninstaller Optimization](docs/research/uninstaller-optimization/research.md): High-speed bulk directory deletion, native tree unlinking, and dynamic disk footprint reporting
