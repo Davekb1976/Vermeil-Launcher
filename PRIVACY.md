@@ -61,8 +61,10 @@ You can sign out at any time from the Account screen. Signing out removes the to
 
 ## Open source
 
-Vermeil's source code is public. You can review exactly what data is read, sent, and stored by reading the source.
+Vermeil's source code is public. You can review exactly what data is read, sent, and stored by reading the source at [https://github.com/Davekb1976/Vermeil-Launcher](https://github.com/Davekb1976/Vermeil-Launcher).
 
-## Contact
+## Changes & Contact
 
-This is a solo project. For security-sensitive issues, use GitHub's private vulnerability reporting on the repository.
+This Privacy Policy is also published on the web at [https://vermeillauncher.app/privacy.html](https://vermeillauncher.app/privacy.html).
+
+This is a solo project. For security-sensitive issues or vulnerability reporting, please use [GitHub Security Advisories](https://github.com/Davekb1976/Vermeil-Launcher/security) or open an issue on the repository.

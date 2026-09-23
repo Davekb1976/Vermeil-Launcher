@@ -76,6 +76,6 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMA
 
 ## 8. Changes & Contact
 
-We reserve the right to modify these Terms as the application evolves. Updates will be reflected in this file and on [https://vermeillauncher.app/terms/](https://vermeillauncher.app/terms/).
+We reserve the right to modify these Terms as the application evolves. Updates will be reflected in this file and on [https://vermeillauncher.app/terms.html](https://vermeillauncher.app/terms.html).
 
 For security reports or inquiries, please contact us via [GitHub Security Advisories](https://github.com/Davekb1976/Vermeil-Launcher/security) or open an issue on GitHub.

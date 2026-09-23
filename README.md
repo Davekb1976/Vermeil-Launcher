@@ -10,18 +10,18 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest"><img src="https://img.shields.io/github/v/release/Vermeil-Launcher/Vermeil-Launcher?style=flat-square&label=release&color=8b5cf6&labelColor=181622" alt="Release" /></a>
-  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Vermeil-Launcher/Vermeil-Launcher/badges/download-count.json&style=flat-square&color=8b5cf6&labelColor=181622" alt="Downloads" /></a>
-  <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Vermeil-Launcher/Vermeil-Launcher/badges/lines-of-code.json&style=flat-square&color=8b5cf6&labelColor=181622" alt="Lines of Code" />
-  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Vermeil-Launcher/Vermeil-Launcher/ci.yml?branch=main&style=flat-square&label=ci%20checks&color=10b981&labelColor=181622" alt="CI Checks" /></a>
-  <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/actions"><img src="https://img.shields.io/github/actions/workflow/status/Vermeil-Launcher/Vermeil-Launcher/release.yml?style=flat-square&label=build&color=10b981&labelColor=181622" alt="Build" /></a>
+  <a href="https://github.com/Davekb1976/Vermeil-Launcher/releases/latest"><img src="https://img.shields.io/github/v/release/Davekb1976/Vermeil-Launcher?style=flat-square&label=release&color=8b5cf6&labelColor=181622" alt="Release" /></a>
+  <a href="https://github.com/Davekb1976/Vermeil-Launcher/releases"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Davekb1976/Vermeil-Launcher/badges/download-count.json&style=flat-square&color=8b5cf6&labelColor=181622" alt="Downloads" /></a>
+  <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Davekb1976/Vermeil-Launcher/badges/lines-of-code.json&style=flat-square&color=8b5cf6&labelColor=181622" alt="Lines of Code" />
+  <a href="https://github.com/Davekb1976/Vermeil-Launcher/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Davekb1976/Vermeil-Launcher/ci.yml?branch=main&style=flat-square&label=ci%20checks&color=10b981&labelColor=181622" alt="CI Checks" /></a>
+  <a href="https://github.com/Davekb1976/Vermeil-Launcher/actions"><img src="https://img.shields.io/github/actions/workflow/status/Davekb1976/Vermeil-Launcher/release.yml?style=flat-square&label=build&color=10b981&labelColor=181622" alt="Build" /></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-2c2738?style=flat-square&labelColor=181622" alt="Platform" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2c2738?style=flat-square&labelColor=181622" alt="License" /></a>
   <img src="https://img.shields.io/badge/status-stable-8b5cf6?style=flat-square&labelColor=181622" alt="Status" />
 </p>
 
 <p align="center">
-  <a href="https://vermeillauncher.app/">Website</a> · <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/releases/latest">Download</a> · <a href="PRIVACY.md">Privacy</a> · <a href="TERMS.md">Terms</a> · <a href="https://github.com/Vermeil-Launcher/Vermeil-Launcher/issues">Issues</a>
+  <a href="https://vermeillauncher.app/">Website</a> · <a href="https://github.com/Davekb1976/Vermeil-Launcher/releases/latest">Download</a> · <a href="PRIVACY.md">Privacy</a> · <a href="TERMS.md">Terms</a> · <a href="https://github.com/Davekb1976/Vermeil-Launcher/issues">Issues</a>
 </p>
 
 ---
