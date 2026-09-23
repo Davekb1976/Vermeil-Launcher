@@ -538,9 +538,9 @@ const InstanceMods: Component = () => {
 
   /** Display label for a preset ID — matches the strings in Settings.tsx. */
   const presetLabel = (id: string): string => {
-    if (id === "g1gc") return "G1GC (recommended)";
-    if (id === "zgc") return "ZGC";
-    if (id === "shenandoah") return "Shenandoah";
+    if (id === "g1gc") return "Client G1GC";
+    if (id === "zgc") return "Generational ZGC";
+    if (id === "shenandoah") return "Adaptive Shenandoah";
     return id.toUpperCase();
   };
 
@@ -1751,7 +1751,7 @@ const InstanceMods: Component = () => {
                   </div>
                 </div>
                 <div class="setting-desc" style="font-size:11px">
-                  Pre-filled from your GC preset. Edit, add, or remove any flag — what's here is passed directly to the JVM (heap memory is managed by the memory settings above).
+                  Pre-filled from your client GC preset. Calibrated for smooth frame pacing and fast startup without Stop-The-World freezes. Edit, add, or remove any flag — heap memory (-Xmx/-Xms) is managed by the memory settings above.
                 </div>
               </div>
             </div>

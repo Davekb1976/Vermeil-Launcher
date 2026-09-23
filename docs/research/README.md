@@ -21,6 +21,7 @@ just the code.
 - [FOV Effects 1.8.9](fov-effects-1.8.9/research.md): Legacy FOV effects backport and video options patching
 - [Legacy LWJGL Linux](legacy-lwjgl-linux/research.md): Handling legacy LWJGL on modern Linux Wayland/X11
 - [Uninstaller Optimization](uninstaller-optimization/research.md): Windows storage footprint synchronization
+- [Client GC Calibration](client-gc-calibration/research.md): Modern client garbage collection presets and initial heap calibration across hardware tiers
 
 ## Ground rules
 

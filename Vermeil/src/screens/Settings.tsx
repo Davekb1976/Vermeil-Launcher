@@ -1025,15 +1025,21 @@ const Settings: Component = () => {
                       <div class="setting-row">
                         <div class="setting-info">
                           <span class="setting-name">GC preset</span>
-                          <span class="setting-desc">{settings()!.gc_preset === "g1gc" ? "G1GC (recommended)" : settings()!.gc_preset.toUpperCase()}</span>
+                          <span class="setting-desc">
+                            {settings()!.gc_preset === "zgc"
+                              ? "Generational ZGC (High-End, Java 21+)"
+                              : settings()!.gc_preset === "shenandoah"
+                              ? "Adaptive Shenandoah (Low-Latency, Java 12+)"
+                              : "Client-Tuned G1GC (Low & Mid-End, Java 8/17)"}
+                          </span>
                         </div>
                         <div class="setting-control">
                           <Dropdown
                             value={settings()!.gc_preset}
                             options={[
-                              { value: "g1gc", label: "G1GC (recommended)" },
-                              { value: "zgc", label: "ZGC (Java 21+)" },
-                              { value: "shenandoah", label: "Shenandoah" },
+                              { value: "g1gc", label: "G1GC (Client-Tuned · Recommended)" },
+                              { value: "zgc", label: "ZGC (Generational · Java 21+)" },
+                              { value: "shenandoah", label: "Shenandoah (Adaptive · Java 12+)" },
                             ]}
                             onChange={(val) => updateSetting("gc_preset", val)}
                           />
@@ -1101,10 +1107,10 @@ const Settings: Component = () => {
                               </Show>
                               <div class="java-slot-actions">
                                 <button
-                                  class={`btn btn--sm ${installed() ? "btn--neutral" : "btn--primary"}`}
+                                  class={`btn btn--sm tip-below ${installed() ? "btn--neutral" : "btn--primary"}`}
                                   onClick={() => runInstall(major)}
                                   disabled={busy() !== null}
-                                  title={installed() ? "Replace with a fresh Adoptium download" : "Download from Adoptium"}
+                                  data-tip={installed() ? "Replace with a fresh Adoptium download" : "Download from Adoptium"}
                                 >
                                   <IconDownload />
                                   {busy() === "install" ? "Installing..." : "Install recommended"}

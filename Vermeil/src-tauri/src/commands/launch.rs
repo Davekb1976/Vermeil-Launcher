@@ -584,10 +584,16 @@ pub async fn get_resolved_jvm_args(instance_id: String) -> Result<String, String
     );
     let gc_flags = crate::services::launch::resolve_gc_flags(gc_preset, java_major, effective.value_mb);
 
+    let initial_mb = if instance.java.adaptive_override && instance.java.memory_min_mb > 512 {
+        instance.java.memory_min_mb.min(effective.value_mb)
+    } else {
+        effective.value_mb
+    };
+
     // Build the full resolved string: -Xmx, -Xms, GC flags, then user extra args
     let mut all_args = vec![
         format!("-Xmx{}m", effective.value_mb),
-        format!("-Xms{}m", instance.java.memory_min_mb),
+        format!("-Xms{}m", initial_mb),
     ];
     all_args.extend(gc_flags);
     all_args.extend(instance.java.extra_args.iter().filter(|a| !a.is_empty()).cloned());
@@ -621,9 +627,15 @@ pub async fn get_preset_jvm_args(instance_id: String) -> Result<Vec<String>, Str
         effective.value_mb,
     );
 
+    let initial_mb = if instance.java.adaptive_override && instance.java.memory_min_mb > 512 {
+        instance.java.memory_min_mb.min(effective.value_mb)
+    } else {
+        effective.value_mb
+    };
+
     let mut preset = vec![
         format!("-Xmx{}m", effective.value_mb),
-        format!("-Xms{}m", instance.java.memory_min_mb),
+        format!("-Xms{}m", initial_mb),
     ];
     preset.extend(gc_flags);
     Ok(preset)

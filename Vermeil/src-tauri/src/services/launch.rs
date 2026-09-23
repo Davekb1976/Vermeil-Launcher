@@ -717,19 +717,22 @@ pub fn required_java_version(mc_version: &str) -> u8 {
 }
 
 /// Resolve GC flags for the given preset, Java major version, and memory allocation.
+/// Resolve GC flags for the launch JVM arguments.
 ///
-/// Sources:
-/// - G1GC: Aikar's flags (https://docs.papermc.io/paper/aikars-flags)
-/// - ZGC: Obydux/Minecraft-startup-flags (https://github.com/Obydux/Minecraft-startup-flags)
-/// - Shenandoah: OpenJDK docs + community tuning for Minecraft workloads.
+/// Sources & Tuning:
+/// - G1GC (Client-Tuned): Optimized for interactive 60-144+ FPS client gameplay.
+///   Caps Stop-The-World pauses to 45ms, restores normal survivor space so transient
+///   modding objects die cheaply in Young Gen, uses standard 45% IHOP to prevent
+///   continuous background GC thrashing, and omits AlwaysPreTouch for fast startup.
+/// - ZGC (Generational): Ultra-low latency (<1ms pauses) for Java 21+.
+/// - Shenandoah (Adaptive): Adaptive heuristics for Java 12+ (prevents CPU thread starvation).
 ///
-/// Falls back to G1GC if the requested GC is incompatible with the Java version.
+/// Falls back to Client-Tuned G1GC if the requested GC is incompatible with the Java version.
 pub fn resolve_gc_flags(preset: &str, java_major: u8, memory_mb: u32) -> Vec<String> {
     match preset {
         "zgc" if java_major >= 21 => {
             let mut flags = vec![
                 "-XX:+UseZGC".to_string(),
-                "-XX:+AlwaysPreTouch".to_string(),
                 "-XX:+UseStringDeduplication".to_string(),
                 "-XX:TrimNativeHeapInterval=5000".to_string(),
             ];
@@ -746,43 +749,36 @@ pub fn resolve_gc_flags(preset: &str, java_major: u8, memory_mb: u32) -> Vec<Str
         "shenandoah" if java_major >= 12 => {
             vec![
                 "-XX:+UseShenandoahGC".to_string(),
-                "-XX:+AlwaysPreTouch".to_string(),
+                "-XX:ShenandoahGCHeuristics=adaptive".to_string(),
                 "-XX:+DisableExplicitGC".to_string(),
                 "-XX:+UseStringDeduplication".to_string(),
-                "-XX:ShenandoahGCHeuristics=compact".to_string(),
             ]
         }
-        // Default: Aikar's tuned G1GC flags. Works on Java 8+.
+        // Default: Client-tuned G1GC. Works reliably across Java 8, 17, 21, and 25+.
         _ => {
             let mut flags = vec![
                 "-XX:+UseG1GC".to_string(),
-                "-XX:+ParallelRefProcEnabled".to_string(),
-                "-XX:MaxGCPauseMillis=200".to_string(),
+                "-XX:MaxGCPauseMillis=45".to_string(),
                 "-XX:+UnlockExperimentalVMOptions".to_string(),
                 "-XX:+DisableExplicitGC".to_string(),
-                "-XX:+AlwaysPreTouch".to_string(),
+                "-XX:+UseStringDeduplication".to_string(),
+                "-XX:G1NewSizePercent=20".to_string(),
+                "-XX:G1MaxNewSizePercent=40".to_string(),
+                "-XX:G1ReservePercent=15".to_string(),
                 "-XX:G1HeapWastePercent=5".to_string(),
                 "-XX:G1MixedGCCountTarget=4".to_string(),
-                "-XX:G1MixedGCLiveThresholdPercent=90".to_string(),
-                "-XX:G1RSetUpdatingPauseTimePercent=5".to_string(),
-                "-XX:SurvivorRatio=32".to_string(),
-                "-XX:+PerfDisableSharedMem".to_string(),
-                "-XX:MaxTenuringThreshold=1".to_string(),
+                "-XX:InitiatingHeapOccupancyPercent=45".to_string(),
+                "-XX:SurvivorRatio=8".to_string(),
             ];
-            // Adjust region sizes based on memory allocation. >12GB gets larger
-            // regions and more new-gen headroom per Aikar's recommendation.
+            // ParallelRefProcEnabled improves reference processing on Java 8; default in Java 9+.
+            if java_major <= 8 {
+                flags.push("-XX:+ParallelRefProcEnabled".to_string());
+            }
+            // Tailor region sizes: heaps > 12 GB get 16 MB regions to reduce card-table overhead.
             if memory_mb > 12288 {
-                flags.push("-XX:G1NewSizePercent=40".to_string());
-                flags.push("-XX:G1MaxNewSizePercent=50".to_string());
                 flags.push("-XX:G1HeapRegionSize=16M".to_string());
-                flags.push("-XX:G1ReservePercent=15".to_string());
-                flags.push("-XX:InitiatingHeapOccupancyPercent=20".to_string());
             } else {
-                flags.push("-XX:G1NewSizePercent=30".to_string());
-                flags.push("-XX:G1MaxNewSizePercent=40".to_string());
                 flags.push("-XX:G1HeapRegionSize=8M".to_string());
-                flags.push("-XX:G1ReservePercent=20".to_string());
-                flags.push("-XX:InitiatingHeapOccupancyPercent=15".to_string());
             }
             flags
         }
@@ -902,7 +898,7 @@ fn mc_version_at_least(version: &str, target_major: u32, target_minor: u32) -> b
 
 #[cfg(test)]
 mod tests {
-    use super::mc_version_at_least;
+    use super::{mc_version_at_least, resolve_gc_flags};
 
     #[test]
     fn version_gate_recognises_pre_and_post_cutoffs() {
@@ -921,6 +917,74 @@ mod tests {
         assert!(mc_version_at_least("1.16-pre1", 1, 16));
         // Unparseable strings (snapshots, malformed) default to modern.
         assert!(mc_version_at_least("23w12a", 1, 16));
+    }
+
+    #[test]
+    fn test_client_g1gc_java8_and_java17() {
+        // Java 8 G1GC gets ParallelRefProcEnabled and client tuning
+        let j8_flags = resolve_gc_flags("g1gc", 8, 4096);
+        assert!(j8_flags.contains(&"-XX:+UseG1GC".to_string()));
+        assert!(j8_flags.contains(&"-XX:MaxGCPauseMillis=45".to_string()));
+        assert!(j8_flags.contains(&"-XX:SurvivorRatio=8".to_string()));
+        assert!(j8_flags.contains(&"-XX:InitiatingHeapOccupancyPercent=45".to_string()));
+        assert!(j8_flags.contains(&"-XX:+ParallelRefProcEnabled".to_string()));
+        assert!(!j8_flags.contains(&"-XX:+AlwaysPreTouch".to_string()));
+        assert!(!j8_flags.contains(&"-XX:MaxTenuringThreshold=1".to_string()));
+
+        // Java 17 G1GC omits ParallelRefProcEnabled (default in Java 9+)
+        let j17_flags = resolve_gc_flags("g1gc", 17, 6144);
+        assert!(j17_flags.contains(&"-XX:+UseG1GC".to_string()));
+        assert!(j17_flags.contains(&"-XX:MaxGCPauseMillis=45".to_string()));
+        assert!(!j17_flags.contains(&"-XX:+ParallelRefProcEnabled".to_string()));
+        assert!(j17_flags.contains(&"-XX:G1HeapRegionSize=8M".to_string()));
+    }
+
+    #[test]
+    fn test_client_g1gc_region_sizing() {
+        // Heaps <= 12GB get 8M regions
+        let normal = resolve_gc_flags("g1gc", 17, 8192);
+        assert!(normal.contains(&"-XX:G1HeapRegionSize=8M".to_string()));
+
+        // Massive heaps > 12GB get 16M regions to keep card tables compact
+        let large = resolve_gc_flags("g1gc", 17, 16384);
+        assert!(large.contains(&"-XX:G1HeapRegionSize=16M".to_string()));
+    }
+
+    #[test]
+    fn test_generational_zgc_version_gating() {
+        // Java 21 gets ZGenerational
+        let j21 = resolve_gc_flags("zgc", 21, 8192);
+        assert!(j21.contains(&"-XX:+UseZGC".to_string()));
+        assert!(j21.contains(&"-XX:+ZGenerational".to_string()));
+        assert!(!j21.contains(&"-XX:+UseCompactObjectHeaders".to_string()));
+
+        // Java 23 omits ZGenerational (default in 23+)
+        let j23 = resolve_gc_flags("zgc", 23, 8192);
+        assert!(j23.contains(&"-XX:+UseZGC".to_string()));
+        assert!(!j23.contains(&"-XX:+ZGenerational".to_string()));
+
+        // Java 25 gets CompactObjectHeaders
+        let j25 = resolve_gc_flags("zgc", 25, 8192);
+        assert!(j25.contains(&"-XX:+UseZGC".to_string()));
+        assert!(j25.contains(&"-XX:+UseCompactObjectHeaders".to_string()));
+
+        // Java 17 cleanly falls back to Client G1GC instead of crashing JVM or using server flags
+        let fallback = resolve_gc_flags("zgc", 17, 6144);
+        assert!(fallback.contains(&"-XX:+UseG1GC".to_string()));
+        assert!(fallback.contains(&"-XX:MaxGCPauseMillis=45".to_string()));
+    }
+
+    #[test]
+    fn test_adaptive_shenandoah() {
+        // Java 17 gets adaptive heuristics (not compact which starved CPU)
+        let shen = resolve_gc_flags("shenandoah", 17, 6144);
+        assert!(shen.contains(&"-XX:+UseShenandoahGC".to_string()));
+        assert!(shen.contains(&"-XX:ShenandoahGCHeuristics=adaptive".to_string()));
+        assert!(!shen.contains(&"-XX:ShenandoahGCHeuristics=compact".to_string()));
+
+        // Java 8 cleanly falls back to Client G1GC
+        let fallback = resolve_gc_flags("shenandoah", 8, 4096);
+        assert!(fallback.contains(&"-XX:+UseG1GC".to_string()));
     }
 }
 
@@ -1165,13 +1229,22 @@ pub async fn launch(
             );
         }
     }
+    // Calibrate initial heap (-Xms) with maximum heap (-Xmx):
+    // For client workloads, pre-allocating the working heap avoids repeated Stop-The-World
+    // page faults and heap resizing pauses while loading 200-400 mods. Since AlwaysPreTouch
+    // is omitted, virtual memory pages are committed on-demand by the OS without launch delay.
+    let initial_mb = if instance.java.adaptive_override && instance.java.memory_min_mb > 512 {
+        instance.java.memory_min_mb.min(max_mb)
+    } else {
+        max_mb
+    };
     jvm_args.push(format!("-Xmx{}m", max_mb));
-    jvm_args.push(format!("-Xms{}m", instance.java.memory_min_mb));
+    jvm_args.push(format!("-Xms{}m", initial_mb));
 
     // GC preset flags — selected by the user in Settings → General → GC preset.
     // The flags are version-aware: ZGC requires Java 21+, Shenandoah requires 12+.
     // If the selected GC is incompatible with the resolved Java version, fall
-    // back to Aikar's G1GC flags silently (better than crashing the JVM).
+    // back to Client-Tuned G1GC flags silently (better than crashing the JVM).
     //
     // OVERRIDE: if the instance has custom `extra_args`, those replace the
     // preset entirely (the user edited the args editor, so we trust their
