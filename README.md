@@ -5,8 +5,8 @@
 <h1 align="center">Vermeil</h1>
 
 <p align="center">
-  <strong>A full-featured, open-source Minecraft: Java Edition launcher for Windows and Linux.</strong><br/>
-  Microsoft sign-in, every major mod loader, modpack imports, managed Java, and zero telemetry.
+  <strong>A tactile, privacy-focused Minecraft: Java Edition launcher for Windows and Linux.</strong><br/>
+  Microsoft sign-in, major mod loaders, modpack imports, 3D Character Studio, Google Drive settings sync, and zero telemetry.
 </p>
 
 <p align="center">
