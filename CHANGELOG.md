@@ -1,24 +1,19 @@
-## 1.2.0 (Experimental Build 1)
+## 1.2.0 (Experimental Build 2)
 
 ### Added
 
-- Google Cloud Settings Sync: cross-device synchronization of General, Display, Sound, and Keybind preferences via Google Drive's sandboxed application data folder (`appDataFolder`) with zero telemetry and automatic local DPAPI token encryption
-- Differentiated Google Cloud session controls: added independent 'Sign Out' (local session teardown preserving account authorization) and 'Disconnect' (full OAuth revocation and app unlinking) actions
-- Live instance options sync: automatically detects and synchronizes display options, FOV, frame rate limits, and VSync into active Minecraft instance configuration files (`options.txt`) across versions
-- High-availability fallback to `latest.json` for GitHub release metadata and updater discovery
+- Independent Google Cloud session controls: separate local 'Sign Out' (keeps account authorization) and 'Disconnect' (full OAuth token revocation) actions
+- Tactile Google OAuth authorization callback page matching Vermeil's dark UI design language with live status feedback
 
 ### Changed
 
-- Uninstaller optimization: overhauled file cleanup to atomic directory staging and single-pass removal, drastically reducing uninstallation duration and dynamically calculating disk space to be freed on the confirmation screen
+- Updated Terms of Service and Privacy Policy with explicit hardware-dependent settings exclusion disclosures (RAM allocation, window dimensions, and Java paths remain strictly local)
+- Standardized all repository and website legal documentation to canonical endpoints
 
 ### Fixed
 
-- Expanded click targets and enabled live visual refresh for in-game cape toggles on Forge 1.8.9
-- Made companion mod in-game settings rows fully clickable and resolved double-click toggle reversion
-- Eliminated horizontal layout overflow on the settings keybinds view
-- Corrected status badge on Home screen to accurately reflect offline state when no Microsoft account is selected
+- Prevented tooltip clipping on right-anchored cloud session action buttons using `tip-right`
 
 ### Documentation
 
 - [Google Cloud Settings Sync Architecture](docs/research/google-cloud-sync/research.md): Technical specification, RFC 8252/7636 security model, Mermaid diagrams, and sandboxed storage flows
-- [Uninstaller Optimization Architecture](docs/research/uninstaller-optimization/research.md): Single-pass directory cleanup pipeline, benchmark results, and safety isolation diagrams
