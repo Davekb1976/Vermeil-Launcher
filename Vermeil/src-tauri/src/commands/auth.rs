@@ -279,15 +279,9 @@ fn save_accounts(accounts: &[MinecraftProfile]) -> Result<(), String> {
     let data_dir = paths::data_dir();
     fs::create_dir_all(&data_dir).map_err(|e| e.to_string())?;
 
-    // Store ONLY clean metadata in accounts.json — zero tokens written to accounts.json
-    let metadata_accounts: Vec<MinecraftProfile> = accounts.iter().map(|a| {
-        let mut account = a.clone();
-        account.access_token = if account.is_offline { "offline".to_string() } else { String::new() };
-        account.refresh_token = None;
-        account
-    }).collect();
-
-    let json = serde_json::to_string_pretty(&metadata_accounts).map_err(|e| e.to_string())?;
+    // Serializing MinecraftProfile directly skips access_token and refresh_token
+    // entirely via #[serde(skip_serializing)], keeping accounts.json clean of all token keys.
+    let json = serde_json::to_string_pretty(accounts).map_err(|e| e.to_string())?;
     let accounts_path = data_dir.join("accounts.json");
     credentials::atomic_write(&accounts_path, json.as_bytes())?;
     Ok(())
@@ -374,16 +368,11 @@ mod tests {
         };
 
         let accounts = vec![profile];
-        let metadata_accounts: Vec<MinecraftProfile> = accounts.iter().map(|a| {
-            let mut account = a.clone();
-            account.access_token = if account.is_offline { "offline".to_string() } else { String::new() };
-            account.refresh_token = None;
-            account
-        }).collect();
-
-        let json = serde_json::to_string(&metadata_accounts).unwrap();
+        let json = serde_json::to_string(&accounts).unwrap();
         assert!(!json.contains("super_secret_mc_token"));
         assert!(!json.contains("super_secret_ms_refresh"));
+        assert!(!json.contains("access_token"));
+        assert!(!json.contains("refresh_token"));
         assert!(json.contains("TestUser"));
     }
 }

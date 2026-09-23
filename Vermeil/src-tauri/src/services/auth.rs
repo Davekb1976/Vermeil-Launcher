@@ -31,13 +31,14 @@ const REQUESTED_SCOPE: &str = "service::user.auth.xboxlive.com::MBI_SSL";
 pub struct MinecraftProfile {
     pub id: String,
     pub name: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing)]
     pub access_token: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing)]
     pub refresh_token: Option<String>,
     pub expires_at: i64,
     #[serde(default)]
     pub is_offline: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub skin_path: Option<String>,
     #[serde(default = "default_true")]
     pub active: bool,
