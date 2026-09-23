@@ -240,6 +240,8 @@ export interface LauncherSettings {
   adaptive_ram_min_mb: number;
   /** Upper bound for adaptive allocation in MB. `0` sentinel = derive at runtime. */
   adaptive_ram_max_mb: number;
+  /** ISO-8601 timestamp of last successful Google Cloud settings backup, or null. */
+  last_cloud_backup?: string | null;
 }
 
 // Instance commands
@@ -473,6 +475,34 @@ export const purgeCache = () => invoke<number>("purge_cache");
 export const getSystemMemory = () => invoke<number>("get_system_memory");
 export const loadDownloadHistory = () => invoke<string>("load_download_history");
 export const saveDownloadHistory = (json: string) => invoke<void>("save_download_history", { json });
+
+// Google Cloud Backup & Sync commands
+export interface CloudBackupSummary {
+  timestamp: string;
+  file_size_bytes: number;
+  pinned_instances_count: number;
+}
+
+export interface CloudRestoreSummary {
+  timestamp: string;
+  settings_restored: boolean;
+  pinned_count: number;
+}
+
+export interface CloudConnectSummary {
+  connected: boolean;
+  restored: boolean;
+  timestamp: string;
+  details: string;
+}
+
+export const connectGoogleCloud = () => invoke<CloudConnectSummary>("connect_google_cloud");
+export const disconnectGoogleCloud = () => invoke<void>("disconnect_google_cloud");
+export const isGoogleCloudConnected = () => invoke<boolean>("is_google_cloud_connected");
+export const backupToGoogleCloud = () => invoke<CloudBackupSummary>("backup_to_google_cloud");
+export const restoreFromGoogleCloud = () => invoke<CloudRestoreSummary>("restore_from_google_cloud");
+export const cancelGoogleCloud = () => invoke<void>("cancel_google_cloud");
+export const getLastCloudBackupTime = () => invoke<string | null>("get_last_cloud_backup_time");
 
 /**
  * One installed JRE detected on the system. Mirrors `services::java::JavaInstall`.

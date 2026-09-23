@@ -102,6 +102,9 @@ pub struct LauncherSettings {
     /// a sensible value scaled to total system RAM.
     #[serde(default)]
     pub adaptive_ram_max_mb: u32,
+    /// Last successful Google Cloud settings backup timestamp (ISO-8601).
+    #[serde(default)]
+    pub last_cloud_backup: Option<String>,
 }
 
 /// Video settings that get written into each instance's options.txt before launch.
@@ -223,6 +226,7 @@ impl Default for LauncherSettings {
             adaptive_ram: false,
             adaptive_ram_min_mb: 0,
             adaptive_ram_max_mb: 0,
+            last_cloud_backup: None,
         }
     }
 }

@@ -1959,6 +1959,12 @@
   color: #fde047;
   border: 1px solid rgba(234, 179, 8, 0.35);
 }
+.tag-settings-cloud,
+.settings-badge--cloud {
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
 .tag-settings-performance,
 .settings-badge--perf {
   background: rgba(16, 185, 129, 0.15);

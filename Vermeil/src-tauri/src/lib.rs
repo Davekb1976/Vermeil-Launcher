@@ -6,7 +6,7 @@ mod util;
 
 pub use error::AppError;
 
-use commands::{app_updater, auth, cf_import, files, instances, java, launch, meta, mods, settings, skins};
+use commands::{app_updater, auth, cf_import, cloud_sync, files, instances, java, launch, meta, mods, settings, skins};
 use services::app_updater::PendingUpdate;
 use tauri::Manager;
 
@@ -296,6 +296,14 @@ pub fn run() {
             settings::get_system_memory,
             settings::load_download_history,
             settings::save_download_history,
+            // Cloud Sync
+            cloud_sync::connect_google_cloud,
+            cloud_sync::disconnect_google_cloud,
+            cloud_sync::is_google_cloud_connected,
+            cloud_sync::backup_to_google_cloud,
+            cloud_sync::restore_from_google_cloud,
+            cloud_sync::get_last_cloud_backup_time,
+            cloud_sync::cancel_google_cloud,
             // Java location finder
             java::detect_java_installations,
             java::validate_java_path,

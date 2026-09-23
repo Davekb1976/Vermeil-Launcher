@@ -1,11 +1,11 @@
 import { Component, createSignal, createResource, Show, For, onMount, onCleanup, createEffect } from "solid-js";
-import { getSettings, saveSettings, getCacheSize, purgeCache, getAppDirectory, openAppDirectory, LauncherSettings, detectJavaInstallations, validateJavaPath, setJavaPath, installRecommendedJava, deleteJavaInstall, pruneInvalidJavaPaths, getSystemMemory, JavaInstall } from "../ipc/commands";
+import { getSettings, saveSettings, getCacheSize, purgeCache, getAppDirectory, openAppDirectory, LauncherSettings, detectJavaInstallations, validateJavaPath, setJavaPath, installRecommendedJava, deleteJavaInstall, pruneInvalidJavaPaths, getSystemMemory, JavaInstall, connectGoogleCloud, cancelGoogleCloud, disconnectGoogleCloud, isGoogleCloudConnected } from "../ipc/commands";
 import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, instances, showToast, setDownloadToastsEnabled, setAutoHideDockSetting, setPaginationPosition } from "../App";
 import { checkForUpdates } from "../services/updater";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
-import { IconDownload, IconSearch, IconFolderOpen, IconTrash, IconModrinth, IconCurseForge, IconChevronRight, IconGlobe, IconSettings as IconSettingsIcon, IconLayers, IconCube, IconMonitor, IconBolt, IconX } from "../components/Icons";
+import { IconDownload, IconSearch, IconFolderOpen, IconTrash, IconModrinth, IconCurseForge, IconChevronRight, IconGlobe, IconSettings as IconSettingsIcon, IconLayers, IconCube, IconMonitor, IconBolt, IconX, IconCloud } from "../components/Icons";
 import JavaPathInput from "../components/JavaPathInput";
 import JavaChooserModal from "../modals/JavaChooserModal";
 import Dropdown from "../components/Dropdown";
@@ -53,7 +53,7 @@ const Settings: Component = () => {
 
   // Section-level matching: when query matches a section name or primary concept, show that whole section
   const isGeneralSection = () => matches("general", "launcher", "core preferences", "startup", "about", "vermeil");
-  const isResourcesSection = () => matches("resources", "resource", "storage", "performance", "java", "memory", "cache", "concurrency", "download", "write");
+  const isResourcesSection = () => matches("resources", "resource", "storage", "performance", "java", "memory", "cache", "concurrency", "download", "write", "cloud", "backup", "restore");
   const isInstancesSection = () => matches("instance", "instances", "global instance", "defaults", "video", "graphics", "sound", "audio", "window", "display", "ram");
   const isKeybindsSection = () => matches("keybind", "keybinds", "keyboard", "shortcuts", "shortcut", "hotkey", "hotkeys", "bindings", "controls");
 
@@ -79,6 +79,10 @@ const Settings: Component = () => {
   const matchesStorage = () => isResourcesSection() || matches(
     "Storage", "App directory", "App cache", "Version metadata and loader installers",
     "folder", "path", "directory", "cache", "purge", "clear"
+  );
+  const matchesCloudBackup = () => isResourcesSection() || matches(
+    "Cloud", "Google", "Google Cloud", "Backup", "Restore", "Sync", "appdata", "drive",
+    "cloud backup", "restore from cloud", "backup to cloud", "cloud sync"
   );
   const matchesPerformance = () => isResourcesSection() || matches(
     "Performance", "Concurrency", "Concurrent downloads", "Concurrent writes", "Download speed limit",
@@ -110,7 +114,7 @@ const Settings: Component = () => {
   );
 
   const matchesGeneral = () => matchesLauncher() || matchesAbout();
-  const matchesResources = () => matchesStorage() || matchesPerformance() || matchesJava();
+  const matchesResources = () => matchesStorage() || matchesCloudBackup() || matchesPerformance() || matchesJava();
   const matchesInstances = () => matchesVideo() || matchesAccessibility() || matchesControls() || matchesAudio() || matchesWindow() || matchesMemory() ||
     (instances() || []).some(i => matches(i.name, i.game_version, i.loader.type));
   const matchesKeybinds = () => isKeybindsSection() || KEYBINDS.some(a => matches(a.label, a.description, a.default));
@@ -122,6 +126,97 @@ const Settings: Component = () => {
   const [systemMemoryMb] = createResource(getSystemMemory);
   const [cacheSize, setCacheSize] = createSignal(0);
   const [purging, setPurging] = createSignal(false);
+  const [cloudConnected, { refetch: refetchCloudStatus }] = createResource(isGoogleCloudConnected);
+  const [cloudBusy, setCloudBusy] = createSignal(false);
+
+  const formatBackupDate = (iso: string | null | undefined): string => {
+    if (!iso) return "No cloud backup found yet";
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return `Last synced: ${d.toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+    } catch {
+      return `Last synced: ${iso}`;
+    }
+  };
+
+  const handleConnectGoogle = async () => {
+    if (cloudBusy()) return;
+    setCloudBusy(true);
+    showToast({
+      title: "Authorizing with Google",
+      message: "Check your browser to approve Google Cloud access...",
+      type: "info",
+    });
+    try {
+      const summary = await connectGoogleCloud();
+      await refetch();
+      await refetchCloudStatus();
+      showToast({
+        title: summary.restored ? "Settings Restored from Cloud" : "Google Cloud Connected",
+        message: summary.details,
+        type: "success",
+      });
+    } catch (e: any) {
+      const msg = typeof e === "string" ? e : e?.message || "Google Cloud sign-in failed";
+      if (!msg.toLowerCase().includes("cancel")) {
+        showToast({
+          title: "Connection Failed",
+          message: msg,
+          type: "error",
+        });
+      } else {
+        showToast({
+          title: "Sign-In Cancelled",
+          message: "Google authorization was cancelled.",
+          type: "info",
+        });
+      }
+    } finally {
+      setCloudBusy(false);
+    }
+  };
+
+  const handleCancelGoogle = async () => {
+    try {
+      await cancelGoogleCloud();
+    } catch {}
+    setCloudBusy(false);
+  };
+
+  onCleanup(() => {
+    if (cloudBusy()) {
+      cancelGoogleCloud().catch(() => {});
+    }
+  });
+
+  const handleDisconnectGoogle = async () => {
+    if (cloudBusy()) return;
+    setCloudBusy(true);
+    try {
+      await disconnectGoogleCloud();
+      await refetchCloudStatus();
+      showToast({
+        title: "Disconnected",
+        message: "Google Cloud account disconnected and local session revoked.",
+        type: "info",
+      });
+    } catch (e: any) {
+      showToast({
+        title: "Disconnect Error",
+        message: String(e),
+        type: "error",
+      });
+    } finally {
+      setCloudBusy(false);
+    }
+  };
 
   // Video settings read straight from the resource — `updateSetting` mutates it
   // optimistically (see below), so reads are always the latest value, no
@@ -857,6 +952,71 @@ const Settings: Component = () => {
                             {purging() ? "Purging..." : "Purge cache"}
                           </button>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Show>
+
+              <Show when={!isSearching() || matchesCloudBackup()}>
+                <div class="card-gamemode-section">
+                  <div class="card-section-header">
+                    <span class={`card-section-tag ${cloudConnected() ? "tag-settings-performance" : "tag-settings-cloud"}`}>
+                      {cloudConnected() ? "SYNCED" : "CLOUD"}
+                    </span>
+                    <span class="card-section-label">Google Cloud Settings Sync</span>
+                    <span class="card-section-desc">Zero-telemetry backup to Google Drive's isolated app storage sandbox</span>
+                  </div>
+                  <div class="card-section-body">
+                    <div class="setting-row">
+                      <div class="setting-info">
+                        <span class="setting-name">
+                          {cloudConnected() ? "Connected to Google Cloud" : "Google Account Connection"}
+                        </span>
+                        <span class="setting-desc">
+                          {cloudConnected()
+                            ? `Preferences automatically sync to cloud. ${formatBackupDate(settings()?.last_cloud_backup)}`
+                            : "Sign in once to automatically sync General, Display, Sound, and Keybind preferences across devices."}
+                        </span>
+                      </div>
+                      <div class="setting-control">
+                        <Show
+                          when={cloudConnected()}
+                          fallback={
+                            <Show
+                              when={cloudBusy()}
+                              fallback={
+                                <button
+                                  type="button"
+                                  class="btn btn--primary btn--sm"
+                                  onClick={handleConnectGoogle}
+                                >
+                                  <IconCloud />
+                                  <span>Sign in with Google</span>
+                                </button>
+                              }
+                            >
+                              <button
+                                type="button"
+                                class="btn btn--secondary btn--sm"
+                                onClick={handleCancelGoogle}
+                                data-tip="Click to abort Google sign-in"
+                              >
+                                <IconX />
+                                <span>Cancel Connecting</span>
+                              </button>
+                            </Show>
+                          }
+                        >
+                          <button
+                            type="button"
+                            class="btn btn--neutral btn--sm"
+                            onClick={handleDisconnectGoogle}
+                            disabled={cloudBusy()}
+                          >
+                            <span>{cloudBusy() ? "Disconnecting..." : "Disconnect"}</span>
+                          </button>
+                        </Show>
                       </div>
                     </div>
                   </div>

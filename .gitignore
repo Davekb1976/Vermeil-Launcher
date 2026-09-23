@@ -40,6 +40,8 @@ desktop.ini
 .env
 .env.local
 .env.*.local
+.cargo/config.toml
+**/.cargo/config.toml
 
 # Tauri signing key
 *.key

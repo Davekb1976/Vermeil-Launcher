@@ -1,5 +1,5 @@
-import { Component, createSignal, createResource, createEffect, Show, For } from "solid-js";
-import { account, activeSkinUrl, refetchAccount } from "../App";
+import { Component, createSignal, createResource, createEffect, onCleanup, Show, For } from "solid-js";
+import { account, activeSkinUrl, refetchAccount, showToast } from "../App";
 import {
   startMsLogin,
   addOfflineAccount,
@@ -7,9 +7,14 @@ import {
   setActiveAccount,
   removeAccount,
   getAccountSkin,
+  connectGoogleCloud,
+  cancelGoogleCloud,
+  disconnectGoogleCloud,
+  isGoogleCloudConnected,
+  getLastCloudBackupTime,
 } from "../ipc/commands";
 import PlayerHead from "../components/PlayerHead";
-import { IconX, IconTrash, IconPlus, IconUser, IconShieldCheck, IconAlertTriangle, IconMicrosoft } from "../components/Icons";
+import { IconX, IconTrash, IconPlus, IconUser, IconShieldCheck, IconAlertTriangle, IconMicrosoft, IconCloud } from "../components/Icons";
 import type { MinecraftProfile } from "../ipc/commands";
 
 /**
@@ -35,6 +40,102 @@ const Account: Component = () => {
   const [error, setError] = createSignal<string | null>(null);
   const [offlineUsername, setOfflineUsername] = createSignal("");
   const [accounts, { refetch: refetchAccounts }] = createResource(getAllAccounts);
+  const [cloudConnected, { refetch: refetchCloudStatus }] = createResource(isGoogleCloudConnected);
+  const [lastBackup, { refetch: refetchBackupTime }] = createResource(getLastCloudBackupTime);
+  const [cloudBusy, setCloudBusy] = createSignal(false);
+
+  const formatBackupDate = (iso: string | null | undefined): string => {
+    if (!iso) return "No cloud backup found yet";
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      return d.toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return iso;
+    }
+  };
+
+  const handleConnectGoogle = async () => {
+    if (cloudBusy()) return;
+    setCloudBusy(true);
+    showToast({
+      title: "Authorizing with Google",
+      message: "Check your browser to approve Google Cloud access...",
+      type: "info",
+    });
+    try {
+      const summary = await connectGoogleCloud();
+      await refetchCloudStatus();
+      await refetchBackupTime();
+      if (summary.restored) {
+        await refetchAccount();
+        await refetchAccounts();
+      }
+      showToast({
+        title: summary.restored ? "Settings Restored from Cloud" : "Google Cloud Connected",
+        message: summary.details,
+        type: "success",
+      });
+    } catch (e: any) {
+      const msg = typeof e === "string" ? e : e?.message || "Google Cloud sign-in failed";
+      if (!msg.toLowerCase().includes("cancel")) {
+        showToast({
+          title: "Connection Failed",
+          message: msg,
+          type: "error",
+        });
+      } else {
+        showToast({
+          title: "Sign-In Cancelled",
+          message: "Google authorization was cancelled.",
+          type: "info",
+        });
+      }
+    } finally {
+      setCloudBusy(false);
+    }
+  };
+
+  const handleCancelGoogle = async () => {
+    try {
+      await cancelGoogleCloud();
+    } catch {}
+    setCloudBusy(false);
+  };
+
+  onCleanup(() => {
+    if (cloudBusy()) {
+      cancelGoogleCloud().catch(() => {});
+    }
+  });
+
+  const handleDisconnectGoogle = async () => {
+    if (cloudBusy()) return;
+    setCloudBusy(true);
+    try {
+      await disconnectGoogleCloud();
+      await refetchCloudStatus();
+      showToast({
+        title: "Disconnected",
+        message: "Google Cloud account disconnected and local session revoked.",
+        type: "info",
+      });
+    } catch (e: any) {
+      showToast({
+        title: "Disconnect Error",
+        message: String(e),
+        type: "error",
+      });
+    } finally {
+      setCloudBusy(false);
+    }
+  };
 
   // Whenever the account list changes, fetch skin heads for every Microsoft
   // account we don't already have cached. The active account's skin also
@@ -299,6 +400,70 @@ const Account: Component = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Google Cloud Settings Sync Strip */}
+          <div class="account-cloud-strip">
+            <div class="account-cloud-strip-left">
+              <div class="account-cloud-strip-icon">
+                <IconCloud />
+              </div>
+              <div class="account-cloud-strip-info">
+                <div class="account-cloud-strip-title-row">
+                  <span class="account-cloud-strip-title">Google Cloud Settings Sync</span>
+                  <span class={`card-section-tag ${cloudConnected() ? "tag-settings-performance" : "tag-settings-cloud"}`}>
+                    {cloudConnected() ? "SYNCED" : "CLOUD"}
+                  </span>
+                </div>
+                <div class="account-cloud-strip-desc">
+                  <Show
+                    when={cloudConnected()}
+                    fallback="Sign in once to automatically sync General, Display, Sound, and Keybind preferences across devices."
+                  >
+                    <span>Preferences automatically synced to cloud. {lastBackup() ? `Last updated: ${formatBackupDate(lastBackup()!)}` : ""}</span>
+                  </Show>
+                </div>
+              </div>
+            </div>
+            <div class="account-cloud-strip-action">
+              <Show
+                when={cloudConnected()}
+                fallback={
+                  <Show
+                    when={cloudBusy()}
+                    fallback={
+                      <button
+                        type="button"
+                        class="btn btn--primary"
+                        onClick={handleConnectGoogle}
+                      >
+                        <IconCloud />
+                        <span>Sign in with Google</span>
+                      </button>
+                    }
+                  >
+                    <button
+                      type="button"
+                      class="btn btn--secondary"
+                      onClick={handleCancelGoogle}
+                      data-tip="Click to abort Google sign-in"
+                    >
+                      <IconX />
+                      <span>Cancel Connecting</span>
+                    </button>
+                  </Show>
+                }
+              >
+                <button
+                  type="button"
+                  class="btn btn--neutral btn--sm"
+                  onClick={handleDisconnectGoogle}
+                  disabled={cloudBusy()}
+                >
+                  {cloudBusy() ? "Disconnecting..." : "Disconnect"}
+                </button>
+              </Show>
             </div>
           </div>
         </div>

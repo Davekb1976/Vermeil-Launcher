@@ -1,6 +1,7 @@
 pub mod app_updater;
 pub mod auth;
 pub mod cf_import;
+pub mod cloud_sync;
 pub mod files;
 pub mod instances;
 pub mod java;

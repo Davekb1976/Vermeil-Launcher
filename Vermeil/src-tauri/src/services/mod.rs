@@ -8,6 +8,7 @@ pub mod curseforge;
 pub mod discord;
 pub mod download;
 pub mod fabric;
+pub mod google_cloud;
 pub mod icon_cache;
 pub mod instance_cape;
 pub mod instance_service;

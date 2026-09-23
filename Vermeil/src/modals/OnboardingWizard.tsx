@@ -1,4 +1,4 @@
-import { Component, createSignal, Show, For, onMount, createResource } from "solid-js";
+import { Component, createSignal, Show, For, onMount, onCleanup, createResource } from "solid-js";
 import {
   setActiveScreen,
   refetchAccount,
@@ -17,6 +17,8 @@ import {
   pruneInvalidJavaPaths,
   JavaInstall,
   getSkinProfile,
+  connectGoogleCloud,
+  cancelGoogleCloud,
 } from "../ipc/commands";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import { getVersion } from "@tauri-apps/api/app";
@@ -33,6 +35,7 @@ import {
   IconCube,
   IconChevronDown,
   IconChevronRight,
+  IconCloud,
 } from "../components/Icons";
 import PlayerHead from "../components/PlayerHead";
 import JavaPathInput from "../components/JavaPathInput";
@@ -91,6 +94,7 @@ const OnboardingWizard: Component = () => {
   const [error, setError] = createSignal<string | null>(null);
   const [offlineUsername, setOfflineUsername] = createSignal("");
   const [showAddAccount, setShowAddAccount] = createSignal(false);
+  const [restoringCloud, setRestoringCloud] = createSignal(false);
 
   // Java step state.
   const [javaDetections, setJavaDetections] = createSignal<JavaInstall[]>([]);
@@ -189,6 +193,60 @@ const OnboardingWizard: Component = () => {
       setError(typeof e === "string" ? e : e.message || "Failed to add account");
     }
   };
+
+  const handleCloudConnect = async () => {
+    if (restoringCloud()) return;
+    setRestoringCloud(true);
+    setError(null);
+    showToast({
+      title: "Authorizing with Google",
+      message: "Check your browser to approve Google Cloud access...",
+      type: "info",
+    });
+    try {
+      const summary = await connectGoogleCloud();
+      await refetchAccount();
+      showToast({
+        title: summary.restored ? "Settings Restored from Cloud" : "Google Cloud Connected",
+        message: summary.details,
+        type: "success",
+      });
+      if (account()) {
+        setStep(2);
+      }
+    } catch (e: any) {
+      const msg = typeof e === "string" ? e : e?.message || "Failed to connect to Google Cloud";
+      if (!msg.toLowerCase().includes("cancel")) {
+        setError(msg);
+        showToast({
+          title: "Connection Failed",
+          message: msg,
+          type: "error",
+        });
+      } else {
+        showToast({
+          title: "Sign-In Cancelled",
+          message: "Google authorization was cancelled.",
+          type: "info",
+        });
+      }
+    } finally {
+      setRestoringCloud(false);
+    }
+  };
+
+  const handleCancelCloud = async () => {
+    try {
+      await cancelGoogleCloud();
+    } catch {}
+    setRestoringCloud(false);
+  };
+
+  onCleanup(() => {
+    if (restoringCloud()) {
+      cancelGoogleCloud().catch(() => {});
+    }
+  });
 
   // ─── Java step actions ──────────────────────────────────────────────────
 
@@ -487,6 +545,30 @@ const OnboardingWizard: Component = () => {
                       </button>
                     </div>
                   </div>
+
+                  <div class="onboarding-or">// OR RESTORE FROM CLOUD</div>
+
+                  <Show
+                    when={restoringCloud()}
+                    fallback={
+                      <button
+                        class="btn btn--neutral onboarding-cloud-btn"
+                        onClick={handleCloudConnect}
+                      >
+                        <IconCloud />
+                        <span>Restore from Google Cloud</span>
+                      </button>
+                    }
+                  >
+                    <button
+                      class="btn btn--secondary onboarding-cloud-btn"
+                      onClick={handleCancelCloud}
+                      data-tip="Click to abort Google sign-in"
+                    >
+                      <IconX />
+                      <span>Cancel Connecting</span>
+                    </button>
+                  </Show>
                 </div>
               </Show>
 
