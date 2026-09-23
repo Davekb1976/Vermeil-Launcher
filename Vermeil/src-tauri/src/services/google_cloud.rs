@@ -245,7 +245,7 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
 
     let code = auth_code;
 
-    // Send stylized success page to browser
+    // Send stylized success page to browser — matches Vermeil's tactile dark UI
     let success_html = "\
         HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n\
         <!DOCTYPE html>\
@@ -254,20 +254,103 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
           <meta charset=\"utf-8\">\
           <title>Vermeil — Google Cloud Connected</title>\
           <style>\
-            body { background: #0f0e13; color: #f4f3f6; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }\
-            .card { background: #1d1b24; border: 1px solid #322f3d; padding: 40px; border-radius: 12px; text-align: center; max-width: 440px; box-shadow: 0 12px 36px rgba(0,0,0,0.6); }\
-            h2 { color: #a78bfa; margin-top: 0; font-size: 22px; }\
-            p { color: #9490a0; font-size: 14px; line-height: 1.6; margin-bottom: 20px; }\
-            .badge { display: inline-block; background: rgba(139, 92, 246, 0.15); border: 1px solid #8b5cf6; color: #c4b5fd; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }\
-            .hint { font-size: 12px; color: #6b687b; margin-top: 16px; }\
+            @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');\
+            * { box-sizing: border-box; margin: 0; padding: 0; }\
+            body {\
+              background:\
+                radial-gradient(ellipse 70% 55% at 50% 42%, rgba(139, 92, 246, 0.12), transparent 72%),\
+                radial-gradient(circle at 50% 120%, rgba(124, 77, 222, 0.08), transparent 60%),\
+                #0f0e13;\
+              color: #ece9f2;\
+              font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;\
+              display: flex;\
+              align-items: center;\
+              justify-content: center;\
+              height: 100vh;\
+              -webkit-font-smoothing: antialiased;\
+            }\
+            .card {\
+              background: #1d1b24;\
+              border: 1px solid #322f3d;\
+              border-left: 3px solid #8b5cf6;\
+              padding: 48px 44px;\
+              border-radius: 0;\
+              text-align: center;\
+              max-width: 460px;\
+              width: 90%;\
+              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);\
+            }\
+            .logo {\
+              width: 48px;\
+              height: 48px;\
+              margin-bottom: 20px;\
+              image-rendering: pixelated;\
+            }\
+            .badge {\
+              display: inline-block;\
+              background: rgba(139, 92, 246, 0.12);\
+              border: 1px solid rgba(139, 92, 246, 0.35);\
+              color: #a78bfa;\
+              font-family: 'DM Mono', monospace;\
+              font-size: 10px;\
+              font-weight: 600;\
+              padding: 3px 10px;\
+              border-radius: 0;\
+              text-transform: uppercase;\
+              letter-spacing: 0.08em;\
+              margin-bottom: 16px;\
+            }\
+            h2 {\
+              color: #ece9f2;\
+              font-size: 20px;\
+              font-weight: 700;\
+              margin-bottom: 12px;\
+              letter-spacing: -0.01em;\
+            }\
+            .check {\
+              display: inline-flex;\
+              align-items: center;\
+              justify-content: center;\
+              width: 36px;\
+              height: 36px;\
+              background: rgba(74, 222, 128, 0.10);\
+              border: 1px solid rgba(74, 222, 128, 0.30);\
+              border-radius: 0;\
+              margin-bottom: 20px;\
+            }\
+            .check svg { width: 20px; height: 20px; stroke: #4ade80; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }\
+            p {\
+              color: #a6a1b5;\
+              font-size: 13.5px;\
+              line-height: 1.65;\
+              margin-bottom: 0;\
+            }\
+            .divider {\
+              width: 100%;\
+              height: 1px;\
+              background: #322f3d;\
+              margin: 20px 0;\
+            }\
+            .hint {\
+              font-size: 11.5px;\
+              color: #6f6a7e;\
+              font-family: 'DM Mono', monospace;\
+            }\
+            @keyframes fadeIn {\
+              from { opacity: 0; transform: translateY(8px); }\
+              to { opacity: 1; transform: translateY(0); }\
+            }\
+            .card { animation: fadeIn 0.4s ease-out both; }\
           </style>\
         </head>\
         <body>\
           <div class=\"card\">\
-            <div class=\"badge\">Google Cloud Sync</div>\
-            <h2>Authentication Successful</h2>\
-            <p>Your Google account has been authorized. You can safely close this tab and return to Vermeil Launcher.</p>\
-            <div class=\"hint\">This window will attempt to close automatically.</div>\
+            <div class=\"check\"><svg viewBox=\"0 0 24 24\"><polyline points=\"20 6 9 17 4 12\"/></svg></div>\
+            <div class=\"badge\">Cloud Sync</div>\
+            <h2>Connected</h2>\
+            <p>Your Google account has been authorized. You can close this tab and return to Vermeil.</p>\
+            <div class=\"divider\"></div>\
+            <div class=\"hint\">This window will close automatically.</div>\
           </div>\
           <script>\
             if (window.history.replaceState) {\
