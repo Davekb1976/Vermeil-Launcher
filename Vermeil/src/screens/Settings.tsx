@@ -1,5 +1,5 @@
 import { Component, createSignal, createResource, Show, For, onMount, onCleanup, createEffect } from "solid-js";
-import { getSettings, saveSettings, getCacheSize, purgeCache, getAppDirectory, openAppDirectory, LauncherSettings, detectJavaInstallations, validateJavaPath, setJavaPath, installRecommendedJava, deleteJavaInstall, pruneInvalidJavaPaths, getSystemMemory, JavaInstall, connectGoogleCloud, cancelGoogleCloud, disconnectGoogleCloud, isGoogleCloudConnected } from "../ipc/commands";
+import { getSettings, saveSettings, getCacheSize, purgeCache, getAppDirectory, openAppDirectory, LauncherSettings, detectJavaInstallations, validateJavaPath, setJavaPath, installRecommendedJava, deleteJavaInstall, pruneInvalidJavaPaths, getSystemMemory, JavaInstall, connectGoogleCloud, cancelGoogleCloud, disconnectGoogleCloud, signOutGoogleCloud, isGoogleCloudConnected } from "../ipc/commands";
 import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, instances, showToast, setDownloadToastsEnabled, setAutoHideDockSetting, setPaginationPosition } from "../App";
 import { checkForUpdates } from "../services/updater";
 import { getVersion } from "@tauri-apps/api/app";
@@ -196,15 +196,39 @@ const Settings: Component = () => {
     }
   });
 
+  const handleSignOutGoogle = async () => {
+    if (cloudBusy()) return;
+    setCloudBusy(true);
+    try {
+      await signOutGoogleCloud();
+      await refetchCloudStatus();
+      await refetch();
+      showToast({
+        title: "Signed Out",
+        message: "Signed out of Google Cloud on this device.",
+        type: "info",
+      });
+    } catch (e: any) {
+      showToast({
+        title: "Sign-Out Error",
+        message: String(e),
+        type: "error",
+      });
+    } finally {
+      setCloudBusy(false);
+    }
+  };
+
   const handleDisconnectGoogle = async () => {
     if (cloudBusy()) return;
     setCloudBusy(true);
     try {
       await disconnectGoogleCloud();
       await refetchCloudStatus();
+      await refetch();
       showToast({
-        title: "Disconnected",
-        message: "Google Cloud account disconnected and local session revoked.",
+        title: "Disconnected & Revoked",
+        message: "Google Cloud authorization revoked and disconnected.",
         type: "info",
       });
     } catch (e: any) {
@@ -1010,11 +1034,21 @@ const Settings: Component = () => {
                         >
                           <button
                             type="button"
-                            class="btn btn--neutral btn--sm"
+                            class="btn btn--neutral btn--sm tip-left"
+                            onClick={handleSignOutGoogle}
+                            disabled={cloudBusy()}
+                            data-tip="Sign out on this device while keeping Google account authorization"
+                          >
+                            <span>{cloudBusy() ? "Working..." : "Sign Out"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            class="btn btn--danger btn--sm tip-left"
                             onClick={handleDisconnectGoogle}
                             disabled={cloudBusy()}
+                            data-tip="Revoke authorization with Google and disallow the app"
                           >
-                            <span>{cloudBusy() ? "Disconnecting..." : "Disconnect"}</span>
+                            <span>{cloudBusy() ? "Working..." : "Disconnect"}</span>
                           </button>
                         </Show>
                       </div>

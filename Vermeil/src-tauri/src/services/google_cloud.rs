@@ -742,7 +742,25 @@ pub async fn connect_google_account() -> Result<CloudConnectSummary, String> {
     }
 }
 
-/// Disconnects Google Cloud: revokes token with Google and purges local credentials.
+/// Signs out of Google Cloud on this device only.
+///
+/// Purges the local token and stops synchronization without contacting Google's
+/// revocation endpoint. This keeps Vermeil authorized in the user's Google Account
+/// ("Third-party apps & services") so future logins or multi-device sessions remain seamless.
+pub async fn sign_out_google_account() -> Result<(), String> {
+    delete_refresh_token();
+
+    if let Ok(mut settings) = settings_service::load().await {
+        settings.last_cloud_backup = None;
+        let _ = settings_service::save(&settings).await;
+    }
+
+    tracing::info!("Google Cloud signed out locally (Google account authorization preserved)");
+    Ok(())
+}
+
+/// Disconnects Google Cloud completely: revokes the OAuth grant with Google servers
+/// (disallowing the app on the user's Google Account) and purges all local credentials.
 pub async fn disconnect_google_account() -> Result<(), String> {
     if let Ok(ref_token) = read_refresh_token() {
         revoke_token(&ref_token).await;

@@ -159,27 +159,56 @@ sequenceDiagram
 
 ---
 
-## 4. Disconnect & Token Revocation Pipeline
+---
 
-When a user disconnects Google Cloud, Vermeil executes a **two-sided termination**:
+## 4. Session Termination: Sign Out vs. Disconnect (Revoke)
+
+Vermeil provides two distinct session teardown paths with separate intent and blast radius:
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor User as User
-    participant V as Vermeil App
-    participant G as Google OAuth Revoke Endpoint
-    participant Disk as Local Storage
+flowchart TD
+    subgraph Actions["User Termination Actions"]
+        SO["Click 'Sign Out' (Neutral)"]
+        DC["Click 'Disconnect' (Danger)"]
+    end
 
-    User->>V: Click 'Disconnect'
-    V->>Disk: Read & decrypt refresh_token from google_cloud.enc
-    V->>G: POST https://oauth2.googleapis.com/revoke?token={refreshToken}
-    Note over G: Google invalidates grant & unlinks app from user account
-    G-->>V: 200 OK
-    V->>Disk: Delete google_cloud.enc
-    V->>Disk: Clear settings.last_cloud_backup = None
-    V-->>User: Show toast ("Account disconnected and access revoked")
+    subgraph SignOutFlow["Sign Out Pipeline (Local Teardown Only)"]
+        SO --> SO1["Delete %LOCALAPPDATA%/Vermeil/google_cloud.enc"]
+        SO1 --> SO2["Clear settings.last_cloud_backup = None"]
+        SO2 --> SO3["Preserve Google OAuth Grant on Google Account"]
+        SO3 --> SO4["Toast: 'Signed out of Google Cloud on this device'"]
+    end
+
+    subgraph DisconnectFlow["Disconnect Pipeline (Full Revocation & Disallow)"]
+        DC --> DC1["Read & Decrypt Refresh Token via DPAPI"]
+        DC1 --> DC2["POST https://oauth2.googleapis.com/revoke"]
+        DC2 --> DC3["Google Invalidates Grant & Unlinks Vermeil from Account"]
+        DC3 --> DC4["Delete local google_cloud.enc & Reset Settings"]
+        DC4 --> DC5["Toast: 'Google Cloud authorization revoked and disconnected'"]
+    end
+
+    style SO fill:#1f1c2b,stroke:#8b5cf6,stroke-width:2px,color:#f4f3f6
+    style DC fill:#3a1818,stroke:#f43f5e,stroke-width:2px,color:#f4f3f6
+    style SignOutFlow fill:#15131e,stroke:#38bdf8,stroke-width:1px,color:#f4f3f6
+    style DisconnectFlow fill:#1c1015,stroke:#f43f5e,stroke-width:1px,color:#f4f3f6
 ```
+
+### Path 1: Sign Out (Local Teardown)
+- **Use Case:** Switching local profiles, setting up a shared device, or pausing sync on this specific computer.
+- **Behavior:**
+  1. Purges `%LOCALAPPDATA%/Vermeil/google_cloud.enc`.
+  2. Resets `last_cloud_backup` timestamp in `settings.json`.
+  3. **Does NOT contact Google's `/revoke` endpoint.**
+  4. The OAuth authorization grant remains active on the user's Google Account under [Third-party apps & services](https://myaccount.google.com/connections). If the user signs in again on this or another machine, Google does not require full re-consent from scratch.
+
+### Path 2: Disconnect (Revoke Access & Disallow App)
+- **Use Case:** Completely revoking Vermeil's access to the user's Google Drive sandbox and removing the app from their Google Account.
+- **Behavior:**
+  1. Reads and decrypts the active refresh token with Windows DPAPI.
+  2. Sends an authenticated POST request to Google's revocation endpoint:
+     `POST https://oauth2.googleapis.com/revoke?token={refreshToken}`
+  3. Google invalidates all issued tokens and removes Vermeil from the user's connected third-party applications list.
+  4. Purges local `google_cloud.enc` and resets settings.
 
 ---
 

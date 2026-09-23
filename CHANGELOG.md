@@ -3,6 +3,7 @@
 ### Added
 
 - Google Cloud Settings Sync: cross-device synchronization of General, Display, Sound, and Keybind preferences via Google Drive's sandboxed application data folder (`appDataFolder`) with zero telemetry and automatic local DPAPI token encryption
+- Differentiated Google Cloud session controls: added independent 'Sign Out' (local session teardown preserving account authorization) and 'Disconnect' (full OAuth revocation and app unlinking) actions
 - Live instance options sync: automatically detects and synchronizes display options, FOV, frame rate limits, and VSync into active Minecraft instance configuration files (`options.txt`) across versions
 - High-availability fallback to `latest.json` for GitHub release metadata and updater discovery
 

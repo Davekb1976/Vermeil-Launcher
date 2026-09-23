@@ -299,6 +299,7 @@ pub fn run() {
             // Cloud Sync
             cloud_sync::connect_google_cloud,
             cloud_sync::disconnect_google_cloud,
+            cloud_sync::sign_out_google_cloud,
             cloud_sync::is_google_cloud_connected,
             cloud_sync::backup_to_google_cloud,
             cloud_sync::restore_from_google_cloud,

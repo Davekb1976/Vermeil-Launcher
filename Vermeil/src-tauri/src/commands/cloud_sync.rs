@@ -14,6 +14,11 @@ pub async fn disconnect_google_cloud() -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn sign_out_google_cloud() -> Result<(), String> {
+    google_cloud::sign_out_google_account().await
+}
+
+#[tauri::command]
 pub fn is_google_cloud_connected() -> bool {
     google_cloud::is_cloud_connected()
 }

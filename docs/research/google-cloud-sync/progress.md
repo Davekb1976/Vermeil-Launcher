@@ -19,20 +19,21 @@
   - `start_google_oauth()`: Ephemeral port binding, PKCE verifier generation, loopback HTTP server with `window.history.replaceState` and auto-close script.
   - `cancel_google_oauth()`: Aborts loopback listener instantly via `oneshot::Sender<()>`.
   - `connect_google_account()`: Connects account, encrypts refresh token with DPAPI, performs initial restore/backup.
-  - `disconnect_google_account()`: Revokes token with Google, deletes `google_cloud.enc`, resets `last_cloud_backup`.
+  - `disconnect_google_account()`: Revokes token with Google (`/revoke`), deletes `google_cloud.enc`, resets `last_cloud_backup`.
+  - `sign_out_google_account()`: Deletes local `google_cloud.enc` and resets `last_cloud_backup` without contacting `/revoke`, preserving Google Account authorization for seamless reconnects.
   - `is_cloud_connected()`: Checks presence of local encrypted credential.
   - `backup_to_google_cloud()` / `restore_from_google_cloud()`: In-place `PATCH` and merge logic.
   - `sanitize_settings_for_cloud()` & `merge_restored_settings()`: Machine-specific data filter.
 - **Commands:** `src-tauri/src/commands/cloud_sync.rs`
-  - Exposes `connect_google_cloud`, `disconnect_google_cloud`, `is_google_cloud_connected`, `backup_to_google_cloud`, `restore_from_google_cloud`, `get_last_cloud_backup_time`, `cancel_google_cloud`.
+  - Exposes `connect_google_cloud`, `disconnect_google_cloud`, `sign_out_google_cloud`, `is_google_cloud_connected`, `backup_to_google_cloud`, `restore_from_google_cloud`, `get_last_cloud_backup_time`, `cancel_google_cloud`.
 - **Registration:** `src-tauri/src/lib.rs` -> Registered in `invoke_handler`.
 
 ### Frontend (`src/`)
 - **IPC Wrappers:** `src/ipc/commands.ts`
-  - Typed wrappers with `CloudConnectSummary`, `CloudBackupSummary`, `CloudRestoreSummary`.
+  - Typed wrappers with `CloudConnectSummary`, `CloudBackupSummary`, `CloudRestoreSummary`, `signOutGoogleCloud`.
 - **UI Surfaces:**
-  - `src/screens/Account.tsx`: Google Cloud Settings Sync strip with `[ CLOUD ]` / `[ SYNCED ]` badges, last backup timestamp formatting, and `[ Sign in with Google ]` / `[ Cancel Connecting ]` / `[ Disconnect ]` actions.
-  - `src/screens/Settings.tsx`: Settings row under General/Account category with synchronized status and connection controls.
+  - `src/screens/Account.tsx`: Google Cloud Settings Sync strip with `[ CLOUD ]` / `[ SYNCED ]` badges, last backup timestamp formatting, and dual `[ Sign Out ]` (neutral) / `[ Disconnect ]` (danger) actions when connected.
+  - `src/screens/Settings.tsx`: Settings row under General/Account category with synchronized status and dual `[ Sign Out ]` / `[ Disconnect ]` connection controls.
   - Auto-cancellation on screen switch via SolidJS `onCleanup`.
 
 ---

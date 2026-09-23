@@ -498,6 +498,7 @@ export interface CloudConnectSummary {
 
 export const connectGoogleCloud = () => invoke<CloudConnectSummary>("connect_google_cloud");
 export const disconnectGoogleCloud = () => invoke<void>("disconnect_google_cloud");
+export const signOutGoogleCloud = () => invoke<void>("sign_out_google_cloud");
 export const isGoogleCloudConnected = () => invoke<boolean>("is_google_cloud_connected");
 export const backupToGoogleCloud = () => invoke<CloudBackupSummary>("backup_to_google_cloud");
 export const restoreFromGoogleCloud = () => invoke<CloudRestoreSummary>("restore_from_google_cloud");

@@ -10,6 +10,7 @@ import {
   connectGoogleCloud,
   cancelGoogleCloud,
   disconnectGoogleCloud,
+  signOutGoogleCloud,
   isGoogleCloudConnected,
   getLastCloudBackupTime,
 } from "../ipc/commands";
@@ -115,15 +116,39 @@ const Account: Component = () => {
     }
   });
 
+  const handleSignOutGoogle = async () => {
+    if (cloudBusy()) return;
+    setCloudBusy(true);
+    try {
+      await signOutGoogleCloud();
+      await refetchCloudStatus();
+      await refetchBackupTime();
+      showToast({
+        title: "Signed Out",
+        message: "Signed out of Google Cloud on this device.",
+        type: "info",
+      });
+    } catch (e: any) {
+      showToast({
+        title: "Sign-Out Error",
+        message: String(e),
+        type: "error",
+      });
+    } finally {
+      setCloudBusy(false);
+    }
+  };
+
   const handleDisconnectGoogle = async () => {
     if (cloudBusy()) return;
     setCloudBusy(true);
     try {
       await disconnectGoogleCloud();
       await refetchCloudStatus();
+      await refetchBackupTime();
       showToast({
-        title: "Disconnected",
-        message: "Google Cloud account disconnected and local session revoked.",
+        title: "Disconnected & Revoked",
+        message: "Google Cloud authorization revoked and disconnected.",
         type: "info",
       });
     } catch (e: any) {
@@ -455,14 +480,26 @@ const Account: Component = () => {
                   </Show>
                 }
               >
-                <button
-                  type="button"
-                  class="btn btn--neutral btn--sm"
-                  onClick={handleDisconnectGoogle}
-                  disabled={cloudBusy()}
-                >
-                  {cloudBusy() ? "Disconnecting..." : "Disconnect"}
-                </button>
+                <div class="account-cloud-buttons">
+                  <button
+                    type="button"
+                    class="btn btn--neutral btn--sm tip-left"
+                    onClick={handleSignOutGoogle}
+                    disabled={cloudBusy()}
+                    data-tip="Sign out on this device while keeping Google account authorization"
+                  >
+                    <span>{cloudBusy() ? "Working..." : "Sign Out"}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn--danger btn--sm tip-left"
+                    onClick={handleDisconnectGoogle}
+                    disabled={cloudBusy()}
+                    data-tip="Revoke authorization with Google and disallow the app"
+                  >
+                    <span>{cloudBusy() ? "Working..." : "Disconnect"}</span>
+                  </button>
+                </div>
               </Show>
             </div>
           </div>
