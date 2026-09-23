@@ -156,6 +156,7 @@ When generating the changelog from conventional commits since the last tag:
 - Map `feat:` → `### Added`
 - Map `fix:` → `### Fixed`
 - Map `refactor:` / `perf:` → `### Changed`
+- Skip `chore:`, `style:`, `docs:` unless user-visible (e.g. user-facing docs)
 - **Feature & Architecture Documentation:** Whenever releases introduce new features, security overhauls, or significant refactors with research/architecture documents in `docs/research/`, include direct links to those documents in the changelog (under `### Documentation`). Visual Mermaid node tree diagrams in these docs must use explicit `<br/>` tags inside node labels (max ~35 chars per line) to prevent box text truncation in narrow viewports. This rule applies to both experimental pre-release builds and full releases.
 - Rewrite the summary to be user-facing (no implementation jargon)
 - One line per bullet
