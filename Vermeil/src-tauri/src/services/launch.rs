@@ -734,7 +734,6 @@ pub fn resolve_gc_flags(preset: &str, java_major: u8, memory_mb: u32) -> Vec<Str
             let mut flags = vec![
                 "-XX:+UseZGC".to_string(),
                 "-XX:+UseStringDeduplication".to_string(),
-                "-XX:TrimNativeHeapInterval=5000".to_string(),
             ];
             // ZGenerational is on by default since Java 23; needed for 21-22.
             if java_major < 23 {

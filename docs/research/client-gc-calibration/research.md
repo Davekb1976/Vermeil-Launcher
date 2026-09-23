@@ -116,8 +116,8 @@ flowchart TD
 - `-XX:+UseZGC`: Activates scalable low-latency collector.
 - `-XX:+ZGenerational`: Generational partitioning for Java 21–22 (default in Java 23+).
 - `-XX:+UseStringDeduplication`: Concurrent string deduplication.
-- `-XX:TrimNativeHeapInterval=5000`: Trims unused native memory allocations.
 - `-XX:+UseCompactObjectHeaders`: Emitted on Java 25+ (`java_major >= 25`).
+- **Cross-Platform Cleanliness**: Omits non-portable Linux-only experimental flags (such as `TrimNativeHeapInterval`) to guarantee zero warnings or crashes on Windows and non-glibc runtimes.
 - **Clean Fallback**: Instances running on Java < 21 (e.g. 1.20.1 Forge on Java 17) automatically fall back to Client-Tuned G1GC.
 
 ### Adaptive Shenandoah (`shenandoah`)
