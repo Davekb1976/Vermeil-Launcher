@@ -121,6 +121,7 @@ pub fn encrypt_credential(plaintext: &str) -> Result<String, String> {
 /// On Linux/macOS: if it has the `aead:` prefix, decrypt via AES-256-GCM.
 /// Plaintext values (no prefix) are returned as-is (graceful migration).
 pub fn decrypt_credential(stored: &str) -> Result<String, String> {
+    let stored = stored.trim();
     if stored.is_empty() || stored == "offline" || stored == "0" {
         return Ok(stored.to_string());
     }
