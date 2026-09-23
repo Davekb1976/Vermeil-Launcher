@@ -227,9 +227,12 @@ The launcher targets Windows (WebView2, Win32/DWM) and Linux (WebKitGTK, X11/Way
 
 ### Living Architecture Documentation & Visual Flowcharts:
 - **When to document (`docs/research/<feature>/`)**: Any architectural feature, security/storage overhaul, or non-trivial refactor/optimization must have dedicated documentation:
-  - `research.md`: Technical specification, data flows, and a visual Mermaid node tree flowchart.
+  - `research.md`: Technical specification, data flows, and visual Mermaid node tree flowcharts.
   - `progress.md`: Living progress board and test suite coverage.
   - Indexed in `docs/research/README.md`.
+- **Comparative Flowchart Requirement (Old vs. New)**:
+  - When documenting an improvement, refactor, or optimization, **always include a comparative flowchart** showing both the previous/legacy flawed pipeline (illustrating bottlenecks/root causes) and the modern/calibrated pipeline (illustrating the solution).
+  - Include a concise direct comparison table summarizing parameter/behavioral shifts and their user-facing impacts.
 - **Node Tree Formatting Rules (Prevent Text Clipping)**:
   - **Explicit `<br/>` Line Breaks**: Always split text across lines with `<br/>` inside node labels (keep each line under ~35 characters). Never put long unbroken sentences in a node, as wide boxes clip in narrow viewports.
   - **Concise Affordances**: Use node boxes for concise titles and status; elaborate details belong in markdown text below the diagram.

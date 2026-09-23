@@ -47,6 +47,14 @@ Guidelines for safely restructuring code without breaking existing functionality
   add follow-up commits instead. See "Never rewrite pushed history" in
   `AGENTS.md` (Section 10).
 
+## Documentation & Comparative Flowcharts
+
+- Non-trivial refactors, performance overhauls, or architectural reorganizations must update or create dedicated Living Architecture Documentation under `docs/research/<feature>/`:
+  - `research.md`: Include an **Old vs. New comparative flowchart** (contrasting the legacy flawed flow with the modern solution) and a parameter/behavior comparison table.
+  - Adhere to Mermaid node tree formatting rules (explicit `<br/>` line breaks under ~35 chars/line, quoted labels).
+  - `progress.md`: Living progress board and test coverage.
+  - Indexed in `docs/research/README.md`.
+
 ## Verification
 
 - `cargo check` passes (zero warnings)
