@@ -463,8 +463,7 @@ const Account: Component = () => {
                         class="btn btn--primary"
                         onClick={handleConnectGoogle}
                       >
-                        <IconGoogleCloud />
-                        <span>Sign in with Google</span>
+                        Sign In
                       </button>
                     }
                   >
@@ -474,8 +473,7 @@ const Account: Component = () => {
                       onClick={handleCancelGoogle}
                       data-tip="Click to abort Google sign-in"
                     >
-                      <IconX />
-                      <span>Cancel Connecting</span>
+                      Cancel
                     </button>
                   </Show>
                 }

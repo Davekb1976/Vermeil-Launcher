@@ -5,7 +5,7 @@ import { checkForUpdates } from "../services/updater";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
-import { IconDownload, IconSearch, IconFolderOpen, IconTrash, IconModrinth, IconCurseForge, IconChevronRight, IconGlobe, IconSettings as IconSettingsIcon, IconLayers, IconCube, IconMonitor, IconBolt, IconX, IconGoogleCloud } from "../components/Icons";
+import { IconDownload, IconSearch, IconFolderOpen, IconTrash, IconModrinth, IconCurseForge, IconChevronRight, IconGlobe, IconSettings as IconSettingsIcon, IconLayers, IconCube, IconMonitor, IconBolt, IconX } from "../components/Icons";
 import JavaPathInput from "../components/JavaPathInput";
 import JavaChooserModal from "../modals/JavaChooserModal";
 import Dropdown from "../components/Dropdown";
@@ -1015,8 +1015,7 @@ const Settings: Component = () => {
                                   class="btn btn--primary btn--sm"
                                   onClick={handleConnectGoogle}
                                 >
-                                  <IconGoogleCloud />
-                                  <span>Sign in with Google</span>
+                                  Sign In
                                 </button>
                               }
                             >
@@ -1026,8 +1025,7 @@ const Settings: Component = () => {
                                 onClick={handleCancelGoogle}
                                 data-tip="Click to abort Google sign-in"
                               >
-                                <IconX />
-                                <span>Cancel Connecting</span>
+                                Cancel
                               </button>
                             </Show>
                           }

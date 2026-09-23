@@ -336,50 +336,17 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
               background: #322f3d;\
               margin: 24px 0 20px 0;\
             }\
-            .countdown-wrap {\
-              display: flex;\
-              align-items: center;\
-              justify-content: center;\
-              gap: 10px;\
-              font-family: 'DM Mono', monospace;\
-              font-size: 11.5px;\
-              color: #8f8a9e;\
-              min-height: 22px;\
-            }\
-            .square-dots {\
-              display: inline-flex;\
-              align-items: center;\
-              gap: 6px;\
-            }\
-            .sq-dot {\
-              width: 6px;\
-              height: 6px;\
-              background: #2a2736;\
-              border: 1px solid #3c384a;\
-              transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;\
-            }\
-            .sq-dot.active {\
-              background: #8b5cf6;\
-              border-color: #a78bfa;\
-              box-shadow: 0 0 6px rgba(139, 92, 246, 0.6);\
-            }\
             .shortcut-pill {\
-              display: none;\
+              display: inline-flex;\
               align-items: center;\
               justify-content: center;\
               gap: 8px;\
-              margin: 18px 0 0 0;\
               background: #0f0e13;\
               border: 1px solid #3c384a;\
               padding: 10px 18px;\
               font-family: 'DM Mono', monospace;\
               font-size: 11.5px;\
               color: #c4b5fd;\
-              transition: border-color 0.2s ease, box-shadow 0.2s ease;\
-            }\
-            .shortcut-pill.flash {\
-              border-color: #8b5cf6;\
-              box-shadow: 0 0 12px rgba(139, 92, 246, 0.45);\
             }\
             .key-cap {\
               background: #25222f;\
@@ -391,25 +358,6 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
               font-weight: 600;\
               border-radius: 2px;\
             }\
-            .btn-close {\
-              margin-top: 14px;\
-              display: none;\
-              width: 100%;\
-              background: #28252f;\
-              border: 1px solid #45414f;\
-              border-bottom: 2px solid #15141a;\
-              color: #ece9f2;\
-              font-family: 'DM Sans', sans-serif;\
-              font-size: 12.5px;\
-              font-weight: 600;\
-              padding: 10px 16px;\
-              cursor: pointer;\
-              text-transform: uppercase;\
-              letter-spacing: 0.05em;\
-            }\
-            .btn-close:hover { background: #322f3d; border-color: #8b5cf6; color: #ffffff; }\
-            .btn-close:active { transform: translateY(1px); }\
-            .btn-close.visible { display: block; animation: cardIn 0.3s ease-out both; }\
             @keyframes cardIn {\
               from { opacity: 0; transform: translateY(10px); }\
               to   { opacity: 1; transform: translateY(0); }\
@@ -423,20 +371,11 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
             <h2>Connected</h2>\
             <p>Your Google account has been authorized. You can close this tab and return to Vermeil.</p>\
             <div class=\"divider\"></div>\
-            <div class=\"countdown-wrap\">\
-              <span id=\"countdown-label\">Closing tab in <span id=\"sec\">3</span>s</span>\
-              <span class=\"square-dots\" id=\"dots\" aria-hidden=\"true\">\
-                <span class=\"sq-dot active\" id=\"dot-1\"></span>\
-                <span class=\"sq-dot active\" id=\"dot-2\"></span>\
-                <span class=\"sq-dot active\" id=\"dot-3\"></span>\
-              </span>\
-            </div>\
-            <div class=\"shortcut-pill\" id=\"shortcut-pill\">\
+            <div class=\"shortcut-pill\">\
               <span>Press</span>\
               <kbd class=\"key-cap\" id=\"cmd-key\">Ctrl</kbd> + <kbd class=\"key-cap\">W</kbd>\
               <span>to close tab</span>\
             </div>\
-            <button type=\"button\" class=\"btn-close\" id=\"btn-close\" onclick=\"handleCloseClick()\">Return to Vermeil</button>\
           </div>\
           <script>\
             if (window.history.replaceState) {\
@@ -445,46 +384,6 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
             var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;\
             var keyEl = document.getElementById('cmd-key');\
             if (keyEl && isMac) keyEl.textContent = '⌘';\
-            var remaining = 3;\
-            function closeTab() {\
-              try { window.open('', '_self', ''); window.close(); } catch (e) {}\
-            }\
-            function handleCloseClick() {\
-              closeTab();\
-              var pill = document.getElementById('shortcut-pill');\
-              if (pill) {\
-                pill.classList.add('flash');\
-                setTimeout(function() { pill.classList.remove('flash'); }, 600);\
-              }\
-            }\
-            function updateUI() {\
-              var secEl = document.getElementById('sec');\
-              var labelEl = document.getElementById('countdown-label');\
-              var btnEl = document.getElementById('btn-close');\
-              var pillEl = document.getElementById('shortcut-pill');\
-              if (secEl) secEl.textContent = remaining;\
-              for (var i = 1; i <= 3; i++) {\
-                var dot = document.getElementById('dot-' + i);\
-                if (dot) {\
-                  if (i <= remaining) dot.classList.add('active');\
-                  else dot.classList.remove('active');\
-                }\
-              }\
-              if (remaining <= 0) {\
-                clearInterval(timer);\
-                if (labelEl) labelEl.textContent = 'All set! You can return to Vermeil.';\
-                var dotsEl = document.getElementById('dots');\
-                if (dotsEl) dotsEl.style.display = 'none';\
-                if (pillEl) pillEl.style.display = 'inline-flex';\
-                if (btnEl) btnEl.classList.add('visible');\
-                closeTab();\
-              }\
-            }\
-            var timer = setInterval(function() {\
-              remaining--;\
-              updateUI();\
-            }, 1000);\
-            updateUI();\
           </script>\
         </body>\
         </html>";
