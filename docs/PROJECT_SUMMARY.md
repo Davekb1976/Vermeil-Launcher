@@ -131,18 +131,20 @@ Vermeil-Launcher/               # Repo root
 - Custom local capes — upload a static or animated image and edit it in the 3D viewer
 
 ### Settings
-- Global Instance tab with video settings (FPS, VSync, FOV, GUI Scale, View Bobbing)
-- Video settings patch options.txt before each launch
+- Google Cloud Settings Sync: cross-device synchronization of General, Display, Sound, and Keybind preferences via Google Drive's isolated `appDataFolder` with zero telemetry and separate Sign Out vs Disconnect actions
+- Global Instance tab with live video settings synchronization (FPS, VSync, FOV, GUI Scale, View Bobbing) into instance `options.txt`
 - Java runtime management (detect, install, browse per major version)
 - Concurrent download/write controls
+- Real-time uninstaller storage footprint synchronization (`EstimatedSize`) across all installs and purges
 - GC preset selection (G1GC, ZGC, Shenandoah)
 - Force delete toggle, show snapshots, Discord RPC toggle
 - Cache purge
 
 ### Security
-- DPAPI credential encryption on Windows (access_token, refresh_token)
+- DPAPI credential encryption on Windows (Microsoft OAuth tokens, Google Cloud tokens)
 - Transparent migration from plaintext on first launch
-- Linux: file permissions protection
+- Linux: file permissions protection (`0600`)
+- Google Drive sandbox isolation (`drive.appdata` scope prevents access to personal Drive files)
 
 ### UI/UX
 - Tactile SloppyKeys design language: chunky keycap bevel buttons (`--bevel`, `--bevel-strong`), framed category sections, sunken tracks (`#0f0e13`)

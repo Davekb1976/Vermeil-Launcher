@@ -87,7 +87,9 @@
 - Skin Wardrobe with on-demand historical skin synchronization from Crafty.gg
 - Companion mod for in-game custom capes
 - Auto-updater (Windows and Linux AppImage)
-- Global video settings (FPS, VSync, FOV, GUI Scale, FOV Effects)
+- Global video settings & live Minecraft options synchronization (FPS, VSync, FOV, GUI Scale, FOV Effects)
+- Google Cloud Settings Sync (cross-device preference backup and restore to Google Drive's sandboxed app storage with zero telemetry)
+- Real-time uninstaller storage footprint synchronization (Windows Installed Apps disk usage reporting)
 - Download history
 - Zero telemetry
 

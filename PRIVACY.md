@@ -17,6 +17,7 @@ Vermeil keeps everything locally under `%LOCALAPPDATA%\Vermeil` (Windows) or `~/
 - Mod, resource pack, and shader files you install
 - Game logs from previous play sessions
 - Your Microsoft account access token and refresh token, stored in `accounts.json` so you don't have to sign in every launch
+- Your Google Cloud settings sync token (encrypted at rest via Windows DPAPI in `google_cloud.enc`) if Google Cloud sync is enabled
 - Java runtimes that Vermeil downloaded for you
 - Game assets, libraries, and version metadata cached from Mojang's servers
 
@@ -36,6 +37,21 @@ Using Vermeil means making HTTPS requests to the following providers. Vermeil se
 | Fabric / Quilt / NeoForge / Forge metadata servers | Download mod loader files | None |
 | Crafty.gg (`api.crafty.gg`) | On-demand historical skin synchronization (only when you click "Sync" in the Wardrobe) | Your Minecraft account UUID (no credentials or personal data) |
 | GitHub (`github.com`, `objects.githubusercontent.com`) | Check for and download Vermeil updates | None |
+| Google OAuth & Google Drive (`accounts.google.com`, `oauth2.googleapis.com`, `www.googleapis.com`) | Optional cross-device settings backup and restore (only when you click "Sign in with Google") | Non-hardware settings payload (General, Display, Sound, Keybinds) stored in isolated `appDataFolder`; your OAuth token |
+
+## Google Cloud Settings Sync (Google Drive App Data Sandbox)
+
+Vermeil provides an optional feature to synchronize launcher preferences across devices using Google Drive's sandboxed Application Data Folder (`https://www.googleapis.com/auth/drive.appdata`).
+
+### Privacy and Isolation Guarantees:
+- **Sandbox-Only Access:** The `drive.appdata` scope restricts Vermeil strictly to an isolated, hidden application folder managed by Google Drive. **Vermeil cannot see, list, read, modify, or delete any of your personal Google Drive documents, files, folders, spreadsheets, photos, or emails.**
+- **No Telemetry or Intermediary Servers:** All communication occurs directly between your local Vermeil client and Google's official OAuth and Drive API endpoints over HTTPS. Vermeil operates no intermediary backend servers, telemetry endpoints, or cloud databases.
+- **Hardware-Specific Data Filtering:** To prevent configuration conflicts across devices with different displays or memory capacities, hardware-dependent settings (including RAM allocation limits, window dimensions, window maximization state, custom Java executable paths, and mouse sensitivity) are **never** uploaded to Google Drive. Only portable preferences (General launcher toggles, Video options like VSync/FPS caps/FOV, Sound volume levels, and Keybind mappings) are synchronized.
+- **Token Security:** On Windows, your Google OAuth refresh token is encrypted at rest in `%LOCALAPPDATA%\Vermeil\google_cloud.enc` using Windows DPAPI (`Scope::User`), tying the encryption key directly to your active Windows logon session. On Linux, tokens rely on restricted file permissions (`0600`) within your user data directory.
+- **User Control (Sign Out vs. Disconnect):**
+  - **Sign Out:** Removes the local encrypted token and stops background synchronization on the current device, while retaining authorization in your Google Account for frictionless reconnects.
+  - **Disconnect:** Sends an authenticated revocation request directly to Google's revocation endpoint (`POST https://oauth2.googleapis.com/revoke`), unlinking Vermeil, deleting the OAuth grant from your Google Account ("Third-party apps & services with access to your account"), and purging all local credentials.
+- **Google API Services User Data Policy Compliance:** Vermeil's use and transfer of information received from Google APIs adheres to the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including the Limited Use requirements. Your data is never sold, shared, used for advertising, or used to train machine learning models.
 
 ## Microsoft account tokens
 
