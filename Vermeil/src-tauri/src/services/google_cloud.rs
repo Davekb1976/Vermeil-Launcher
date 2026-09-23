@@ -252,6 +252,7 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
         <html>\
         <head>\
           <meta charset=\"utf-8\">\
+          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\
           <title>Vermeil — Google Cloud Connected</title>\
           <style>\
             @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');\
@@ -264,29 +265,26 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
               color: #ece9f2;\
               font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;\
               display: flex;\
+              flex-direction: column;\
               align-items: center;\
               justify-content: center;\
               height: 100vh;\
+              padding: 24px;\
               -webkit-font-smoothing: antialiased;\
             }\
             .card {\
               background: #1d1b24;\
               border: 1px solid #322f3d;\
               border-left: 3px solid #8b5cf6;\
-              padding: 48px 44px;\
+              padding: 42px 40px 36px 40px;\
               border-radius: 0;\
               text-align: center;\
-              max-width: 460px;\
-              width: 90%;\
-              box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);\
+              max-width: 440px;\
+              width: 100%;\
+              box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);\
+              animation: cardIn 0.35s ease-out both;\
             }\
-            .logo {\
-              width: 48px;\
-              height: 48px;\
-              margin-bottom: 20px;\
-              image-rendering: pixelated;\
-            }\
-            .badge {\
+            .card-tag {\
               display: inline-block;\
               background: rgba(139, 92, 246, 0.12);\
               border: 1px solid rgba(139, 92, 246, 0.35);\
@@ -297,68 +295,150 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
               padding: 3px 10px;\
               border-radius: 0;\
               text-transform: uppercase;\
-              letter-spacing: 0.08em;\
-              margin-bottom: 16px;\
+              letter-spacing: 0.1em;\
+              margin-bottom: 22px;\
+            }\
+            .check-well {\
+              width: 48px;\
+              height: 48px;\
+              margin: 0 auto 18px auto;\
+              background: #0f0e13;\
+              border: 1px solid #322f3d;\
+              display: flex;\
+              align-items: center;\
+              justify-content: center;\
+            }\
+            .check-well svg {\
+              width: 24px;\
+              height: 24px;\
+              stroke: #4ade80;\
+              fill: none;\
+              stroke-width: 2.5;\
+              stroke-linecap: round;\
+              stroke-linejoin: round;\
             }\
             h2 {\
               color: #ece9f2;\
-              font-size: 20px;\
+              font-size: 21px;\
               font-weight: 700;\
-              margin-bottom: 12px;\
+              margin-bottom: 10px;\
               letter-spacing: -0.01em;\
             }\
-            .check {\
-              display: inline-flex;\
-              align-items: center;\
-              justify-content: center;\
-              width: 36px;\
-              height: 36px;\
-              background: rgba(74, 222, 128, 0.10);\
-              border: 1px solid rgba(74, 222, 128, 0.30);\
-              border-radius: 0;\
-              margin-bottom: 20px;\
-            }\
-            .check svg { width: 20px; height: 20px; stroke: #4ade80; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }\
             p {\
               color: #a6a1b5;\
               font-size: 13.5px;\
-              line-height: 1.65;\
+              line-height: 1.6;\
               margin-bottom: 0;\
             }\
             .divider {\
               width: 100%;\
               height: 1px;\
               background: #322f3d;\
-              margin: 20px 0;\
+              margin: 24px 0 20px 0;\
             }\
-            .hint {\
-              font-size: 11.5px;\
-              color: #6f6a7e;\
+            .countdown-wrap {\
+              display: flex;\
+              align-items: center;\
+              justify-content: center;\
+              gap: 10px;\
               font-family: 'DM Mono', monospace;\
+              font-size: 11.5px;\
+              color: #8f8a9e;\
+              min-height: 22px;\
             }\
-            @keyframes fadeIn {\
-              from { opacity: 0; transform: translateY(8px); }\
-              to { opacity: 1; transform: translateY(0); }\
+            .square-dots {\
+              display: inline-flex;\
+              align-items: center;\
+              gap: 6px;\
             }\
-            .card { animation: fadeIn 0.4s ease-out both; }\
+            .sq-dot {\
+              width: 6px;\
+              height: 6px;\
+              background: #2a2736;\
+              border: 1px solid #3c384a;\
+              transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;\
+            }\
+            .sq-dot.active {\
+              background: #8b5cf6;\
+              border-color: #a78bfa;\
+              box-shadow: 0 0 6px rgba(139, 92, 246, 0.6);\
+            }\
+            .btn-close {\
+              margin-top: 16px;\
+              display: none;\
+              width: 100%;\
+              background: #28252f;\
+              border: 1px solid #45414f;\
+              border-bottom: 2px solid #15141a;\
+              color: #ece9f2;\
+              font-family: 'DM Sans', sans-serif;\
+              font-size: 12.5px;\
+              font-weight: 600;\
+              padding: 10px 16px;\
+              cursor: pointer;\
+              text-transform: uppercase;\
+              letter-spacing: 0.05em;\
+            }\
+            .btn-close:hover { background: #322f3d; border-color: #8b5cf6; color: #ffffff; }\
+            .btn-close:active { transform: translateY(1px); }\
+            .btn-close.visible { display: block; animation: cardIn 0.3s ease-out both; }\
+            @keyframes cardIn {\
+              from { opacity: 0; transform: translateY(10px); }\
+              to   { opacity: 1; transform: translateY(0); }\
+            }\
           </style>\
         </head>\
         <body>\
           <div class=\"card\">\
-            <div class=\"check\"><svg viewBox=\"0 0 24 24\"><polyline points=\"20 6 9 17 4 12\"/></svg></div>\
-            <div class=\"badge\">Cloud Sync</div>\
+            <div class=\"card-tag\">CLOUD SYNC</div>\
+            <div class=\"check-well\"><svg viewBox=\"0 0 24 24\"><polyline points=\"20 6 9 17 4 12\"/></svg></div>\
             <h2>Connected</h2>\
             <p>Your Google account has been authorized. You can close this tab and return to Vermeil.</p>\
             <div class=\"divider\"></div>\
-            <div class=\"hint\">This window will close automatically.</div>\
+            <div class=\"countdown-wrap\">\
+              <span id=\"countdown-label\">Closing tab in <span id=\"sec\">3</span>s</span>\
+              <span class=\"square-dots\" id=\"dots\" aria-hidden=\"true\">\
+                <span class=\"sq-dot active\" id=\"dot-1\"></span>\
+                <span class=\"sq-dot active\" id=\"dot-2\"></span>\
+                <span class=\"sq-dot active\" id=\"dot-3\"></span>\
+              </span>\
+            </div>\
+            <button type=\"button\" class=\"btn-close\" id=\"btn-close\" onclick=\"closeTab()\">Close Tab</button>\
           </div>\
           <script>\
             if (window.history.replaceState) {\
               window.history.replaceState({}, document.title, window.location.pathname);\
             }\
-            setTimeout(function() {\
-              window.close();\
-            }, 2000);\
+            var remaining = 3;\
+            function closeTab() {\
+              try { window.open('', '_self', ''); window.close(); } catch (e) {}\
+            }\
+            function updateUI() {\
+              var secEl = document.getElementById('sec');\
+              var labelEl = document.getElementById('countdown-label');\
+              var btnEl = document.getElementById('btn-close');\
+              if (secEl) secEl.textContent = remaining;\
+              for (var i = 1; i <= 3; i++) {\
+                var dot = document.getElementById('dot-' + i);\
+                if (dot) {\
+                  if (i <= remaining) dot.classList.add('active');\
+                  else dot.classList.remove('active');\
+                }\
+              }\
+              if (remaining <= 0) {\
+                clearInterval(timer);\
+                if (labelEl) labelEl.textContent = 'Ready to close · Return to launcher';\
+                var dotsEl = document.getElementById('dots');\
+                if (dotsEl) dotsEl.style.display = 'none';\
+                if (btnEl) btnEl.classList.add('visible');\
+                closeTab();\
+              }\
+            }\
+            var timer = setInterval(function() {\
+              remaining--;\
+              updateUI();\
+            }, 1000);\
+            updateUI();\
           </script>\
         </body>\
         </html>";
