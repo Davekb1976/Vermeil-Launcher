@@ -63,7 +63,8 @@
       "nsis": {
         "installMode": "currentUser",
         "installerIcon": "icons/icon.ico",
-        "installerHooks": "./nsis/hooks.nsi"
+        "installerHooks": "./nsis/hooks.nsi",
+        "template": "./nsis/installer.nsi"
       }
     }
   },

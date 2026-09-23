@@ -31,7 +31,6 @@
 ; -----------------------------------------------------------------------------
 
 Var DeleteUserData
-Var DataFolderMB
 
 !macro NSIS_HOOK_POSTINSTALL
     ; Recalculate true directory size in KB (including existing instances/assets if updating)
@@ -46,38 +45,58 @@ Var DataFolderMB
     ; Default: don't touch user data.
     StrCpy $DeleteUserData "0"
 
-    ; If the user opted in via Tauri's confirm-page checkbox, ask them to
-    ; double-confirm — this is destructive and worth the extra click.
+    ; If user opted in via the confirm-page checkbox, honor their selection
+    ; directly without interrupting with a redundant confirmation popup.
     ${If} $DeleteAppDataCheckboxState == "1"
-        StrCpy $DataFolderMB "0"
-        ${If} ${FileExists} "$LOCALAPPDATA\Vermeil\*.*"
-            ${GetSize} "$LOCALAPPDATA\Vermeil" "/S=0M" $0 $1 $2
-            StrCpy $DataFolderMB $0
-        ${EndIf}
-        MessageBox MB_YESNO|MB_ICONEXCLAMATION|MB_DEFBUTTON2 \
-            "This will permanently delete your Vermeil data folder (approximately $DataFolderMB MB) including all instances, accounts, settings, and downloads stored in:$\r$\n$LOCALAPPDATA\Vermeil$\r$\n$\r$\nAre you sure?" \
-            /SD IDNO \
-            IDNO skip
         StrCpy $DeleteUserData "1"
-        skip:
     ${EndIf}
 !macroend
 
 !macro NSIS_HOOK_POSTUNINSTALL
     ${If} $DeleteUserData == "1"
-        DetailPrint "Removing user data folder $LOCALAPPDATA\Vermeil (this can take a moment)..."
-        ; The data folder holds the Minecraft asset cache — tens of thousands
-        ; of tiny hashed files under assets\objects\. RMDir /r prints every
-        ; deleted file to the detail listview by default, and that per-file
-        ; redraw is what makes the uninstall flicker and crawl. Silence detail
-        ; output for the bulk delete, then restore it. The filesystem work is
-        ; inherently O(files) but without the UI churn it's far faster and
-        ; doesn't flicker.
+        DetailPrint "Removing user data folder (this can take a moment)..."
         SetDetailsPrint none
-        RMDir /r "$LOCALAPPDATA\Vermeil"
-        ; Also remove the pre-0.6 roaming location in case data was never
-        ; migrated (e.g. user never relaunched after updating).
-        RMDir /r "$APPDATA\Vermeil"
+
+        ; Local data folder (%LOCALAPPDATA%\Vermeil):
+        ; Holds instances, Minecraft asset objects, Java runtimes, and caches (tens of
+        ; thousands of tiny files). Standard interpreted RMDir /r crawls over NTFS metadata.
+        ; Instead, perform an instant atomic directory rename (<1ms) to detach the folder,
+        ; then invoke native bulk tree deletion via cmd.exe /c rd /s /q.
+        StrCpy $0 "$LOCALAPPDATA\Vermeil"
+        ${If} ${FileExists} "$0\*.*"
+            StrCpy $1 "$LOCALAPPDATA\Vermeil_trash"
+            ${If} ${FileExists} "$1\*.*"
+                nsExec::Exec 'cmd.exe /c "rd /s /q \"$1\""'
+                RMDir /r "$1"
+            ${EndIf}
+            Rename "$0" "$1"
+            ${If} ${FileExists} "$1\*.*"
+                nsExec::Exec 'cmd.exe /c "rd /s /q \"$1\""'
+                RMDir /r "$1"
+            ${Else}
+                nsExec::Exec 'cmd.exe /c "rd /s /q \"$0\""'
+                RMDir /r "$0"
+            ${EndIf}
+        ${EndIf}
+
+        ; Roaming data folder (%APPDATA%\Vermeil) from pre-0.6 builds:
+        StrCpy $0 "$APPDATA\Vermeil"
+        ${If} ${FileExists} "$0\*.*"
+            StrCpy $1 "$APPDATA\Vermeil_trash"
+            ${If} ${FileExists} "$1\*.*"
+                nsExec::Exec 'cmd.exe /c "rd /s /q \"$1\""'
+                RMDir /r "$1"
+            ${EndIf}
+            Rename "$0" "$1"
+            ${If} ${FileExists} "$1\*.*"
+                nsExec::Exec 'cmd.exe /c "rd /s /q \"$1\""'
+                RMDir /r "$1"
+            ${Else}
+                nsExec::Exec 'cmd.exe /c "rd /s /q \"$0\""'
+                RMDir /r "$0"
+            ${EndIf}
+        ${EndIf}
+
         SetDetailsPrint both
         DetailPrint "User data removed."
     ${EndIf}
