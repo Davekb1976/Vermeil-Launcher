@@ -157,6 +157,7 @@ When generating the changelog from conventional commits since the last tag:
 - Map `fix:` → `### Fixed`
 - Map `refactor:` / `perf:` → `### Changed`
 - Skip `chore:`, `style:`, `docs:` unless user-visible (e.g. user-facing docs)
+- **Feature & Architecture Documentation:** Whenever releases introduce new features or significant improvements with research/architecture documents in `docs/research/`, include direct links to those documents in the changelog (under `### Documentation` or in relevant feature notes) so users and contributors can explore architectural diagrams, security models, and technical specifications. This rule applies to both experimental pre-release builds and full releases.
 - Rewrite the summary to be user-facing (no implementation jargon)
 - One line per bullet
 - No marketing language, no emojis, no other launcher mentions
@@ -178,6 +179,10 @@ Full release:
 ### Fixed
 
 - Bug fix (from fix: commits)
+
+### Documentation
+
+- [Feature Name Documentation](docs/research/<feature>/research.md): Architecture, security models, and diagrams
 ```
 
 Experimental pre-release build:
@@ -195,6 +200,10 @@ Experimental pre-release build:
 ### Fixed
 
 - Bug fix (from fix: commits)
+
+### Documentation
+
+- [Feature Name Documentation](docs/research/<feature>/research.md): Architecture, security models, and diagrams
 ```
 
 Replace file contents on each release. Don't prepend.
