@@ -15,17 +15,17 @@ Vermeil addresses these challenges with an isolated, encrypted token vault (`cre
 ```mermaid
 flowchart TD
     subgraph UI["Vermeil Launcher UI (SolidJS / Webview)"]
-        A["User Signs in or Launches Game"] -->|IPC invoke| B["Tauri Command Boundary"]
+        A["User Signs in or<br/>Launches Game"] -->|IPC invoke| B["Tauri Command Boundary"]
     end
 
     subgraph Metadata["Public Metadata Store (accounts.json)"]
-        B -.->|Read/Write Metadata Only| C["accounts.json"]
+        B -.->|Read/Write Metadata| C["accounts.json"]
         C --- C1["id (UUID)"]
         C --- C2["name (PlayerName)"]
         C --- C3["expires_at (Timestamp)"]
         C --- C4["is_offline (bool)"]
         C --- C5["active (bool)"]
-        note1["Tokens (access_token, refresh_token) are strictly omitted via skip_serializing"]
+        note1["Tokens are strictly omitted<br/>via skip_serializing"]
     end
 
     subgraph Vault["Encrypted Credential Vault (credentials.enc)"]
@@ -33,23 +33,23 @@ flowchart TD
         D -->|Read & Decrypt| E["Platform Crypto Engine"]
         
         subgraph Crypto["Platform Encryption Engine"]
-            E1["Windows: DPAPI (Scope::User)"]
-            E2["Linux / macOS: Authenticated AES-256-GCM (RustCrypto)"]
+            E1["Windows:<br/>DPAPI (Scope::User)"]
+            E2["Linux / macOS:<br/>AES-256-GCM (RustCrypto)"]
         end
 
         E --> E1
         E --> E2
-        E -->|Deserializes Plaintext| F["VaultMap: HashMap<UUID, AccountCredentials>"]
+        E -->|Deserializes Plaintext| F["VaultMap:<br/>HashMap<UUID, AccountCredentials>"]
         F --> G["AccountCredentials"]
         G --- G1["access_token (Minecraft JWT)"]
         G --- G2["refresh_token (Microsoft OAuth)"]
     end
 
     subgraph DiskIO["Atomic File Writer (atomic_write)"]
-        H["Save Vault / Metadata"] --> I["Write to Unique Temporary File (.tmp)"]
-        I --> J["Flush Physical Buffers: file.sync_all()"]
-        J --> K["Restrict Permissions: chmod 0600 (Unix)"]
-        K --> L["Atomic Rename to Target with Windows Lock Retry"]
+        H["Save Vault / Metadata"] --> I["Write to Unique<br/>Temporary File (.tmp)"]
+        I --> J["Flush Physical Buffers:<br/>file.sync_all()"]
+        J --> K["Restrict Permissions:<br/>chmod 0600 (Unix)"]
+        K --> L["Atomic Rename to Target<br/>with Windows Lock Retry"]
     end
 
     style UI fill:#1d1b24,stroke:#8b5cf6,stroke-width:2px,color:#f4f3f6

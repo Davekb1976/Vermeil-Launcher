@@ -225,6 +225,18 @@ The launcher targets Windows (WebView2, Win32/DWM) and Linux (WebKitGTK, X11/Way
      - Pre-release / Experimental build: When the user requests an experimental build or pre-release (e.g. "experimental build N"), the commit message **MUST explicitly include it**: `release: X.Y.Z (experimental build N)` (e.g., `release: 1.1.0 (experimental build 1)`).
 6. **Definition of Done:** Code works, tests pass, zero warnings, parallel surfaces updated, living research docs (`docs/research/<feature>/progress.md`) updated, committed and pushed.
 
+### Living Architecture Documentation & Visual Flowcharts:
+- **When to document (`docs/research/<feature>/`)**: Any architectural feature, security/storage overhaul, or non-trivial refactor/optimization must have dedicated documentation:
+  - `research.md`: Technical specification, data flows, and a visual Mermaid node tree flowchart.
+  - `progress.md`: Living progress board and test suite coverage.
+  - Indexed in `docs/research/README.md`.
+- **Node Tree Formatting Rules (Prevent Text Clipping)**:
+  - **Explicit `<br/>` Line Breaks**: Always split text across lines with `<br/>` inside node labels (keep each line under ~35 characters). Never put long unbroken sentences in a node, as wide boxes clip in narrow viewports.
+  - **Concise Affordances**: Use node boxes for concise titles and status; elaborate details belong in markdown text below the diagram.
+  - **Quoted Syntax**: Always quote labels: `nodeId["Label Title<br/>(Brief detail)"]`.
+- **Changelog Integration**:
+  - Always link relevant research docs in `CHANGELOG.md` under `### Documentation` for both full releases and experimental builds so users and contributors have instant access to visual architecture blueprints.
+
 ---
 
 ## 11. Available Workspace Skills

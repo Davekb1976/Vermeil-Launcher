@@ -13,28 +13,28 @@ The system is built on **RFC 7636 (PKCE)**, **RFC 8252 (OAuth 2.0 for Native App
 ```mermaid
 flowchart TD
     subgraph Client["Vermeil Launcher (Local Client)"]
-        A["User clicks 'Sign in with Google'"] --> B["Generate PKCE (verifier + challenge)"]
-        B --> C["Bind Ephemeral TCP Listener (127.0.0.1:port)"]
-        C --> D["Open Default System Browser"]
+        A["User clicks<br/>'Sign in with Google'"] --> B["Generate PKCE<br/>(verifier + challenge)"]
+        B --> C["Bind Ephemeral TCP Listener<br/>(127.0.0.1:port)"]
+        C --> D["Open Default<br/>System Browser"]
     end
 
     subgraph Browser["Default System Browser (Chrome / Edge / Firefox)"]
-        D --> E["Google Accounts OAuth Consent"]
-        E -->|User clicks Allow| F["Redirect to 127.0.0.1:port/?code=..."]
+        D --> E["Google Accounts<br/>OAuth Consent"]
+        E -->|User clicks Allow| F["Redirect to<br/>127.0.0.1:port/?code=..."]
     end
 
     subgraph Teardown["Browser URL Cleansing & Teardown"]
-        F --> G["window.history.replaceState (Wipes ?code=...)"]
-        G --> H["window.close() (Auto-closes tab in 2s)"]
+        F --> G["window.history.replaceState<br/>(Wipes ?code=...)"]
+        G --> H["window.close()<br/>(Auto-closes tab in 2s)"]
     end
 
     subgraph Exchange["Token Exchange & Storage"]
-        F -->|Raw Code| I["Local Loopback TCP Stream receives code"]
+        F -->|Raw Code| I["Local Loopback TCP Stream<br/>receives auth code"]
         I --> J["POST https://oauth2.googleapis.com/token"]
         J --> K["Validate code_verifier (PKCE)"]
-        K --> L["Receive access_token + refresh_token"]
-        L --> M["Encrypt with Windows DPAPI (Scope::User)"]
-        M --> N["Save google_cloud.enc in %LOCALAPPDATA%/Vermeil"]
+        K --> L["Receive access_token +<br/>refresh_token"]
+        L --> M["Encrypt with Windows DPAPI /<br/>Linux AES-256-GCM"]
+        M --> N["Save google_cloud.enc via<br/>atomic_write (%LOCALAPPDATA%)"]
     end
 
     style Client fill:#1d1b24,stroke:#8b5cf6,stroke-width:2px,color:#f4f3f6

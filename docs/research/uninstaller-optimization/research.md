@@ -25,18 +25,18 @@ Minecraft launchers accumulate a unique filesystem footprint:
 ```mermaid
 flowchart TD
     subgraph OldFlow["Previous Uninstaller Flow (Slow & Redundant)"]
-        O1["Page 1: Check 'Delete app data'"] --> O2["Click 'Uninstall'"]
-        O2 --> O3["Modal Popup: 'Are you sure? (~1.2 GB)'"]
-        O3 -->|User clicks Yes| O4["Interpreted RMDir /r over 30,000+ files"]
-        O4 -->|UI redraws on every file| O5["Uninstall freezes for 30-60s"]
+        O1["Page 1: Check<br/>'Delete app data'"] --> O2["Click 'Uninstall'"]
+        O2 --> O3["Modal Popup:<br/>'Are you sure? (~1.2 GB)'"]
+        O3 -->|User clicks Yes| O4["Interpreted RMDir /r<br/>over 30,000+ files"]
+        O4 -->|UI redraws on every file| O5["Uninstall freezes<br/>for 30-60s"]
     end
 
     subgraph NewFlow["Optimized Modern Flow (<2s & Clean UX)"]
-        N1["Page 1: Inspect Registry 'EstimatedSize'"] --> N2["Dynamic Checkbox Label: 'Delete the application data (~1.2 GB)'"]
-        N2 --> N3["User checks box & clicks 'Uninstall'"]
-        N3 --> N4["Atomic Rename: Vermeil -> Vermeil_trash (<1ms)"]
-        N4 --> N5["Native Tree Unlink: cmd.exe /c rd /s /q (SetDetailsPrint none)"]
-        N5 --> N6["Instant Completion (<2 seconds)"]
+        N1["Page 1: Inspect Registry<br/>'EstimatedSize'"] --> N2["Dynamic Checkbox Label:<br/>'Delete app data (~1.2 GB)'"]
+        N2 --> N3["User checks box &<br/>clicks 'Uninstall'"]
+        N3 --> N4["Atomic Rename:<br/>Vermeil -> Vermeil_trash (<1ms)"]
+        N4 --> N5["Native Tree Unlink:<br/>cmd.exe /c rd /s /q"]
+        N5 --> N6["Instant Completion<br/>(<2 seconds)"]
     end
 
     style OldFlow fill:#1d1b24,stroke:#f87171,stroke-width:1px,color:#f4f3f6
