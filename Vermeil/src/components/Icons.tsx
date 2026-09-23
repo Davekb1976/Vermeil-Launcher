@@ -35,11 +35,19 @@ export const IconCloud: Component = () => (
 export const IconGoogleCloud: Component<{ class?: string }> = (props) => (
   <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={props.class}>
     <defs>
-      <linearGradient id="google-cloud-rainbow" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#4285F4" />
-        <stop offset="35%" stop-color="#EA4335" />
-        <stop offset="70%" stop-color="#FBBC05" />
-        <stop offset="100%" stop-color="#34A853" />
+      <linearGradient id="cloud-theme-sway" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#00f0ff">
+          <animate attributeName="stop-color" values="#00f0ff;#8b5cf6;#d946ef;#0284c7;#00f0ff" dur="4.5s" repeatCount="indefinite" />
+        </stop>
+        <stop offset="30%" stop-color="#0284c7">
+          <animate attributeName="stop-color" values="#0284c7;#00f0ff;#8b5cf6;#d946ef;#0284c7" dur="4.5s" repeatCount="indefinite" />
+        </stop>
+        <stop offset="65%" stop-color="#8b5cf6">
+          <animate attributeName="stop-color" values="#8b5cf6;#d946ef;#0284c7;#00f0ff;#8b5cf6" dur="4.5s" repeatCount="indefinite" />
+        </stop>
+        <stop offset="100%" stop-color="#d946ef">
+          <animate attributeName="stop-color" values="#d946ef;#0284c7;#00f0ff;#8b5cf6;#d946ef" dur="4.5s" repeatCount="indefinite" />
+        </stop>
         <animateTransform
           attributeName="gradientTransform"
           type="rotate"
@@ -50,9 +58,11 @@ export const IconGoogleCloud: Component<{ class?: string }> = (props) => (
         />
       </linearGradient>
     </defs>
-    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="url(#google-cloud-rainbow)" />
+    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" stroke="url(#cloud-theme-sway)" />
   </svg>
 );
+
+export const IconCloudSync: Component<{ class?: string }> = IconGoogleCloud;
 
 export const IconSettings: Component = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
