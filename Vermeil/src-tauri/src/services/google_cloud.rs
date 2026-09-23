@@ -434,11 +434,7 @@ pub fn is_cloud_connected() -> bool {
 pub fn save_refresh_token(refresh_token: &str) -> Result<(), String> {
     let encrypted = credentials::encrypt_credential(refresh_token)?;
     let path = token_file_path();
-    if let Some(parent) = path.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
-    std::fs::write(&path, encrypted).map_err(|e| format!("Failed to write encrypted Google token: {}", e))?;
-    Ok(())
+    credentials::atomic_write(&path, encrypted.as_bytes())
 }
 
 pub fn read_refresh_token() -> Result<String, String> {
@@ -446,6 +442,7 @@ pub fn read_refresh_token() -> Result<String, String> {
     if !path.exists() {
         return Err("Not connected to Google Cloud".to_string());
     }
+    credentials::restrict_file_permissions(&path);
     let encrypted = std::fs::read_to_string(&path)
         .map_err(|e| format!("Failed to read Google token file: {}", e))?;
     credentials::decrypt_credential(&encrypted)
