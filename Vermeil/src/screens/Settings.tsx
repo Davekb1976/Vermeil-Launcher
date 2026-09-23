@@ -1034,19 +1034,19 @@ const Settings: Component = () => {
                         >
                           <button
                             type="button"
-                            class="btn btn--neutral btn--sm tip-left"
+                            class="btn btn--neutral btn--sm tip-right"
                             onClick={handleSignOutGoogle}
                             disabled={cloudBusy()}
-                            data-tip="Sign out on this device while keeping Google account authorization"
+                            data-tip="Sign out on this device (keeps Google authorization)"
                           >
                             <span>{cloudBusy() ? "Working..." : "Sign Out"}</span>
                           </button>
                           <button
                             type="button"
-                            class="btn btn--danger btn--sm tip-left"
+                            class="btn btn--danger btn--sm tip-right"
                             onClick={handleDisconnectGoogle}
                             disabled={cloudBusy()}
-                            data-tip="Revoke authorization with Google and disallow the app"
+                            data-tip="Revoke Google authorization and unlink app"
                           >
                             <span>{cloudBusy() ? "Working..." : "Disconnect"}</span>
                           </button>
