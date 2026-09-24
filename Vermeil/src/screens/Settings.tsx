@@ -813,9 +813,6 @@ const Settings: Component = () => {
                 <div class="page-title">Resources</div>
                 <div class="page-subtitle">Storage paths, download concurrency, and Java environment</div>
               </div>
-              <button class="btn btn--sm" onClick={handlePurgeCache} disabled={purging()}>
-                {purging() ? "Purging..." : "Purge cache"}
-              </button>
             </div>
 
             <div class="cards-container">
