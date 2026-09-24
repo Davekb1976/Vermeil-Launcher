@@ -27,7 +27,7 @@ import CrashReportModal, { showCrashReport } from "./components/CrashReportModal
 import OnboardingWizard, { openOnboarding } from "./modals/OnboardingWizard";
 import PinInstancesModal from "./modals/PinInstancesModal";
 import { pinInstancesModalOpen, closePinInstancesModal } from "./modals/PinInstancesModal";
-import { listInstances, getActiveAccount, getSettings, getSkinProfile, showWindow, loadDownloadHistory, saveDownloadHistory } from "./ipc/commands";
+import { listInstances, getActiveAccount, getSettings, getSkinProfile, showWindow, loadDownloadHistory, saveDownloadHistory, isGoogleCloudConnected } from "./ipc/commands";
 import { listen } from "@tauri-apps/api/event";
 import { checkForUpdates } from "./services/updater";
 import { matchesKeybind, resolveBinding } from "./lib/keybinds";
@@ -659,7 +659,10 @@ createEffect(() => {
   refreshActiveSkin().catch(() => {});
 });
 
-export { activeScreen, setActiveScreen, activeInstanceId, setActiveInstanceId, initialInstanceTab, setInitialInstanceTab, gameLaunched, setGameLaunched, gameRunning, setGameRunning, logsPoppedOut, setLogsPoppedOut, downloads, activeDownloadCount, isBulkInstall, bulkBatchSize, bulkDone, bulkProgress, instances, refetchInstances, account, refetchAccount, activeSkinUrl, offline, showToast, updateToast };
+// Google Cloud connection state for settings backup and sync.
+const [cloudConnected, { refetch: refetchCloudStatus }] = createResource(isGoogleCloudConnected);
+
+export { activeScreen, setActiveScreen, activeInstanceId, setActiveInstanceId, initialInstanceTab, setInitialInstanceTab, gameLaunched, setGameLaunched, gameRunning, setGameRunning, logsPoppedOut, setLogsPoppedOut, downloads, activeDownloadCount, isBulkInstall, bulkBatchSize, bulkDone, bulkProgress, instances, refetchInstances, account, refetchAccount, activeSkinUrl, offline, showToast, updateToast, cloudConnected, refetchCloudStatus };
 
 const screenTitles: Record<Screen, string> = {
   home: "Home",

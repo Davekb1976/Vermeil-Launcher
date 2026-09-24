@@ -4,6 +4,7 @@ import {
   refetchAccount,
   account,
   showToast,
+  refetchCloudStatus,
 } from "../App";
 import {
   startMsLogin,
@@ -204,6 +205,7 @@ const OnboardingWizard: Component = () => {
     });
     try {
       const summary = await connectGoogleCloud();
+      await refetchCloudStatus();
       await refetchAccount();
       showToast({
         title: summary.restored ? "Settings Restored from Cloud" : "Google Cloud Connected",

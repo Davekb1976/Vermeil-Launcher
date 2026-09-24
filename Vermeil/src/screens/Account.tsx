@@ -1,5 +1,5 @@
 import { Component, createSignal, createResource, createEffect, onCleanup, Show, For } from "solid-js";
-import { account, activeSkinUrl, refetchAccount, showToast } from "../App";
+import { account, activeSkinUrl, refetchAccount, showToast, cloudConnected, refetchCloudStatus } from "../App";
 import {
   startMsLogin,
   addOfflineAccount,
@@ -11,7 +11,6 @@ import {
   cancelGoogleCloud,
   disconnectGoogleCloud,
   signOutGoogleCloud,
-  isGoogleCloudConnected,
   getLastCloudBackupTime,
 } from "../ipc/commands";
 import PlayerHead from "../components/PlayerHead";
@@ -41,7 +40,6 @@ const Account: Component = () => {
   const [error, setError] = createSignal<string | null>(null);
   const [offlineUsername, setOfflineUsername] = createSignal("");
   const [accounts, { refetch: refetchAccounts }] = createResource(getAllAccounts);
-  const [cloudConnected, { refetch: refetchCloudStatus }] = createResource(isGoogleCloudConnected);
   const [lastBackup, { refetch: refetchBackupTime }] = createResource(getLastCloudBackupTime);
   const [cloudBusy, setCloudBusy] = createSignal(false);
 
@@ -327,7 +325,7 @@ const Account: Component = () => {
                           <div class={`account-badge-active ${acc.is_offline ? "account-badge--offline" : ""}`}>
                             <Show
                               when={!acc.is_offline}
-                              fallback={<span class="account-badge-dot account-badge-dot--offline" />}
+                              fallback={<IconUser class="account-badge-user-icon" />}
                             >
                               <IconMicrosoft class="account-badge-ms-icon" />
                             </Show>

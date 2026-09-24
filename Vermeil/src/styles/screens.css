@@ -1244,6 +1244,155 @@
   }
 }
 
+/* --- Home Telemetry Status Badges (compact icon keycaps) --- */
+.home-telemetry-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.home-status-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
+  box-sizing: border-box;
+  user-select: none;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s, transform 0.1s;
+}
+
+.home-status-badge:hover {
+  transform: translateY(-1px);
+}
+
+.home-status-badge:active {
+  transform: translateY(1px);
+}
+
+/* Microsoft Account badge */
+.home-status-badge--ms {
+  background: rgba(139, 92, 246, 0.18);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.home-status-badge--ms:hover {
+  background: rgba(139, 92, 246, 0.28);
+  border-color: rgba(139, 92, 246, 0.65);
+}
+
+.home-status-ms-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  display: inline-block;
+  animation: msBadgeGlow 2.4s ease-in-out infinite;
+}
+
+/* Offline Account badge */
+.home-status-badge--offline {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--muted);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.home-status-badge--offline:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--text);
+}
+
+/* No account signed in */
+.home-status-badge--none {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+.home-status-badge--none:hover {
+  opacity: 1;
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--text);
+}
+
+/* Expired Session badge */
+.home-status-badge--reauth {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.home-status-badge--reauth:hover {
+  background: rgba(245, 158, 11, 0.28);
+  border-color: rgba(245, 158, 11, 0.7);
+}
+
+/* Cloud sync badge */
+.home-status-badge--cloud {
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.home-status-badge--cloud.connected {
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+}
+
+.home-status-badge--cloud.connected:hover {
+  background: rgba(56, 189, 248, 0.24);
+  border-color: rgba(56, 189, 248, 0.65);
+}
+
+.home-status-badge--cloud.disconnected {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--muted);
+  opacity: 0.38;
+}
+
+.home-status-badge--cloud.disconnected:hover {
+  opacity: 0.85;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.home-status-cloud-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.home-status-cloud-icon-dimmed {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  stroke: currentColor;
+}
+
+.home-status-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  stroke: currentColor;
+}
+
+.account-badge-user-icon {
+  width: 10px;
+  height: 10px;
+  stroke: currentColor;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
 .home-telemetry-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

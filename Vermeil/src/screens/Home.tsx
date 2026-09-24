@@ -1,9 +1,9 @@
 import { Component, createSignal, createEffect, createResource, createMemo, For, Show, onCleanup } from "solid-js";
-import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, setGameLaunched, instances, ensureAccountOrPrompt, account, activeSkinUrl, setDockPagination, clearGameLogs, showToast } from "../App";
+import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, setGameLaunched, instances, ensureAccountOrPrompt, account, activeSkinUrl, setDockPagination, clearGameLogs, showToast, cloudConnected } from "../App";
 import { launchInstance, listInstanceWorlds, getJavaNews, getArticleBody, NewsArticle, getSettings } from "../ipc/commands";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
-import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX, IconMicrosoft, IconAlertTriangle, IconClock } from "../components/Icons";
+import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX, IconMicrosoft, IconAlertTriangle, IconClock, IconUser, IconCloud, IconGoogleCloud } from "../components/Icons";
 import CharacterStage from "../components/CharacterStage";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { resolveAssetUrl } from "../lib/assets";
@@ -352,48 +352,70 @@ const Home: Component = () => {
                 <span class="home-telemetry-salutation">{timeOfDayGreeting()},</span>
                 <span class="home-telemetry-name">{displayName()}</span>
               </div>
-              <Show
-                when={account()}
-                fallback={
-                  <div
-                    class="account-badge-active account-badge--none tip-below tip-right"
-                    data-tip="No active account — click to sign in or add a profile"
-                  >
-                    <span class="account-badge-dot account-badge-dot--offline" />
-                    <span>Not Signed In</span>
-                  </div>
-                }
-              >
-                {(acc) => (
-                  <Show
-                    when={acc().needs_reauth}
-                    fallback={
-                      <div
-                        class={`account-badge-active tip-below tip-right ${acc().is_offline ? "account-badge--offline" : ""}`}
-                        data-tip={acc().is_offline ? "Offline Minecraft profile" : "Signed in with Microsoft"}
-                      >
+              <div class="home-telemetry-badges">
+                {/* Account / Identity status icon badge (Icon only, no text) */}
+                <Show
+                  when={account()}
+                  fallback={
+                    <div
+                      class="home-status-badge home-status-badge--none tip-below tip-right"
+                      data-tip="No active account — click to sign in"
+                    >
+                      <IconUser class="home-status-icon" />
+                    </div>
+                  }
+                >
+                  {(acc) => (
+                    <Show
+                      when={acc().needs_reauth}
+                      fallback={
                         <Show
                           when={!acc().is_offline}
-                          fallback={<span class="account-badge-dot account-badge-dot--offline" />}
+                          fallback={
+                            <div
+                              class="home-status-badge home-status-badge--offline tip-below tip-right"
+                              data-tip="Offline profile"
+                            >
+                              <IconUser class="home-status-icon" />
+                            </div>
+                          }
                         >
-                          <IconMicrosoft class="account-badge-ms-icon" />
+                          <div
+                            class="home-status-badge home-status-badge--ms tip-below tip-right"
+                            data-tip="Signed in with Microsoft"
+                          >
+                            <IconMicrosoft class="home-status-ms-icon" />
+                          </div>
                         </Show>
-                        <span>{acc().is_offline ? "Offline" : "Microsoft"}</span>
-                      </div>
-                    }
-                  >
-                    <div
-                      class="account-badge-reauth tip-below tip-right"
-                      data-tip="Session expired — open Accounts to sign in again"
-                      onClick={() => setActiveScreen("account")}
-                      style={{ cursor: "pointer" }}
+                      }
                     >
-                      <IconAlertTriangle />
-                      <span>Session Expired</span>
-                    </div>
+                      <div
+                        class="home-status-badge home-status-badge--reauth tip-below tip-right"
+                        data-tip="Session expired — open Accounts to sign in again"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveScreen("account");
+                        }}
+                      >
+                        <IconAlertTriangle class="home-status-icon" />
+                      </div>
+                    </Show>
+                  )}
+                </Show>
+
+                {/* Cloud sync status icon badge (grayed out when disconnected) */}
+                <div
+                  class={`home-status-badge home-status-badge--cloud ${cloudConnected() ? "connected" : "disconnected"} tip-below tip-right`}
+                  data-tip={cloudConnected() ? "Cloud sync: Connected" : "Cloud sync: Disconnected"}
+                >
+                  <Show
+                    when={cloudConnected()}
+                    fallback={<IconCloud class="home-status-cloud-icon-dimmed" />}
+                  >
+                    <IconGoogleCloud class="home-status-cloud-icon" />
                   </Show>
-                )}
-              </Show>
+                </div>
+              </div>
             </div>
 
             <div class="home-telemetry-stats">
