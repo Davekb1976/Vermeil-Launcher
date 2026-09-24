@@ -58,34 +58,23 @@ pub async fn get_instance(id: String) -> Result<Instance, String> {
 pub async fn delete_instance(id: String) -> Result<(), String> {
     let instance_dir = crate::util::paths::instances_dir().join(&id);
     let meta_path = instance_dir.join("instance.json");
-    let mut instance_play_seconds: u64 = 0;
     let mut instance_last_played: Option<String> = None;
 
     if meta_path.exists() {
         if let Ok(content) = std::fs::read_to_string(&meta_path) {
             if let Ok(inst) = serde_json::from_str::<crate::models::instance::Instance>(&content) {
-                instance_play_seconds = inst.total_play_seconds;
                 instance_last_played = inst.last_played;
             }
         }
     }
 
-    if instance_dir.exists() {
-        std::fs::remove_dir_all(&instance_dir).map_err(|e| format!("Failed to delete: {}", e))?;
-    }
-
     // Strip the deleted instance from the sidebar pin list so the badge
-    // doesn't keep counting a ghost pin. Also ensure lifetime_play_seconds
-    // preserves the deleted instance's play time, and last_active_at retains the latest timestamp.
+    // doesn't keep counting a ghost pin. Also ensure settings_service::load
+    // synchronizes lifetime_play_seconds and last_active_at before folder removal.
     if let Ok(mut settings) = crate::services::settings_service::load().await {
         let before = settings.sidebar_pinned_instances.len();
         settings.sidebar_pinned_instances.retain(|pinned| pinned != &id);
         let mut changed = settings.sidebar_pinned_instances.len() != before;
-
-        if instance_play_seconds > 0 && settings.lifetime_play_seconds < instance_play_seconds {
-            settings.lifetime_play_seconds = settings.lifetime_play_seconds.max(instance_play_seconds);
-            changed = true;
-        }
 
         if let Some(ref lp) = instance_last_played {
             if settings.last_active_at.as_ref().map_or(true, |cur| lp > cur) {
@@ -97,6 +86,10 @@ pub async fn delete_instance(id: String) -> Result<(), String> {
         if changed {
             let _ = crate::services::settings_service::save(&settings).await;
         }
+    }
+
+    if instance_dir.exists() {
+        std::fs::remove_dir_all(&instance_dir).map_err(|e| format!("Failed to delete: {}", e))?;
     }
 
     crate::util::platform::update_windows_estimated_size();
