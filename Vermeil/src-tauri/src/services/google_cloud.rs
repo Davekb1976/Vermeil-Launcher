@@ -990,16 +990,20 @@ mod tests {
         let mut keybinds_a = HashMap::new();
         keybinds_a.insert("open_search".to_string(), "Ctrl+K".to_string());
         machine_a.keybinds = keybinds_a;
+        machine_a.lifetime_play_seconds = 7200;
+        machine_a.last_active_at = Some("2026-09-23T20:00:00Z".to_string());
 
         // Sanitize for cloud
         let cloud = sanitize_settings_for_cloud(&machine_a);
 
-        // Verify synced: General, Display, Sound, and Keybinds
+        // Verify synced: General, Display, Sound, Keybinds, and Lifetime Playtime
         assert_eq!(cloud.discord_rpc, false);
         assert_eq!(cloud.auto_hide_dock, false);
         assert_eq!(cloud.video_settings.max_fps, Some(144));
         assert_eq!(cloud.video_settings.master_volume, Some(0.8));
         assert_eq!(cloud.keybinds.get("open_search").map(|s| s.as_str()), Some("Ctrl+K"));
+        assert_eq!(cloud.lifetime_play_seconds, 7200);
+        assert_eq!(cloud.last_active_at, Some("2026-09-23T20:00:00Z".to_string()));
 
         // Verify local-only settings were stripped (Memory & Window are machine-specific)
         assert_eq!(cloud.default_memory_mb, 4096); // default, not Machine A's 8192
@@ -1024,6 +1028,8 @@ mod tests {
         machine_b.gc_preset = "zgc".to_string();
         machine_b.concurrent_downloads = 3;
         machine_b.video_settings.mouse_sensitivity = Some(0.4);
+        machine_b.lifetime_play_seconds = 3600;
+        machine_b.last_active_at = Some("2026-09-22T20:00:00Z".to_string());
 
         // Restore cloud backup onto Machine B
         let restored_on_b = merge_restored_settings(&cloud, &machine_b, "2026-09-22T21:00:00Z");
@@ -1044,5 +1050,9 @@ mod tests {
         assert_eq!(restored_on_b.gc_preset, "zgc");
         assert_eq!(restored_on_b.concurrent_downloads, 3);
         assert_eq!(restored_on_b.video_settings.mouse_sensitivity, Some(0.4));
+
+        // Machine A had 7200s, Machine B had 3600s: restored gets 7200s
+        assert_eq!(restored_on_b.lifetime_play_seconds, 7200);
+        assert_eq!(restored_on_b.last_active_at, Some("2026-09-23T20:00:00Z".to_string()));
     }
 }
