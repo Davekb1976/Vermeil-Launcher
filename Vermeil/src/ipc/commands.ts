@@ -254,6 +254,7 @@ export const createInstance = (config: CreateInstanceConfig) => invoke<Instance>
 export const prepareInstance = (id: string) => invoke<void>("prepare_instance", { id });
 export const getInstance = (id: string) => invoke<Instance>("get_instance", { id });
 export const deleteInstance = (id: string) => invoke<void>("delete_instance", { id });
+export const deleteInstances = (ids: string[]) => invoke<void>("delete_instances", { ids });
 export const updateInstanceMemory = (id: string, memoryMaxMb: number) => invoke<void>("update_instance_memory", { id, memoryMaxMb });
 export const updateInstanceOptions = (id: string, opts: { memoryMaxMb?: number; width?: number; height?: number; extraArgs?: string[]; adaptiveOverride?: boolean }) =>
   invoke<void>("update_instance_options", { id, ...opts });

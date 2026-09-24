@@ -347,6 +347,21 @@ export const IconCheck: Component = () => (
   </svg>
 );
 
+// Star — Feather Icons (MIT).
+export const IconStar: Component<{ class?: string }> = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class={props?.class}>
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+  </svg>
+);
+
+// Pin — Feather Icons (MIT).
+export const IconPin: Component<{ class?: string }> = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class={props?.class}>
+    <line x1="12" y1="17" x2="12" y2="22"/>
+    <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.89A2 2 0 0 1 15 10.76V6h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.89A2 2 0 0 0 5 15.24Z"/>
+  </svg>
+);
+
 // Alert-triangle — Feather Icons (MIT). https://github.com/feathericons/feather
 // Replaces the `⚠` status glyph in `.toast-icon` (warning/error toasts).
 export const IconAlertTriangle: Component<{ class?: string }> = (props) => (

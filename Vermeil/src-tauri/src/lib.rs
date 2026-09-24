@@ -226,6 +226,7 @@ pub fn run() {
             instances::create_instance,
             instances::get_instance,
             instances::delete_instance,
+            instances::delete_instances,
             instances::update_instance_memory,
             instances::update_instance_options,
             instances::rename_instance,

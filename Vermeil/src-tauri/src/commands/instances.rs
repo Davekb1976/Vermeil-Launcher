@@ -56,27 +56,42 @@ pub async fn get_instance(id: String) -> Result<Instance, String> {
 
 #[tauri::command]
 pub async fn delete_instance(id: String) -> Result<(), String> {
-    let instance_dir = crate::util::paths::instances_dir().join(&id);
-    let meta_path = instance_dir.join("instance.json");
-    let mut instance_last_played: Option<String> = None;
+    delete_instances(vec![id]).await
+}
 
-    if meta_path.exists() {
-        if let Ok(content) = std::fs::read_to_string(&meta_path) {
-            if let Ok(inst) = serde_json::from_str::<crate::models::instance::Instance>(&content) {
-                instance_last_played = inst.last_played;
+#[tauri::command]
+pub async fn delete_instances(ids: Vec<String>) -> Result<(), String> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+
+    let instances_dir = crate::util::paths::instances_dir();
+    let ids_set: std::collections::HashSet<String> = ids.iter().cloned().collect();
+    let mut max_last_played: Option<String> = None;
+
+    // Scan metadata for last_played across all targets before deletion
+    for id in &ids {
+        let meta_path = instances_dir.join(id).join("instance.json");
+        if meta_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&meta_path) {
+                if let Ok(inst) = serde_json::from_str::<crate::models::instance::Instance>(&content) {
+                    if let Some(lp) = inst.last_played {
+                        if max_last_played.as_ref().map_or(true, |cur| &lp > cur) {
+                            max_last_played = Some(lp);
+                        }
+                    }
+                }
             }
         }
     }
 
-    // Strip the deleted instance from the sidebar pin list so the badge
-    // doesn't keep counting a ghost pin. Also ensure settings_service::load
-    // synchronizes lifetime_play_seconds and last_active_at before folder removal.
+    // Strip deleted instances from settings once
     if let Ok(mut settings) = crate::services::settings_service::load().await {
-        let before = settings.sidebar_pinned_instances.len();
-        settings.sidebar_pinned_instances.retain(|pinned| pinned != &id);
-        let mut changed = settings.sidebar_pinned_instances.len() != before;
+        let before_len = settings.sidebar_pinned_instances.len();
+        settings.sidebar_pinned_instances.retain(|pinned| !ids_set.contains(pinned));
+        let mut changed = settings.sidebar_pinned_instances.len() != before_len;
 
-        if let Some(ref lp) = instance_last_played {
+        if let Some(ref lp) = max_last_played {
             if settings.last_active_at.as_ref().map_or(true, |cur| lp > cur) {
                 settings.last_active_at = Some(lp.clone());
                 changed = true;
@@ -88,8 +103,19 @@ pub async fn delete_instance(id: String) -> Result<(), String> {
         }
     }
 
-    if instance_dir.exists() {
-        std::fs::remove_dir_all(&instance_dir).map_err(|e| format!("Failed to delete: {}", e))?;
+    // Delete folders concurrently in parallel blocking tasks
+    let mut handles = Vec::new();
+    for id in ids {
+        let dir = instances_dir.join(id);
+        handles.push(tokio::task::spawn_blocking(move || {
+            if dir.exists() {
+                let _ = std::fs::remove_dir_all(&dir);
+            }
+        }));
+    }
+
+    for handle in handles {
+        let _ = handle.await;
     }
 
     crate::util::platform::update_windows_estimated_size();
@@ -452,4 +478,15 @@ pub async fn get_ingame_cape() -> Result<Option<IngameCapeSettings>, String> {
 #[tauri::command]
 pub async fn companion_supported_versions(loader: String) -> Result<Vec<String>, String> {
     Ok(instance_cape::supported_versions_for_loader(&loader))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_delete_instances_empty_list() {
+        let result = delete_instances(vec![]).await;
+        assert!(result.is_ok());
+    }
 }
