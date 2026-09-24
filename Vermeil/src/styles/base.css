@@ -88,8 +88,8 @@
   --fw-medium: 500;
   --fw-semibold: 600;
   --fw-bold: 700;
-  --font: 'DM Sans', system-ui, sans-serif;
-  --font-mono: 'DM Mono', monospace;
+  --font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Consolas', monospace;
 
   /* --- Spacing: discrete 4px base scale --- */
   --space-0: 0;
@@ -213,8 +213,8 @@
      (clean CSS bevels; no pixel-art assets)
      ===================================================================== */
 
-  /* Display font — heavy condensed caps for HUD headers (Oswald, OFL). */
-  --font-display: 'Oswald', 'DM Sans', system-ui, sans-serif;
+  /* Display font — harmonized with primary system font */
+  --font-display: var(--font);
 
   /* Bevel system — disabled for the redesign. Surfaces are flat with hairline
      borders; depth comes from contrast (panel vs base) and shadow, not bevels.

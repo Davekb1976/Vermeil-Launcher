@@ -202,11 +202,11 @@
 /* Section label — clean caps with a thin accent rule beneath. No tick,
    no glow, no ornament. Purpose: announce a section, nothing more. */
 .section-label {
-  font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 600;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 700;
   color: var(--text-muted);
-  letter-spacing: .14em;
+  letter-spacing: .06em;
   text-transform: uppercase;
   margin-bottom: var(--space-3);
   padding-bottom: var(--space-2);
@@ -270,13 +270,13 @@
 
 /* Page title — big display heading, sharp, no shadow ornament. */
 .page-title {
-  font-family: var(--font-display);
-  font-size: 28px;
+  font-family: var(--font);
+  font-size: 22px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: .03em;
+  letter-spacing: .02em;
   text-transform: uppercase;
-  line-height: 1;
+  line-height: 1.1;
 }
 
 
