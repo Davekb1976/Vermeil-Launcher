@@ -23,6 +23,8 @@ pub struct WorldEntry {
     /// `data:image/png;base64,...` URL, or `None` when the world has no icon
     /// yet. Re-read on every listing so a changed icon shows up automatically.
     pub icon: Option<String>,
+    /// Total play time in seconds for this world.
+    pub play_time_seconds: u64,
 }
 
 #[tauri::command]
@@ -86,9 +88,13 @@ pub async fn list_instance_worlds(instance_id: String) -> Result<Vec<WorldEntry>
         let folder_name = entry.file_name().to_string_lossy().to_string();
         let world_dir = entry.path();
 
-        // Display name from level.dat's LevelName (reflects in-game renames);
-        // falls back to the folder name when level.dat is missing/unreadable.
-        let name = read_world_name(&world_dir, &folder_name);
+        let level_info = parse_level_dat(&world_dir);
+        let name = level_info.name.unwrap_or_else(|| folder_name.clone());
+        let game_mode = level_info.game_mode;
+
+        // Player playtime from stats/*.json or level.dat Time ticks
+        let play_time_seconds = read_player_play_time(&world_dir)
+            .unwrap_or(level_info.play_time_seconds);
 
         // World thumbnail (saves/<world>/icon.png), inlined as a data URL.
         let icon = read_world_icon(&world_dir);
@@ -97,24 +103,27 @@ pub async fn list_instance_worlds(instance_id: String) -> Result<Vec<WorldEntry>
         let size = dir_size(&world_dir);
         let size_mb = size as f64 / (1024.0 * 1024.0);
 
-        // Get last modified time
-        let last_played = fs::metadata(&world_dir)
-            .and_then(|m| m.modified())
-            .map(|t| {
-                let duration = t.duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
-                chrono::DateTime::from_timestamp(duration.as_secs() as i64, 0)
-                    .map(|dt| dt.to_rfc3339())
-                    .unwrap_or_default()
-            })
-            .unwrap_or_default();
+        // Last played from level.dat or folder mtime
+        let last_played = level_info.last_played.unwrap_or_else(|| {
+            fs::metadata(&world_dir)
+                .and_then(|m| m.modified())
+                .map(|t| {
+                    let duration = t.duration_since(std::time::UNIX_EPOCH).unwrap_or_default();
+                    chrono::DateTime::from_timestamp(duration.as_secs() as i64, 0)
+                        .map(|dt| dt.to_rfc3339())
+                        .unwrap_or_default()
+                })
+                .unwrap_or_default()
+        });
 
         worlds.push(WorldEntry {
             name,
             folder_name,
             size_mb: (size_mb * 10.0).round() / 10.0,
             last_played,
-            game_mode: "Survival".to_string(), // Would need NBT parsing for real value
+            game_mode,
             icon,
+            play_time_seconds,
         });
     }
 
@@ -154,39 +163,147 @@ fn read_world_icon(world_dir: &std::path::Path) -> Option<String> {
     Some(format!("data:image/png;base64,{}", b64))
 }
 
-/// Read a world's display name from `level.dat`. Java `level.dat` is a
-/// gzip-compressed NBT compound; the display name lives in the `LevelName`
-/// string tag, which changes when the player renames the world in-game (the
-/// folder name does not). Rather than pull in a full NBT parser, we gunzip and
-/// scan for the unique 12-byte signature of the `LevelName` string tag —
-/// `08` (TAG_String) · `00 09` (name length 9) · "LevelName" — then read the
-/// big-endian-length-prefixed UTF-8 value that follows. Falls back to the
-/// folder name on any failure (missing file, not gzip, tag absent).
-fn read_world_name(world_dir: &std::path::Path, fallback: &str) -> String {
+struct LevelDatInfo {
+    name: Option<String>,
+    play_time_seconds: u64,
+    game_mode: String,
+    last_played: Option<String>,
+}
+
+/// Parse `level.dat` once to extract display name (`LevelName`), world playtime
+/// (`Time` tag ticks / 20), game mode (`GameType` / `hardcore`), and last played timestamp (`LastPlayed`).
+fn parse_level_dat(world_dir: &std::path::Path) -> LevelDatInfo {
     use std::io::Read;
+    let mut info = LevelDatInfo {
+        name: None,
+        play_time_seconds: 0,
+        game_mode: "Survival".to_string(),
+        last_played: None,
+    };
+
     let Ok(raw) = fs::read(world_dir.join("level.dat")) else {
-        return fallback.to_string();
+        return info;
     };
     let mut data = Vec::new();
     if flate2::read::GzDecoder::new(&raw[..]).read_to_end(&mut data).is_err() {
-        return fallback.to_string();
+        return info;
     }
-    const SIG: &[u8] = b"\x08\x00\x09LevelName";
-    let Some(pos) = data.windows(SIG.len()).position(|w| w == SIG) else {
-        return fallback.to_string();
-    };
-    let len_at = pos + SIG.len();
-    if len_at + 2 > data.len() {
-        return fallback.to_string();
+
+    // 1. LevelName: TAG_String (0x08) · length 9 · "LevelName"
+    const NAME_SIG: &[u8] = b"\x08\x00\x09LevelName";
+    if let Some(pos) = data.windows(NAME_SIG.len()).position(|w| w == NAME_SIG) {
+        let len_at = pos + NAME_SIG.len();
+        if len_at + 2 <= data.len() {
+            let len = u16::from_be_bytes([data[len_at], data[len_at + 1]]) as usize;
+            let start = len_at + 2;
+            if start + len <= data.len() {
+                if let Ok(s) = std::str::from_utf8(&data[start..start + len]) {
+                    let trimmed = s.trim();
+                    if !trimmed.is_empty() {
+                        info.name = Some(trimmed.to_string());
+                    }
+                }
+            }
+        }
     }
-    let len = u16::from_be_bytes([data[len_at], data[len_at + 1]]) as usize;
-    let start = len_at + 2;
-    if start + len > data.len() {
-        return fallback.to_string();
+
+    // 2. Time: TAG_Long (0x04) · length 4 · "Time" (world ticks since creation)
+    const TIME_SIG: &[u8] = b"\x04\x00\x04Time";
+    if let Some(pos) = data.windows(TIME_SIG.len()).position(|w| w == TIME_SIG) {
+        let val_at = pos + TIME_SIG.len();
+        if val_at + 8 <= data.len() {
+            if let Ok(bytes) = data[val_at..val_at + 8].try_into() {
+                let ticks = i64::from_be_bytes(bytes);
+                if ticks > 0 {
+                    info.play_time_seconds = (ticks as u64) / 20;
+                }
+            }
+        }
     }
-    match std::str::from_utf8(&data[start..start + len]) {
-        Ok(s) if !s.trim().is_empty() => s.trim().to_string(),
-        _ => fallback.to_string(),
+
+    // 3. GameType: TAG_Int (0x03) · length 8 · "GameType" + hardcore: TAG_Byte (0x01)
+    let mut is_hardcore = false;
+    const HC_SIG: &[u8] = b"\x01\x00\x08hardcore";
+    if let Some(pos) = data.windows(HC_SIG.len()).position(|w| w == HC_SIG) {
+        let val_at = pos + HC_SIG.len();
+        if val_at < data.len() && data[val_at] == 1 {
+            is_hardcore = true;
+        }
+    }
+
+    if is_hardcore {
+        info.game_mode = "Hardcore".to_string();
+    } else {
+        const GT_SIG: &[u8] = b"\x03\x00\x08GameType";
+        if let Some(pos) = data.windows(GT_SIG.len()).position(|w| w == GT_SIG) {
+            let val_at = pos + GT_SIG.len();
+            if val_at + 4 <= data.len() {
+                if let Ok(bytes) = data[val_at..val_at + 4].try_into() {
+                    let gt = i32::from_be_bytes(bytes);
+                    info.game_mode = match gt {
+                        0 => "Survival".to_string(),
+                        1 => "Creative".to_string(),
+                        2 => "Adventure".to_string(),
+                        3 => "Spectator".to_string(),
+                        _ => "Survival".to_string(),
+                    };
+                }
+            }
+        }
+    }
+
+    // 4. LastPlayed: TAG_Long (0x04) · length 10 · "LastPlayed" (epoch millis)
+    const LP_SIG: &[u8] = b"\x04\x00\x0aLastPlayed";
+    if let Some(pos) = data.windows(LP_SIG.len()).position(|w| w == LP_SIG) {
+        let val_at = pos + LP_SIG.len();
+        if val_at + 8 <= data.len() {
+            if let Ok(bytes) = data[val_at..val_at + 8].try_into() {
+                let millis = i64::from_be_bytes(bytes);
+                if millis > 0 {
+                    if let Some(dt) = chrono::DateTime::from_timestamp_millis(millis) {
+                        info.last_played = Some(dt.to_rfc3339());
+                    }
+                }
+            }
+        }
+    }
+
+    info
+}
+
+/// Read player playtime ticks from `saves/<world>/stats/*.json` if available.
+/// Returns playtime in seconds.
+fn read_player_play_time(world_dir: &std::path::Path) -> Option<u64> {
+    let stats_dir = world_dir.join("stats");
+    if !stats_dir.is_dir() {
+        return None;
+    }
+    let mut max_ticks: u64 = 0;
+    if let Ok(entries) = fs::read_dir(stats_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content) {
+                        // Modern 1.13+: stats["minecraft:custom"]["minecraft:play_time"] or "minecraft:total_world_time"
+                        if let Some(ticks) = v.pointer("/stats/minecraft:custom/minecraft:play_time").and_then(|n| n.as_u64()) {
+                            max_ticks = max_ticks.max(ticks);
+                        } else if let Some(ticks) = v.pointer("/stats/minecraft:custom/minecraft:total_world_time").and_then(|n| n.as_u64()) {
+                            max_ticks = max_ticks.max(ticks);
+                        }
+                        // Legacy 1.7-1.12: stat.playOneMinute
+                        if let Some(ticks) = v.get("stat.playOneMinute").and_then(|n| n.as_u64()) {
+                            max_ticks = max_ticks.max(ticks);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if max_ticks > 0 {
+        Some(max_ticks / 20)
+    } else {
+        None
     }
 }
 
@@ -202,4 +319,85 @@ pub async fn open_instance_folder(instance_id: String, sub_path: Option<String>)
         let _ = open::that(&dir);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use flate2::write::GzEncoder;
+    use flate2::Compression;
+    use std::io::Write;
+
+    #[test]
+    fn test_parse_level_dat() {
+        let temp = std::env::temp_dir().join(format!("vermeil_test_world_{}", uuid::Uuid::new_v4()));
+        let _ = fs::create_dir_all(&temp);
+        let mut raw = Vec::new();
+        // TAG_Compound (0x0a) + name length (0x00, 0x04) + "Data"
+        raw.extend_from_slice(b"\x0a\x00\x04Data");
+        // LevelName: "TestWorld"
+        raw.extend_from_slice(b"\x08\x00\x09LevelName\x00\x09TestWorld");
+        // Time: 24000 ticks = 1200 seconds
+        raw.extend_from_slice(b"\x04\x00\x04Time");
+        raw.extend_from_slice(&24000i64.to_be_bytes());
+        // GameType: 1 (Creative)
+        raw.extend_from_slice(b"\x03\x00\x08GameType");
+        raw.extend_from_slice(&1i32.to_be_bytes());
+        // LastPlayed: 1716300000000
+        raw.extend_from_slice(b"\x04\x00\x0aLastPlayed");
+        raw.extend_from_slice(&1716300000000i64.to_be_bytes());
+        // TAG_End
+        raw.push(0);
+
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(&raw).unwrap();
+        let gzipped = encoder.finish().unwrap();
+
+        fs::write(temp.join("level.dat"), gzipped).unwrap();
+
+        let info = parse_level_dat(&temp);
+        assert_eq!(info.name.as_deref(), Some("TestWorld"));
+        assert_eq!(info.play_time_seconds, 1200);
+        assert_eq!(info.game_mode, "Creative");
+        assert!(info.last_played.is_some());
+        let _ = fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn test_parse_level_dat_hardcore() {
+        let temp = std::env::temp_dir().join(format!("vermeil_test_world_{}", uuid::Uuid::new_v4()));
+        let _ = fs::create_dir_all(&temp);
+        let mut raw = Vec::new();
+        raw.extend_from_slice(b"\x0a\x00\x04Data");
+        raw.extend_from_slice(b"\x08\x00\x09LevelName\x00\x08Hardcore");
+        raw.extend_from_slice(b"\x01\x00\x08hardcore\x01");
+        raw.extend_from_slice(b"\x03\x00\x08GameType");
+        raw.extend_from_slice(&0i32.to_be_bytes());
+        raw.push(0);
+
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(&raw).unwrap();
+        let gzipped = encoder.finish().unwrap();
+
+        fs::write(temp.join("level.dat"), gzipped).unwrap();
+
+        let info = parse_level_dat(&temp);
+        assert_eq!(info.name.as_deref(), Some("Hardcore"));
+        assert_eq!(info.game_mode, "Hardcore");
+        let _ = fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn test_read_player_play_time() {
+        let temp = std::env::temp_dir().join(format!("vermeil_test_world_{}", uuid::Uuid::new_v4()));
+        let stats_dir = temp.join("stats");
+        fs::create_dir_all(&stats_dir).unwrap();
+        // 72000 ticks = 3600 seconds
+        let json = r#"{"stats":{"minecraft:custom":{"minecraft:play_time":72000}}}"#;
+        fs::write(stats_dir.join("player-uuid.json"), json).unwrap();
+
+        let secs = read_player_play_time(&temp);
+        assert_eq!(secs, Some(3600));
+        let _ = fs::remove_dir_all(&temp);
+    }
 }

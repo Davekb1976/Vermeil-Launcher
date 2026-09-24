@@ -105,6 +105,14 @@ pub struct LauncherSettings {
     /// Last successful Google Cloud settings backup timestamp (ISO-8601).
     #[serde(default)]
     pub last_cloud_backup: Option<String>,
+    /// Cumulative play time in seconds across all instances ever played in Vermeil.
+    /// Preserved even when instances are deleted so global stats never reset.
+    #[serde(default)]
+    pub lifetime_play_seconds: u64,
+    /// Timestamp (ISO-8601) of the most recent session launched across any instance.
+    /// Preserved even when instances are deleted.
+    #[serde(default)]
+    pub last_active_at: Option<String>,
 }
 
 /// Video settings that get written into each instance's options.txt before launch.
@@ -227,6 +235,8 @@ impl Default for LauncherSettings {
             adaptive_ram_min_mb: 0,
             adaptive_ram_max_mb: 0,
             last_cloud_backup: None,
+            lifetime_play_seconds: 0,
+            last_active_at: None,
         }
     }
 }

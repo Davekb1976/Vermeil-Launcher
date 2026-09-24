@@ -3253,6 +3253,30 @@
   white-space: nowrap;
 }
 
+.world-card-sep {
+  opacity: 0.4;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.world-card-playtime {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.world-card-clock-icon {
+  width: 11px;
+  height: 11px;
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+
 .world-card-badges {
   display: flex;
   align-items: center;

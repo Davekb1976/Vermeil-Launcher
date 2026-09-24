@@ -1,9 +1,9 @@
 import { Component, createSignal, createEffect, createResource, createMemo, For, Show, onCleanup } from "solid-js";
 import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, setGameLaunched, instances, ensureAccountOrPrompt, account, activeSkinUrl, setDockPagination, clearGameLogs, showToast } from "../App";
-import { launchInstance, listInstanceWorlds, getJavaNews, getArticleBody, NewsArticle } from "../ipc/commands";
+import { launchInstance, listInstanceWorlds, getJavaNews, getArticleBody, NewsArticle, getSettings } from "../ipc/commands";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
-import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX, IconMicrosoft, IconAlertTriangle } from "../components/Icons";
+import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX, IconMicrosoft, IconAlertTriangle, IconClock } from "../components/Icons";
 import CharacterStage from "../components/CharacterStage";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { resolveAssetUrl } from "../lib/assets";
@@ -183,6 +183,12 @@ const Home: Component = () => {
   });
   onCleanup(() => setDockPagination(null));
 
+  const [settings, { refetch: refetchSettings }] = createResource(getSettings);
+  createEffect(() => {
+    instances();
+    refetchSettings();
+  });
+
   const [recentWorlds] = createResource(
     instances,
     async (insts) => {
@@ -192,6 +198,7 @@ const Home: Component = () => {
         instanceId: string; instanceName: string; instanceIcon: string;
         loader: string; gameVersion: string;
         worldName: string; worldFolder: string; worldIcon: string | null; lastPlayed: string;
+        playTimeSeconds: number;
       }[] = [];
       for (const inst of insts.slice(0, 10)) {
         try {
@@ -207,6 +214,7 @@ const Home: Component = () => {
               worldFolder: w.folder_name,
               worldIcon: w.icon,
               lastPlayed: w.last_played,
+              playTimeSeconds: w.play_time_seconds,
             });
           }
         } catch { /* ignore */ }
@@ -275,18 +283,29 @@ const Home: Component = () => {
     }
   };
 
-  // Header summary — total instance count, playtime, and most-recent play date across
-  // all instances, formatted relatively. Memo'd so it only recomputes when
-  // the instances signal changes, not on every render.
+  // Header summary — total instance count, lifetime playtime, and most-recent play date across
+  // all instances and global launcher history, formatted relatively.
   const headerSummary = createMemo(() => {
     const list = instances() ?? [];
-    if (list.length === 0) return null;
-    const mostRecent = list
+    const sett = settings();
+    const instRecent = list
       .map((i) => i.last_played)
       .filter((d): d is string => Boolean(d))
       .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
       .pop();
-    const totalPlaySeconds = list.reduce((acc, i) => acc + (i.total_play_seconds || 0), 0);
+
+    const globalLast = sett?.last_active_at ?? null;
+    let mostRecent: string | null = null;
+    if (instRecent && globalLast) {
+      mostRecent = new Date(instRecent).getTime() > new Date(globalLast).getTime() ? instRecent : globalLast;
+    } else {
+      mostRecent = instRecent ?? globalLast;
+    }
+
+    const currentInstPlaySeconds = list.reduce((acc, i) => acc + (i.total_play_seconds || 0), 0);
+    const globalPlaySeconds = sett?.lifetime_play_seconds ?? 0;
+    const totalPlaySeconds = Math.max(currentInstPlaySeconds, globalPlaySeconds);
+
     return {
       count: list.length,
       relative: relativePlayed(mostRecent),
@@ -440,6 +459,12 @@ const Home: Component = () => {
                             {loaderLabel(heroWorld().loader)}
                           </span>
                           <span class="badge badge--version">{heroWorld().gameVersion}</span>
+                          <Show when={heroWorld().playTimeSeconds && heroWorld().playTimeSeconds > 0}>
+                            <span class="badge badge--playtime tip-below" data-tip="Time played in this world">
+                              <IconClock class="badge-icon" />
+                              {formatPlaytime(heroWorld().playTimeSeconds)}
+                            </span>
+                          </Show>
                         </div>
                         <div class="continue-hero-title">{heroWorld().worldName}</div>
                         <div class="continue-hero-sub">
@@ -499,6 +524,13 @@ const Home: Component = () => {
                           <div class="world-card-title">{world.worldName}</div>
                           <div class="world-card-sub">
                             <span class="world-card-inst-name">{world.instanceName}</span>
+                            <Show when={world.playTimeSeconds && world.playTimeSeconds > 0}>
+                              <span class="world-card-sep">·</span>
+                              <span class="world-card-playtime tip-below" data-tip="Time played in this world">
+                                <IconClock class="world-card-clock-icon" />
+                                {formatPlaytime(world.playTimeSeconds)}
+                              </span>
+                            </Show>
                           </div>
                         </div>
                         <button

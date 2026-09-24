@@ -1577,15 +1577,21 @@ pub async fn launch(
 
     tracing::debug!("Launching with main class: {}", main_class);
 
-    // Update last_played timestamp
+    // Update last_played timestamp and global last_active_at
+    let now_str = chrono::Utc::now().to_rfc3339();
     let meta_path = paths::instances_dir().join(&instance.id).join("instance.json");
     if let Ok(content) = fs::read_to_string(&meta_path) {
         if let Ok(mut inst_data) = serde_json::from_str::<Instance>(&content) {
-            inst_data.last_played = Some(chrono::Utc::now().to_rfc3339());
+            inst_data.last_played = Some(now_str.clone());
             if let Ok(json) = serde_json::to_string_pretty(&inst_data) {
                 let _ = fs::write(&meta_path, json);
             }
         }
+    }
+
+    if let Ok(mut settings) = crate::services::settings_service::load().await {
+        settings.last_active_at = Some(now_str);
+        let _ = crate::services::settings_service::save(&settings).await;
     }
 
     let mut child = cmd.spawn().map_err(|e| format!("Failed to launch: {}", e))?;
@@ -1721,6 +1727,14 @@ pub async fn launch(
                 if let Ok(json) = serde_json::to_string_pretty(&inst_data) {
                     let _ = std::fs::write(&meta_path, json);
                 }
+            }
+        }
+
+        // Credit elapsed play time to global lifetime_play_seconds
+        if elapsed_secs > 0 {
+            if let Ok(mut settings) = crate::services::settings_service::load().await {
+                settings.lifetime_play_seconds += elapsed_secs;
+                let _ = crate::services::settings_service::save(&settings).await;
             }
         }
 

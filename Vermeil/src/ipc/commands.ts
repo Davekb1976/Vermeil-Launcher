@@ -242,6 +242,10 @@ export interface LauncherSettings {
   adaptive_ram_max_mb: number;
   /** ISO-8601 timestamp of last successful Google Cloud settings backup, or null. */
   last_cloud_backup?: string | null;
+  /** Lifetime playtime in seconds across all sessions and instances ever played in Vermeil. */
+  lifetime_play_seconds?: number;
+  /** ISO-8601 timestamp of the most recent session launched across any instance. */
+  last_active_at?: string | null;
 }
 
 // Instance commands
@@ -787,6 +791,8 @@ export interface WorldEntry {
   game_mode: string;
   /** World thumbnail (icon.png) as a data URL, or null if the world has none. */
   icon: string | null;
+  /** Total playtime in seconds for this world. */
+  play_time_seconds: number;
 }
 
 export const listInstanceFiles = (instanceId: string, subPath?: string) =>

@@ -56,6 +56,17 @@ function detectCategory(mod: ModHit): "mod" | "resourcepack" | "shader" | "datap
   return "mod";
 }
 
+function formatPlaytime(seconds: number): string {
+  if (!seconds || seconds <= 0) return "0m";
+  if (seconds < 60) return "< 1m";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
+}
+
 const InstanceMods: Component = () => {
   const [mainTab, setMainTab] = createSignal<InstanceTab>(initialInstanceTab() as InstanceTab || "content");
 
@@ -2489,12 +2500,17 @@ const InstanceMods: Component = () => {
             <For each={worlds()}>
               {(world) => (
                 <div class="mod-item">
-                  <div class="mod-icon" style="background:var(--accent-soft)">
-                    <IconGlobe />
+                  <div class="mod-icon" style="background:var(--accent-soft);overflow:hidden;">
+                    <Show when={world.icon} fallback={<IconGlobe />}>
+                      <img src={world.icon!} alt="" style="width:100%;height:100%;object-fit:cover;image-rendering:pixelated;" />
+                    </Show>
                   </div>
                   <div class="mod-details">
                     <div class="mod-name">{world.name}</div>
-                    <div class="mod-stats">{world.game_mode} · {world.size_mb} MB</div>
+                    <div class="mod-stats">
+                      {world.game_mode} · {world.size_mb} MB
+                      {world.play_time_seconds > 0 ? ` · ${formatPlaytime(world.play_time_seconds)}` : ""}
+                    </div>
                   </div>
                   <button class="btn btn--sm" onClick={() => openInstanceFolder(instance()!.id, `saves/${world.folder_name}`)}>
                     Open

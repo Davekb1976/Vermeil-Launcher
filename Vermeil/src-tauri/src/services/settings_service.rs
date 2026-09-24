@@ -32,6 +32,39 @@ pub async fn load() -> Result<LauncherSettings, Box<dyn std::error::Error + Send
         let _ = save(&settings).await;
     }
 
+    // One-time grandfathering for lifetime_play_seconds and last_active_at:
+    // If lifetime_play_seconds is 0, seed it from existing instances on disk so
+    // existing players don't lose their accumulated history.
+    if settings.lifetime_play_seconds == 0 {
+        let instances_dir = paths::instances_dir();
+        if instances_dir.exists() {
+            let mut sum_play = 0u64;
+            let mut latest_played: Option<String> = None;
+            if let Ok(entries) = fs::read_dir(&instances_dir) {
+                for entry in entries.flatten() {
+                    let meta_path = entry.path().join("instance.json");
+                    if let Ok(content) = fs::read_to_string(&meta_path) {
+                        if let Ok(inst) = serde_json::from_str::<crate::models::instance::Instance>(&content) {
+                            sum_play += inst.total_play_seconds;
+                            if let Some(lp) = inst.last_played {
+                                if latest_played.as_ref().map_or(true, |cur| lp > *cur) {
+                                    latest_played = Some(lp);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if sum_play > 0 || latest_played.is_some() {
+                settings.lifetime_play_seconds = sum_play;
+                if settings.last_active_at.is_none() {
+                    settings.last_active_at = latest_played;
+                }
+                let _ = save(&settings).await;
+            }
+        }
+    }
+
     Ok(settings)
 }
 

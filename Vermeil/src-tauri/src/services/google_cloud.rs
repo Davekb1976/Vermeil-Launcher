@@ -622,6 +622,8 @@ pub fn sanitize_settings_for_cloud(source: &LauncherSettings) -> LauncherSetting
         sidebar_pinned_instances: Vec::new(),
         ingame_cape: defaults.ingame_cape,
         last_cloud_backup: source.last_cloud_backup.clone(),
+        lifetime_play_seconds: source.lifetime_play_seconds,
+        last_active_at: source.last_active_at.clone(),
     }
 }
 
@@ -667,6 +669,16 @@ pub fn merge_restored_settings(
 
     // 4. Custom keybinds (restored from cloud)
     merged.keybinds = cloud_backup.keybinds.clone();
+
+    // 5. Lifetime play stats: take the greater playtime and most recent active date
+    if cloud_backup.lifetime_play_seconds > merged.lifetime_play_seconds {
+        merged.lifetime_play_seconds = cloud_backup.lifetime_play_seconds;
+    }
+    if let Some(ref cloud_last) = cloud_backup.last_active_at {
+        if merged.last_active_at.as_ref().map_or(true, |local_last| cloud_last > local_last) {
+            merged.last_active_at = Some(cloud_last.clone());
+        }
+    }
 
     // Memory (default_memory_mb, adaptive_ram) and Window dimensions
     // (window_width, window_height, start_maximized) remain strictly machine-specific/local.

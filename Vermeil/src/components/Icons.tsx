@@ -263,6 +263,14 @@ export const IconArrowUpCircle: Component<{ class?: string }> = (props) => (
   </svg>
 );
 
+// Clock — Feather Icons (MIT). https://github.com/feathericons/feather
+export const IconClock: Component<{ class?: string }> = (props) => (
+  <svg class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+);
+
 // External-link — Feather Icons (MIT). https://github.com/feathericons/feather
 export const IconExternalLink: Component<{ class?: string }> = (props) => (
   <svg class={props.class} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">

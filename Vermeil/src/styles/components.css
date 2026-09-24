@@ -1437,6 +1437,25 @@
   color: var(--text-muted);
 }
 
+/* Variant — playtime (compact clock + playtime readout) */
+.badge--playtime {
+  font-family: var(--font-mono);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge--playtime svg,
+.badge--playtime .badge-icon {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
 /* Variant — content version (the item's own release). Accent-tinted to read as
    distinct from the neutral MC game-version badge; width-capped with ellipsis
    since CurseForge display names can run long (full text in the title attr). */
