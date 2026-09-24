@@ -1,5 +1,5 @@
 import { Component, createSignal, createResource, Show, For, onMount, onCleanup, createEffect } from "solid-js";
-import { getSettings, saveSettings, getCacheSize, purgeCache, getAppDirectory, openAppDirectory, LauncherSettings, detectJavaInstallations, validateJavaPath, setJavaPath, installRecommendedJava, deleteJavaInstall, pruneInvalidJavaPaths, getSystemMemory, JavaInstall } from "../ipc/commands";
+import { getSettings, saveSettings, getCacheSize, purgeCache, getSharedGameDataSize, purgeSharedGameData, getAppDirectory, openAppDirectory, LauncherSettings, detectJavaInstallations, validateJavaPath, setJavaPath, installRecommendedJava, deleteJavaInstall, pruneInvalidJavaPaths, getSystemMemory, JavaInstall } from "../ipc/commands";
 import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, instances, showToast, setDownloadToastsEnabled, setAutoHideDockSetting, setPaginationPosition } from "../App";
 import { checkForUpdates } from "../services/updater";
 import { getVersion } from "@tauri-apps/api/app";
@@ -77,8 +77,8 @@ const Settings: Component = () => {
   );
 
   const matchesStorage = () => isResourcesSection() || matches(
-    "Storage", "App directory", "App cache", "Version metadata and loader installers",
-    "folder", "path", "directory", "cache", "purge", "clear"
+    "Storage", "App directory", "App cache", "Shared game data", "Version metadata and loader installers",
+    "folder", "path", "directory", "cache", "purge", "clear", "assets", "libraries"
   );
   const matchesPerformance = () => isResourcesSection() || matches(
     "Performance", "Concurrency", "Concurrent downloads", "Concurrent writes", "Download speed limit",
@@ -122,6 +122,8 @@ const Settings: Component = () => {
   const [systemMemoryMb] = createResource(getSystemMemory);
   const [cacheSize, setCacheSize] = createSignal(0);
   const [purging, setPurging] = createSignal(false);
+  const [sharedDataSize, setSharedDataSize] = createSignal(0);
+  const [purgingShared, setPurgingShared] = createSignal(false);
 
   // Video settings read straight from the resource — `updateSetting` mutates it
   // optimistically (see below), so reads are always the latest value, no
@@ -308,6 +310,7 @@ const Settings: Component = () => {
 
   onMount(async () => {
     try { setCacheSize(await getCacheSize()); } catch {}
+    try { setSharedDataSize(await getSharedGameDataSize()); } catch {}
     // Self-heal stale Java overrides. The user may have deleted a JRE
     // manually (or uninstalled an external one) since the last launch — we
     // clear those entries before showing them so the input never displays
@@ -334,6 +337,14 @@ const Settings: Component = () => {
   });
 
   const formatCacheSize = () => (cacheSize() / (1024 * 1024)).toFixed(1);
+  const formatSharedDataSize = () => {
+    const bytes = sharedDataSize();
+    if (bytes >= 1024 * 1024 * 1024) {
+      return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    }
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  };
 
   const handlePurgeCache = async () => {
     setPurging(true);
@@ -342,6 +353,37 @@ const Settings: Component = () => {
       setCacheSize(0);
     } catch (e) { console.error(e); }
     finally { setPurging(false); }
+  };
+
+  const handlePurgeSharedData = async () => {
+    const instCount = (instances() || []).length;
+    if (instCount > 0) {
+      const ok = window.confirm(
+        `You have ${instCount} installed instance${instCount === 1 ? "" : "s"}. Cleaning shared game assets and libraries will require Minecraft to re-download them the next time you play.\n\nAre you sure you want to clean shared game data?`
+      );
+      if (!ok) return;
+    }
+    setPurgingShared(true);
+    try {
+      const freed = await purgeSharedGameData();
+      setSharedDataSize(0);
+      try { setCacheSize(await getCacheSize()); } catch {}
+      const freedMb = (freed / (1024 * 1024)).toFixed(0);
+      showToast({
+        title: "Shared game data cleaned",
+        message: `Freed ${freedMb} MB of shared assets and libraries.`,
+        type: "success",
+      });
+    } catch (e) {
+      console.error(e);
+      showToast({
+        title: "Failed to clean shared data",
+        message: String(e),
+        type: "error",
+      });
+    } finally {
+      setPurgingShared(false);
+    }
   };
 
   // Adaptive RAM defaults — mirrors `services::memory::default_max_for_system`
@@ -821,7 +863,7 @@ const Settings: Component = () => {
                   <div class="card-section-header">
                     <span class="card-section-tag tag-settings-storage">STORAGE</span>
                     <span class="card-section-label">Storage Management</span>
-                    <span class="card-section-desc">Application data path and local caches</span>
+                    <span class="card-section-desc">Application data path, local caches, and shared game files</span>
                   </div>
                   <div class="card-section-body">
                     <div class="setting-card-grid setting-card-grid--2col">
@@ -852,6 +894,22 @@ const Settings: Component = () => {
                         <div class="setting-control">
                           <button class="btn btn--sm" onClick={handlePurgeCache} disabled={purging()}>
                             {purging() ? "Purging..." : "Purge cache"}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div class="setting-row setting-row--span-2">
+                        <div class="setting-info">
+                          <span class="setting-name">Shared game data</span>
+                          <span class="setting-desc">{formatSharedDataSize()} shared Minecraft sounds, textures, and engine libraries</span>
+                        </div>
+                        <div class="setting-control">
+                          <button
+                            class="btn btn--sm"
+                            onClick={handlePurgeSharedData}
+                            disabled={purgingShared() || sharedDataSize() === 0}
+                          >
+                            {purgingShared() ? "Cleaning..." : "Clean data"}
                           </button>
                         </div>
                       </div>

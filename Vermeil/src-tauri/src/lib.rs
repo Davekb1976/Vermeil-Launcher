@@ -293,6 +293,8 @@ pub fn run() {
             settings::open_app_directory,
             settings::get_cache_size,
             settings::purge_cache,
+            settings::get_shared_game_data_size,
+            settings::purge_shared_game_data,
             settings::get_system_memory,
             settings::load_download_history,
             settings::save_download_history,

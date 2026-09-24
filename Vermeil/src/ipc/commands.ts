@@ -476,6 +476,8 @@ export const getAppDirectory = () => invoke<string>("get_app_directory");
 export const openAppDirectory = () => invoke<void>("open_app_directory");
 export const getCacheSize = () => invoke<number>("get_cache_size");
 export const purgeCache = () => invoke<number>("purge_cache");
+export const getSharedGameDataSize = () => invoke<number>("get_shared_game_data_size");
+export const purgeSharedGameData = () => invoke<number>("purge_shared_game_data");
 export const getSystemMemory = () => invoke<number>("get_system_memory");
 export const loadDownloadHistory = () => invoke<string>("load_download_history");
 export const saveDownloadHistory = (json: string) => invoke<void>("save_download_history", { json });
