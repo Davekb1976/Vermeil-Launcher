@@ -1,41 +1,32 @@
-## 1.2.0
+## 1.3.0 (Experimental Build 1)
 
 ### Added
 
-- Isolated encrypted credential vault (`credentials.enc`) decoupling sensitive authentication tokens from public account metadata
-- Cross-platform cryptographic security using Windows DPAPI and pure-Rust authenticated AES-256-GCM (`aes-gcm 0.11`) on Linux/macOS
-- Crash-safe atomic file writing (`atomic_write`) with physical buffer synchronization and Windows file-lock retry backoff
-- Zero-telemetry Google Drive settings backup and restore using sandboxed `appDataFolder`
-- Independent Google Cloud session controls with separate local Sign Out and full OAuth Disconnect
-- Tactile Google OAuth authorization callback landing page with live status feedback and auto-closing tab handler
-- Animated theme sway indicator for cloud synchronization status in the header
-- High-speed NSIS uninstaller bulk deletion with native tree unlinking, instant trash renaming, and dynamic disk footprint reporting
-- Client-tuned GC presets (Client G1GC, Generational ZGC, Adaptive Shenandoah) with hardware-tier heap calibration
-- Persistent dual-ledger playtime and activity tracking surviving instance deletions
-- Single-pass NBT and JSON per-world playtime tracking on Continue Hero card, 2x2 grid, and Worlds manager tab
-- One-click shared Minecraft game data cleanup (assets and engine libraries) in Settings Storage Management
+- Official dual-channel update engine supporting seamless switching between Stable and Experimental release channels
+- Dynamic updater endpoint routing in Rust querying high-speed Fastly CDN manifests with zero GitHub API rate limits
+- Bidirectional channel switching with version-comparator rollback support
+- Tactile rollback confirmation modal reassuring full data and instance preservation when returning to Stable
+- Library dual-shelf hierarchy separating Pinned quick-launch instances from the main library collection
+- High-concurrency instance management with live category filtering (All, Modded, Vanilla, Pinned) and batch deletion
+- Shared game data cleanup option in Storage Management for removing unreferenced Minecraft engine assets and loader libraries
 
 ### Changed
 
-- Completely omitted `access_token` and `refresh_token` keys from `accounts.json`, storing strictly clean profile metadata
-- Upgraded Google Cloud refresh token storage to use atomic writes and Unix `0600` file permission hardening
-- Modernized Settings layout with categorized section panels and live instance options synchronization
-- Standardized all repository and website legal documentation with explicit hardware-dependent settings exclusions
+- Replaced external Google Fonts (`Oswald`) with high-performance native system font stacks for zero layout shifts and improved startup speed
+- Refactored updater service to execute strictly through typed IPC boundaries without direct plugin calls
+- Standardized Library instance cards with tactile 3D hover lift and minimalist icon-only pin keycaps
+- Replaced distorted cube icon with authentic Vermeil emblem in the Library empty state
 
 ### Fixed
 
-- Handled antivirus scanner file locks on Windows via exponential backoff retries during atomic renames
-- Eliminated horizontal scrollbar overflow on the Settings keybinds tab
-- Prevented tooltip clipping on right-anchored cloud session action buttons using `tip-right`
-- Resolved click target sizing and toggle state synchronization in companion mod settings
-- Fixed lifetime playtime and last active reset bug when deleting instances
-- Eliminated race conditions and JVM crashes (missing jvm.cfg and jimage.dll access violations) during rapid/concurrent instance creation via atomic staging and single-flight mutex synchronization
+- Eliminated race conditions, missing `jvm.cfg`, and `jimage.dll` errors during rapid concurrent instance creation via atomic staging and single-flight mutex synchronization
+- Isolated Forge and NeoForge installer execution to dedicated scratch directories to prevent launch collisions
+- Handled pre-release manifest 404s gracefully as up-to-date states instead of surfacing false errors
+- Normalized release notes URLs in the update banner to eliminate double-`v` prefix tag resolution issues
+- Short-circuited duplicate Windows Registry writes and log noise when `EstimatedSize` is unchanged
 
 ### Documentation
 
-- [Secure Credential Vault Architecture](docs/research/secure-credentials-vault/research.md): Technical specification, security models, Mermaid architecture diagrams, and atomic I/O guarantees
-- [Google Cloud Settings Sync Architecture](docs/research/google-cloud-sync/research.md): RFC 8252/7636 security model, sandboxed storage flows, and privacy policy disclosures
-- [Windows Uninstaller Optimization](docs/research/uninstaller-optimization/research.md): High-speed bulk directory deletion, native tree unlinking, and dynamic disk footprint reporting
-- [Client GC Calibration Architecture](docs/research/client-gc-calibration/research.md): Modern client garbage collection presets and initial heap calibration across hardware tiers
-- [Persistent Lifetime Telemetry Architecture](docs/research/lifetime-telemetry/research.md): Dual-ledger activity persistence, monotonic playtime tracking, and single-pass NBT world telemetry
+- [Dual-Channel Release & Update Architecture](docs/research/dual-channel-updater/research.md): Dynamic endpoint routing, Fastly CDN manifest synchronization, and cryptographic rollback mechanics
+- [Library Architecture & Parallel Deletion](docs/research/library-architecture/research.md): High-concurrency instance unlinking, single-pass settings consolidation, and dual-shelf hierarchy
 - [Concurrent Runtime Provisioning Architecture](docs/research/concurrent-runtime-provisioning/research.md): Single-flight Java synchronization, atomic extraction staging, structural JRE validation, and loader installer scratch isolation
