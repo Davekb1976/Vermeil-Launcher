@@ -114,6 +114,8 @@ pub fn extract_java_archive(archive_path: &std::path::Path, dest_dir: &std::path
 
 #[cfg(windows)]
 static IS_UPDATING_ESTIMATED_SIZE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+#[cfg(windows)]
+static LAST_ESTIMATED_SIZE_KB: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 
 /// On Windows, updates the `EstimatedSize` registry DWORD (in KB) under
 /// `HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\Vermeil`
@@ -155,10 +157,13 @@ pub fn update_windows_estimated_size() {
                 if data_dir.exists() {
                     let size_bytes = crate::util::paths::dir_size(&data_dir);
                     let size_kb = (size_bytes / 1024).min(u32::MAX as u64) as u32;
+                    let prev_kb = LAST_ESTIMATED_SIZE_KB.swap(size_kb, Ordering::SeqCst);
                     if let Err(e) = uninstall_key.set_value("EstimatedSize", &size_kb) {
                         tracing::warn!("Failed to set Windows uninstall EstimatedSize: {}", e);
-                    } else {
+                    } else if prev_kb != size_kb {
                         tracing::info!("Updated Windows uninstall EstimatedSize to {} KB", size_kb);
+                    } else {
+                        tracing::debug!("Windows uninstall EstimatedSize unchanged at {} KB", size_kb);
                     }
                 }
             }
