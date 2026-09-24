@@ -90,7 +90,7 @@ flowchart TD
 | **Tooltip Positioning** | Centered `tip-below` clipping past the right viewport margin. | Right-anchored `tip-below tip-right` keeping tooltip content on screen. | Crisp, legible tooltips regardless of window size. |
 | **Library Organization** | Flat unordered grid; minimal filtering. | Dual-Shelf layout: `// PINNED FAVORITES` (with quick-access modal trigger) and `// ALL INSTANCES`. | Immediate access to favorite profiles without visual clutter. |
 | **Filtering & Search** | Limited search; out-of-place controls. | Tactile filter pills (`All`, `★ Pinned`, `Played`, `Unplayed`, Loader chips) + live text search with quick clear. | Instant profile discovery across large collections. |
-| **Empty State** | Empty void with a solitary dashed card. | Framed sunken `#0f0e13` Hero Panel with `<IconCube />` and 3 clear action entry points. | Welcoming, self-explanatory onboarding for new users. |
+| **Empty State** | Empty void with a solitary dashed card. | Framed sunken `#0f0e13` Hero Panel with Vermeil logo and 3 clear action entry points. | Welcoming, self-explanatory onboarding for new users. |
 
 ---
 
