@@ -155,7 +155,7 @@ async function processQueue() {
         result?.name || nextTask.title,
         result?.source_version ?? nextTask.meta?.versionNumber ?? undefined,
         {
-          iconUrl: result?.icon && result.icon !== "cube" ? result.icon : nextTask.meta?.iconUrl,
+          iconUrl: nextTask.meta?.iconUrl || (result?.icon && result.icon !== "cube" ? result.icon : undefined),
           loader: result?.loader?.type || nextTask.meta?.loader,
           gameVersion: result?.game_version || nextTask.meta?.gameVersion,
           author: nextTask.meta?.author,
@@ -171,7 +171,7 @@ async function processQueue() {
           result?.name,
           result?.source_version ?? nextTask.meta?.versionNumber ?? undefined,
           {
-            iconUrl: result?.icon && result.icon !== "cube" ? result.icon : nextTask.meta?.iconUrl,
+            iconUrl: nextTask.meta?.iconUrl || (result?.icon && result.icon !== "cube" ? result.icon : undefined),
             loader: result?.loader?.type || nextTask.meta?.loader,
             gameVersion: result?.game_version || nextTask.meta?.gameVersion,
             author: nextTask.meta?.author,

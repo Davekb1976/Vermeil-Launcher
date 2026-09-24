@@ -53,7 +53,8 @@ Every content addition or modification ripples through 5 connected stages. When 
   4. Only fall back to `"cube"` placeholder if all resolution passes fail.
 - **Instance Metadata (`instance.json`)**:
   - `name`: Deduplicated clean title via `unique_instance_name(&manifest.name)`.
-  - `icon`: The resolved data URL or `"cube"`.
+  - `icon`: The durable instance icon path inside the instance directory (`<instance_dir>/icon.<ext>`) via `icon_cache::persist_instance_icon()`. **Invariant**: Never point `instance.icon` directly into volatile `%LOCALAPPDATA%\Vermeil\cache\` (wiped on cache purge). If resolution fails, fall back to `"cube"`.
+  - **Auto-Healing Invariant**: `sanitize_instance_json()` verifies that any local path in `instance.icon` exists on disk. If pointing outside the instance directory (e.g. in `cache/icons/`), it migrates it durably into `<instance_dir>/icon.<ext>`. If missing on disk, it heals to an existing icon or cleanly falls back to `"cube"`, preventing Tauri `tauri::protocol::asset` 404 console errors.
   - `loader`: `LoaderConfig` with actual `LoaderType`.
   - `game_version`: Target Minecraft version.
   - `source_project_id` & `source_platforms` & `source_version`.

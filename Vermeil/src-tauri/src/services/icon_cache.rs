@@ -168,3 +168,101 @@ pub async fn cache_icon_bytes(bytes: &[u8], ext: &str) -> Option<String> {
     Some(clean_path_string(&path))
 }
 
+/// Persist an instance's icon into the instance's own durable folder (`<instance_dir>/icon.<ext>`).
+///
+/// If `source_icon` is a local file (e.g. from the volatile cache or an extracted archive),
+/// this copies it into the instance directory so it survives cache purges.
+/// If `source_icon` is None, missing, or "cube", it returns `"cube"`.
+pub fn persist_instance_icon(
+    source_icon: Option<String>,
+    instance_dir: &std::path::Path,
+) -> String {
+    let Some(src_str) = source_icon else {
+        return "cube".to_string();
+    };
+
+    let trimmed = src_str.trim();
+    if trimmed.is_empty() || trimmed == "cube" {
+        return "cube".to_string();
+    }
+
+    // Remote URLs or data URIs are kept as-is
+    if trimmed.starts_with("http://")
+        || trimmed.starts_with("https://")
+        || trimmed.starts_with("data:")
+        || trimmed.starts_with("asset:")
+    {
+        return trimmed.to_string();
+    }
+
+    let src = std::path::Path::new(trimmed);
+    if src.exists() {
+        let _ = std::fs::create_dir_all(instance_dir);
+        let ext = src
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("png")
+            .to_lowercase();
+        let dest = instance_dir.join(format!("icon.{}", ext));
+        if src != dest {
+            if let Err(e) = std::fs::copy(src, &dest) {
+                tracing::warn!("Failed to copy icon from {:?} to {:?}: {}", src, dest, e);
+                return clean_path_string(src);
+            }
+        }
+        clean_path_string(&dest)
+    } else {
+        // Source file doesn't exist — check if the instance directory already has an icon
+        for ext in ["png", "webp", "jpg", "jpeg"] {
+            let candidate = instance_dir.join(format!("icon.{}", ext));
+            if candidate.exists() {
+                return clean_path_string(&candidate);
+            }
+        }
+        "cube".to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_persist_instance_icon_copies_to_instance_dir() {
+        let temp = std::env::temp_dir().join(format!("vermeil_test_icon_{}", uuid::Uuid::new_v4()));
+        let _ = std::fs::create_dir_all(&temp);
+        let cache_icon = temp.join("cached_icon.webp");
+        std::fs::write(&cache_icon, b"dummy-webp-data").unwrap();
+
+        let inst_dir = temp.join("my-instance");
+        let result = persist_instance_icon(Some(cache_icon.to_string_lossy().to_string()), &inst_dir);
+
+        let target_icon = inst_dir.join("icon.webp");
+        assert!(target_icon.exists());
+        assert_eq!(result, clean_path_string(&target_icon));
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn test_persist_instance_icon_missing_falls_back_to_cube() {
+        let temp = std::env::temp_dir().join(format!("vermeil_test_icon_{}", uuid::Uuid::new_v4()));
+        let inst_dir = temp.join("my-instance");
+        let ghost_path = temp.join("nonexistent.png").to_string_lossy().to_string();
+
+        let result = persist_instance_icon(Some(ghost_path), &inst_dir);
+        assert_eq!(result, "cube");
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn test_persist_instance_icon_preserves_remote_urls() {
+        let temp = std::env::temp_dir().join(format!("vermeil_test_icon_{}", uuid::Uuid::new_v4()));
+        let inst_dir = temp.join("my-instance");
+        let remote = "https://cdn.modrinth.com/icon.png".to_string();
+
+        let result = persist_instance_icon(Some(remote.clone()), &inst_dir);
+        assert_eq!(result, remote);
+        let _ = std::fs::remove_dir_all(&temp);
+    }
+}
+

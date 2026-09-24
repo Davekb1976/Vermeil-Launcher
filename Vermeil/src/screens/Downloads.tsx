@@ -118,7 +118,6 @@ const Downloads: Component = () => {
 
   const activeIcon = () => {
     const entry = activeInstallEntry();
-    if (entry?.iconUrl) return resolveAssetUrl(entry.iconUrl);
     const instList = instances() ?? [];
     const activeTitle = (entry?.name || activeInstall().title).toLowerCase().replace(/[^a-z0-9]/g, "");
     if (activeTitle.length > 0) {
@@ -127,6 +126,11 @@ const Downloads: Component = () => {
         return instNorm.length > 0 && (activeTitle.includes(instNorm) || instNorm.includes(activeTitle));
       });
       if (inst && inst.icon && inst.icon !== "cube") return resolveAssetUrl(inst.icon);
+    }
+    const url = entry?.iconUrl;
+    if (url) {
+      if (url.includes("cache\\icons") || url.includes("cache/icons")) return undefined;
+      return resolveAssetUrl(url);
     }
     return undefined;
   };
@@ -369,9 +373,13 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry; position?: number }>
   });
 
   const cardIcon = () => {
-    if (dl().iconUrl) return resolveAssetUrl(dl().iconUrl);
     const inst = matchingInstance();
     if (inst && inst.icon && inst.icon !== "cube") return resolveAssetUrl(inst.icon);
+    const url = dl().iconUrl;
+    if (url) {
+      if (url.includes("cache\\icons") || url.includes("cache/icons")) return undefined;
+      return resolveAssetUrl(url);
+    }
     return undefined;
   };
 
@@ -481,9 +489,13 @@ const DownloadCard: Component<{ entry: DownloadEntry; timeAgo: (ts: number) => s
   });
 
   const cardIcon = () => {
-    if (dl().iconUrl) return resolveAssetUrl(dl().iconUrl);
     const inst = matchingInstance();
     if (inst && inst.icon && inst.icon !== "cube") return resolveAssetUrl(inst.icon);
+    const url = dl().iconUrl;
+    if (url) {
+      if (url.includes("cache\\icons") || url.includes("cache/icons")) return undefined;
+      return resolveAssetUrl(url);
+    }
     return undefined;
   };
 

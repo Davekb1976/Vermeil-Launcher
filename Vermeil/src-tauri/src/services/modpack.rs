@@ -444,11 +444,12 @@ pub async fn install_from_mrpack_file(
     // (with duplicate-name handling).
     let final_name = unique_instance_name(&index.name)?;
     let now = chrono::Utc::now().to_rfc3339();
-    // The resolved project icon (Modrinth API or embedded archive icon) becomes
-    // the new instance's tile icon. Only falls back to "cube" if no icon could be found.
-    let icon_value = project_icon_path
-        .or(embedded_icon_path)
-        .unwrap_or_else(|| "cube".to_string());
+    // The resolved project icon (Modrinth API or embedded archive icon) is
+    // copied into the instance's own directory so it survives cache purges.
+    let icon_value = crate::services::icon_cache::persist_instance_icon(
+        project_icon_path.or(embedded_icon_path),
+        &instance_dir,
+    );
     let instance = Instance {
         format_version: 1,
         id: id.clone(),

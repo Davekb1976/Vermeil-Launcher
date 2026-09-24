@@ -37,9 +37,12 @@ pub async fn list_all() -> Result<Vec<Instance>, Box<dyn std::error::Error + Sen
     Ok(instances)
 }
 
-/// Sanitize any legacy bloated base64 data URLs in `instance.mods` or `instance.icon`.
+/// Sanitize any legacy bloated base64 data URLs in `instance.mods` or `instance.icon`,
+/// and ensure instance icons are stored durably within the instance's own directory
+/// instead of referencing volatile purgeable cache directories.
 fn sanitize_instance_json(instance: &mut Instance, meta_path: &std::path::Path) {
     let mut modified = false;
+    let instance_dir = meta_path.parent().unwrap_or(meta_path);
 
     for m in &mut instance.mods {
         if let Some(ref path) = m.local_icon_path {
@@ -54,20 +57,53 @@ fn sanitize_instance_json(instance: &mut Instance, meta_path: &std::path::Path) 
         if let Some((_header, b64)) = instance.icon.split_once(',') {
             use base64::Engine;
             if let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(b64) {
-                let icons_dir = paths::icons_cache_dir();
-                let _ = fs::create_dir_all(&icons_dir);
-                use sha1::{Digest, Sha1};
-                let mut hasher = Sha1::new();
-                hasher.update(&bytes);
-                let mut hash = String::with_capacity(40);
-                for b in hasher.finalize() {
-                    hash.push_str(&format!("{:02x}", b));
-                }
-                let icon_dest = icons_dir.join(format!("{}.png", hash));
+                let icon_dest = instance_dir.join("icon.png");
                 if fs::write(&icon_dest, &bytes).is_ok() {
                     instance.icon = crate::services::icon_cache::clean_path_string(&icon_dest);
                     modified = true;
                 }
+            }
+        }
+    } else if instance.icon != "cube"
+        && !instance.icon.starts_with("http://")
+        && !instance.icon.starts_with("https://")
+        && !instance.icon.starts_with("asset:")
+    {
+        let current_path = std::path::Path::new(&instance.icon);
+        if current_path.exists() {
+            // If the icon exists on disk but is outside the instance directory (e.g. in cache/icons/),
+            // migrate it durably into the instance directory so cache purges cannot destroy it.
+            if !current_path.starts_with(instance_dir) {
+                let ext = current_path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("png")
+                    .to_lowercase();
+                let dest = instance_dir.join(format!("icon.{}", ext));
+                if std::fs::copy(current_path, &dest).is_ok() {
+                    instance.icon = crate::services::icon_cache::clean_path_string(&dest);
+                    modified = true;
+                    tracing::info!("Migrated instance icon to durable directory for {}", instance.name);
+                }
+            }
+        } else {
+            // File does NOT exist on disk — check if an icon exists in instance_dir
+            let mut healed = false;
+            for ext in ["png", "webp", "jpg", "jpeg"] {
+                let candidate = instance_dir.join(format!("icon.{}", ext));
+                if candidate.exists() {
+                    instance.icon = crate::services::icon_cache::clean_path_string(&candidate);
+                    modified = true;
+                    healed = true;
+                    tracing::info!("Healed instance icon from instance directory for {}", instance.name);
+                    break;
+                }
+            }
+            if !healed {
+                // Ghost path — fall back to "cube" sentinel so Tauri doesn't log 404s
+                instance.icon = "cube".to_string();
+                modified = true;
+                tracing::warn!("Ghost icon path missing on disk for {}; falling back to cube", instance.name);
             }
         }
     }
@@ -75,7 +111,7 @@ fn sanitize_instance_json(instance: &mut Instance, meta_path: &std::path::Path) 
     if modified {
         if let Ok(serialized) = serde_json::to_string_pretty(instance) {
             let _ = fs::write(meta_path, serialized);
-            tracing::info!("Sanitized legacy bloated instance.json for {}", instance.name);
+            tracing::info!("Sanitized and saved instance.json for {}", instance.name);
         }
     }
 }
@@ -93,12 +129,13 @@ pub async fn create(config: CreateInstanceConfig) -> Result<Instance, Box<dyn st
     fs::create_dir_all(instance_dir.join(".minecraft").join("logs"))?;
 
     let now = chrono::Utc::now().to_rfc3339();
+    let icon = crate::services::icon_cache::persist_instance_icon(config.icon, &instance_dir);
 
     let instance = Instance {
         format_version: 1,
         id: id.clone(),
         name: config.name,
-        icon: config.icon.unwrap_or_else(|| "cube".to_string()),
+        icon,
         icon_custom: None,
         created_at: now,
         last_played: None,
@@ -180,6 +217,9 @@ pub async fn clone_instance(
     cloned.created_at = chrono::Utc::now().to_rfc3339();
     cloned.last_played = None;
     cloned.total_play_seconds = 0;
+    if let Ok(rel) = std::path::Path::new(&cloned.icon).strip_prefix(&source_dir) {
+        cloned.icon = crate::services::icon_cache::clean_path_string(&new_dir.join(rel));
+    }
 
     let json = serde_json::to_string_pretty(&cloned)?;
     fs::write(new_dir.join("instance.json"), json)?;

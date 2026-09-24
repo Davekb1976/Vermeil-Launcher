@@ -168,10 +168,6 @@ pub async fn import_zip(
         }
     }
 
-    let final_icon = project_icon
-        .or(embedded_icon_path)
-        .unwrap_or_else(|| "cube".to_string());
-
     // Parse loader info
     let (loader_type, loader_version) = parse_loader(&manifest.minecraft.mod_loaders);
 
@@ -183,6 +179,10 @@ pub async fn import_zip(
     // Create the instance
     let instance_id = uuid::Uuid::new_v4().to_string();
     let instance_dir = paths::instances_dir().join(&instance_id);
+    let final_icon = crate::services::icon_cache::persist_instance_icon(
+        project_icon.or(embedded_icon_path),
+        &instance_dir,
+    );
     let minecraft_dir = instance_dir.join(".minecraft");
     let mods_dir = minecraft_dir.join("mods");
     fs::create_dir_all(&mods_dir).map_err(|e| e.to_string())?;
