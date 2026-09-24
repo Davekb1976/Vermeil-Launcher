@@ -150,45 +150,42 @@ fn dir_size(path: &std::path::Path) -> u64 {
 /// Calculate the total size of shared Minecraft game data (`assets/` and `libraries/`).
 #[tauri::command]
 pub async fn get_shared_game_data_size() -> Result<u64, String> {
-    let mut total: u64 = 0;
-    let assets_dir = paths::assets_dir();
-    if assets_dir.exists() {
-        total += dir_size(&assets_dir);
-    }
-    let libraries_dir = paths::libraries_dir();
-    if libraries_dir.exists() {
-        total += dir_size(&libraries_dir);
-    }
-    Ok(total)
+    let assets = paths::assets_dir();
+    let libraries = paths::libraries_dir();
+    Ok(calculate_shared_data_size(&[&assets, &libraries]))
+}
+
+pub(crate) fn calculate_shared_data_size(dirs: &[&std::path::Path]) -> u64 {
+    dirs.iter()
+        .filter(|d| d.exists())
+        .map(|d| dir_size(d))
+        .sum()
 }
 
 /// Purge shared Minecraft game data (`assets/` and `libraries/`).
 /// Returns the number of bytes freed and recreates empty root directories.
 #[tauri::command]
 pub async fn purge_shared_game_data() -> Result<u64, String> {
-    let mut freed: u64 = 0;
-
-    let assets_dir = paths::assets_dir();
-    if assets_dir.exists() {
-        freed += dir_size(&assets_dir);
-        if let Err(e) = fs::remove_dir_all(&assets_dir) {
-            tracing::warn!("Failed to remove assets dir {:?}: {}", assets_dir, e);
-        }
-        let _ = fs::create_dir_all(&assets_dir);
-    }
-
-    let libraries_dir = paths::libraries_dir();
-    if libraries_dir.exists() {
-        freed += dir_size(&libraries_dir);
-        if let Err(e) = fs::remove_dir_all(&libraries_dir) {
-            tracing::warn!("Failed to remove libraries dir {:?}: {}", libraries_dir, e);
-        }
-        let _ = fs::create_dir_all(&libraries_dir);
-    }
-
+    let assets = paths::assets_dir();
+    let libraries = paths::libraries_dir();
+    let freed = purge_game_data_dirs(&[&assets, &libraries]);
     tracing::info!("Purged shared game data: freed {} bytes", freed);
     crate::util::platform::update_windows_estimated_size();
     Ok(freed)
+}
+
+pub(crate) fn purge_game_data_dirs(dirs: &[&std::path::Path]) -> u64 {
+    let mut freed: u64 = 0;
+    for dir in dirs {
+        if dir.exists() {
+            freed += dir_size(dir);
+            if let Err(e) = fs::remove_dir_all(dir) {
+                tracing::warn!("Failed to remove dir {:?}: {}", dir, e);
+            }
+            let _ = fs::create_dir_all(dir);
+        }
+    }
+    freed
 }
 
 /// Get total system memory in MB.
@@ -240,8 +237,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_shared_game_data_size_and_purge() {
-        let assets = paths::assets_dir();
-        let libraries = paths::libraries_dir();
+        let temp = std::env::temp_dir().join(format!("vermeil_test_shared_game_data_{}", uuid::Uuid::new_v4()));
+        let assets = temp.join("assets");
+        let libraries = temp.join("libraries");
         std::fs::create_dir_all(&assets).unwrap();
         std::fs::create_dir_all(&libraries).unwrap();
 
@@ -250,14 +248,20 @@ mod tests {
         std::fs::write(&test_asset, vec![0u8; 2048]).unwrap();
         std::fs::write(&test_lib, vec![0u8; 4096]).unwrap();
 
-        let size = get_shared_game_data_size().await.unwrap();
-        assert!(size >= 6144);
+        let size = calculate_shared_data_size(&[&assets, &libraries]);
+        assert_eq!(size, 6144);
 
-        let freed = purge_shared_game_data().await.unwrap();
-        assert!(freed >= 6144);
+        let freed = purge_game_data_dirs(&[&assets, &libraries]);
+        assert_eq!(freed, 6144);
         assert!(!test_asset.exists());
         assert!(!test_lib.exists());
         assert!(assets.exists());
         assert!(libraries.exists());
+
+        let _ = std::fs::remove_dir_all(&temp);
+
+        // Verify the IPC command itself executes cleanly
+        let live_size = get_shared_game_data_size().await;
+        assert!(live_size.is_ok());
     }
 }
