@@ -23,6 +23,7 @@ just the code.
 - [Uninstaller Optimization](uninstaller-optimization/research.md): Windows storage footprint synchronization
 - [Client GC Calibration](client-gc-calibration/research.md): Modern client garbage collection presets and initial heap calibration across hardware tiers
 - [Persistent Lifetime Telemetry](lifetime-telemetry/research.md): Dual-ledger activity persistence, monotonic playtime tracking, and single-pass NBT world telemetry
+- [Concurrent Runtime Provisioning](concurrent-runtime-provisioning/research.md): Single-flight Java synchronization, atomic extraction staging, structural JRE validation, and loader installer scratch isolation
 
 ## Ground rules
 

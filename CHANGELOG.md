@@ -29,6 +29,7 @@
 - Prevented tooltip clipping on right-anchored cloud session action buttons using `tip-right`
 - Resolved click target sizing and toggle state synchronization in companion mod settings
 - Fixed lifetime playtime and last active reset bug when deleting instances
+- Eliminated race conditions and JVM crashes (missing jvm.cfg and jimage.dll access violations) during rapid/concurrent instance creation via atomic staging and single-flight mutex synchronization
 
 ### Documentation
 
@@ -37,3 +38,4 @@
 - [Windows Uninstaller Optimization](docs/research/uninstaller-optimization/research.md): High-speed bulk directory deletion, native tree unlinking, and dynamic disk footprint reporting
 - [Client GC Calibration Architecture](docs/research/client-gc-calibration/research.md): Modern client garbage collection presets and initial heap calibration across hardware tiers
 - [Persistent Lifetime Telemetry Architecture](docs/research/lifetime-telemetry/research.md): Dual-ledger activity persistence, monotonic playtime tracking, and single-pass NBT world telemetry
+- [Concurrent Runtime Provisioning Architecture](docs/research/concurrent-runtime-provisioning/research.md): Single-flight Java synchronization, atomic extraction staging, structural JRE validation, and loader installer scratch isolation
