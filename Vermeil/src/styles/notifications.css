@@ -31,7 +31,7 @@
 /* Toast notification system (SloppyKeys tactile design) */
 .toast-container {
   position: fixed;
-  bottom: 24px;
+  top: 50px;
   right: 24px;
   z-index: 9999;
   display: flex;
@@ -55,7 +55,7 @@
   min-width: 280px;
 }
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  from { opacity: 0; transform: translateY(-10px) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .toast-info { border-left-color: var(--info); }
