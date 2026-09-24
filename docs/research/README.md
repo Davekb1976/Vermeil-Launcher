@@ -22,6 +22,7 @@ just the code.
 - [Legacy LWJGL Linux](legacy-lwjgl-linux/research.md): Handling legacy LWJGL on modern Linux Wayland/X11
 - [Uninstaller Optimization](uninstaller-optimization/research.md): Windows storage footprint synchronization
 - [Client GC Calibration](client-gc-calibration/research.md): Modern client garbage collection presets and initial heap calibration across hardware tiers
+- [Persistent Lifetime Telemetry](lifetime-telemetry/research.md): Dual-ledger activity persistence, monotonic playtime tracking, and single-pass NBT world telemetry
 
 ## Ground rules
 
