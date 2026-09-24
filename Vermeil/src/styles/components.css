@@ -482,11 +482,20 @@
 }
 
 .library-empty-icon {
-  width: 44px;
-  height: 44px;
-  color: var(--accent);
-  margin-bottom: var(--space-3);
-  opacity: 0.9;
+  width: 52px;
+  height: 52px;
+  margin-bottom: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.library-empty-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 14px rgba(124, 58, 237, 0.45));
+  user-select: none;
 }
 
 .library-empty-title {

@@ -17,7 +17,6 @@ import {
   IconX,
   IconSearch,
   IconTrash2,
-  IconCube,
   IconFolderOpen,
   IconDownload,
   IconPin,
@@ -343,7 +342,7 @@ const Library: Component = () => {
         <div class="page-title" style="margin-bottom:var(--space-4);">Library</div>
         <div class="library-empty-panel">
           <div class="library-empty-icon">
-            <IconCube />
+            <img src="/logo.png" alt="Vermeil" draggable={false} />
           </div>
           <div class="library-empty-title">No Instances Created Yet</div>
           <div class="library-empty-subtitle">
