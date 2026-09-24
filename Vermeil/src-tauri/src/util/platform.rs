@@ -158,16 +158,36 @@ pub fn update_windows_estimated_size() {
                     let size_bytes = crate::util::paths::dir_size(&data_dir);
                     let size_kb = (size_bytes / 1024).min(u32::MAX as u64) as u32;
                     let prev_kb = LAST_ESTIMATED_SIZE_KB.swap(size_kb, Ordering::SeqCst);
+                    if prev_kb == size_kb {
+                        tracing::debug!("Windows uninstall EstimatedSize unchanged at {} KB", size_kb);
+                        return;
+                    }
                     if let Err(e) = uninstall_key.set_value("EstimatedSize", &size_kb) {
                         tracing::warn!("Failed to set Windows uninstall EstimatedSize: {}", e);
-                    } else if prev_kb != size_kb {
-                        tracing::info!("Updated Windows uninstall EstimatedSize to {} KB", size_kb);
                     } else {
-                        tracing::debug!("Windows uninstall EstimatedSize unchanged at {} KB", size_kb);
+                        tracing::info!("Updated Windows uninstall EstimatedSize to {} KB", size_kb);
                     }
                 }
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[cfg(windows)]
+    fn test_estimated_size_deduplication() {
+        use std::sync::atomic::Ordering;
+        LAST_ESTIMATED_SIZE_KB.store(1500, Ordering::SeqCst);
+        let prev = LAST_ESTIMATED_SIZE_KB.swap(1500, Ordering::SeqCst);
+        assert_eq!(prev, 1500, "Unchanged size matches previous and detects duplicate");
+
+        let prev2 = LAST_ESTIMATED_SIZE_KB.swap(1800, Ordering::SeqCst);
+        assert_eq!(prev2, 1500, "Changed size detects delta");
+        assert_eq!(LAST_ESTIMATED_SIZE_KB.load(Ordering::SeqCst), 1800);
     }
 }
 
