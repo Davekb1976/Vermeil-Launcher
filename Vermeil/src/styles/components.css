@@ -18,15 +18,21 @@
   cursor: pointer;
   user-select: none;
   box-sizing: border-box;
-  transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.15s;
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .card.card--inst:hover,
 .card--inst:hover {
-  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  border-color: rgba(139, 92, 246, 0.65);
   background: var(--surface-raised);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.45),
+    0 0 16px rgba(139, 92, 246, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .card.card--inst:hover .badge,
@@ -260,14 +266,21 @@
   cursor: pointer;
   user-select: none;
   opacity: 0.7;
-  transition: opacity 0.15s, border-color 0.15s, background 0.15s, transform 0.12s;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .add-card:hover {
   opacity: 1;
-  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
-  background: rgba(139, 92, 246, 0.04);
-  transform: translateY(-1px);
+  border-color: rgba(139, 92, 246, 0.5);
+  background: rgba(139, 92, 246, 0.05);
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.35),
+    0 0 14px rgba(139, 92, 246, 0.14);
 }
 
 .add-card:active {
@@ -532,16 +545,19 @@
 .badge--pinned {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  border-color: rgba(234, 179, 8, 0.4) !important;
-  background: rgba(234, 179, 8, 0.1) !important;
+  justify-content: center;
+  padding: 2px 5px;
+  border-color: rgba(234, 179, 8, 0.45) !important;
+  background: rgba(234, 179, 8, 0.12) !important;
   color: #facc15 !important;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
 
 .badge--pinned svg {
-  width: 11px;
-  height: 11px;
+  width: 13px;
+  height: 13px;
   flex-shrink: 0;
+  display: block;
 }
 
 /* ============================================================

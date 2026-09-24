@@ -296,9 +296,8 @@ const Library: Component = () => {
         <div class="inst-card-badges">
           <div class="inst-card-badges-track">
             <Show when={pinnedSet().has(inst.id)}>
-              <span class="badge badge--pinned" data-tip="Pinned to floating dock">
+              <span class="badge badge--pinned tip-below" data-tip="Pinned to floating dock">
                 <IconPin />
-                <span>Pinned</span>
               </span>
             </Show>
             <Show when={!inst.last_played && (!inst.total_play_seconds || inst.total_play_seconds === 0)}>
