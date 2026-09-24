@@ -803,74 +803,7 @@ pub async fn ensure_java_public(mc_version: &str) -> Result<PathBuf, String> {
         }
     }
 
-    let java_dir = paths::java_dir();
-    let install_dir = java_dir.join(format!("jdk-{}", java_version));
-
-    // Check if already downloaded
-    let java_exe = install_dir.join("bin").join(crate::util::platform::java_exe_name());
-    if java_exe.exists() {
-        return Ok(java_exe);
-    }
-
-    // Also check if there's a nested directory (Adoptium extracts with a version folder)
-    if install_dir.exists() {
-        // Look for java executable in any subdirectory
-        if let Ok(entries) = fs::read_dir(&install_dir) {
-            for entry in entries.flatten() {
-                let nested_exe = entry.path().join("bin").join(crate::util::platform::java_exe_name());
-                if nested_exe.exists() {
-                    return Ok(nested_exe);
-                }
-            }
-        }
-    }
-
-    // Download from Adoptium
-    tracing::debug!("Downloading Java {} from Adoptium...", java_version);
-
-    let url = format!(
-        "https://api.adoptium.net/v3/binary/latest/{}/ga/{}/{}/jre/hotspot/normal/eclipse",
-        java_version, crate::util::platform::adoptium_os(), crate::util::platform::adoptium_arch()
-    );
-
-    let resp = crate::util::http::HTTP.get(&url)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to download Java: {}", e))?;
-
-    if !resp.status().is_success() {
-        return Err(format!("Adoptium returned HTTP {}", resp.status()));
-    }
-
-    let bytes = resp.bytes().await.map_err(|e| format!("Read Java download: {}", e))?;
-
-    // Save archive
-    fs::create_dir_all(&java_dir).map_err(|e| e.to_string())?;
-    let archive_path = java_dir.join(format!("jdk-{}{}", java_version, crate::util::platform::java_archive_ext()));
-    fs::write(&archive_path, &bytes).map_err(|e| format!("Write archive: {}", e))?;
-
-    // Extract archive
-    crate::util::platform::extract_java_archive(&archive_path, &install_dir)?;
-
-    // Clean up archive
-    let _ = fs::remove_file(&archive_path);
-
-    // Find java executable in extracted directory
-    if let Ok(entries) = fs::read_dir(&install_dir) {
-        for entry in entries.flatten() {
-            let nested_exe = entry.path().join("bin").join(crate::util::platform::java_exe_name());
-            if nested_exe.exists() {
-                return Ok(nested_exe);
-            }
-        }
-    }
-
-    // Direct path
-    if java_exe.exists() {
-        return Ok(java_exe);
-    }
-
-    Err("Java downloaded but executable not found in extracted files".to_string())
+    crate::services::java::ensure_java_major(java_version).await
 }
 
 /// Returns `true` if the Minecraft release `version` (e.g. "1.8.9", "1.21.1",

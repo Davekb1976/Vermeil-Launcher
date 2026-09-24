@@ -209,6 +209,25 @@ pub fn dir_size(path: &std::path::Path) -> u64 {
     size
 }
 
+/// Recursively copy a directory tree.
+pub fn copy_dir_all(
+    src: &std::path::Path,
+    dst: &std::path::Path,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let dst_path = dst.join(entry.file_name());
+        if ty.is_dir() {
+            copy_dir_all(&entry.path(), &dst_path)?;
+        } else if ty.is_file() {
+            std::fs::copy(entry.path(), &dst_path)?;
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

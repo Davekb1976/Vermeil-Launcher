@@ -31,6 +31,63 @@ use std::os::windows::process::CommandExt;
 #[cfg(windows)]
 pub const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
+lazy_static::lazy_static! {
+    static ref JAVA_INSTALL_MUTEX: tokio::sync::Mutex<()> = tokio::sync::Mutex::new(());
+}
+
+/// Readiness sentinel written inside a JDK directory after extraction is 100% complete.
+pub const READY_SENTINEL: &str = ".vermeil_ready";
+
+/// Check if a directory contains a verified, structurally intact Java runtime
+/// and locate its java executable. Returns None if incomplete, corrupt, or missing.
+pub fn find_valid_java_in(dir: &Path) -> Option<PathBuf> {
+    if !dir.exists() {
+        return None;
+    }
+    let exe_name = crate::util::platform::java_exe_name();
+
+    // 1. Direct structure: dir/bin/java(.exe)
+    let direct_exe = dir.join("bin").join(exe_name);
+    if direct_exe.is_file() && is_structurally_valid_jre(dir) {
+        return Some(direct_exe);
+    }
+
+    // 2. Nested structure: dir/<nested_folder>/bin/java(.exe) (Adoptium archives)
+    let has_root_sentinel = dir.join(READY_SENTINEL).exists();
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let child = entry.path();
+            if child.is_dir() {
+                let nested_exe = child.join("bin").join(exe_name);
+                if nested_exe.is_file()
+                    && (has_root_sentinel || is_structurally_valid_jre(&child))
+                {
+                    return Some(nested_exe);
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Check if a directory possesses core JRE files to prevent using half-extracted archives.
+fn is_structurally_valid_jre(dir: &Path) -> bool {
+    if dir.join(READY_SENTINEL).exists() {
+        return true;
+    }
+    let lib = dir.join("lib");
+    lib.join("jvm.cfg").is_file()
+        || lib.join("modules").is_file()
+        || lib.join("rt.jar").is_file()
+}
+
+/// Check if a verified Java installation exists for the requested major version.
+pub fn is_java_installed(major: u8) -> bool {
+    let install_dir = paths::java_dir().join(format!("jdk-{}", major));
+    find_valid_java_in(&install_dir).is_some()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum JavaSource {
@@ -318,13 +375,12 @@ fn find_auto_installed() -> Vec<PathBuf> {
     for entry in entries.flatten() {
         let p = entry.path();
         if p.is_dir() {
-            // The Adoptium zip extracts with a nested version folder. Walk the
-            // immediate children too so we catch jdk-21/jdk-21.0.6+9/bin.
-            out.push(p.clone());
-            if let Ok(nested) = std::fs::read_dir(&p) {
-                for n in nested.flatten() {
-                    out.push(n.path());
-                }
+            let name_str = entry.file_name().to_string_lossy().to_string();
+            if name_str.starts_with('.') {
+                continue;
+            }
+            if let Some(exe) = find_valid_java_in(&p) {
+                out.push(exe);
             }
         }
     }
@@ -475,13 +531,10 @@ pub fn resolve_user_path(settings_paths: &std::collections::HashMap<u8, String>,
     }
 }
 
-/// Trigger an Adoptium download for a specific major version. Reuses the
-/// existing flow in `services::launch::ensure_java_public` indirectly by
-/// downloading into the same `<data>/java/jdk-<major>/` location.
-///
-/// Returns the absolute path to the resulting `java(.exe)`.
+/// Trigger an Adoptium download for a specific major version.
+/// Returns the detected and validated JavaInstall metadata.
 pub async fn install_recommended(major: u8) -> Result<JavaInstall, String> {
-    let exe = download_jre(major).await?;
+    let exe = ensure_java_major(major).await?;
     validate_java(&exe, JavaSource::AutoInstalled)
         .await
         .ok_or_else(|| "Downloaded JRE could not be validated".to_string())
@@ -498,6 +551,7 @@ pub async fn install_recommended(major: u8) -> Result<JavaInstall, String> {
 ///
 /// Returns the deleted directory's absolute path on success.
 pub async fn delete_auto_installed(major: u8) -> Result<String, String> {
+    let _lock = JAVA_INSTALL_MUTEX.lock().await;
     let install_dir = paths::java_dir().join(format!("jdk-{}", major));
 
     if !install_dir.exists() {
@@ -536,53 +590,113 @@ pub async fn delete_auto_installed(major: u8) -> Result<String, String> {
     Ok(strip_extended_prefix(&target_canon.to_string_lossy()))
 }
 
-/// Replicates the Adoptium download path used by `launch::ensure_java_public`
-/// but parameterized on the major version, so the Settings UI can install
-/// any of the major versions our matrix supports (8, 17, 21, 25).
-async fn download_jre(major: u8) -> Result<PathBuf, String> {
-    use std::fs;
-
+/// Clean up any leftover temporary staging folders from previous interrupted runs.
+fn clean_stale_staging_dirs() {
     let java_dir = paths::java_dir();
-    let install_dir = java_dir.join(format!("jdk-{}", major));
-
-    let exe_name = if cfg!(windows) { "java.exe" } else { "java" };
-
-    // Already installed?
-    let direct = install_dir.join("bin").join(exe_name);
-    if direct.exists() {
-        return Ok(direct);
-    }
-    if install_dir.exists() {
-        if let Ok(entries) = fs::read_dir(&install_dir) {
-            for entry in entries.flatten() {
-                let nested = entry.path().join("bin").join(exe_name);
-                if nested.exists() {
-                    return Ok(nested);
-                }
+    if let Ok(entries) = std::fs::read_dir(&java_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            if name_str.starts_with(".staging-jdk-") {
+                let _ = std::fs::remove_dir_all(entry.path());
             }
         }
     }
+}
 
-    let os_segment = if cfg!(windows) {
-        "windows"
-    } else if cfg!(target_os = "macos") {
-        "mac"
-    } else {
-        "linux"
-    };
-    let arch_segment = if cfg!(target_arch = "aarch64") {
-        "aarch64"
-    } else {
-        "x64"
-    };
+/// Internal helper: safely unpacks an archive into an isolated staging directory,
+/// writes the readiness sentinel, and atomically moves it to the target install directory.
+async fn extract_and_publish_archive(major: u8, archive_path: &Path) -> Result<PathBuf, String> {
+    let java_dir = paths::java_dir();
+    let install_dir = java_dir.join(format!("jdk-{}", major));
 
+    clean_stale_staging_dirs();
+
+    let staging_id = uuid::Uuid::new_v4().to_string();
+    let staging_dir = java_dir.join(format!(".staging-jdk-{}-{}", major, &staging_id[..8]));
+
+    let archive_buf = archive_path.to_path_buf();
+    let dest_dir = staging_dir.clone();
+    let extract_res = tokio::task::spawn_blocking(move || {
+        crate::util::platform::extract_java_archive(&archive_buf, &dest_dir)
+    })
+    .await
+    .map_err(|e| format!("Java extraction task panicked: {}", e))?;
+
+    let _ = std::fs::remove_file(archive_path);
+
+    if let Err(e) = extract_res {
+        let _ = std::fs::remove_dir_all(&staging_dir);
+        return Err(format!("Extract Java {}: {}", major, e));
+    }
+
+    // Mark as fully unpacked and ready inside staging before making it visible
+    let _ = std::fs::write(staging_dir.join(READY_SENTINEL), "");
+
+    // Clear target directory if an incomplete or corrupt one already exists
+    if install_dir.exists() {
+        let _ = std::fs::remove_dir_all(&install_dir);
+    }
+
+    // Atomic publish via rename (NTFS / ext4 move)
+    if let Err(e) = std::fs::rename(&staging_dir, &install_dir) {
+        tracing::warn!("fs::rename failed ({}), falling back to copy_dir_all", e);
+        if let Err(copy_err) = crate::util::paths::copy_dir_all(&staging_dir, &install_dir) {
+            let _ = std::fs::remove_dir_all(&staging_dir);
+            return Err(format!("Move Java {} to install dir: {}", major, copy_err));
+        }
+        let _ = std::fs::remove_dir_all(&staging_dir);
+    }
+
+    find_valid_java_in(&install_dir)
+        .ok_or_else(|| format!("Java {} installed but executable could not be validated", major))
+}
+
+/// Unpack and publish a downloaded Java archive into `<data>/java/jdk-<major>/`
+/// safely using atomic staging and single-flight synchronization.
+pub async fn install_from_archive(major: u8, archive_path: &Path) -> Result<PathBuf, String> {
+    let install_dir = paths::java_dir().join(format!("jdk-{}", major));
+    if let Some(exe) = find_valid_java_in(&install_dir) {
+        let _ = std::fs::remove_file(archive_path);
+        return Ok(exe);
+    }
+
+    let _lock = JAVA_INSTALL_MUTEX.lock().await;
+
+    if let Some(exe) = find_valid_java_in(&install_dir) {
+        let _ = std::fs::remove_file(archive_path);
+        return Ok(exe);
+    }
+
+    extract_and_publish_archive(major, archive_path).await
+}
+
+/// Ensure that the required major Java version is present on disk and valid.
+/// If not installed, downloads from Adoptium and unpacks via atomic staging.
+/// Serialized by an async mutex so concurrent instance launches/preparations
+/// do not race, clobber extraction, or launch half-unpacked runtimes.
+pub async fn ensure_java_major(major: u8) -> Result<PathBuf, String> {
+    let install_dir = paths::java_dir().join(format!("jdk-{}", major));
+    if let Some(exe) = find_valid_java_in(&install_dir) {
+        return Ok(exe);
+    }
+
+    let _lock = JAVA_INSTALL_MUTEX.lock().await;
+
+    if let Some(exe) = find_valid_java_in(&install_dir) {
+        return Ok(exe);
+    }
+
+    let java_dir = paths::java_dir();
+    std::fs::create_dir_all(&java_dir).map_err(|e| format!("Create java dir: {}", e))?;
+    let os_segment = crate::util::platform::adoptium_os();
+    let arch_segment = crate::util::platform::adoptium_arch();
     let url = format!(
         "https://api.adoptium.net/v3/binary/latest/{}/ga/{}/{}/jre/hotspot/normal/eclipse",
         major, os_segment, arch_segment
     );
 
-    tracing::debug!("Downloading Java {} from Adoptium: {}", major, url);
-
+    tracing::info!("Downloading Java {} from Adoptium: {}", major, url);
     let resp = crate::util::http::HTTP
         .get(&url)
         .send()
@@ -602,29 +716,51 @@ async fn download_jre(major: u8) -> Result<PathBuf, String> {
         .await
         .map_err(|e| format!("Read Java {} download: {}", major, e))?;
 
-    fs::create_dir_all(&java_dir).map_err(|e| e.to_string())?;
-    let archive_path = java_dir.join(format!("jdk-{}{}", major, crate::util::platform::java_archive_ext()));
-    fs::write(&archive_path, &bytes).map_err(|e| format!("Write archive: {}", e))?;
+    let staging_id = uuid::Uuid::new_v4().to_string();
+    let staging_archive = java_dir.join(format!(
+        ".staging-jdk-{}-{}{}",
+        major,
+        &staging_id[..8],
+        crate::util::platform::java_archive_ext()
+    ));
 
-    crate::util::platform::extract_java_archive(&archive_path, &install_dir)?;
+    std::fs::write(&staging_archive, &bytes).map_err(|e| format!("Write Java archive: {}", e))?;
 
-    let _ = fs::remove_file(&archive_path);
+    extract_and_publish_archive(major, &staging_archive).await
+}
 
-    if let Ok(entries) = fs::read_dir(&install_dir) {
-        for entry in entries.flatten() {
-            let nested = entry.path().join("bin").join(exe_name);
-            if nested.exists() {
-                return Ok(nested);
-            }
-        }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_java_version() {
+        let openjdk = "openjdk version \"21.0.6\" 2025-01-21\nOpenJDK Runtime Environment ...";
+        let (major, ver) = parse_java_version(openjdk).expect("Should parse major");
+        assert_eq!(major, 21);
+        assert_eq!(ver, "21.0.6");
+
+        let legacy = "java version \"1.8.0_412\"\nJava(TM) SE Runtime Environment ...";
+        let (major_legacy, ver_legacy) = parse_java_version(legacy).expect("Should parse legacy 1.8");
+        assert_eq!(major_legacy, 8);
+        assert_eq!(ver_legacy, "1.8.0_412");
     }
 
-    if direct.exists() {
-        return Ok(direct);
-    }
+    #[test]
+    fn test_valid_java_detection_with_sentinel() {
+        let temp = std::env::temp_dir().join(format!("vermeil_test_java_{}", uuid::Uuid::new_v4()));
+        let bin = temp.join("bin");
+        std::fs::create_dir_all(&bin).unwrap();
+        let exe = bin.join(crate::util::platform::java_exe_name());
+        std::fs::write(&exe, b"dummy").unwrap();
 
-    Err(format!(
-        "Java {} downloaded but the executable could not be located in the extracted files",
-        major
-    ))
+        // Without sentinel or core lib files, find_valid_java_in should reject it
+        assert!(find_valid_java_in(&temp).is_none());
+
+        // With sentinel, it should be recognized
+        std::fs::write(temp.join(READY_SENTINEL), b"").unwrap();
+        assert_eq!(find_valid_java_in(&temp), Some(exe));
+
+        let _ = std::fs::remove_dir_all(&temp);
+    }
 }

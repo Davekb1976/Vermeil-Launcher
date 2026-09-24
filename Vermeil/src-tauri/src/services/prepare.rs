@@ -83,8 +83,7 @@ pub async fn prepare_with_extras(
     // === Determine what needs downloading ===
     let java_version = required_java_version(&instance.game_version);
     let java_dir = paths::java_dir();
-    let install_dir = java_dir.join(format!("jdk-{}", java_version));
-    let java_cached = install_dir.exists() && has_java_exe(&install_dir);
+    let java_cached = crate::services::java::is_java_installed(java_version);
 
     // Fetch version metadata + loader-library list in parallel. These are
     // independent network calls; running them sequentially adds 200-800ms of
@@ -249,14 +248,7 @@ pub async fn prepare_with_extras(
     // Extract Java archive if we just downloaded it
     if !java_cached && java_archive_path.exists() {
         emit("game", &instance_name, "Extracting Java", 0.97, false);
-        let archive_path = java_archive_path.clone();
-        let target_dir = install_dir.clone();
-        tokio::task::spawn_blocking(move || {
-            crate::util::platform::extract_java_archive(&archive_path, &target_dir)
-        })
-        .await
-        .map_err(|e| format!("Java extraction task panicked: {}", e))??;
-        let _ = fs::remove_file(&java_archive_path);
+        crate::services::java::install_from_archive(java_version, &java_archive_path).await?;
     }
 
     // Extract natives
@@ -416,14 +408,3 @@ fn maven_to_path_classified(coordinate: &str, classifier: &str) -> String {
     format!("{}/{}/{}/{}-{}-{}.jar", group, artifact, version, artifact, version, classifier)
 }
 
-/// Check if a java executable exists in the directory (or nested subdirectory)
-fn has_java_exe(dir: &std::path::Path) -> bool {
-    let exe = crate::util::platform::java_exe_name();
-    if dir.join("bin").join(exe).exists() { return true; }
-    if let Ok(entries) = std::fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            if entry.path().join("bin").join(exe).exists() { return true; }
-        }
-    }
-    false
-}

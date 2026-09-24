@@ -564,6 +564,10 @@ async fn resolve_libraries(
     Ok(paths_out)
 }
 
+lazy_static::lazy_static! {
+    static ref INSTALLER_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::new(());
+}
+
 /// Run the Forge/NeoForge installer if not already done for this instance.
 /// Returns (main_class, classpath libs, extra JVM args, extra game args)
 async fn ensure_installer_ran(
@@ -576,6 +580,13 @@ async fn ensure_installer_ran(
     game_version: &str,
 ) -> Result<(String, Vec<PathBuf>, Vec<String>, Vec<String>), String> {
     let marker = instance_dir.join(format!(".{}-installed", marker_name));
+
+    // Serialize loader installer runs across concurrent instance preparations.
+    // Modern Forge and NeoForge run headless installers inside a shared scratch
+    // directory with junction links to shared libraries. Serializing execution
+    // prevents junction clobbering, race conditions, and corrupted files.
+    // Subsequent instances immediately see marker.exists() and return in 0ms.
+    let _lock = INSTALLER_LOCK.lock().await;
 
     if !marker.exists() {
         crate::services::download::cancel_check()?;
@@ -696,7 +707,11 @@ async fn ensure_installer_ran(
             // Unlink or migrate
             link_guard.finish()?;
 
-            install_result?;
+            if let Err(e) = install_result {
+                // If the installer failed, clean up the scratch dir so subsequent attempts don't inherit a corrupted state
+                let _ = fs::remove_dir_all(instance_dir);
+                return Err(e);
+            }
 
             // Mark as done
             let _ = fs::write(&marker, "");
@@ -798,24 +813,6 @@ pub async fn resolve_forge_installer_url(game_version: &str, loader_version: &st
     }
 }
 
-/// Helper to locate a java executable inside a JDK installation directory.
-fn find_java_exe_in(dir: &Path) -> Option<PathBuf> {
-    let exe_name = crate::util::platform::java_exe_name();
-    let direct = dir.join("bin").join(exe_name);
-    if direct.exists() {
-        return Some(direct);
-    }
-    if let Ok(entries) = fs::read_dir(dir) {
-        for entry in entries.flatten() {
-            let nested = entry.path().join("bin").join(exe_name);
-            if nested.exists() {
-                return Some(nested);
-            }
-        }
-    }
-    None
-}
-
 /// Get a Java executable suitable for running the installer for the given Minecraft version.
 /// Prioritizes the exact version downloaded/required by the game to ensure compatibility.
 async fn ensure_java_for_loader(game_version: &str) -> Result<PathBuf, String> {
@@ -824,10 +821,8 @@ async fn ensure_java_for_loader(game_version: &str) -> Result<PathBuf, String> {
 
     // 1. Prefer the exact required Java version (already downloaded by prepare.rs)
     let exact_dir = java_dir.join(format!("jdk-{}", req_ver));
-    if exact_dir.exists() {
-        if let Some(exe) = find_java_exe_in(&exact_dir) {
-            return Ok(exe);
-        }
+    if let Some(exe) = crate::services::java::find_valid_java_in(&exact_dir) {
+        return Ok(exe);
     }
 
     // 2. Try compatible Java versions
@@ -838,12 +833,10 @@ async fn ensure_java_for_loader(game_version: &str) -> Result<PathBuf, String> {
         _ => &[25, 21, 17, 8],
     };
 
-    for v in candidates {
+    for &v in candidates {
         let install_dir = java_dir.join(format!("jdk-{}", v));
-        if install_dir.exists() {
-            if let Some(exe) = find_java_exe_in(&install_dir) {
-                return Ok(exe);
-            }
+        if let Some(exe) = crate::services::java::find_valid_java_in(&install_dir) {
+            return Ok(exe);
         }
     }
 

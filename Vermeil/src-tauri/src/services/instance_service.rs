@@ -208,7 +208,7 @@ pub async fn clone_instance(
     // tree (including .minecraft/) so worlds, configs, and any custom files
     // come along — Minecraft launchers without this feature force users to
     // manually shovel folders, which always loses something.
-    copy_dir_all(&source_dir, &new_dir)?;
+    crate::util::paths::copy_dir_all(&source_dir, &new_dir)?;
 
     // Rewrite instance.json with the new id, name, and reset play stats.
     let mut cloned = source.clone();
@@ -262,29 +262,6 @@ fn unique_instance_name(base: &str) -> Result<String, Box<dyn std::error::Error 
     }
 }
 
-/// Recursively copy a directory tree. `std::fs::copy` only handles single
-/// files, so we walk and re-create. We deliberately *don't* preserve file
-/// permissions or symlinks — instances are user content, not system files.
-fn copy_dir_all(
-    src: &std::path::Path,
-    dst: &std::path::Path,
-) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    fs::create_dir_all(dst)?;
-    for entry in fs::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-        let dst_path = dst.join(entry.file_name());
-        if ty.is_dir() {
-            copy_dir_all(&entry.path(), &dst_path)?;
-        } else if ty.is_file() {
-            fs::copy(entry.path(), &dst_path)?;
-        }
-        // Symlinks are skipped — none of Minecraft's writes produce them on
-        // Windows, and on Unix preserving them across instance copies would
-        // accidentally share state between two supposedly-independent setups.
-    }
-    Ok(())
-}
 
 /// Change an instance's mod loader and/or loader version.
 ///
