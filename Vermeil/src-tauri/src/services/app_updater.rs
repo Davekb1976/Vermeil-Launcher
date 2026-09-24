@@ -226,10 +226,11 @@ pub async fn check_for_updates<R: Runtime>(
     let updater = builder
         .build()
         .map_err(|e| format!("Failed to build updater: {}", e))?;
-    let update = updater
-        .check()
-        .await
-        .map_err(|e| format!("Failed to check for updates: {}", e))?;
+    let update = match updater.check().await {
+        Ok(u) => u,
+        Err(tauri_plugin_updater::Error::ReleaseNotFound) => None,
+        Err(e) => return Err(format!("Failed to check for updates: {}", e)),
+    };
 
     if let Some(update) = update {
         let formatted_date = update.date.map(|d| d.to_string());

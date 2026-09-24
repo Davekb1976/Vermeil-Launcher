@@ -84,7 +84,7 @@ const UpdateBanner: Component = () => {
               <button
                 class="btn btn--neutral btn--sm"
                 onClick={() =>
-                  openUrl(`${RELEASES_URL}/v${updateAvailable()?.version}`).catch(() => {})
+                  openUrl(`${RELEASES_URL}/${fmtVer(updateAvailable()?.version)}`).catch(() => {})
                 }
               >
                 <IconExternalLink />
