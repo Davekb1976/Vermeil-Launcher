@@ -564,6 +564,7 @@ pub fn sanitize_settings_for_cloud(source: &LauncherSettings) -> LauncherSetting
         close_on_launch: source.close_on_launch,
         popout_logs: source.popout_logs,
         auto_update: source.auto_update,
+        update_channel: source.update_channel.clone(),
         discord_rpc: source.discord_rpc,
         show_snapshots: source.show_snapshots,
         splash_screen: source.splash_screen,
@@ -645,6 +646,7 @@ pub fn merge_restored_settings(
     merged.close_on_launch = cloud_backup.close_on_launch;
     merged.popout_logs = cloud_backup.popout_logs;
     merged.auto_update = cloud_backup.auto_update;
+    merged.update_channel = cloud_backup.update_channel.clone();
     merged.discord_rpc = cloud_backup.discord_rpc;
     merged.show_snapshots = cloud_backup.show_snapshots;
     merged.splash_screen = cloud_backup.splash_screen;

@@ -25,6 +25,7 @@ just the code.
 - [Persistent Lifetime Telemetry](lifetime-telemetry/research.md): Dual-ledger activity persistence, monotonic playtime tracking, and single-pass NBT world telemetry
 - [Concurrent Runtime Provisioning](concurrent-runtime-provisioning/research.md): Single-flight Java synchronization, atomic extraction staging, structural JRE validation, and loader installer scratch isolation
 - [Library Architecture & Parallel Deletion](library-architecture/research.md): High-concurrency instance unlinking, single-pass settings consolidation, and dual-shelf hierarchy
+- [Dual-Channel Release & Update Architecture](dual-channel-updater/research.md): Dynamic endpoint routing, Fastly CDN manifest synchronization, and cryptographic rollback mechanics
 
 ## Ground rules
 

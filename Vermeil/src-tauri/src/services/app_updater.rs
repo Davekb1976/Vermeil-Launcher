@@ -20,10 +20,22 @@
 //! documented alternative and is what gives us the in-app download progress
 //! bar.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, Manager, ResourceId, Runtime, Webview};
-use tauri_plugin_updater::Update;
+use tauri_plugin_updater::{Update, UpdaterExt};
+use url::Url;
+
+/// Metadata of an available update exposed across IPC to the frontend.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateMetadata {
+    pub rid: ResourceId,
+    pub current_version: String,
+    pub version: String,
+    pub date: Option<String>,
+    pub body: Option<String>,
+}
 
 /// Resource managed by Tauri so we can hold the downloaded bytes between the
 /// `start_update_download` and `apply_pending_update` calls.
@@ -182,4 +194,55 @@ pub fn clear_pending_update<R: Runtime>(app: &AppHandle<R>) {
         Err(_) => return,
     };
     slot.take();
+}
+
+/// Check for updates on the requested channel ("stable" or "experimental"),
+/// dynamically configuring the updater endpoint and version comparator.
+/// When `allow_downgrades` is true, versions different from current are
+/// accepted, allowing bidirectional rollbacks between channels.
+pub async fn check_for_updates<R: Runtime>(
+    webview: Webview<R>,
+    channel: Option<String>,
+    allow_downgrades: Option<bool>,
+) -> Result<Option<UpdateMetadata>, String> {
+    let mut builder = webview.updater_builder();
+
+    let channel_name = channel.unwrap_or_else(|| "stable".to_string());
+    let endpoint_url = if channel_name == "experimental" {
+        "https://github.com/Davekb1976/Vermeil-Launcher/releases/download/experimental-latest/latest.json"
+    } else {
+        "https://github.com/Davekb1976/Vermeil-Launcher/releases/latest/download/latest.json"
+    };
+
+    let url = Url::parse(endpoint_url).map_err(|e| format!("Invalid updater URL: {}", e))?;
+    builder = builder
+        .endpoints(vec![url])
+        .map_err(|e| format!("Failed to configure updater endpoints: {}", e))?;
+
+    if allow_downgrades.unwrap_or(false) {
+        builder = builder.version_comparator(|current, update| update.version != current);
+    }
+
+    let updater = builder
+        .build()
+        .map_err(|e| format!("Failed to build updater: {}", e))?;
+    let update = updater
+        .check()
+        .await
+        .map_err(|e| format!("Failed to check for updates: {}", e))?;
+
+    if let Some(update) = update {
+        let formatted_date = update.date.map(|d| d.to_string());
+        let rid = webview.resources_table().add(update.clone());
+        let metadata = UpdateMetadata {
+            rid,
+            current_version: update.current_version,
+            version: update.version,
+            date: formatted_date,
+            body: update.body,
+        };
+        Ok(Some(metadata))
+    } else {
+        Ok(None)
+    }
 }

@@ -64,6 +64,7 @@ const Settings: Component = () => {
     "Auto-hide dock", "Hide floating dock across all screens until hovered", "dock", "autohide", "floating dock",
     "Pagination dock position", "Position and orientation of the pagination dock", "pagination", "page dock",
     "Auto-update launcher", "Automatically checks for updates", "update", "updates", "updater",
+    "Release Channel", "Update channel", "channel", "stable", "experimental",
     "Boot splash", "Show the animated logo splash on startup", "splash", "startup", "boot",
     "Discord Rich Presence", "Display playing status", "discord", "rpc", "rich presence",
     "Show snapshots", "Include experimental versions", "snapshots", "snapshot", "experimental",
@@ -448,6 +449,43 @@ const Settings: Component = () => {
     }
   };
 
+  const [showRollbackConfirmModal, setShowRollbackConfirmModal] = createSignal(false);
+  const isCurrentExperimental = () => {
+    const v = appVersion();
+    return Boolean(v && (v.includes("-") || v.toLowerCase().includes("exp")));
+  };
+
+  const handleChannelSwitch = async (target: "stable" | "experimental") => {
+    const current = settings()?.update_channel || "stable";
+    if (current === target) return;
+
+    if (target === "stable" && isCurrentExperimental()) {
+      setShowRollbackConfirmModal(true);
+      return;
+    }
+
+    await updateSetting("update_channel", target);
+    showToast({
+      title: "Update channel changed",
+      message: `Now tracking the ${target === "experimental" ? "Experimental" : "Stable"} channel.`,
+      type: "info",
+      autoCloseMs: 3000,
+    });
+    checkForUpdates(false, false, target).catch(() => {});
+  };
+
+  const confirmRollbackToStable = async () => {
+    setShowRollbackConfirmModal(false);
+    await updateSetting("update_channel", "stable");
+    showToast({
+      title: "Checking for rollback",
+      message: "Querying the Stable channel for the latest verified release...",
+      type: "info",
+      autoCloseMs: 4000,
+    });
+    checkForUpdates(false, true, "stable").catch(() => {});
+  };
+
   // Patch helper for video_settings: merges onto the current resource value and
   // writes through `updateSetting` (which mutates optimistically, so the slider
   // tracks the thumb live with no separate mirror).
@@ -759,14 +797,53 @@ const Settings: Component = () => {
                         </div>
                       </Show>
 
-                      <Show when={isGeneralSection() || matches("Check for updates", "Manually check for a new version", "update")}>
-                        <div class="setting-row setting-row--span-2">
+                      {/* Update Release Channel Selector */}
+                      <Show when={isGeneralSection() || matches("Release Channel", "Update channel", "channel", "stable", "experimental")}>
+                        <div class="setting-row">
                           <div class="setting-info">
-                            <span class="setting-name">Check for updates</span>
-                            <span class="setting-desc">Manually check for a new version</span>
+                            <span class="setting-name">Release Channel</span>
+                            <span class="setting-desc">
+                              {settings()?.update_channel === "experimental"
+                                ? "Opted in to bleeding-edge test builds"
+                                : "Standard verified production releases"}
+                            </span>
                           </div>
                           <div class="setting-control">
-                            <button class="btn btn--sm" onClick={() => checkForUpdates(false)}>Check now</button>
+                            <div class="update-channel-pills">
+                              <button
+                                type="button"
+                                class={`update-channel-pill ${settings()?.update_channel !== "experimental" ? "active" : ""}`}
+                                onClick={() => handleChannelSwitch("stable")}
+                              >
+                                Stable
+                              </button>
+                              <button
+                                type="button"
+                                class={`update-channel-pill ${settings()?.update_channel === "experimental" ? "active" : ""}`}
+                                onClick={() => handleChannelSwitch("experimental")}
+                              >
+                                Experimental
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </Show>
+
+                      <Show when={isGeneralSection() || matches("Check for updates", "Manually check for a new version", "update")}>
+                        <div class="setting-row">
+                          <div class="setting-info">
+                            <span class="setting-name">Check for updates</span>
+                            <span class="setting-desc">
+                              Check for new releases on the {settings()?.update_channel === "experimental" ? "Experimental" : "Stable"} channel
+                            </span>
+                          </div>
+                          <div class="setting-control">
+                            <button
+                              class="btn btn--sm"
+                              onClick={() => checkForUpdates(false, settings()?.update_channel === "stable" && isCurrentExperimental())}
+                            >
+                              Check now
+                            </button>
                           </div>
                         </div>
                       </Show>
@@ -788,7 +865,15 @@ const Settings: Component = () => {
                       <Show when={isGeneralSection() || matches("Vermeil", "Version", appVersion())}>
                         <div class="setting-row">
                           <div class="setting-info">
-                            <span class="setting-name">Vermeil</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                              <span class="setting-name">Vermeil</span>
+                              <span
+                                class="card-section-tag"
+                                style={`font-size: 10px; font-weight: 700; padding: 2px 6px; letter-spacing: 0.5px; background: ${isCurrentExperimental() ? "rgba(234, 179, 8, 0.15)" : "rgba(16, 185, 129, 0.15)"}; color: ${isCurrentExperimental() ? "#eab308" : "#10b981"}; border: 1px solid ${isCurrentExperimental() ? "rgba(234, 179, 8, 0.3)" : "rgba(16, 185, 129, 0.3)"};`}
+                              >
+                                {isCurrentExperimental() ? "EXPERIMENTAL" : "STABLE"}
+                              </span>
+                            </div>
                             <span class="setting-desc">Version {appVersion() || "..."}</span>
                           </div>
                           <div class="setting-control">
@@ -1989,6 +2074,57 @@ const Settings: Component = () => {
             await applyDetection(major, install);
           }}
         />
+      </Show>
+
+      {/* Rollback confirmation modal */}
+      <Show when={showRollbackConfirmModal()}>
+        <div class="modal-overlay" onClick={() => setShowRollbackConfirmModal(false)}>
+          <div
+            class="modal"
+            style="width: 480px; max-width: 95vw;"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div class="modal-header">
+              <div>
+                <div class="modal-title">Switch to Stable Channel?</div>
+                <div style="font-size: 11px; color: var(--muted); margin-top: 2px">
+                  Current build: v{appVersion()} (Experimental)
+                </div>
+              </div>
+              <button
+                class="modal-close"
+                onClick={() => setShowRollbackConfirmModal(false)}
+                aria-label="Close modal"
+              >
+                <IconX />
+              </button>
+            </div>
+
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: var(--space-3); font-size: 13px; line-height: 1.5; color: var(--text-muted);">
+              <p>
+                You are currently running an experimental pre-release. Switching to the <strong>Stable</strong> channel will check for the latest verified production milestone and offer a safe rollback.
+              </p>
+              <div style="background: var(--surface-sunken); border: 1px solid var(--border); padding: 12px; border-left: 3px solid var(--accent); font-size: 12px; color: var(--text);">
+                <strong>Data Safety:</strong> All your Minecraft instances, worlds, saves, screenshots, shaderpacks, and accounts will be completely preserved.
+              </div>
+            </div>
+
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-4);">
+              <button
+                class="btn btn--subtle"
+                onClick={() => setShowRollbackConfirmModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                class="btn btn--primary"
+                onClick={confirmRollbackToStable}
+              >
+                Rollback to Stable
+              </button>
+            </div>
+          </div>
+        </div>
       </Show>
     </div>
   );

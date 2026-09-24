@@ -13,6 +13,9 @@ pub struct LauncherSettings {
     #[serde(default)]
     pub popout_logs: bool,
     pub auto_update: bool,
+    /// Update release channel: "stable" or "experimental". Defaults to "stable".
+    #[serde(default = "default_update_channel")]
+    pub update_channel: String,
     pub discord_rpc: bool,
     pub show_snapshots: bool,
     /// Show the animated boot splash (turning logo cube + wordmark) when the
@@ -188,6 +191,7 @@ fn default_splash_screen() -> bool { true }
 fn default_download_toasts() -> bool { true }
 fn default_auto_hide_dock() -> bool { true }
 fn default_pagination_position() -> String { "bottom".to_string() }
+fn default_update_channel() -> String { "stable".to_string() }
 
 /// In-game custom cape state (companion mod). The baked cape image lives at
 /// `<data>/ingame-cape.png`; this is just the toggle + which library cape.
@@ -213,6 +217,7 @@ impl Default for LauncherSettings {
             close_on_launch: false,
             popout_logs: false,
             auto_update: true,
+            update_channel: default_update_channel(),
             discord_rpc: false,
             show_snapshots: false,
             splash_screen: true,

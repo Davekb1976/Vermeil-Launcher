@@ -120,3 +120,35 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release edit "${{ github.ref_name }}" --latest --repo "${{ github.repository }}"
+
+  # Sync the dual-platform latest.json to the static 'experimental-latest' release
+  # so experimental channel users can discover pre-releases over Fastly CDN without
+  # encountering GitHub API unauthenticated rate limits.
+  sync-experimental:
+    needs: release
+    if: contains(github.ref_name, '-')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Sync latest manifest to experimental-latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" --pattern "latest.json" --clobber --repo "${{ github.repository }}"
+
+          if [ ! -f "latest.json" ]; then
+            echo "::error::latest.json not found in release assets for ${{ github.ref_name }}"
+            exit 1
+          fi
+
+          if ! gh release view "experimental-latest" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release create "experimental-latest" latest.json \
+              --title "Vermeil Experimental Channel (Latest Manifest)" \
+              --notes "Automated tracking manifest for Vermeil experimental pre-releases. Do not delete." \
+              --prerelease \
+              --repo "${{ github.repository }}"
+          else
+            gh release upload "experimental-latest" latest.json --clobber --repo "${{ github.repository }}"
+          fi
+

@@ -19,6 +19,15 @@ pub async fn apply_pending_update<R: Runtime>(app: AppHandle<R>) -> Result<(), S
 }
 
 #[tauri::command]
+pub async fn check_for_updates<R: Runtime>(
+    webview: Webview<R>,
+    channel: Option<String>,
+    allow_downgrades: Option<bool>,
+) -> Result<Option<crate::services::app_updater::UpdateMetadata>, String> {
+    crate::services::app_updater::check_for_updates(webview, channel, allow_downgrades).await
+}
+
+#[tauri::command]
 pub fn clear_pending_update<R: Runtime>(app: AppHandle<R>) {
     crate::services::app_updater::clear_pending_update(&app);
 }

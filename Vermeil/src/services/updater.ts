@@ -1,5 +1,11 @@
-import { check, type Update } from "@tauri-apps/plugin-updater";
-import { invoke } from "@tauri-apps/api/core";
+import {
+  checkForAppUpdates,
+  startUpdateDownload,
+  applyPendingUpdate,
+  clearPendingUpdate,
+  getSettings,
+  type UpdateMetadata,
+} from "../ipc/commands";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 import {
@@ -14,26 +20,11 @@ import {
 /**
  * Auto-updater glue.
  *
- * The Tauri JS plugin's `update.downloadAndInstall()` does not work reliably
- * on Windows: it spawns the NSIS installer asynchronously and returns before
- * the file-replace step finishes. If we then call `relaunch()` the still-
- * running vermeil.exe holds the file lock and NSIS silently fails to overwrite
- * it — the user perceives "update applied but everything is the same".
- *
- * Instead we go through three Rust commands that surface the staged update
- * as an explicit user action:
- *
- *  1. `start_update_download(rid)` — downloads payload into memory, emits
- *     `update-progress` events for the UI.
- *  2. `apply_pending_update()`     — sets a flag and closes the window.
- *  3. (RunEvent::Exit on the Rust side) — runs `update.install(data)` while
- *     the webview is gone, then `app.restart()`.
- *
- * The `update` resource lives in Tauri's resource table; we keep its `rid`
- * around so the Rust side can fetch the same `Update` instance.
+ * Checks for updates dynamically routed to the user's selected channel
+ * (Stable or Experimental) and delegates downloading / applying to Rust.
  */
 
-let cachedUpdate: Update | null = null;
+let cachedUpdate: UpdateMetadata | null = null;
 let unlistenProgress: UnlistenFn | null = null;
 
 interface UpdateProgressPayload {
@@ -82,16 +73,29 @@ async function ensureProgressListener() {
  * This does NOT auto-download; the user always opts in via
  * the UpdateBanner component.
  *
+ * @param silent When true, suppresses info toasts when no updates are found.
+ * @param allowDowngrades When true, versions different from current are accepted (for channel rollbacks).
+ * @param channelOverride Optional channel override ("stable" | "experimental").
  * Returns true when a new update is available, false otherwise.
  */
-export async function checkForUpdates(silent = false): Promise<boolean> {
+export async function checkForUpdates(
+  silent = false,
+  allowDowngrades = false,
+  channelOverride?: "stable" | "experimental",
+): Promise<boolean> {
   try {
-    const update = await check();
+    const settings = await getSettings().catch(() => null);
+    const channel =
+      channelOverride ||
+      (settings?.update_channel as "stable" | "experimental") ||
+      "stable";
+
+    const update = await checkForAppUpdates(channel, allowDowngrades);
     if (!update) {
       if (!silent) {
         showToast({
-          title: "No updates",
-          message: "You're running the latest version.",
+          title: "Up to date",
+          message: `You're running the latest version for the ${channel} channel.`,
           type: "info",
           autoCloseMs: 3000,
         });
@@ -143,10 +147,7 @@ export async function downloadUpdate(): Promise<void> {
   await ensureProgressListener();
   setUpdateDownloading(true);
   setUpdateProgress(0);
-  // The plugin-updater check() call assigned the resource to the `Update`
-  // object — its `rid` is what Rust uses to find it again.
-  const rid = cachedUpdate.rid as number;
-  await invoke<void>("start_update_download", { rid });
+  await startUpdateDownload(cachedUpdate.rid);
   setUpdateDownloading(false);
   setUpdateDownloaded(true);
 }
@@ -156,7 +157,7 @@ export async function downloadUpdate(): Promise<void> {
  * at RunEvent::Exit, then the app relaunches.
  */
 export async function applyUpdate(): Promise<void> {
-  await invoke<void>("apply_pending_update");
+  await applyPendingUpdate();
 }
 
 /**
@@ -165,7 +166,7 @@ export async function applyUpdate(): Promise<void> {
  */
 export async function dismissUpdate(): Promise<void> {
   cachedUpdate = null;
-  await invoke<void>("clear_pending_update");
+  await clearPendingUpdate();
   setUpdateAvailable(null);
   setUpdateDownloading(false);
   setUpdateDownloaded(false);

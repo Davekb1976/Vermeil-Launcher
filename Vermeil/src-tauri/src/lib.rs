@@ -336,6 +336,7 @@ pub fn run() {
             files::list_instance_worlds,
             files::open_instance_folder,
             // Auto-updater
+            app_updater::check_for_updates,
             app_updater::start_update_download,
             app_updater::apply_pending_update,
             app_updater::clear_pending_update,

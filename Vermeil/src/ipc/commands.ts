@@ -133,6 +133,11 @@ export interface LauncherSettings {
    *  hides to the tray. */
   popout_logs: boolean;
   auto_update: boolean;
+  /**
+   * Application update channel: "stable" for tested production milestones,
+   * "experimental" for bleeding-edge pre-releases. Defaults to "stable".
+   */
+  update_channel: "stable" | "experimental";
   discord_rpc: boolean;
   show_snapshots: boolean;
   /** Show the animated boot splash when the launcher window first appears. */
@@ -804,6 +809,34 @@ export const listInstanceWorlds = (instanceId: string) =>
   invoke<WorldEntry[]>("list_instance_worlds", { instanceId });
 export const openInstanceFolder = (instanceId: string, subPath?: string) =>
   invoke<void>("open_instance_folder", { instanceId, subPath });
+
+// Auto-updater commands
+export interface UpdateMetadata {
+  rid: number;
+  currentVersion: string;
+  version: string;
+  date: string | null;
+  body: string | null;
+}
+
+export const checkForAppUpdates = (
+  channel?: "stable" | "experimental",
+  allowDowngrades?: boolean,
+) =>
+  invoke<UpdateMetadata | null>("check_for_updates", {
+    channel,
+    allowDowngrades,
+  });
+
+export const startUpdateDownload = (rid: number) =>
+  invoke<void>("start_update_download", { rid });
+
+export const applyPendingUpdate = () =>
+  invoke<void>("apply_pending_update");
+
+export const clearPendingUpdate = () =>
+  invoke<void>("clear_pending_update");
+
 export const getInstanceLogs = (instanceId: string) =>
   invoke<string[]>("get_instance_logs", { instanceId });
 export const getCrashReport = (path: string) =>
