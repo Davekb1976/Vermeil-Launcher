@@ -24,6 +24,7 @@ just the code.
 - [Client GC Calibration](client-gc-calibration/research.md): Modern client garbage collection presets and initial heap calibration across hardware tiers
 - [Persistent Lifetime Telemetry](lifetime-telemetry/research.md): Dual-ledger activity persistence, monotonic playtime tracking, and single-pass NBT world telemetry
 - [Concurrent Runtime Provisioning](concurrent-runtime-provisioning/research.md): Single-flight Java synchronization, atomic extraction staging, structural JRE validation, and loader installer scratch isolation
+- [Library Architecture & Parallel Deletion](library-architecture/research.md): High-concurrency instance unlinking, single-pass settings consolidation, and dual-shelf hierarchy
 
 ## Ground rules
 
