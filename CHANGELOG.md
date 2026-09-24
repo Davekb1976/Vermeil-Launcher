@@ -13,6 +13,7 @@
 - Client-tuned GC presets (Client G1GC, Generational ZGC, Adaptive Shenandoah) with hardware-tier heap calibration
 - Persistent dual-ledger playtime and activity tracking surviving instance deletions
 - Single-pass NBT and JSON per-world playtime tracking on Continue Hero card, 2x2 grid, and Worlds manager tab
+- One-click shared Minecraft game data cleanup (assets and engine libraries) in Settings Storage Management
 
 ### Changed
 
