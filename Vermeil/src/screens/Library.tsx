@@ -20,8 +20,7 @@ import {
   IconCube,
   IconFolderOpen,
   IconDownload,
-  IconStar,
-  IconSettings,
+  IconPin,
 } from "../components/Icons";
 import Dropdown from "../components/Dropdown";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
@@ -299,7 +298,7 @@ const Library: Component = () => {
           <div class="inst-card-badges-track">
             <Show when={pinnedSet().has(inst.id)}>
               <span class="badge badge--pinned" data-tip="Pinned to floating dock">
-                <IconStar class="icon-star-badge" />
+                <IconPin />
                 <span>Pinned</span>
               </span>
             </Show>
@@ -434,7 +433,8 @@ const Library: Component = () => {
                 class={`library-filter-pill ${loaderFilter() === "pinned" ? "active" : ""}`}
                 onClick={() => setLoaderFilter("pinned")}
               >
-                ★ Pinned ({pinnedList().length})
+                <IconPin />
+                <span>Pinned ({pinnedList().length})</span>
               </button>
             </Show>
             <button
@@ -471,7 +471,7 @@ const Library: Component = () => {
                 <span style="color:var(--text-muted);font-size:var(--fs-xs);">Quick-launch on floating dock</span>
               </div>
               <button class="btn btn--xs btn--ghost" onClick={openPinInstancesModal}>
-                <IconSettings />
+                <IconPin />
                 <span style="margin-left:4px;">Manage Pins</span>
               </button>
             </div>
