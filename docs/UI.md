@@ -131,6 +131,17 @@ Before adding, restyling, or modifying any interactive element (button, badge, t
     - Bottom-left: `class="... tip-below tip-left" data-tip="..."`
   - **Restraint Rule**: Only add `data-tip` to discrete interactive affordances (icon buttons, status badges, chips). Never place `data-tip` on large containers (e.g. full cards, panels, or telemetry plates) or buttons that already have clear visible text.
 
+### 9. Modal Dialog Restraint & Ban on Redundant Top-Right [X] Buttons
+- **In overlay dialogs (`.modal-overlay`), NEVER add a top-right `modal-close` `[X]` button when explicit footer dismiss actions already exist** (`Cancel`, `Close`, `Got it`, `Dismiss`, `Skip setup`), along with backdrop click and `Escape` key handling.
+- **Rationale**: Top-right `[X]` buttons create redundant affordances, clutter headers where category tags and titles belong, and cause tooltip clipping bugs (`data-tip` clipping past viewport or window boundaries). Modal dismissal must be clean, single-point, and restrained.
+
+### 10. Dropdown & Popover Anchoring Invariant
+- **When placing dropdown menus, version selectors, or custom select panels inside setting rows (`.setting-row`) or cards:**
+  - The row container MUST enforce flex row alignment: `display: flex; align-items: center; justify-content: space-between; gap: 12px;`
+  - The trigger button MUST be wrapped in a relative positioning container: `position: relative; display: inline-flex; flex-shrink: 0;`
+  - The dropdown panel (`.custom-select-panel`) MUST be anchored directly to that wrapper: `position: absolute; right: 0; top: calc(100% + 4px); z-index: 100; min-width: 100%;`
+  - **Never** allow a setting row with a dropdown to collapse into block display (e.g. by placing `.setting-row` outside `.card-section-body` without explicit flex rules), which forces the control to full width on a new line and displaces `right: 0` to the far right edge of the dialog away from the trigger button.
+
 ## Responsive contract
 
 `--content-min` (480px) is the minimum fully-supported content width. Card grids reflow via `.card-grid` (track narrower than 480px, so columns drop without clipping). Below 480px, `.content > *` carries `max-width:100%` + `min-width:0` and media is capped, so nothing overflows. **Don't override the grid template inline** — let `.card-grid` do the reflow.
@@ -178,7 +189,7 @@ Mounted at App level, controlled by signal. `OnboardingWizard`, `PinInstancesMod
 
 ### Mod detail overlay (Browse)
 
-**Clicking anywhere on a Browse mod card opens its detail overlay** (`modals/ModDetailModal.tsx`) — summary, a stat grid, loader pills, and the version picker. The card's own `+ Install` button and the multi-select checkbox `stopPropagation`, so they act without opening the overlay; while multi-select is active, clicking a card toggles selection instead. Dismiss with the X, the Close button, clicking the backdrop, or Escape.
+**Clicking anywhere on a Browse mod card opens its detail overlay** (`modals/ModDetailModal.tsx`) — summary, a stat grid, loader pills, and the version picker. The card's own `+ Install` button and the multi-select checkbox `stopPropagation`, so they act without opening the overlay; while multi-select is active, clicking a card toggles selection instead. Dismiss with the footer Close button, clicking the backdrop, or pressing Escape.
 
 Escape is handled in the overlay on the **capture** phase with `stopImmediatePropagation()`. The global handler in `App.tsx` treats Escape on the instance screen as "back to Library" and listens on `document` in the bubble phase, so without capture the overlay would close *and* navigate away.
 

@@ -70,6 +70,13 @@ Before adding buttons, badges, checkboxes, or visual indicators to any screen, m
   - **Only for clickable/interactive items**: Buttons (`.btn`), mechanical hotkey keycaps, square checkboxes (`.check-box`), and cards with physical depression on `:active` (`transform: translateY(1px)`).
   - **Never on static informational surfaces**: Telemetry plates, setting rows, data grid cells, stat panels, status badges/chips, footer banners, or labels. Static containers must be flat with hairline borders (`1px solid var(--border)` / `#23202f`), subtle backgrounds, and hover tints.
   - **The Gold Rule**: *If the user cannot click and physically depress the element to execute an action or toggle state, it MUST NOT have a bevel shadow.*
+- **Modal Dialog Restraint & Ban on Redundant Top-Right [X] Buttons**: In overlay dialogs (`.modal-overlay`), **NEVER add a top-right `modal-close` `[X]` button when explicit footer dismiss actions already exist** (`Cancel`, `Close`, `Got it`, `Dismiss`, `Skip setup`), along with backdrop click and `Escape` key handling. This eliminates redundant affordances, prevents tooltip clipping bugs, and keeps headers clean.
+- **Dropdown & Popover Anchoring Invariant**: When placing dropdown menus, version selectors, or custom select panels inside setting rows (`.setting-row`) or cards:
+  - Row must enforce flex row alignment: `display: flex; align-items: center; justify-content: space-between; gap: 12px;`
+  - Trigger button must be wrapped in a relative container: `position: relative; display: inline-flex; flex-shrink: 0;`
+  - Dropdown panel (`.custom-select-panel`) must be anchored directly to that wrapper: `position: absolute; right: 0; top: calc(100% + 4px); z-index: 100; min-width: 100%;`
+  - Never allow a setting row with a dropdown to collapse into block display (which pushes controls to a new line and displaces `right: 0` to the far right edge of the card away from the button).
+- **Screen vs. Modal Architectural Taxonomy**: Do NOT assume a component in `src/modals/` is an overlay dialog. In Vermeil, full-page screen views (`CreateCustom.tsx` as `create-custom`, `ImportInstance.tsx` as `create-import`) reside in `src/modals/` for legacy reasons, but are routed as full screens in `App.tsx` with back navigation (`← Back to Setup`), not popup backdrops. True overlay dialogs are mounted at the App root level or wrapped in `.modal-overlay`.
 - **Stay Within Theme Without Overdoing It**: Adhere strictly to the established SloppyKeys tokens (`--bevel`, `--surface-panel`, `--surface-raised`, `#0f0e13` wells, hairline borders). Do not invent novel decorative doodads, corner stickers, or unneeded containers. Boring, clean, and restrained beats busy and cluttered every time.
 
 ## Verification

@@ -26,6 +26,7 @@ just the code.
 - [Concurrent Runtime Provisioning](concurrent-runtime-provisioning/research.md): Single-flight Java synchronization, atomic extraction staging, structural JRE validation, and loader installer scratch isolation
 - [Library Architecture & Parallel Deletion](library-architecture/research.md): High-concurrency instance unlinking, single-pass settings consolidation, and dual-shelf hierarchy
 - [Dual-Channel Release & Update Architecture](dual-channel-updater/research.md): Dynamic endpoint routing, Fastly CDN manifest synchronization, and cryptographic rollback mechanics
+- [UI Modal Restraint & Popover Anchoring](ui-modal-restraint/research.md): Single-point footer dismissal, prohibition of redundant top-right close buttons, and dropdown anchoring invariants
 
 ## Ground rules
 

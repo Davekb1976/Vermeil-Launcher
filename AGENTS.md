@@ -113,7 +113,20 @@ Vermeil/
       - **Data Grid Cells & Table Rows**: Cells inside a data grid or recessed well (`#0f0e13`) must be flat tiles with hairline borders (`1px solid var(--border)` / `#23202f`), subtle backgrounds, and hover tints—never button bevels.
       - **Status Badges & Category Tags**: Badges (`[BASE]`, `[OPTIMAL]`, `[CAPPED]`, `Fabric`, version badges) are metadata labels, NOT keys. They must be flat with hairline borders and soft background tints.
       - **Footers, Headers & Banners**: Summary rows, calculation footers, and progress banners are static readouts. Use hairline dividers (`border-top: 1px solid var(--border)`).
-    - **The Gold Rule**: *If the user cannot click and physically depress the element to execute an action or toggle state, it MUST NOT have a bevel shadow.*
+  - **Modal Dialog Restraint & Ban on Redundant Top-Right [X] Buttons:**
+    - In overlay dialogs (`.modal-overlay`), **NEVER add a top-right `modal-close` `[X]` button when explicit footer dismiss actions already exist** (`Cancel`, `Close`, `Got it`, `Dismiss`, `Skip setup`), along with backdrop click and `Escape` key handling.
+    - **Rationale**: Top-right `[X]` buttons create redundant affordances, clutter headers where category tags and titles belong, and cause tooltip clipping bugs (`data-tip` clipping past viewport or window boundaries). Modal dismissal must be clean, single-point, and restrained.
+  - **Dropdown & Popover Anchoring Invariant:**
+    - When placing dropdown menus, version selectors, or custom select panels inside setting rows (`.setting-row`) or cards, the row container MUST enforce flex row alignment:
+      `display: flex; align-items: center; justify-content: space-between; gap: 12px;`
+    - The trigger button MUST be wrapped in a relative positioning container:
+      `position: relative; display: inline-flex; flex-shrink: 0;`
+    - The dropdown panel (`.custom-select-panel`) MUST be anchored directly to that wrapper:
+      `position: absolute; right: 0; top: calc(100% + 4px); z-index: 100; min-width: 100%;`
+    - **Never** allow a setting row with a dropdown to collapse into block display (e.g. by placing `.setting-row` outside `.card-section-body` without explicit flex rules), which forces the control to full width on a new line and displaces `right: 0` to the far right edge of the dialog away from the trigger button.
+  - **Screen vs. Modal Architectural Taxonomy:**
+    - Do NOT assume a component in `src/modals/` is an overlay dialog. In Vermeil, full-page screen views (`CreateCustom.tsx` as `create-custom`, `ImportInstance.tsx` as `create-import`) reside in `src/modals/` for legacy reasons, but are routed as full screens in `App.tsx` with back navigation (`← Back to Setup`), not popup backdrops.
+    - True **Overlay Modals** are mounted at the App root level or wrapped in `.modal-overlay`, controlled by independent signals or events (`ChangeLoaderModal`, `NoAccountModal`, `CrashReportModal`, `DependencyIssuesModal`, `ManualDownloadModal`, `PinInstancesModal`, `JavaChooserModal`, `OnboardingWizard`, `CustomCapeEditor`).
   - **Stay within the theme without overdoing it:** Adhere to SloppyKeys tactile tokens (`--bevel`, `--surface-panel`, `--surface-raised`, `#0f0e13` wells, hairline borders). Do not invent novel decorative doodads, corner stickers, or unneeded containers. Boring, clean, and restrained beats busy and cluttered every time.
 
 ---
