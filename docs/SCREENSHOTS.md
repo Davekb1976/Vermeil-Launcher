@@ -63,7 +63,7 @@ Inspect, customize, and manage your Minecraft skins and capes in real time.
 
 Browse, search, and install mods, resource packs, shaders, and datapacks directly from **Modrinth** and **CurseForge** without leaving the launcher.
 
-![Instance Content & Mod Browser](images/screenshots/browse-mods.png)
+![Instance Content & Mod Browser](images/screenshots/browse-mods.gif)
 
 ### Key Features Shown:
 - **Unified Framed Control Panel**: Sunken search well, source switcher (Modrinth / CurseForge), bulk selection mode, and custom sort filter inside a cohesive framed box.
