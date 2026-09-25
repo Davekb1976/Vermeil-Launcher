@@ -14,40 +14,40 @@ Sharing Minecraft modpacks and customized instances traditionally requires expor
 
 ```mermaid
 flowchart TD
-    subgraph LEGACY["LEGACY PIPELINE: Heavy Archives and Massive Strings"]
+    subgraph LEGACY["LEGACY PIPELINE: Heavy Archives"]
         direction TB
-        l_export["User wants to share instance"] --> l_choice{"Sharing Method"}
-        l_choice -->|Archive Export| l_zip["Bundle full .zip or .mrpack<br/>Includes 50MB to 500MB of JARs"]
-        l_zip --> l_upload["Upload to external file host<br/>Google Drive, MediaFire, Discord limits"]
-        l_upload --> l_share["Send file link to friend"]
-        l_share --> l_friend["Friend downloads large file<br/>Extracts ZIP, resolves conflicts"]
+        l_export["User shares instance"] --> l_choice{"Format?"}
+        l_choice -->|Archive| l_zip["Export .zip / .mrpack<br/>50MB to 500MB JARs"]
+        l_zip --> l_upload["Upload to host<br/>Drive, MediaFire, limits"]
+        l_upload --> l_share["Send download link"]
+        l_share --> l_friend["Friend downloads zip<br/>Extracts & resolves"]
 
-        l_choice -->|Raw Text Code| l_huge["Serialize giant uncompressed JSON<br/>1000 to 4000+ character string"]
-        l_huge --> l_discord["Hits Discord 2000-char message limit<br/>Formatting breaks on word wrap"]
-        l_discord --> l_ui_clutter["Cluttered UI with duplicate buttons<br/>Separate Paste, Clear, Scan, Import"]
+        l_choice -->|Text| l_huge["Raw flat JSON<br/>1000+ chars string"]
+        l_huge --> l_discord["Hits Discord limits<br/>Word-wrap breaks"]
+        l_discord --> l_ui_clutter["Cluttered UI<br/>4 separate buttons"]
     end
 
-    subgraph MODERN["CALIBRATED EDGE PIPELINE: Cloudflare Workers and D1"]
+    subgraph MODERN["CALIBRATED EDGE PIPELINE: Cloudflare Workers"]
         direction TB
-        m_export["User clicks Share Instance"] --> m_serialize["Extract Public Metadata Only<br/>Zlib Best Compression + Base62"]
-        m_serialize --> m_choice{"Sharing Choice"}
+        m_export["User clicks Share"] --> m_serialize["Extract Public Data<br/>Zlib + Base62"]
+        m_serialize --> m_choice{"Method?"}
 
-        m_choice -->|Cloud Relay| m_worker["POST to Cloudflare Edge Worker<br/>X-Vermeil-Client attestation"]
-        m_worker --> m_dedup{"SHA-256 Hash Exists?"}
-        m_dedup -->|Existing match| m_cached_code["Return active 8-character code<br/>Zero new D1 writes"]
-        m_dedup -->|New manifest| m_d1["Insert into Cloudflare D1<br/>Auto-expires in 180 seconds"]
-        m_cached_code --> m_copy["Instant 8-character code: VML-XXXX-XXXX<br/>Single click copy to clipboard"]
+        m_choice -->|Cloud| m_worker["POST to Edge Worker<br/>Client attestation"]
+        m_worker --> m_dedup{"In D1?"}
+        m_dedup -->|Yes| m_cached_code["Return active code<br/>0 new D1 writes"]
+        m_dedup -->|No| m_d1["Insert into D1<br/>180s auto-expiry"]
+        m_cached_code --> m_copy["8-character code<br/>VML-XXXX-XXXX"]
         m_d1 --> m_copy
 
-        m_choice -->|Offline Blueprint| m_offline["Prepend VML prefix<br/>Self-contained compressed string"]
-        m_offline --> m_copy_offline["Fits easily in Discord chat<br/>Zero network or database calls"]
+        m_choice -->|Offline| m_offline["Prepend VML prefix<br/>Self-contained string"]
+        m_offline --> m_copy_offline["Fits in Discord chat<br/>0 server calls"]
 
-        m_copy --> m_friend_import["Friend enters code in Import dialog"]
+        m_copy --> m_friend_import["Friend enters code<br/>in Import dialog"]
         m_copy_offline --> m_friend_import
 
-        m_friend_import --> m_morph["State-Morphing Single Control<br/>Paste morphs to Clear automatically"]
-        m_morph --> m_cta["Progressive CTA Button<br/>Scan Code morphs to Import Instance"]
-        m_cta --> m_fetch["Fetch directly from Modrinth and CurseForge<br/>Fast parallel downloads, zero host upload"]
+        m_friend_import --> m_morph["State-Morphing Button<br/>Paste morphs to Clear"]
+        m_morph --> m_cta["Progressive CTA<br/>Scan morphs to Import"]
+        m_cta --> m_fetch["Direct CDN Download<br/>Modrinth & CurseForge<br/>Fast parallel fetch"]
     end
 
     style LEGACY fill:#1c1417,stroke:#ef4444,stroke-width:2px,color:#f4f3f6
@@ -82,37 +82,37 @@ flowchart TD
 ```mermaid
 flowchart TD
     subgraph Export["Instance Export Pipeline"]
-        A["User clicks Share Instance"] --> B["Serialize Instance Manifest<br/>MC version, loader, mods"]
-        B --> C["Filter to Public Metadata<br/>Exclude worlds, tokens, credentials, IPs"]
-        C --> D["Compress Payload<br/>Zlib Best Compression + Base62"]
-        D --> E{"Export Mode"}
-        E -->|Offline Blueprint| F["Prepend VML Prefix<br/>Copy direct to clipboard"]
-        E -->|Cloud Code| G["POST /api/share<br/>to Cloudflare Edge Worker<br/>X-Vermeil-Client attestation"]
+        A["Click Share Instance"] --> B["Serialize Manifest<br/>MC, loader, mods"]
+        B --> C["Filter Public Meta<br/>No tokens, worlds, IPs"]
+        C --> D["Compress Payload<br/>Zlib Best + Base62"]
+        D --> E{"Mode?"}
+        E -->|Offline| F["Prepend VML Prefix<br/>Copy to clipboard"]
+        E -->|Cloud| G["POST /api/share<br/>to Edge Worker<br/>Attestation header"]
     end
 
     subgraph Edge["Serverless Edge Layer"]
-        G --> H["Worker: Validate Client Header<br/>and Payload Schema"]
-        H --> I["Compute SHA-256 Hash<br/>of Payload"]
-        I --> J{"Deduplication Check:<br/>Active Hash in D1?"}
-        J -->|Existing match| K["Return existing 8-character code<br/>Zero new D1 writes"]
-        J -->|New payload| L["Generate 8-character Code<br/>Base62: A7K9-2P4M"]
-        L --> M["Insert D1 Record<br/>expires_at = now + 180s"]
-        M --> N["Prune Expired Codes<br/>DELETE WHERE expires_at is past"]
+        G --> H["Worker: Validate Header<br/>and Schema"]
+        H --> I["Compute SHA-256<br/>of Payload"]
+        I --> J{"In D1?"}
+        J -->|Match| K["Return active code<br/>0 new D1 writes"]
+        J -->|New| L["Generate Code<br/>Base62: A7K9-2P4M"]
+        L --> M["Insert D1 Record<br/>expires in 180s"]
+        M --> N["Prune Expired Codes<br/>DELETE past TTL"]
         N --> O["Respond 201 Created<br/>with JSON code"]
     end
 
     subgraph Import["Instance Import Pipeline"]
-        P["User inputs code in Import dialog<br/>Paste and Clear morphing button"] --> Q{"Code Format?"}
-        Q -->|Cloud Code| R["GET /api/share/:code<br/>Worker checks Edge Cache / D1"]
-        R --> S["Fetch Cloudflare Worker<br/>Edge Cache hits: 0 D1 reads"]
-        Q -->|Offline Code| T["Decode Base62 and Decompress Zlib<br/>64 KB ceiling + Adler32 check"]
+        P["Input code in Dialog<br/>Paste / Clear button"] --> Q{"Format?"}
+        Q -->|Cloud| R["GET /api/share/:code<br/>Cache or D1 query"]
+        R --> S["Fetch Edge Worker<br/>Cache hit: 0 D1 reads"]
+        Q -->|Offline| T["Decode Base62 & Zlib<br/>64 KB cap + Adler32"]
         S --> T
-        T --> U["Resolve Mod Metadata<br/>Batch Modrinth / CurseForge APIs"]
-        U --> V["Render Preview Stage<br/>CTA morphs to Import Instance"]
-        V --> W["Download and Stage Instance<br/>Parallel downloads, icon caching, auto-pin"]
+        T --> U["Resolve Mod Meta<br/>Batch API queries"]
+        U --> V["Render Preview<br/>CTA: Import Instance"]
+        V --> W["Download & Stage<br/>Parallel CDN fetch<br/>Icon cache & pin"]
     end
 
-    O -->|Copy 8-character code| P
+    O -->|8-char code| P
 
     style Export fill:#1d1b24,stroke:#8b5cf6,stroke-width:2px,color:#f4f3f6
     style Edge fill:#181620,stroke:#f59e0b,stroke-width:2px,color:#f4f3f6
