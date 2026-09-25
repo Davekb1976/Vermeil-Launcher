@@ -1,6 +1,6 @@
 {
   "name": "vermeil",
-  "version": "1.3.0-experimental.2",
+  "version": "1.3.0-experimental.3",
   "packageManager": "pnpm@11.5.1",
   "description": "A tactile, privacy-focused Minecraft launcher for Windows and Linux",
   "type": "module",

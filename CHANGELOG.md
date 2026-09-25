@@ -1,4 +1,4 @@
-## 1.3.0 (Experimental Build 2)
+## 1.3.0 (Experimental Build 3)
 
 ### Added
 
@@ -16,6 +16,9 @@
 
 ### Changed
 
+- Eliminated blocking single-threaded NSIS file crawls (`${GetSize}`) during post-install updates in favor of $O(1)$ `EstimatedSize` registry preservation so updates finish instantaneously regardless of installed modpack/asset size
+- Optimized background storage footprint calculation (`paths::dir_size`) to read cached `WIN32_FIND_DATAW` attributes via `DirEntry::metadata()` with symlink/junction guards
+- Defaulted manual `.exe` upgrade wizard (`PageReinstall`) to in-place binary replacement (`Do not uninstall`) so manual upgrades do not invoke `uninstall.exe` by default
 - Replaced external Google Fonts (`Oswald`) with high-performance native system font stacks for zero layout shifts and improved startup speed
 - Refactored updater service to execute strictly through typed IPC boundaries without direct plugin calls
 - Standardized Library instance cards with tactile 3D hover lift and minimalist icon-only pin keycaps
@@ -43,3 +46,5 @@
 - [Concurrent Runtime Provisioning Architecture](docs/research/concurrent-runtime-provisioning/research.md): Single-flight Java synchronization, atomic extraction staging, structural JRE validation, and loader installer scratch isolation
 - [UI Modal Restraint & Popover Anchoring](docs/research/ui-modal-restraint/research.md): Single-point footer dismissal, prohibition of redundant top-right close buttons, and dropdown anchoring invariants
 - [Offline Character Studio & Local Wardrobe](docs/research/offline-character-studio/research.md): Decoupled local wardrobe management, 2-tone CAD mannequin dummy skins, 3D WebGL studio viewing, and tactile offline status banner
+- [Google Cloud Settings Sync](docs/research/google-cloud-sync/research.md): Single-use local loopback gate, cryptographic CSRF `state` validation (`RFC 8252 §8.9`), and DPAPI encrypted storage
+- [NSIS Installer & Uninstaller Optimization](docs/research/uninstaller-optimization/research.md): $O(1)$ update `EstimatedSize` preservation, atomic bulk deletion, and zero-syscall directory sizing
