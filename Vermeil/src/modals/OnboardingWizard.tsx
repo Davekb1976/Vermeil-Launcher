@@ -422,13 +422,6 @@ const OnboardingWizard: Component = () => {
                 {appVersion() ? `v${appVersion()}` : "v..."}
               </span>
             </div>
-            <button
-              class="modal-close tip-below tip-left"
-              data-tip="Skip onboarding"
-              onClick={close}
-            >
-              <IconX />
-            </button>
           </div>
 
           {/* Keycap Stepper */}

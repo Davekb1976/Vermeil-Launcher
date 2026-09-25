@@ -3,7 +3,7 @@ import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, setGameLau
 import { launchInstance, listInstanceWorlds, getJavaNews, getArticleBody, NewsArticle, getSettings } from "../ipc/commands";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
-import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX, IconMicrosoft, IconAlertTriangle, IconClock, IconUser, IconCloud, IconGoogleCloud, IconExternalLink } from "../components/Icons";
+import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconMicrosoft, IconAlertTriangle, IconClock, IconUser, IconCloud, IconGoogleCloud, IconExternalLink } from "../components/Icons";
 import CharacterStage from "../components/CharacterStage";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { resolveAssetUrl } from "../lib/assets";
@@ -656,23 +656,14 @@ const Home: Component = () => {
       <Show when={selectedArticle()}>
         <div class="news-modal-overlay" onClick={() => setSelectedArticle(null)}>
           <div class="news-modal" onClick={(e) => e.stopPropagation()}>
-            {/* Hero banner with blurred backdrop and close button */}
+            {/* Hero banner with blurred backdrop */}
             <Show
               when={selectedArticle()!.image_url}
               fallback={
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px 0">
+                <div style="display:flex;align-items:center;padding:12px 14px 0">
                   <span class={`news-card-tag ${getNewsCategory(selectedArticle()!).tagClass}`} style="position:static">
                     {getNewsCategory(selectedArticle()!).label}
                   </span>
-                  <button
-                    class="news-modal-close tip-left"
-                    data-tip="Close"
-                    style="position:static"
-                    onClick={() => setSelectedArticle(null)}
-                    aria-label="Close modal"
-                  >
-                    <IconX />
-                  </button>
                 </div>
               }
             >
@@ -690,14 +681,6 @@ const Home: Component = () => {
                 <span class={`news-card-tag ${getNewsCategory(selectedArticle()!).tagClass}`}>
                   {getNewsCategory(selectedArticle()!).label}
                 </span>
-                <button
-                  class="news-modal-close tip-left"
-                  data-tip="Close"
-                  onClick={() => setSelectedArticle(null)}
-                  aria-label="Close modal"
-                >
-                  <IconX />
-                </button>
               </div>
             </Show>
 
