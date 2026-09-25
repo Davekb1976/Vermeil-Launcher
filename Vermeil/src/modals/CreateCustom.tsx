@@ -309,7 +309,7 @@ const CreateCustom: Component = () => {
       // Track download so the floating dock badge, active downloads tab, and toasts activate
       dlId = trackDownload(instanceName, "instance", {
         instanceId: instance.id,
-        loader: loader() === "vanilla" ? undefined : loader(),
+        loader: loader(),
         gameVersion: selectedGameVersion(),
       });
 

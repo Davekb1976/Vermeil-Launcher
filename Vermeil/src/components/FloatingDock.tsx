@@ -389,7 +389,7 @@ const FloatingDock: Component = () => {
     return downloads().some(
       (d) =>
         d.status === "downloading" &&
-        (d.instanceId === id || (d.category === "instance" && d.name === instances()?.find((i) => i.id === id)?.name))
+        (d.instanceId ? d.instanceId === id : d.category === "instance" && d.name === instances()?.find((i) => i.id === id)?.name)
     );
   };
 
@@ -486,7 +486,9 @@ const FloatingDock: Component = () => {
               >
                 <span class="dock-center-icon">
                   <Show when={centerMode() === "play"}>
-                    <IconPlay />
+                    <Show when={isCurrentInstanceInstalling()} fallback={<IconPlay />}>
+                      <IconDownload />
+                    </Show>
                   </Show>
                   <Show when={centerMode() === "create"}>
                     <IconPlus />
