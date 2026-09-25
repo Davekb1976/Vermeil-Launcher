@@ -2,7 +2,6 @@ import { Component, For, Show, createEffect, createSignal, onCleanup } from "sol
 import { ContentVersion, ModHit, getCfModFiles, getModVersions } from "../ipc/commands";
 import { formatDownloads, formatSize, formatVersionRange } from "../lib/format";
 import {
-  IconX,
   IconDownload,
   IconHeart,
   IconLayers,
@@ -193,9 +192,6 @@ export const ModpackDetailModal: Component<ModpackDetailModalProps> = (props) =>
                     </Show>
                   </div>
                 </div>
-                <button class="modal-close tip-left" data-tip="Close" aria-label="Close" onClick={props.onClose}>
-                  <IconX />
-                </button>
               </div>
 
               {/* Body */}

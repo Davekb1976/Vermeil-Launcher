@@ -3,7 +3,6 @@ import { ContentVersion, ModHit, getCfModFiles, getModVersions } from "../ipc/co
 import { formatDownloads, formatSize, formatVersionRange } from "../lib/format";
 import {
   IconBolt,
-  IconX,
   IconDownload,
   IconHeart,
   IconCheck,
@@ -231,9 +230,6 @@ const ModDetailModal: Component<Props> = (props) => {
                   </Show>
                 </div>
               </div>
-              <button class="modal-close tip-left" data-tip="Close" aria-label="Close" onClick={props.onClose}>
-                <IconX />
-              </button>
             </div>
 
             {/* Body */}

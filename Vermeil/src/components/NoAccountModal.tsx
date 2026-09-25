@@ -1,6 +1,6 @@
 import { Component, Show } from "solid-js";
 import { setActiveScreen } from "../App";
-import { IconX, IconUser } from "./Icons";
+import { IconUser } from "./Icons";
 
 const NoAccountModal: Component<{ open: boolean; onClose: () => void }> = (props) => {
   return (
@@ -12,9 +12,6 @@ const NoAccountModal: Component<{ open: boolean; onClose: () => void }> = (props
               <span class="card-section-tag tag-settings-account">ACCOUNT REQUIRED</span>
               <span class="modal-title">Sign In to Launch</span>
             </div>
-            <button class="modal-close tip-left" data-tip="Close" onClick={props.onClose} aria-label="Close modal">
-              <IconX />
-            </button>
           </div>
           <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
             <div style="font-size: 13px; color: var(--text); line-height: 1.5;">

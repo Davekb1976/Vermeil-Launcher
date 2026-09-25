@@ -2,7 +2,7 @@ import { Component, For, Show, createSignal, onCleanup, onMount } from "solid-js
 import { listen } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { openInstanceFolder } from "../ipc/commands";
-import { IconFolderOpen, IconGlobe, IconX } from "./Icons";
+import { IconFolderOpen, IconGlobe } from "./Icons";
 
 /**
  * One file the launcher isn't permitted to download. Mirrors the backend
@@ -70,7 +70,6 @@ const ManualDownloadModal: Component = () => {
                 {entries().length === 1 ? "Manual Download Needed" : `${entries().length} Manual Downloads Needed`}
               </span>
             </div>
-            <button class="modal-close tip-left" data-tip="Close" aria-label="Close" onClick={close}><IconX /></button>
           </div>
 
           <div class="modal-body manual-dl-body">

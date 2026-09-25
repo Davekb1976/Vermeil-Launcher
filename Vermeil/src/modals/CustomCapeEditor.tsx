@@ -5,7 +5,7 @@ import { showToast } from "../App";
 import Dropdown from "../components/Dropdown";
 import ColorPicker from "../components/ColorPicker";
 import { normalizeHex } from "../lib/color";
-import { IconRotate, IconUpload, IconCheck, IconX } from "../components/Icons";
+import { IconRotate, IconUpload, IconCheck } from "../components/Icons";
 import {
   PANEL,
   clampRes,
@@ -574,14 +574,6 @@ const CustomCapeEditor: Component<Props> = (props) => {
               {props.editing ? `Edit Cape: ${props.editing.name}` : "Design Custom Cape"}
             </span>
           </div>
-          <button
-            class="modal-close tip-left"
-            data-tip="Close"
-            onClick={props.onClose}
-            aria-label="Close modal"
-          >
-            <IconX />
-          </button>
         </div>
 
         <div class="modal-body cape-editor-body">

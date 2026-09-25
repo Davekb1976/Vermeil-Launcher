@@ -2121,14 +2121,6 @@ const Settings: Component = () => {
                   </div>
                 </div>
               </div>
-              <button
-                class="modal-close tip-left"
-                data-tip="Close"
-                onClick={() => setShowRollbackConfirmModal(false)}
-                aria-label="Close modal"
-              >
-                <IconX />
-              </button>
             </div>
 
             <div class="modal-body" style="display: flex; flex-direction: column; gap: var(--space-3); font-size: 13px; line-height: 1.5; color: var(--text-muted);">

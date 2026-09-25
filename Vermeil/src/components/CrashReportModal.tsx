@@ -1,6 +1,5 @@
 import { Component, Show, createSignal, onMount } from "solid-js";
 import { getCrashReport } from "../ipc/commands";
-import { IconX } from "./Icons";
 
 /**
  * Crash-report viewer. Mounted once at App level and surfaced from any code
@@ -88,7 +87,6 @@ const CrashReportModal: Component = () => {
               <span class="card-section-tag tag-settings-crash">CRASH REPORT</span>
               <span class="modal-title">Minecraft Error Log</span>
             </div>
-            <button class="modal-close tip-left" data-tip="Close" onClick={close} aria-label="Close modal"><IconX /></button>
           </div>
           <div class="modal-body">
             <Show when={loading()}>

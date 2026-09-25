@@ -1,5 +1,4 @@
 import { Component, For, Show, createSignal } from "solid-js";
-import { IconX } from "./Icons";
 
 export interface DependencyIssue {
   parent_title: string;
@@ -97,7 +96,6 @@ const DependencyIssuesModal: Component = () => {
               <span class="card-section-tag tag-settings-storage">DEPENDENCY CHECK</span>
               <span class="modal-title">Dependency Resolution Notice</span>
             </div>
-            <button class="modal-close tip-left" data-tip="Close" onClick={close} aria-label="Close modal"><IconX /></button>
           </div>
           <div class="modal-body">
             <div class="dep-issue-summary">

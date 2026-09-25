@@ -365,14 +365,17 @@ const ChangeLoaderModal: Component = () => {
 
             {/* 2. Loader Version Selector (When non-vanilla) */}
             <Show when={selectedLoader() !== "vanilla"}>
-              <div class="setting-row full" style="padding: 10px 12px; background: var(--surface-panel); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 0;">
-                <div class="setting-info">
-                  <span class="setting-name" style="font-size: 12px;">{loaderLabel(selectedLoader())} Version</span>
-                  <span class="setting-desc" style="font-size: 11px;">
+              <div
+                class="setting-row"
+                style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: var(--surface-panel); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 0; box-sizing: border-box;"
+              >
+                <div class="setting-info" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                  <span class="setting-name" style="font-size: 13px; font-weight: 600; color: var(--text);">{loaderLabel(selectedLoader())} Version</span>
+                  <span class="setting-desc" style="font-size: 11px; color: var(--muted); line-height: 1.4;">
                     {isVersionLoading() ? "Fetching available versions..." : "Select the loader runtime release to use"}
                   </span>
                 </div>
-                <div class="setting-control" style="position: relative;">
+                <div class="setting-control" style="position: relative; display: inline-flex; flex-shrink: 0;">
                   <button
                     type="button"
                     class="btn btn--sm"
@@ -384,17 +387,17 @@ const ChangeLoaderModal: Component = () => {
                     <IconChevronDown />
                   </button>
 
-                  {/* Version dropdown panel */}
+                  {/* Version dropdown panel directly anchored to button */}
                   <Show when={versionDropOpen() && availableLoaderVersions().length > 0}>
                     <div
                       class="custom-select-panel"
-                      style="position: absolute; right: 0; top: calc(100% + 4px); width: 220px; max-height: 200px; overflow-y: auto; background: var(--bg3); border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 100; border-radius: 0;"
+                      style="position: absolute; right: 0; top: calc(100% + 4px); min-width: 100%; width: max-content; max-width: 260px; max-height: 200px; overflow-y: auto; background: var(--surface-panel); border: 1px solid var(--border-strong); box-shadow: 0 8px 24px rgba(0,0,0,0.6); z-index: 100; border-radius: 0;"
                     >
                       <For each={availableLoaderVersions()}>
                         {(v) => (
                           <div
                             class="custom-select-option"
-                            style={`padding: 6px 10px; font-size: 12px; font-family: var(--font-mono); cursor: pointer; display: flex; align-items: center; justify-content: space-between; ${selectedVersion() === v.version ? "background: rgba(139,92,246,0.15); color: var(--accent);" : "color: var(--text);"}`}
+                            style={`padding: 6px 12px; font-size: 12px; font-family: var(--font-mono); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; ${selectedVersion() === v.version ? "background: rgba(139,92,246,0.15); color: var(--accent);" : "color: var(--text);"}`}
                             onClick={() => {
                               setSelectedVersion(v.version);
                               setVersionDropOpen(false);
