@@ -8,6 +8,7 @@ import {
   refetchInstances,
   refreshPinnedInstanceIds,
   pinnedInstanceIds,
+  downloads,
 } from "../App";
 import { InstanceSummary, deleteInstances, getSettings } from "../ipc/commands";
 import {
@@ -224,6 +225,14 @@ const Library: Component = () => {
     setActiveScreen("mods");
   };
 
+  const isInstanceInstalling = (inst: InstanceSummary) => {
+    return downloads().some(
+      (d) =>
+        d.status === "downloading" &&
+        (d.instanceId === inst.id || (d.category === "instance" && d.name === inst.name))
+    );
+  };
+
   const renderInstanceCard = (inst: InstanceSummary) => (
     <div
       class={`card--inst ${selectMode() && selected().has(inst.id) ? "inst-card-selected" : ""}`}
@@ -291,10 +300,21 @@ const Library: Component = () => {
           {inst.name}
         </div>
         <div class="inst-card-sub">
-          {inst.mod_count} {inst.mod_count === 1 ? "mod" : "mods"} · {timeAgo(inst.last_played)}
+          <Show
+            when={isInstanceInstalling(inst)}
+            fallback={`${inst.mod_count} ${inst.mod_count === 1 ? "mod" : "mods"} · ${timeAgo(inst.last_played)}`}
+          >
+            Downloading game files...
+          </Show>
         </div>
         <div class="inst-card-badges">
           <div class="inst-card-badges-track">
+            <Show when={isInstanceInstalling(inst)}>
+              <span class="badge badge--installing tip-below" data-tip="Downloading game files and libraries">
+                <IconDownload />
+                Installing...
+              </span>
+            </Show>
             <Show when={pinnedSet().has(inst.id)}>
               <span class="badge badge--pinned tip-below" data-tip="Pinned to floating dock">
                 <IconPin />

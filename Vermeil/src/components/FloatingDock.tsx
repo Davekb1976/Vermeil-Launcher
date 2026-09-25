@@ -21,6 +21,7 @@ import {
   paginationScrollMode,
   clearGameLogs,
   activeDownloadCount,
+  downloads,
 } from "../App";
 import { resolveAssetUrl } from "../lib/assets";
 import {
@@ -382,10 +383,21 @@ const FloatingDock: Component = () => {
     return false;
   };
 
+  const isCurrentInstanceInstalling = () => {
+    const id = activeInstanceId();
+    if (!id) return false;
+    return downloads().some(
+      (d) =>
+        d.status === "downloading" &&
+        (d.instanceId === id || (d.category === "instance" && d.name === instances()?.find((i) => i.id === id)?.name))
+    );
+  };
+
   const centerLabel = () => {
     switch (centerMode()) {
       case "stop": return "Stop game";
       case "play":
+        if (isCurrentInstanceInstalling()) return "Installing...";
         const inst = instances()?.find((i) => i.id === activeInstanceId());
         return inst ? `Play ${inst.name}` : "Play";
       case "create": return "New instance";
@@ -410,6 +422,10 @@ const FloatingDock: Component = () => {
     if (!ensureAccountOrPrompt()) return;
     const id = activeInstanceId();
     if (!id) return;
+    if (isCurrentInstanceInstalling()) {
+      showToast({ title: "Installing", message: "Please wait for installation to finish", type: "info" });
+      return;
+    }
     setGameRunning(true);
     clearGameLogs(id);
     try {

@@ -252,7 +252,7 @@ function updateDownloadQueueToast() {
 export function trackDownload(
   name: string,
   category: string,
-  meta?: { iconUrl?: string | null; loader?: string; gameVersion?: string; author?: string | null; versionNumber?: string | null },
+  meta?: { iconUrl?: string | null; loader?: string; gameVersion?: string; author?: string | null; versionNumber?: string | null; instanceId?: string },
 ): string {
   const id = Math.random().toString(36).slice(2);
   const entry: DownloadEntry = {
@@ -266,6 +266,7 @@ export function trackDownload(
     gameVersion: meta?.gameVersion,
     versionNumber: meta?.versionNumber ?? undefined,
     author: meta?.author ?? undefined,
+    instanceId: meta?.instanceId ?? undefined,
   };
   setDownloads(prev => [entry, ...prev].slice(0, 200));
 
@@ -346,10 +347,11 @@ export function completeDownload(
         });
       } else {
         const isPack = finishedItem?.category === "modpack";
+        const isInstance = finishedItem?.category === "instance";
         const displayName = lastFinishedItemName || finishedItem?.name || "Content";
         updateToast(activeDownloadToastId, {
-          title: isPack ? "Modpack installed" : "Installed",
-          message: isPack ? `${displayName} is ready to play` : displayName,
+          title: isPack ? "Modpack installed" : (isInstance ? "Instance ready" : "Installed"),
+          message: (isPack || isInstance) ? `${displayName} is ready to play` : displayName,
           type: "success",
           autoCloseMs: 3500,
           action: undefined,

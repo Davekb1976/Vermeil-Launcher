@@ -1718,6 +1718,27 @@
 }
 .badge--companion img { width: 13px; height: 13px; flex-shrink: 0; display: block; }
 
+/* Variant — installing status (in-flight downloads) */
+.badge--installing {
+  background: rgba(124, 77, 255, 0.15);
+  border: 1px solid rgba(167, 139, 250, 0.5);
+  color: #c4b5fd;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  animation: badgePulse 2s ease-in-out infinite;
+}
+.badge--installing svg {
+  width: 11px;
+  height: 11px;
+  flex-shrink: 0;
+  stroke-width: 2.2;
+}
+@keyframes badgePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
 /* ============================================================
    Canonical form field — one .field-control vocabulary
    (Requirement 5.5)

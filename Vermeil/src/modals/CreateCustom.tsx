@@ -1,6 +1,6 @@
 import { Component, createSignal, createResource, createEffect, onCleanup, For, Show, createMemo } from "solid-js";
 import { Portal } from "solid-js/web";
-import { setActiveScreen, refetchInstances, refreshPinnedInstanceIds, showToast } from "../App";
+import { setActiveScreen, refetchInstances, refreshPinnedInstanceIds, showToast, trackDownload, completeDownload, failDownload } from "../App";
 import {
   getGameVersions,
   getFabricLoaderVersions,
@@ -294,6 +294,8 @@ const CreateCustom: Component = () => {
     const instanceName = name().trim() || suggestedName();
     if (!instanceName) return;
     setCreating(true);
+
+    let dlId: string | null = null;
     try {
       const instance = await createInstance({
         name: instanceName,
@@ -303,14 +305,44 @@ const CreateCustom: Component = () => {
         icon: null,
         memory_max_mb: 4096,
       });
+
+      // Track download so the floating dock badge, active downloads tab, and toasts activate
+      dlId = trackDownload(instanceName, "instance", {
+        instanceId: instance.id,
+        loader: loader() === "vanilla" ? undefined : loader(),
+        gameVersion: selectedGameVersion(),
+      });
+
       await refetchInstances();
       refreshPinnedInstanceIds().catch(() => {});
       setActiveScreen("library");
-      prepareInstance(instance.id).catch((e) => {
-        showToast({ title: "Install failed", message: String(e), type: "error", autoCloseMs: 8000 });
-      });
+
+      prepareInstance(instance.id)
+        .then(() => {
+          if (dlId) {
+            completeDownload(dlId, instanceName, undefined, {
+              instanceId: instance.id,
+              loader: instance.loader?.type,
+              gameVersion: instance.game_version,
+            });
+          }
+          refetchInstances();
+        })
+        .catch((e) => {
+          if (dlId) {
+            failDownload(dlId, String(e));
+          } else {
+            showToast({ title: "Install failed", message: String(e), type: "error", autoCloseMs: 8000 });
+          }
+          refetchInstances();
+        });
     } catch (e) {
       console.error("Failed to create instance:", e);
+      if (dlId) {
+        failDownload(dlId, String(e));
+      } else {
+        showToast({ title: "Creation failed", message: String(e), type: "error", autoCloseMs: 8000 });
+      }
     } finally {
       setCreating(false);
     }

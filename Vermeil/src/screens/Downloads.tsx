@@ -17,6 +17,7 @@ import { resolveAssetUrl } from "../lib/assets";
 
 function getCategoryLabel(category: string): string {
   switch (category) {
+    case "instance": return "Instance";
     case "mod": return "Mod";
     case "resourcepack": return "Resource Pack";
     case "shader": return "Shader";
