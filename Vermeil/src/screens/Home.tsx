@@ -18,28 +18,17 @@ function timeOfDayGreeting(): string {
   return "Good evening";
 }
 
-/** Format the most recent play timestamp as a compact relative phrase
- *  ("just now", "15m ago", "2h ago", "yesterday", "3d ago"). Returns null
- *  when absent or unparseable so the telemetry plate renders "None". */
+/** Format the most recent play timestamp as an ISO calendar date (`YYYY-MM-DD`,
+ *  e.g. "2026-09-25") in the user's local timezone. Returns null when absent
+ *  or unparseable so the telemetry plate renders "None". */
 function relativePlayed(iso: string | null | undefined): string | null {
   if (!iso) return null;
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return null;
-  const diffMs = Date.now() - then;
-  if (diffMs < 60_000) return "just now";
-  const mins = Math.floor(diffMs / 60_000);
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(diffMs / 3_600_000);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(diffMs / 86_400_000);
-  if (days === 1) return "yesterday";
-  if (days < 7) return `${days}d ago`;
-  if (days < 30) {
-    const weeks = Math.floor(days / 7);
-    return `${weeks}w ago`;
-  }
-  const months = Math.floor(days / 30);
-  return `${months}mo ago`;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 /** Format total playtime seconds into compact hours/minutes (e.g. "14h 25m", "< 1m", "0m"). */

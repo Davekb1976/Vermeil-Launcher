@@ -113,7 +113,9 @@ pub async fn save(settings: &LauncherSettings) -> Result<(), Box<dyn std::error:
             }
             if let Some(ref existing_last) = existing.last_active_at {
                 let should_keep_existing = match to_save.last_active_at {
-                    Some(ref incoming_last) => existing_last > incoming_last,
+                    Some(ref incoming_last) => {
+                        crate::services::google_cloud::is_timestamp_newer(existing_last, incoming_last)
+                    }
                     None => true,
                 };
                 if should_keep_existing {
