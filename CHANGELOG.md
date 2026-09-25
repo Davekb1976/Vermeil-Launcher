@@ -1,4 +1,4 @@
-## 1.3.0 (Experimental Build 3)
+## 1.3.0
 
 ### Added
 
