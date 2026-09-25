@@ -27,6 +27,7 @@ just the code.
 - [Library Architecture & Parallel Deletion](library-architecture/research.md): High-concurrency instance unlinking, single-pass settings consolidation, and dual-shelf hierarchy
 - [Dual-Channel Release & Update Architecture](dual-channel-updater/research.md): Dynamic endpoint routing, Fastly CDN manifest synchronization, and cryptographic rollback mechanics
 - [UI Modal Restraint & Popover Anchoring](ui-modal-restraint/research.md): Single-point footer dismissal, prohibition of redundant top-right close buttons, and dropdown anchoring invariants
+- [Offline Character Studio & Local Wardrobe](offline-character-studio/research.md): Decoupled local wardrobe management, 3D WebGL studio viewing, client-side model variants, and tactile offline status banner
 
 ## Ground rules
 

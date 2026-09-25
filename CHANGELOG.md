@@ -37,3 +37,4 @@
 - [Library Architecture & Parallel Deletion](docs/research/library-architecture/research.md): High-concurrency instance unlinking, single-pass settings consolidation, and dual-shelf hierarchy
 - [Concurrent Runtime Provisioning Architecture](docs/research/concurrent-runtime-provisioning/research.md): Single-flight Java synchronization, atomic extraction staging, structural JRE validation, and loader installer scratch isolation
 - [UI Modal Restraint & Popover Anchoring](docs/research/ui-modal-restraint/research.md): Single-point footer dismissal, prohibition of redundant top-right close buttons, and dropdown anchoring invariants
+- [Offline Character Studio & Local Wardrobe](docs/research/offline-character-studio/research.md): Decoupled local wardrobe management, 3D WebGL studio viewing, client-side model variants, and tactile offline status banner
