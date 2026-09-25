@@ -141,6 +141,9 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
     }
 
     let (code_verifier, code_challenge) = generate_pkce();
+    // Generate cryptographic OAuth `state` token (RFC 6749 §10.12 / RFC 8252 §8.9)
+    // to prevent Login CSRF / session fixation attacks on the loopback callback.
+    let (oauth_state, _) = generate_pkce();
 
     // Bind to an ephemeral loopback port on 127.0.0.1
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
@@ -156,16 +159,24 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
 
     // Build Google OAuth 2.0 authorization URL
     let auth_url = format!(
-        "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&code_challenge={}&code_challenge_method=S256&access_type=offline&prompt=consent",
+        "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}&code_challenge={}&code_challenge_method=S256&access_type=offline&prompt=consent",
         GOOGLE_AUTH_ENDPOINT,
         urlencoding::encode(GOOGLE_CLIENT_ID),
         urlencoding::encode(&redirect_uri),
         urlencoding::encode(SCOPE_DRIVE_APPDATA),
+        urlencoding::encode(&oauth_state),
         urlencoding::encode(&code_challenge),
     );
 
-    tracing::info!("Launching system browser for Google Cloud OAuth: 127.0.0.1:{}", port);
-    open::that(&auth_url).map_err(|e| format!("Failed to open default system browser: {}", e))?;
+    // Generate a single-use local entry nonce so the verification link opened by
+    // the launcher points to 127.0.0.1:<port>/start?nonce=... instead of directly
+    // to accounts.google.com. Once consumed (or once cancelled/expired), any repeat
+    // attempt to open the link is blocked locally before Google ever loads.
+    let (entry_nonce, _) = generate_pkce();
+    let local_start_url = format!("http://127.0.0.1:{}/start?nonce={}", port, urlencoding::encode(&entry_nonce));
+
+    tracing::info!("Launching system browser for Google Cloud OAuth via single-use local gate: 127.0.0.1:{}", port);
+    open::that(&local_start_url).map_err(|e| format!("Failed to open default system browser: {}", e))?;
 
     // Set up cancellation channel
     let (cancel_tx, mut cancel_rx) = oneshot::channel::<()>();
@@ -183,67 +194,121 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
     }
     let _guard = CancelGuard;
 
-    // Wait for the browser redirect callback with a 60-second timeout, or immediate user cancellation
-    let (mut stream, _) = tokio::select! {
-        res = tokio::time::timeout(Duration::from_secs(60), listener.accept()) => {
-            match res {
-                Ok(Ok(pair)) => pair,
-                Ok(Err(e)) => return Err(format!("Failed to accept OAuth loopback connection: {}", e)),
-                Err(_) => return Err("Google authorization timed out (no response received within 60 seconds).".to_string()),
+    let mut nonce_consumed = false;
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(60);
+
+    let (code, mut stream) = loop {
+        let accept_res = tokio::select! {
+            res = tokio::time::timeout_at(deadline, listener.accept()) => {
+                match res {
+                    Ok(Ok(pair)) => pair,
+                    Ok(Err(e)) => return Err(format!("Failed to accept OAuth loopback connection: {}", e)),
+                    Err(_) => return Err("Google authorization timed out (no response received within 60 seconds).".to_string()),
+                }
+            }
+            _ = &mut cancel_rx => {
+                return Err("Google authorization was cancelled.".to_string());
+            }
+        };
+
+        let (mut s, _) = accept_res;
+        let mut buffer = [0u8; 4096];
+        let n = match s.read(&mut buffer).await {
+            Ok(0) | Err(_) => continue,
+            Ok(n) => n,
+        };
+
+        let request_str = String::from_utf8_lossy(&buffer[..n]);
+        let first_line = request_str.lines().next().unwrap_or_default();
+        let query_part = first_line.split_whitespace().nth(1).unwrap_or("/");
+
+        // Ignore automatic browser favicon / preflight requests so they don't consume the listener
+        if query_part.starts_with("/favicon.ico") {
+            let _ = s.write_all(b"HTTP/1.1 204 No Content\r\nConnection: close\r\n\r\n").await;
+            let _ = s.flush().await;
+            continue;
+        }
+
+        // Single-use local gate: only redirect to Google on the very first visit with a valid nonce
+        if query_part.starts_with("/start") {
+            let expected_query = format!("nonce={}", urlencoding::encode(&entry_nonce));
+            if !nonce_consumed && query_part.contains(&expected_query) {
+                nonce_consumed = true;
+                let redirect_resp = format!(
+                    "HTTP/1.1 302 Found\r\nLocation: {}\r\nCache-Control: no-store, no-cache, must-revalidate\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nConnection: close\r\n\r\n",
+                    auth_url
+                );
+                let _ = s.write_all(redirect_resp.as_bytes()).await;
+                let _ = s.flush().await;
+            } else {
+                let expired_html = "\
+                    HTTP/1.1 410 Gone\r\nContent-Type: text/html; charset=utf-8\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nConnection: close\r\n\r\n\
+                    <!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Vermeil — Verification Link Expired</title></head>\
+                    <body style=\"background:#0f0e13;color:#ece9f2;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;\">\
+                    <div style=\"background:#1d1b24;border:1px solid #322f3d;border-left:3px solid #f87171;padding:36px 40px;max-width:420px;text-align:center;\">\
+                    <h2 style=\"color:#f87171;margin:0 0 10px 0;\">Verification Link Expired</h2>\
+                    <p style=\"color:#a6a1b5;font-size:13.5px;line-height:1.6;margin:0;\">This single-use verification link has already been used or expired. Please start a new connection from Vermeil.</p>\
+                    </div>\
+                    <script>if(window.history&&window.history.replaceState){window.history.replaceState({l:1},document.title,window.location.pathname);for(var i=0;i<25;i++)window.history.pushState({l:1},document.title,window.location.pathname);window.addEventListener('popstate',function(){window.history.pushState({l:1},document.title,window.location.pathname);});}</script>\
+                    </body></html>";
+                let _ = s.write_all(expired_html.as_bytes()).await;
+                let _ = s.flush().await;
+            }
+            continue;
+        }
+
+        // Handle Google OAuth callback (?code=...&state=... or ?error=...)
+        if let Some(q_idx) = query_part.find('?') {
+            let query = &query_part[q_idx + 1..];
+            let mut code_val = None;
+            let mut state_val = None;
+            let mut error_val = None;
+
+            for pair in query.split('&') {
+                let mut parts = pair.splitn(2, '=');
+                let key = parts.next().unwrap_or_default();
+                let val = parts.next().unwrap_or_default();
+                if key == "code" {
+                    code_val = Some(urlencoding::decode(val).unwrap_or_default().into_owned());
+                } else if key == "state" {
+                    state_val = Some(urlencoding::decode(val).unwrap_or_default().into_owned());
+                } else if key == "error" {
+                    error_val = Some(urlencoding::decode(val).unwrap_or_default().into_owned());
+                }
+            }
+
+            if let Some(err) = error_val {
+                let error_html = format!(
+                    "HTTP/1.1 400 Bad Request\r\nContent-Type: text/html; charset=utf-8\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nConnection: close\r\n\r\n\
+                    <!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Vermeil — Authorization Cancelled</title></head>\
+                    <body style=\"background:#0f0e13;color:#f4f3f6;font-family:sans-serif;padding:40px;text-align:center;\">\
+                    <h2 style=\"color:#f87171;\">Authorization Cancelled</h2><p>Google authentication failed: {}</p>\
+                    <script>if(window.history&&window.history.replaceState){{window.history.replaceState({{l:1}},document.title,window.location.pathname);for(var i=0;i<25;i++)window.history.pushState({{l:1}},document.title,window.location.pathname);window.addEventListener('popstate',function(){{window.history.pushState({{l:1}},document.title,window.location.pathname);}});}}</script>\
+                    </body></html>",
+                    err
+                );
+                let _ = s.write_all(error_html.as_bytes()).await;
+                let _ = s.flush().await;
+                return Err(format!("Google authorization denied: {}", err));
+            }
+
+            if let Some(c) = code_val {
+                if state_val.as_deref() != Some(oauth_state.as_str()) {
+                    let csrf_html = "\
+                        HTTP/1.1 403 Forbidden\r\nContent-Type: text/html; charset=utf-8\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nX-Content-Type-Options: nosniff\r\nX-Frame-Options: DENY\r\nConnection: close\r\n\r\n\
+                        <!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Vermeil — Invalid Session State</title></head>\
+                        <body style=\"background:#0f0e13;color:#f4f3f6;font-family:sans-serif;padding:40px;text-align:center;\">\
+                        <h2 style=\"color:#f87171;\">Invalid Session State</h2><p>OAuth state mismatch. Please start a new connection from Vermeil.</p>\
+                        <script>if(window.history&&window.history.replaceState){window.history.replaceState({l:1},document.title,window.location.pathname);for(var i=0;i<25;i++)window.history.pushState({l:1},document.title,window.location.pathname);window.addEventListener('popstate',function(){window.history.pushState({l:1},document.title,window.location.pathname);});}</script>\
+                        </body></html>";
+                    let _ = s.write_all(csrf_html.as_bytes()).await;
+                    let _ = s.flush().await;
+                    return Err("Google OAuth state mismatch (potential CSRF or stale session).".to_string());
+                }
+                break (c, s);
             }
         }
-        _ = &mut cancel_rx => {
-            return Err("Google authorization was cancelled.".to_string());
-        }
     };
-
-    // Read incoming HTTP request
-    let mut buffer = [0u8; 4096];
-    let n = stream
-        .read(&mut buffer)
-        .await
-        .map_err(|e| format!("Failed to read OAuth loopback request: {}", e))?;
-
-    let request_str = String::from_utf8_lossy(&buffer[..n]);
-
-    // Parse the GET line
-    let first_line = request_str.lines().next().unwrap_or_default();
-    let query_part = first_line.split_whitespace().nth(1).unwrap_or("/");
-
-    let auth_code = if let Some(q_idx) = query_part.find('?') {
-        let query = &query_part[q_idx + 1..];
-        let mut code_val = None;
-        let mut error_val = None;
-
-        for pair in query.split('&') {
-            let mut parts = pair.splitn(2, '=');
-            let key = parts.next().unwrap_or_default();
-            let val = parts.next().unwrap_or_default();
-            if key == "code" {
-                code_val = Some(urlencoding::decode(val).unwrap_or_default().into_owned());
-            } else if key == "error" {
-                error_val = Some(urlencoding::decode(val).unwrap_or_default().into_owned());
-            }
-        }
-
-        if let Some(err) = error_val {
-            let error_html = format!(
-                "HTTP/1.1 400 Bad Request\r\nContent-Type: text/html; charset=utf-8\r\nConnection: close\r\n\r\n\
-                <!DOCTYPE html><html><body style=\"background:#0f0e13;color:#f4f3f6;font-family:sans-serif;padding:40px;text-align:center;\">\
-                <h2 style=\"color:#f87171;\">Authorization Cancelled</h2><p>Google authentication failed: {}</p></body></html>",
-                err
-            );
-            let _ = stream.write_all(error_html.as_bytes()).await;
-            let _ = stream.flush().await;
-            return Err(format!("Google authorization denied: {}", err));
-        }
-
-        code_val.ok_or_else(|| "No authorization code found in Google callback query".to_string())?
-    } else {
-        return Err("Malformed OAuth redirect callback URL".to_string());
-    };
-
-    let code = auth_code;
 
     // Send stylized success page to browser — matches Vermeil's tactile dark UI
     let success_html = "\
@@ -378,8 +443,14 @@ pub async fn start_google_oauth() -> Result<(String, Option<String>), String> {
             </div>\
           </div>\
           <script>\
-            if (window.history.replaceState) {\
-              window.history.replaceState({}, document.title, window.location.pathname);\
+            if (window.history && window.history.replaceState) {\
+              window.history.replaceState({ vermeilLocked: true }, document.title, window.location.pathname);\
+              for (var i = 0; i < 25; i++) {\
+                window.history.pushState({ vermeilLocked: true }, document.title, window.location.pathname);\
+              }\
+              window.addEventListener('popstate', function () {\
+                window.history.pushState({ vermeilLocked: true }, document.title, window.location.pathname);\
+              });\
             }\
             var isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;\
             var keyEl = document.getElementById('cmd-key');\
