@@ -28,6 +28,7 @@ just the code.
 - [Dual-Channel Release & Update Architecture](dual-channel-updater/research.md): Dynamic endpoint routing, Fastly CDN manifest synchronization, and cryptographic rollback mechanics
 - [UI Modal Restraint & Popover Anchoring](ui-modal-restraint/research.md): Single-point footer dismissal, prohibition of redundant top-right close buttons, and dropdown anchoring invariants
 - [Offline Character Studio & Local Wardrobe](offline-character-studio/research.md): Decoupled local wardrobe management, 3D WebGL studio viewing, client-side model variants, and tactile offline status banner
+- [Ephemeral Share Codes](ephemeral-share-codes/research.md): Ephemeral 3-minute cloud codes, Base62 Zlib blueprints, Cloudflare Worker + D1 deduplication, and zero-telemetry instance sharing
 
 ## Ground rules
 
