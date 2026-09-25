@@ -128,6 +128,7 @@ flowchart LR
 | **Display** | `max_fps`, `vsync`, `gui_scale`, `gamma`, `fov` | **Google Cloud** | In-game visual quality preferences. |
 | **Sound** | `master_volume`, `music_volume`, `weather_volume`, `hostile_volume`, `block_volume`, `player_volume` | **Google Cloud** | Audio balance preferences. |
 | **Keybinds** | `keybinds: HashMap<String, String>` | **Google Cloud** | Muscle-memory keyboard shortcuts. |
+| **Telemetry & Stats** | `lifetime_play_seconds`, `last_active_at` | **Google Cloud (Monotonic `max`)** | Synced bidirectionally via monotonic high-water mark (`max(cloud, local)` and parsed RFC3339 epoch comparison) on game launch, game exit, cloud connect, and launcher startup so a fresh install never resets cumulative play time or last active date (`YYYY-MM-DD`). |
 | **Memory** | `default_memory_mb`, `adaptive_ram`, `adaptive_ram_min_mb`, `adaptive_ram_max_mb` | **Local Only** | Machine-dependent (e.g. 8GB laptop vs 64GB desktop). |
 | **Window** | `window_width`, `window_height`, `start_maximized` | **Local Only** | Monitor-dependent (e.g. 1080p vs 4K ultrawide). |
 | **Java** | `java_runtime`, `java_paths`, `gc_preset` | **Local Only** | Absolute filesystem paths and architecture differ per OS/PC. |
