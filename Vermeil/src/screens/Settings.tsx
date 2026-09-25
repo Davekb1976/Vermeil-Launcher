@@ -2059,10 +2059,10 @@ const Settings: Component = () => {
 
                     {/* Disclaimer */}
                     <Show when={isAboutSection() || matches("Disclaimer", "unofficial Minecraft launcher")}>
-                      <div class="setting-row full">
+                      <div class="setting-row">
                         <div class="setting-info">
                           <span class="setting-name">Disclaimer</span>
-                          <span class="setting-desc" style="line-height:1.5">
+                          <span class="setting-desc" style="line-height:1.4">
                             Vermeil is an unofficial Minecraft launcher. Not affiliated with, endorsed by, or sponsored by Mojang Studios or Microsoft.
                             Minecraft is a trademark of Mojang Synergies AB.
                           </span>
