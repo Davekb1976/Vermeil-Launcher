@@ -31,13 +31,25 @@
 ; -----------------------------------------------------------------------------
 
 Var DeleteUserData
+Var PrevEstimatedSize
+
+!macro NSIS_HOOK_PREINSTALL
+    ; Preserve existing EstimatedSize (maintained asynchronously by Vermeil's Rust runtime)
+    ; before Section Install overwrites it with the static binary size.
+    ${If} $PrevEstimatedSize == ""
+    ${OrIf} $PrevEstimatedSize == 0
+        ReadRegDWORD $PrevEstimatedSize HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Vermeil" "EstimatedSize"
+    ${EndIf}
+!macroend
 
 !macro NSIS_HOOK_POSTINSTALL
-    ; Recalculate true directory size in KB (including existing instances/assets if updating)
-    ; and update EstimatedSize in the registry so Windows Settings shows the real disk usage.
-    ${If} ${FileExists} "$INSTDIR\*.*"
-        ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
-        WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Vermeil" "EstimatedSize" $0
+    ; Restore the previous EstimatedSize in O(1) time instead of running a blocking
+    ; single-threaded ${GetSize} walk across 100,000+ Minecraft asset/library/mod files.
+    ; Vermeil's Rust backend (platform::update_windows_estimated_size) automatically
+    ; refreshes EstimatedSize on a background thread when the launcher starts and exits.
+    ${If} $PrevEstimatedSize != ""
+    ${AndIf} $PrevEstimatedSize <> 0
+        WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Vermeil" "EstimatedSize" $PrevEstimatedSize
     ${EndIf}
 !macroend
 

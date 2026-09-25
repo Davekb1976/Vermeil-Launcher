@@ -194,15 +194,18 @@ pub fn atomic_write<P: AsRef<std::path::Path>>(path: P, contents: &[u8]) -> std:
 }
 
 /// Recursively calculates the total size in bytes of all files within a directory.
+/// Uses `DirEntry::metadata()` directly so Windows reads cached `WIN32_FIND_DATAW`
+/// attributes/sizes with zero extra stat syscalls or `PathBuf` allocations for leaf files.
 pub fn dir_size(path: &std::path::Path) -> u64 {
     let mut size: u64 = 0;
     if let Ok(entries) = std::fs::read_dir(path) {
         for entry in entries.flatten() {
-            let p = entry.path();
-            if p.is_dir() {
-                size += dir_size(&p);
-            } else if let Ok(meta) = p.metadata() {
-                size += meta.len();
+            if let Ok(meta) = entry.metadata() {
+                if meta.is_dir() {
+                    size += dir_size(&entry.path());
+                } else {
+                    size += meta.len();
+                }
             }
         }
     }

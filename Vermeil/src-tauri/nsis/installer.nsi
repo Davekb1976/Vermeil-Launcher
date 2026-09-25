@@ -518,6 +518,9 @@ Function .onInit
 
   !insertmacro SetContext
 
+  ; Capture existing EstimatedSize early (before PageReinstall can run uninstall.exe)
+  ReadRegDWORD $PrevEstimatedSize HKCU "${UNINSTKEY}" "EstimatedSize"
+
   ${If} $INSTDIR == "${PLACEHOLDER_INSTALL_DIR}"
     ; Set default install location
     !if "${INSTALLMODE}" == "perMachine"
