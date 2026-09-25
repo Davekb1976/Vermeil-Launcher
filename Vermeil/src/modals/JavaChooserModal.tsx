@@ -1,5 +1,6 @@
 import { Component, For, Show, createSignal } from "solid-js";
 import { JavaInstall } from "../ipc/commands";
+import { IconX, IconCheck } from "../components/Icons";
 
 /**
  * Shown by Settings → Resources → Java and the Onboarding wizard when the
@@ -44,17 +45,22 @@ const JavaChooserModal: Component<Props> = (props) => {
       <div class="modal-overlay" onClick={props.onCancel}>
         <div
           class="modal java-chooser-modal panel panel--bracketed"
-          style="max-width:520px"
+          style="width: 520px; max-width: calc(100vw - 40px);"
           onClick={(e) => e.stopPropagation()}
         >
           <div class="modal-header">
-            <span class="modal-title">Pick a Java {props.major} install</span>
-            <button class="modal-close" onClick={props.onCancel}>✕</button>
+            <div class="modal-header-left">
+              <span class="card-section-tag tag-settings-java">JAVA RUNTIME</span>
+              <span class="modal-title">Java {props.major} Installation</span>
+            </div>
+            <button class="modal-close tip-left" data-tip="Close" onClick={props.onCancel} aria-label="Close modal">
+              <IconX />
+            </button>
           </div>
           <div class="modal-body">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:10px">
-              Detected {props.options.length} JREs that satisfy Java {props.major}.
-              Choose which one Vermeil should use to launch the game.
+            <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5;">
+              Detected {props.options.length} installations that satisfy Java {props.major}.
+              Select which runtime Vermeil should use to launch the game:
             </div>
             <div class="java-chooser-list">
               <For each={props.options}>
@@ -82,8 +88,11 @@ const JavaChooserModal: Component<Props> = (props) => {
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn--ghost" onClick={props.onCancel}>Cancel</button>
-            <button class="btn btn--primary" onClick={confirm}>Use this</button>
+            <button class="btn btn--subtle" onClick={props.onCancel}>Cancel</button>
+            <button class="btn btn--primary" onClick={confirm}>
+              <IconCheck />
+              <span>Use this runtime</span>
+            </button>
           </div>
         </div>
       </div>

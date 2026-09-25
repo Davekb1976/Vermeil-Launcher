@@ -347,9 +347,9 @@ const ModDetailModal: Component<Props> = (props) => {
                     <Show when={incompatibleCount() > 0}>
                       <button
                         type="button"
-                        class={`btn btn--sm mod-filter-toggle ${showAll() ? "active" : ""}`}
+                        class={`btn btn--sm mod-filter-toggle tip-below tip-left ${showAll() ? "active" : ""}`}
                         onClick={() => setShowAll(!showAll())}
-                        title={`${incompatibleCount()} of ${versions().length} versions do not target ${props.loader} ${props.gameVersion}`}
+                        data-tip={`${incompatibleCount()} of ${versions().length} versions do not target ${props.loader} ${props.gameVersion}`}
                       >
                         {showAll() ? "Compatible only" : `Show all (${versions().length})`}
                       </button>

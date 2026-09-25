@@ -324,7 +324,7 @@ const ImportInstance: Component = () => {
                     </div>
                     <div class="import-selected-meta">
                       <div class="import-selected-name">{selectedFileName()}</div>
-                      <div class="import-selected-path" title={selectedPath() || ""}>
+                      <div class="import-selected-path tip-below tip-left" data-tip={selectedPath() || ""}>
                         {selectedPath()}
                       </div>
                     </div>
@@ -486,9 +486,9 @@ const ImportInstance: Component = () => {
                 <div class="create-spec-row">
                   <span class="create-spec-label">Archive File</span>
                   <span
-                    class="create-spec-value"
+                    class="create-spec-value tip-left"
                     style="max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-                    title={selectedFileName() || ""}
+                    data-tip={selectedFileName() || ""}
                   >
                     {selectedFileName() || "None"}
                   </span>

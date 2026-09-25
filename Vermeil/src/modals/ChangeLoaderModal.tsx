@@ -299,14 +299,18 @@ const ChangeLoaderModal: Component = () => {
         >
           {/* Header */}
           <div class="modal-header">
-            <div>
-              <div class="modal-title">Change Mod Loader</div>
-              <div style="font-size: 11px; color: var(--muted); margin-top: 2px">
-                {inst()!.name} · Minecraft {inst()!.game_version}
+            <div class="modal-header-left">
+              <span class="card-section-tag tag-settings-instances">FRAMEWORK</span>
+              <div>
+                <div class="modal-title">Change Mod Loader</div>
+                <div style="font-size: 11px; color: var(--muted); margin-top: 2px">
+                  {inst()!.name} &middot; Minecraft {inst()!.game_version}
+                </div>
               </div>
             </div>
             <button
-              class="modal-close"
+              class="modal-close tip-left"
+              data-tip="Close"
               onClick={closeChangeLoaderModal}
               disabled={changing()}
               aria-label="Close modal"
@@ -371,7 +375,7 @@ const ChangeLoaderModal: Component = () => {
 
             {/* 2. Loader Version Selector (When non-vanilla) */}
             <Show when={selectedLoader() !== "vanilla"}>
-              <div class="setting-row full" style="padding: 10px 12px; background: var(--surface-panel); border: 1px solid var(--border); border-radius: 0; box-shadow: var(--bevel);">
+              <div class="setting-row full" style="padding: 10px 12px; background: var(--surface-panel); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 0;">
                 <div class="setting-info">
                   <span class="setting-name" style="font-size: 12px;">{loaderLabel(selectedLoader())} Version</span>
                   <span class="setting-desc" style="font-size: 11px;">
@@ -401,7 +405,7 @@ const ChangeLoaderModal: Component = () => {
                           <div
                             class="custom-select-option"
                             style={`padding: 6px 10px; font-size: 12px; font-family: var(--font-mono); cursor: pointer; display: flex; align-items: center; justify-content: space-between; ${selectedVersion() === v.version ? "background: rgba(139,92,246,0.15); color: var(--accent);" : "color: var(--text);"}`}
-                            title={v.version}
+                            data-tip={v.version}
                             onClick={() => {
                               setSelectedVersion(v.version);
                               setVersionDropOpen(false);
@@ -424,14 +428,14 @@ const ChangeLoaderModal: Component = () => {
             <div>
               {/* Scenario 1: Same loader and version (No changes) */}
               <Show when={isNoChange()}>
-                <div style="padding: 10px 12px; background: var(--surface-panel); border: 1px solid var(--border); border-left: 3px solid var(--muted); font-size: 12px; color: var(--muted); box-shadow: var(--bevel);">
+                <div style="padding: 10px 12px; background: var(--surface-panel); border: 1px solid var(--border); border-left: 3px solid var(--muted); font-size: 12px; color: var(--muted);">
                   No changes selected. Pick a different loader or version to switch.
                 </div>
               </Show>
 
               {/* Scenario 2: Same loader, changing version (Upgrade/Downgrade) */}
               <Show when={isSameLoader() && !isSameVersion()}>
-                <div style="padding: 10px 12px; background: rgba(139,92,246,0.06); border: 1px solid var(--border); border-left: 3px solid var(--accent); font-size: 12px; color: var(--text); box-shadow: var(--bevel);">
+                <div style="padding: 10px 12px; background: rgba(139,92,246,0.06); border: 1px solid var(--border); border-left: 3px solid var(--accent); font-size: 12px; color: var(--text);">
                   <div style="font-weight: 600; color: var(--accent); margin-bottom: 2px;">Loader Runtime Update</div>
                   <div>
                     Updating {loaderLabel(selectedLoader())} from <strong style="font-family:var(--font-mono)">{inst()!.loader.version || "default"}</strong> to <strong style="font-family:var(--font-mono)">{selectedVersion()}</strong>. Installed mods will remain intact and will run on the updated loader.
@@ -441,7 +445,7 @@ const ChangeLoaderModal: Component = () => {
 
               {/* Scenario 3: Vanilla -> Modded */}
               <Show when={isVanillaToModded()}>
-                <div style="padding: 10px 12px; background: rgba(34,197,94,0.06); border: 1px solid var(--border); border-left: 3px solid var(--success); font-size: 12px; color: var(--text); box-shadow: var(--bevel);">
+                <div style="padding: 10px 12px; background: rgba(34,197,94,0.06); border: 1px solid var(--border); border-left: 3px solid var(--success); font-size: 12px; color: var(--text);">
                   <div style="font-weight: 600; color: var(--success); margin-bottom: 2px;">Enabling Mod Support</div>
                   <div>
                     Switching to {loaderLabel(selectedLoader())} will enable mod support for this instance. You will be able to browse and install {loaderLabel(selectedLoader())} mods directly from Modrinth and CurseForge.
@@ -454,13 +458,13 @@ const ChangeLoaderModal: Component = () => {
                 <Show
                   when={activeModCount() > 0}
                   fallback={
-                    <div style="padding: 10px 12px; background: rgba(34,197,94,0.06); border: 1px solid var(--border); border-left: 3px solid var(--success); font-size: 12px; color: var(--text); box-shadow: var(--bevel);">
+                    <div style="padding: 10px 12px; background: rgba(34,197,94,0.06); border: 1px solid var(--border); border-left: 3px solid var(--success); font-size: 12px; color: var(--text);">
                       <div style="font-weight: 600; color: var(--success); margin-bottom: 2px;">Switching to Vanilla</div>
                       <div>No mods are currently active on this instance. Switching to Vanilla is completely safe.</div>
                     </div>
                   }
                 >
-                  <div style="padding: 12px; background: rgba(245,158,11,0.08); border: 1px solid var(--border); border-left: 3px solid var(--warn); box-shadow: var(--bevel);">
+                  <div style="padding: 12px; background: rgba(245,158,11,0.08); border: 1px solid var(--border); border-left: 3px solid var(--warn);">
                     <div style="display: flex; gap: 8px; align-items: flex-start;">
                       <div style="color: var(--warn); margin-top: 1px;"><IconAlertTriangle /></div>
                       <div style="flex: 1; font-size: 12px;">
@@ -490,7 +494,7 @@ const ChangeLoaderModal: Component = () => {
 
               {/* Scenario 5: Fabric <-> Quilt */}
               <Show when={isFabricQuiltCross()}>
-                <div style="padding: 12px; background: rgba(124,77,222,0.08); border: 1px solid var(--border); border-left: 3px solid #7c3aed; box-shadow: var(--bevel);">
+                <div style="padding: 12px; background: rgba(124,77,222,0.08); border: 1px solid var(--border); border-left: 3px solid #7c3aed;">
                   <div style="font-size: 12px; line-height: 1.4;">
                     <div style="font-weight: 700; color: #a78bfa; margin-bottom: 2px;">Cross-Compatible Ecosystems</div>
                     <div style="color: var(--text);">
@@ -505,13 +509,13 @@ const ChangeLoaderModal: Component = () => {
                 <Show
                   when={activeModCount() > 0}
                   fallback={
-                    <div style="padding: 10px 12px; background: rgba(34,197,94,0.06); border: 1px solid var(--border); border-left: 3px solid var(--success); font-size: 12px; color: var(--text); box-shadow: var(--bevel);">
+                    <div style="padding: 10px 12px; background: rgba(34,197,94,0.06); border: 1px solid var(--border); border-left: 3px solid var(--success); font-size: 12px; color: var(--text);">
                       <div style="font-weight: 600; color: var(--success); margin-bottom: 2px;">Safe Loader Switch</div>
                       <div>No mods are currently active on this instance. Switching to {loaderLabel(selectedLoader())} is completely safe.</div>
                     </div>
                   }
                 >
-                  <div style="padding: 12px; background: rgba(239,68,68,0.08); border: 1px solid var(--border); border-left: 3px solid var(--danger); box-shadow: var(--bevel);">
+                  <div style="padding: 12px; background: rgba(239,68,68,0.08); border: 1px solid var(--border); border-left: 3px solid var(--danger);">
                     <div style="display: flex; gap: 8px; align-items: flex-start;">
                       <div style="color: var(--danger); margin-top: 2px;"><IconAlertTriangle /></div>
                       <div style="flex: 1; font-size: 12px;">
@@ -550,7 +554,7 @@ const ChangeLoaderModal: Component = () => {
           {/* Footer */}
           <div class="modal-footer">
             <button
-              class="btn btn--ghost btn--sm"
+              class="btn btn--subtle btn--sm"
               onClick={closeChangeLoaderModal}
               disabled={changing()}
             >

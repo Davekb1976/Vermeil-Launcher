@@ -3,7 +3,7 @@ import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, setGameLau
 import { launchInstance, listInstanceWorlds, getJavaNews, getArticleBody, NewsArticle, getSettings } from "../ipc/commands";
 import { loaderBadgeClass, loaderLabel } from "../lib/loader";
 import { createGridPageSize } from "../lib/gridPageSize";
-import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX, IconMicrosoft, IconAlertTriangle, IconClock, IconUser, IconCloud, IconGoogleCloud } from "../components/Icons";
+import { IconPlay, IconGlobe, IconShieldCheck, IconPlus, IconX, IconMicrosoft, IconAlertTriangle, IconClock, IconUser, IconCloud, IconGoogleCloud, IconExternalLink } from "../components/Icons";
 import CharacterStage from "../components/CharacterStage";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { resolveAssetUrl } from "../lib/assets";
@@ -639,7 +639,10 @@ const Home: Component = () => {
                             <span class="news-card-date">{formatArticleDate(article.date)}</span>
                           </Show>
                         </div>
-                        <span class="news-card-read">Read ↗</span>
+                        <span class="news-card-read">
+                          Read
+                          <IconExternalLink />
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -662,7 +665,8 @@ const Home: Component = () => {
                     {getNewsCategory(selectedArticle()!).label}
                   </span>
                   <button
-                    class="news-modal-close"
+                    class="news-modal-close tip-left"
+                    data-tip="Close"
                     style="position:static"
                     onClick={() => setSelectedArticle(null)}
                     aria-label="Close modal"
@@ -687,7 +691,8 @@ const Home: Component = () => {
                   {getNewsCategory(selectedArticle()!).label}
                 </span>
                 <button
-                  class="news-modal-close"
+                  class="news-modal-close tip-left"
+                  data-tip="Close"
                   onClick={() => setSelectedArticle(null)}
                   aria-label="Close modal"
                 >
@@ -734,10 +739,11 @@ const Home: Component = () => {
                 fallback={<div />}
               >
                 <button
-                  class="btn btn--sm"
+                  class="btn btn--subtle btn--sm"
                   onClick={() => openUrl(selectedArticle()!.url)}
                 >
-                  Read on minecraft.net ↗
+                  <IconExternalLink />
+                  <span>Read on minecraft.net</span>
                 </button>
               </Show>
               <button

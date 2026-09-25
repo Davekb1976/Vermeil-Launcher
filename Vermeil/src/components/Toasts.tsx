@@ -132,7 +132,14 @@ const Toasts: Component = () => {
                 {toast.action.label}
               </button>
             )}
-            <button class="toast-dismiss" onClick={() => dismissToast(toast.id)}><IconX /></button>
+            <button
+              class="toast-dismiss tip-left"
+              data-tip="Dismiss"
+              aria-label="Dismiss notification"
+              onClick={() => dismissToast(toast.id)}
+            >
+              <IconX />
+            </button>
           </div>
         )}
       </For>

@@ -805,6 +805,8 @@
 .mod-card-desc { font-size: 11px; color: var(--muted); line-height: 1.45; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; flex: 1; }
 .mod-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: var(--space-1); gap: var(--space-2); }
 .mod-card-meta { font-size: 10px; color: var(--muted); display: flex; align-items: center; gap: var(--space-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mod-meta-stat { display: inline-flex; align-items: center; gap: 3px; }
+.mod-meta-stat svg { width: 11px; height: 11px; color: var(--muted); }
 .side-icon { display: inline-flex; width: 13px; height: 13px; opacity: 0.75; }
 .side-icon svg { width: 100%; height: 100%; }
 .mod-card-actions { display: flex; gap: var(--space-1); align-items: center; }
@@ -2999,13 +3001,24 @@
 
 /* Modal */
 .modal-overlay {
-  position: fixed; top: 38px; left: 0; right: 0; bottom: 0;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,.55); z-index: 50;
+  position: fixed;
+  top: 38px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 50;
 }
 .modal {
-  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-xl);
-  width: 440px; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  width: 460px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--border);
   /* Stay within the viewport on short or display-scaled screens. Without
      this a tall modal (e.g. the onboarding wizard) overflows and — because
      the overlay centers it — gets clipped at BOTH the top and bottom edges.
@@ -3018,24 +3031,74 @@
   overflow: hidden;
 }
 .modal-header {
-  padding: var(--space-5) var(--space-5) var(--space-4); border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-panel);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   flex-shrink: 0;
 }
-.modal-title { font-size: 15px; font-weight: 600; color: var(--text); }
-.modal-close {
-  background: none; border: none; color: var(--muted); cursor: pointer;
-  padding: var(--space-1); border-radius: var(--radius-sm); font-size: 16px;
-  transition: background .15s, color .15s;
+.modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
 }
-.modal-close:hover { background: var(--bg4); color: var(--text); }
-.modal-body { padding: var(--space-5); overflow-y: auto; min-height: 0; }
+.modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.modal-close {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+}
+.modal-close:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: var(--danger);
+}
+.modal-close:active {
+  transform: translateY(1px);
+}
+.modal-close svg {
+  width: 15px;
+  height: 15px;
+}
+.modal-body {
+  padding: 16px 18px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
 .modal-body .mod-list::-webkit-scrollbar { width: 4px; }
 .modal-body .mod-list::-webkit-scrollbar-thumb { background: var(--accent); border-radius: var(--radius-xs); }
 .modal-body .mod-list::-webkit-scrollbar-track { background: transparent; }
 .modal-footer {
-  padding: var(--space-4) var(--space-5); border-top: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2);
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-panel);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 
@@ -3140,9 +3203,9 @@ select.field-input[size] { appearance: none; }
 .custom-dropdown-selected {
   width: 100%;
   height: var(--dropdown-height, var(--control-height-sm));
-  background: var(--bg3);
+  background: var(--surface-sunken);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 0;
   padding: 0 var(--space-3);
   color: var(--text);
   font-size: var(--fs-xs);
@@ -3177,12 +3240,12 @@ select.field-input[size] { appearance: none; }
   left: 0;
   right: 0;
   z-index: 100;
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
   max-height: 210px;
   overflow-y: auto;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.65), 0 0 0 1px var(--border);
 }
 /* Upward variant — for dropdowns near the bottom of their container, so the
    options panel rises above the trigger instead of overflowing downward. */
@@ -3200,7 +3263,7 @@ select.field-input[size] { appearance: none; }
   align-items: center;
   gap: var(--space-2);
 }
-.custom-dropdown-option:hover { background: var(--bg4); }
+.custom-dropdown-option:hover { background: var(--surface-raised); }
 .custom-dropdown-option.selected {
   background: var(--accent-tint);
   color: var(--accent);
@@ -3222,6 +3285,7 @@ select.field-input[size] { appearance: none; }
   bottom: auto;
   right: auto;
   z-index: 9999;
+  border-radius: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -3231,7 +3295,7 @@ select.field-input[size] { appearance: none; }
   flex-shrink: 0;
   width: 100%;
   box-sizing: border-box;
-  background: var(--bg4);
+  background: var(--surface-sunken);
   border: none;
   border-bottom: 1px solid var(--border);
   color: var(--text);
@@ -3246,12 +3310,14 @@ select.field-input[size] { appearance: none; }
 /* Choice pills */
 .choice-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .choice-btn {
-  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-md);
+  background: var(--surface-raised); border: 1px solid var(--border); border-radius: 0;
+  box-shadow: var(--bevel);
   padding: var(--space-2) var(--space-3); font-size: 12px; font-family: var(--font); color: var(--muted);
   cursor: pointer; transition: all .12s;
 }
-.choice-btn:hover { border-color: var(--border-hover); color: var(--text); }
-.choice-btn.selected { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); }
+.choice-btn:hover { border-color: var(--accent); color: var(--text); transform: translateY(-1px); }
+.choice-btn:active { transform: translateY(1px); }
+.choice-btn.selected { background: var(--accent-tint); border-color: var(--accent); color: var(--accent); box-shadow: var(--bevel-strong); }
 
 /* Create choice grid — single column so each option is a full-width card.
    Looks balanced with three options instead of leaving one orphaned in the

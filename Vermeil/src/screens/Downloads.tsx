@@ -173,7 +173,7 @@ const Downloads: Component = () => {
                   </Show>
                 </div>
                 <div class="dl-active-title-group">
-                  <span class="dl-active-name" title={activeInstall().title}>{activeInstall().title}</span>
+                  <span class="dl-active-name">{activeInstall().title}</span>
                   <Show when={activeInstallEntry()?.author}>
                     <span class="dl-card-author">by {activeInstallEntry()!.author}</span>
                   </Show>
@@ -248,7 +248,7 @@ const Downloads: Component = () => {
                   </Show>
                 </div>
                 <div class="dl-active-title-group">
-                  <span class="dl-active-name" title={activeContentItem()?.name}>
+                  <span class="dl-active-name">
                     {activeContentItem()?.name}
                   </span>
                   <Show when={activeContentItem()?.author}>
@@ -264,7 +264,7 @@ const Downloads: Component = () => {
                     <span class="badge badge--version">{activeContentItem()!.gameVersion}</span>
                   </Show>
                   <Show when={activeContentItem()?.versionNumber}>
-                    <span class="badge badge--vnum" title={activeContentItem()!.versionNumber!}>
+                    <span class="badge badge--vnum tip-below" data-tip={activeContentItem()!.versionNumber!}>
                       {activeContentItem()!.versionNumber}
                     </span>
                   </Show>
@@ -430,7 +430,7 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry; position?: number }>
         </div>
         <div class="dl-queue-info">
           <div class="dl-queue-title-row">
-            <span class="dl-queue-name" title={cardName()}>{cardName()}</span>
+            <span class="dl-queue-name">{cardName()}</span>
             <Show when={dl().author}>
               <span class="dl-queue-author">by {dl().author}</span>
             </Show>
@@ -444,7 +444,7 @@ const ActiveDownloadCard: Component<{ entry: DownloadEntry; position?: number }>
               <span class="badge badge--version">{cardGameVersion()}</span>
             </Show>
             <Show when={cardVersionNumber()}>
-              <span class="badge badge--vnum" title={cardVersionNumber()!}>{cardVersionNumber()}</span>
+              <span class="badge badge--vnum tip-below" data-tip={cardVersionNumber()!}>{cardVersionNumber()}</span>
             </Show>
           </div>
         </div>
@@ -547,7 +547,7 @@ const DownloadCard: Component<{ entry: DownloadEntry; timeAgo: (ts: number) => s
         <div class="dl-card-body">
           <div class="dl-card-header">
             <div class="dl-card-title-group">
-              <span class="dl-card-name" title={cardName()}>{cardName()}</span>
+              <span class="dl-card-name">{cardName()}</span>
               <Show when={dl().author}>
                 <span class="dl-card-author">by {dl().author}</span>
               </Show>
@@ -565,7 +565,7 @@ const DownloadCard: Component<{ entry: DownloadEntry; timeAgo: (ts: number) => s
               <span class="badge badge--version">{cardGameVersion()}</span>
             </Show>
             <Show when={cardVersionNumber()}>
-              <span class="badge badge--vnum" title={cardVersionNumber()!}>{cardVersionNumber()}</span>
+              <span class="badge badge--vnum tip-below" data-tip={cardVersionNumber()!}>{cardVersionNumber()}</span>
             </Show>
             <span class="dl-card-time">{props.timeAgo(dl().timestamp)}</span>
           </div>

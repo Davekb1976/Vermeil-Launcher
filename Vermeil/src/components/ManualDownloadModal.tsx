@@ -64,9 +64,12 @@ const ManualDownloadModal: Component = () => {
       <div class="modal-overlay" onClick={close}>
         <div class="modal manual-dl-modal" onClick={(e) => e.stopPropagation()}>
           <div class="modal-header">
-            <span class="modal-title">
-              {entries().length === 1 ? "Manual download needed" : `${entries().length} manual downloads needed`}
-            </span>
+            <div class="modal-header-left">
+              <span class="card-section-tag tag-settings-storage">MANUAL DOWNLOAD</span>
+              <span class="modal-title">
+                {entries().length === 1 ? "Manual Download Needed" : `${entries().length} Manual Downloads Needed`}
+              </span>
+            </div>
             <button class="modal-close tip-left" data-tip="Close" aria-label="Close" onClick={close}><IconX /></button>
           </div>
 
@@ -143,7 +146,7 @@ const ManualDownloadModal: Component = () => {
                 <IconFolderOpen /> Open mods folder
               </button>
             </Show>
-            <button class="btn btn--neutral" onClick={close}>Got it</button>
+            <button class="btn btn--subtle" onClick={close}>Got it</button>
           </div>
         </div>
       </div>

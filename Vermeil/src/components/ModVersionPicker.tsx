@@ -139,10 +139,10 @@ const ModVersionPicker: Component<Props> = (props) => {
               shifts the row it sits in. The count goes in the tooltip rather than
               the label, where it read as a total and was really the fetch cap. */}
           <button
-            class={`btn btn--sm btn--ghost btn--fixed ${showAll() ? "btn-active" : ""}`}
+            class={`btn btn--sm btn--subtle btn--fixed tip-below tip-left ${showAll() ? "btn-active" : ""}`}
             style="--btn-fixed-width:112px"
             onClick={() => setShowAll(!showAll())}
-            title={`${incompatibleCount()} of ${versions().length} listed versions don't match ${props.loader} ${props.gameVersion}`}
+            data-tip={`${incompatibleCount()} of ${versions().length} listed versions don't match ${props.loader} ${props.gameVersion}`}
           >
             {showAll() ? "Compatible only" : "Show all"}
           </button>

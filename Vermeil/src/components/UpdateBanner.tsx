@@ -13,6 +13,7 @@ import {
   IconDownload,
   IconExternalLink,
   IconRotate,
+  IconArrowRight,
 } from "./Icons";
 
 const RELEASES_URL = "https://github.com/Davekb1976/Vermeil-Launcher/releases/tag";
@@ -68,7 +69,9 @@ const UpdateBanner: Component = () => {
               <span class="update-version-badge update-version-badge--old">
                 {fmtVer(updateAvailable()?.currentVersion)}
               </span>
-              <span class="update-version-arrow">→</span>
+              <span class="update-version-arrow">
+                <IconArrowRight />
+              </span>
               <span class="update-version-badge update-version-badge--new">
                 {fmtVer(updateAvailable()?.version)}
               </span>
@@ -82,7 +85,7 @@ const UpdateBanner: Component = () => {
                 <span>Download</span>
               </button>
               <button
-                class="btn btn--neutral btn--sm"
+                class="btn btn--subtle btn--sm"
                 onClick={() =>
                   openUrl(`${RELEASES_URL}/${fmtVer(updateAvailable()?.version)}`).catch(() => {})
                 }

@@ -129,10 +129,10 @@ const ColorPicker: Component<Props> = (props) => {
               {(p) => (
                 <button
                   type="button"
-                  class="color-preset"
+                  class="color-preset tip-below"
                   classList={{ selected: p === hex() }}
                   style={`background:${p}`}
-                  title={p}
+                  data-tip={p}
                   aria-label={p}
                   aria-pressed={p === hex()}
                   onClick={() => choosePreset(p)}

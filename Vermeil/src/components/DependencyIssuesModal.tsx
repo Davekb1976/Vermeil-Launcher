@@ -93,8 +93,11 @@ const DependencyIssuesModal: Component = () => {
           onClick={(e) => e.stopPropagation()}
         >
           <div class="modal-header">
-            <span class="modal-title">Dependency issues</span>
-            <button class="modal-close" onClick={close}><IconX /></button>
+            <div class="modal-header-left">
+              <span class="card-section-tag tag-settings-storage">DEPENDENCY CHECK</span>
+              <span class="modal-title">Dependency Resolution Notice</span>
+            </div>
+            <button class="modal-close tip-left" data-tip="Close" onClick={close} aria-label="Close modal"><IconX /></button>
           </div>
           <div class="modal-body">
             <div class="dep-issue-summary">

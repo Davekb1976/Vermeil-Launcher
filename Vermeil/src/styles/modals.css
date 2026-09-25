@@ -1,27 +1,4 @@
-/* modals.css — Crash report, onboarding wizard, java location finder, toast action button */
-
-/* ============================================================
-   Toast action button (CTA next to dismiss in Toasts.tsx).
-   Used by e.g. the "View report" button on a game-crashed toast.
-   ============================================================ */
-.toast-action {
-  background: var(--accent-tint);
-  border: 1px solid var(--accent);
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 600;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-family: var(--font);
-  transition: background 0.15s, border-color 0.15s;
-  margin-right: var(--space-2);
-}
-.toast-action:hover {
-  background: var(--accent);
-  color: var(--text);
-  border-color: var(--accent);
-}
+/* modals.css — Crash report, onboarding wizard, java location finder */
 
 /* ============================================================
    Crash report viewer modal (CrashReportModal.tsx).
@@ -75,9 +52,9 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  background: var(--bg1);
+  background: var(--surface-sunken);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 0;
   padding: var(--space-3) var(--space-3);
   font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
   font-size: 11.5px;
@@ -87,7 +64,7 @@
 .crash-line {
   white-space: pre;
   padding: 0 var(--space-1);
-  border-radius: var(--radius-xs);
+  border-radius: 0;
 }
 .crash-line.highlight {
   color: var(--danger);
@@ -772,7 +749,7 @@
   margin-top: var(--space-4);
 }
 .onboarding-java-slots::-webkit-scrollbar { width: 6px; }
-.onboarding-java-slots::-webkit-scrollbar-thumb { background: var(--accent); border-radius: var(--radius-xs); }
+.onboarding-java-slots::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 0; }
 .onboarding-java-slots::-webkit-scrollbar-track { background: transparent; }
 
 
@@ -789,23 +766,28 @@
   padding-right: var(--space-1);
 }
 .java-chooser-list::-webkit-scrollbar { width: 6px; }
-.java-chooser-list::-webkit-scrollbar-thumb { background: var(--accent); border-radius: var(--radius-xs); }
+.java-chooser-list::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 0; }
 .java-chooser-list::-webkit-scrollbar-track { background: transparent; }
 .java-chooser-row {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  background: var(--bg1);
+  padding: 10px 12px;
+  background: var(--surface-sunken);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-left: 3px solid transparent;
+  border-radius: 0;
   cursor: pointer;
-  transition: border-color .12s, background .12s;
+  transition: border-color .15s, background .15s, transform .1s;
 }
-.java-chooser-row:hover { border-color: var(--accent); }
+.java-chooser-row:hover {
+  border-color: var(--border-hover);
+  background: var(--surface-panel);
+}
 .java-chooser-row.selected {
   border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, var(--bg1));
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-panel));
 }
 .java-chooser-row input[type="radio"] {
   flex-shrink: 0;

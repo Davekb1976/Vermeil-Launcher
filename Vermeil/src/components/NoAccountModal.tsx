@@ -1,28 +1,37 @@
 import { Component, Show } from "solid-js";
 import { setActiveScreen } from "../App";
-import { IconX } from "./Icons";
+import { IconX, IconUser } from "./Icons";
 
 const NoAccountModal: Component<{ open: boolean; onClose: () => void }> = (props) => {
   return (
     <Show when={props.open}>
       <div class="modal-overlay" onClick={props.onClose}>
-        <div class="modal panel panel--bracketed" style="max-width:400px" onClick={(e) => e.stopPropagation()}>
+        <div class="modal panel panel--bracketed" style="width: 440px; max-width: calc(100vw - 40px);" onClick={(e) => e.stopPropagation()}>
           <div class="modal-header">
-            <span class="modal-title">Account required</span>
-            <button class="modal-close" onClick={props.onClose}><IconX /></button>
-          </div>
-          <div class="modal-body">
-            <div style="font-size:13px;color:var(--text);line-height:1.5;margin-bottom:12px">
-              You need to add an account before you can launch Minecraft.
+            <div class="modal-header-left">
+              <span class="card-section-tag tag-settings-account">ACCOUNT REQUIRED</span>
+              <span class="modal-title">Sign In to Launch</span>
             </div>
-            <div style="font-size:11px;color:var(--muted);line-height:1.5">
-              Sign in with Microsoft to play on online servers, or create an offline account to play singleplayer and on offline servers.
+            <button class="modal-close tip-left" data-tip="Close" onClick={props.onClose} aria-label="Close modal">
+              <IconX />
+            </button>
+          </div>
+          <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="font-size: 13px; color: var(--text); line-height: 1.5;">
+              You need an active Minecraft account before launching the game.
+            </div>
+            <div style="background: var(--surface-sunken); border: 1px solid var(--border); border-left: 3px solid var(--accent); padding: 12px 14px; font-size: 12px; color: var(--text-muted); line-height: 1.5; display: flex; gap: 10px; align-items: flex-start;">
+              <span style="color: var(--accent); margin-top: 1px; flex-shrink: 0;"><IconUser /></span>
+              <div>
+                Sign in with <strong style="color: var(--text);">Microsoft</strong> to play on online multiplayer servers, or create an <strong style="color: var(--text);">Offline profile</strong> for singleplayer and LAN worlds.
+              </div>
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn--ghost" onClick={props.onClose}>Cancel</button>
+            <button class="btn btn--subtle" onClick={props.onClose}>Cancel</button>
             <button class="btn btn--primary" onClick={() => { props.onClose(); setActiveScreen("account"); }}>
-              Go to Account
+              <IconUser />
+              <span>Go to Accounts</span>
             </button>
           </div>
         </div>

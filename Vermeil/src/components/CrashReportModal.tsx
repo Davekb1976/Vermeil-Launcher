@@ -84,8 +84,11 @@ const CrashReportModal: Component = () => {
           onClick={(e) => e.stopPropagation()}
         >
           <div class="modal-header">
-            <span class="modal-title">Crash report</span>
-            <button class="modal-close" onClick={close}><IconX /></button>
+            <div class="modal-header-left">
+              <span class="card-section-tag tag-settings-video" style="background: rgba(239,68,68,0.15); color: #fca5a5; border-color: rgba(239,68,68,0.3);">CRASH REPORT</span>
+              <span class="modal-title">Minecraft Error Log</span>
+            </div>
+            <button class="modal-close tip-left" data-tip="Close" onClick={close} aria-label="Close modal"><IconX /></button>
           </div>
           <div class="modal-body">
             <Show when={loading()}>
@@ -99,7 +102,7 @@ const CrashReportModal: Component = () => {
             <Show when={!loading() && !error() && reportText()}>
               <div class="crash-meta">
                 <span class="crash-meta-path">{reportPath()}</span>
-                <button class="btn btn--ghost crash-jump" onClick={scrollToError}>
+                <button class="btn btn--subtle btn--sm crash-jump" onClick={scrollToError}>
                   Jump to error
                 </button>
               </div>
@@ -115,7 +118,7 @@ const CrashReportModal: Component = () => {
             </Show>
           </div>
           <div class="modal-footer">
-            <button class="btn btn--ghost" onClick={close}>Close</button>
+            <button class="btn btn--subtle" onClick={close}>Close</button>
           </div>
         </div>
       </div>

@@ -4095,11 +4095,10 @@
   gap: var(--space-2);
   padding: var(--space-3);
   width: 210px;
-  /* Same floating-surface treatment as .custom-dropdown-options. */
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65), 0 0 0 1px var(--border);
 }
 /* Preset palette — two rows of eight, sized so the grid matches the popover's
    content width exactly. One click is the fast path for a solid cape; the
@@ -4113,7 +4112,9 @@
   aspect-ratio: 1;
   padding: 0;
   border: 1px solid var(--border);
+  border-radius: 0;
   cursor: pointer;
+  transition: transform 0.08s ease, border-color 0.12s ease;
 }
 .color-preset:hover,
 .color-preset:focus-visible {
@@ -4934,6 +4935,9 @@
 }
 
 .news-card-read {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
   font-weight: 600;
   color: var(--accent);
@@ -4942,6 +4946,11 @@
   transition: opacity 0.15s ease, transform 0.15s ease;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.news-card-read svg {
+  width: 11px;
+  height: 11px;
 }
 
 .news-card:hover .news-card-read {

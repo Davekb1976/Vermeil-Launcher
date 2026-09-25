@@ -1,7 +1,7 @@
 import { Component, createSignal, Show, For, onMount } from "solid-js";
 import { instances, showToast, refreshPinnedInstanceIds } from "../App";
 import { getSettings, saveSettings } from "../ipc/commands";
-import { IconCheck, IconSearch } from "../components/Icons";
+import { IconCheck, IconSearch, IconX } from "../components/Icons";
 import { resolveAssetUrl } from "../lib/assets";
 
 /**
@@ -105,7 +105,18 @@ const PinInstancesModal: Component = () => {
       <div class="modal-overlay" onClick={close}>
         <div class="modal pin-instances-modal panel panel--bracketed" onClick={(e) => e.stopPropagation()}>
           <div class="modal-header">
-            <span class="modal-title">Manage Pinned Instances</span>
+            <div class="modal-header-left">
+              <span class="card-section-tag tag-settings-general">QUICK LAUNCH</span>
+              <span class="modal-title">Manage Pinned Instances</span>
+            </div>
+            <button
+              class="modal-close tip-left"
+              data-tip="Close"
+              onClick={close}
+              aria-label="Close modal"
+            >
+              <IconX />
+            </button>
           </div>
           <div class="modal-body">
             <div class="pin-instances-help">
@@ -199,9 +210,10 @@ const PinInstancesModal: Component = () => {
                 {pinned().length} / {MAX_PINS} slots used
               </span>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <button class="btn btn--neutral" onClick={close}>Cancel</button>
+                <button class="btn btn--subtle" onClick={close}>Cancel</button>
                 <button class="btn btn--primary" onClick={save} disabled={saving()}>
-                  {saving() ? "Saving..." : "Save Pins"}
+                  <IconCheck />
+                  <span>{saving() ? "Saving..." : "Save Pins"}</span>
                 </button>
               </div>
             </div>

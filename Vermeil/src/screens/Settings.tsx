@@ -1952,7 +1952,7 @@ const Settings: Component = () => {
                                   </Show>
                                 </div>
                                 <div class="inst-card-body">
-                                  <div class="inst-card-title" title={inst.name}>{inst.name}</div>
+                                  <div class="inst-card-title">{inst.name}</div>
                                   <div class="inst-card-sub">
                                     {inst.game_version} · {inst.mod_count} {inst.mod_count === 1 ? "mod" : "mods"} · {inst.window.width}x{inst.window.height}
                                   </div>
@@ -2087,14 +2087,18 @@ const Settings: Component = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div class="modal-header">
-              <div>
-                <div class="modal-title">Switch to Stable Channel?</div>
-                <div style="font-size: 11px; color: var(--muted); margin-top: 2px">
-                  Current build: v{appVersion()} (Experimental)
+              <div class="modal-header-left">
+                <span class="card-section-tag tag-settings-general">CHANNEL ROLLBACK</span>
+                <div>
+                  <div class="modal-title">Switch to Stable Channel?</div>
+                  <div style="font-size: 11px; color: var(--muted); margin-top: 2px">
+                    Current build: v{appVersion()} (Experimental)
+                  </div>
                 </div>
               </div>
               <button
-                class="modal-close"
+                class="modal-close tip-left"
+                data-tip="Close"
                 onClick={() => setShowRollbackConfirmModal(false)}
                 aria-label="Close modal"
               >
@@ -2106,8 +2110,8 @@ const Settings: Component = () => {
               <p>
                 You are currently running an experimental pre-release. Switching to the <strong>Stable</strong> channel will check for the latest verified production milestone and offer a safe rollback.
               </p>
-              <div style="background: var(--surface-sunken); border: 1px solid var(--border); padding: 12px; border-left: 3px solid var(--accent); font-size: 12px; color: var(--text);">
-                <strong>Data Safety:</strong> All your Minecraft instances, worlds, saves, screenshots, shaderpacks, and accounts will be completely preserved.
+              <div style="background: var(--surface-sunken); border: 1px solid var(--border); border-left: 3px solid var(--accent); padding: 12px 14px; font-size: 12px; color: var(--text); line-height: 1.5;">
+                <strong style="color: var(--accent);">Data Safety:</strong> All your Minecraft instances, worlds, saves, screenshots, shaderpacks, and accounts will be completely preserved.
               </div>
             </div>
 

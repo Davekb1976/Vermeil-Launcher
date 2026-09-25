@@ -10,7 +10,7 @@ import ModDetailModal from "../modals/ModDetailModal";
 import ChangeLoaderModal, { openChangeLoaderModal } from "../modals/ChangeLoaderModal";
 import { formatDownloads, formatSize, formatVersionRange } from "../lib/format";
 import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled, getInstance } from "../ipc/commands";
-import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconAlertTriangle, IconFolderOpen, IconChevronDown, IconImage } from "../components/Icons";
+import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconAlertTriangle, IconFolderOpen, IconChevronDown, IconImage, IconDownload, IconHeart } from "../components/Icons";
 import { enqueueInstallTask, isTaskQueuedOrActive, isTaskActive, isTaskQueued } from "../services/modpackQueue";
 
 import { resolveAssetUrl } from "../lib/assets";
@@ -1326,7 +1326,10 @@ const InstanceMods: Component = () => {
       <Show when={instance()} fallback={
         <div style="text-align:center;color:var(--muted);padding:40px;font-size:var(--fs-sm)">
           <div style="margin-bottom:8px">No instance selected.</div>
-          <button class="btn" onClick={() => setActiveScreen("home")}>← Go to Home</button>
+          <button class="btn btn--subtle" onClick={() => setActiveScreen("home")}>
+            <IconArrowLeft />
+            <span>Go to Home</span>
+          </button>
         </div>
       }>
       {/* Context bar */}
@@ -2155,7 +2158,12 @@ const InstanceMods: Component = () => {
                             ? "Updating..."
                             : isTaskQueued(mod.project_id, instance()?.id)
                             ? "Queued"
-                            : `↑ ${modUpdates().get(mod.project_id)?.latest_version_number ?? "Update"}`}
+                            : (
+                              <>
+                                <IconArrowUp />
+                                <span>{modUpdates().get(mod.project_id)?.latest_version_number ?? "Update"}</span>
+                              </>
+                            )}
                         </button>
                       </Show>
                     </div>
@@ -2372,7 +2380,9 @@ const InstanceMods: Component = () => {
                     </div>
                     <div class="mod-card-footer">
                       <div class="mod-card-meta">
-                        ↓ {formatDownloads(mod.downloads)} · ♥ {formatDownloads(mod.follows)}
+                        <span class="mod-meta-stat"><IconDownload /> {formatDownloads(mod.downloads)}</span>
+                        <span>·</span>
+                        <span class="mod-meta-stat"><IconHeart /> {formatDownloads(mod.follows)}</span>
                         <Show when={mod.client_side || mod.server_side}>
                           {" · "}
                           <Show when={mod.client_side === "required" || mod.client_side === "optional"}>
@@ -2456,7 +2466,10 @@ const InstanceMods: Component = () => {
         <div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
             <Show when={filePath()}>
-              <button class="btn btn--sm" onClick={navigateUp}>← Back</button>
+              <button class="btn btn--sm btn--subtle" onClick={navigateUp}>
+                <IconArrowLeft />
+                <span>Back</span>
+              </button>
             </Show>
             <span style="font-size:var(--fs-xs);color:var(--muted);font-family:var(--font-mono)">
               /{filePath() || ""}
