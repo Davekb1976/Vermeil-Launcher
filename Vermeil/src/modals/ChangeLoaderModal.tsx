@@ -405,7 +405,6 @@ const ChangeLoaderModal: Component = () => {
                           <div
                             class="custom-select-option"
                             style={`padding: 6px 10px; font-size: 12px; font-family: var(--font-mono); cursor: pointer; display: flex; align-items: center; justify-content: space-between; ${selectedVersion() === v.version ? "background: rgba(139,92,246,0.15); color: var(--accent);" : "color: var(--text);"}`}
-                            data-tip={v.version}
                             onClick={() => {
                               setSelectedVersion(v.version);
                               setVersionDropOpen(false);

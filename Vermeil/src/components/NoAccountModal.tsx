@@ -6,7 +6,7 @@ const NoAccountModal: Component<{ open: boolean; onClose: () => void }> = (props
   return (
     <Show when={props.open}>
       <div class="modal-overlay" onClick={props.onClose}>
-        <div class="modal panel panel--bracketed" style="width: 440px; max-width: calc(100vw - 40px);" onClick={(e) => e.stopPropagation()}>
+        <div class="modal panel panel--bracketed" style="width: 440px;" onClick={(e) => e.stopPropagation()}>
           <div class="modal-header">
             <div class="modal-header-left">
               <span class="card-section-tag tag-settings-account">ACCOUNT REQUIRED</span>

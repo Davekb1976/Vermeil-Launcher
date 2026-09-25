@@ -468,9 +468,9 @@ const Library: Component = () => {
                 <span class="card-section-tag tag-settings-accent">PINNED FAVORITES ({pinnedList().length})</span>
                 <span style="color:var(--text-muted);font-size:var(--fs-xs);">Quick-launch on floating dock</span>
               </div>
-              <button class="btn btn--xs btn--ghost" onClick={openPinInstancesModal}>
+              <button class="btn btn--sm btn--subtle" onClick={openPinInstancesModal}>
                 <IconPin />
-                <span style="margin-left:4px;">Manage Pins</span>
+                <span>Manage Pins</span>
               </button>
             </div>
 

@@ -149,7 +149,7 @@ const DependencyIssuesModal: Component = () => {
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn--neutral" onClick={close}>Got it</button>
+            <button class="btn btn--subtle" onClick={close}>Got it</button>
           </div>
         </div>
       </div>

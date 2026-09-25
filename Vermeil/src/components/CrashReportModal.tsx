@@ -85,7 +85,7 @@ const CrashReportModal: Component = () => {
         >
           <div class="modal-header">
             <div class="modal-header-left">
-              <span class="card-section-tag tag-settings-video" style="background: rgba(239,68,68,0.15); color: #fca5a5; border-color: rgba(239,68,68,0.3);">CRASH REPORT</span>
+              <span class="card-section-tag tag-settings-crash">CRASH REPORT</span>
               <span class="modal-title">Minecraft Error Log</span>
             </div>
             <button class="modal-close tip-left" data-tip="Close" onClick={close} aria-label="Close modal"><IconX /></button>

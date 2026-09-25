@@ -45,7 +45,7 @@ const JavaChooserModal: Component<Props> = (props) => {
       <div class="modal-overlay" onClick={props.onCancel}>
         <div
           class="modal java-chooser-modal panel panel--bracketed"
-          style="width: 520px; max-width: calc(100vw - 40px);"
+          style="width: 520px;"
           onClick={(e) => e.stopPropagation()}
         >
           <div class="modal-header">

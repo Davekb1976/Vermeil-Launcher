@@ -2115,7 +2115,7 @@ const Settings: Component = () => {
               </div>
             </div>
 
-            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-4);">
+            <div class="modal-footer">
               <button
                 class="btn btn--subtle"
                 onClick={() => setShowRollbackConfirmModal(false)}

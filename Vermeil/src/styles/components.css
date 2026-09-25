@@ -2225,6 +2225,7 @@
   color: #93c5fd;
   border: 1px solid rgba(59, 130, 246, 0.35);
 }
+.tag-settings-crash,
 .tag-settings-video,
 .settings-badge--video {
   background: rgba(239, 68, 68, 0.15);
@@ -3089,7 +3090,7 @@
   flex: 1;
 }
 .modal-body .mod-list::-webkit-scrollbar { width: 4px; }
-.modal-body .mod-list::-webkit-scrollbar-thumb { background: var(--accent); border-radius: var(--radius-xs); }
+.modal-body .mod-list::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 0; }
 .modal-body .mod-list::-webkit-scrollbar-track { background: transparent; }
 .modal-footer {
   padding: 12px 18px;
