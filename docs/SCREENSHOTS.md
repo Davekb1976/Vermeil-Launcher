@@ -72,28 +72,29 @@ Discover, filter, and install content from both **Modrinth** and **CurseForge** 
 
 ---
 
-## 6. Tactile Settings, Cloud Sync & Release Control
+## 6. Tactile Settings & Release Control
 
-Fine-tune launcher behavior, JVM garbage collection, network throughput, cloud backups, and update channels across 6 dedicated sections.
+Fine-tune launcher behavior, JVM garbage collection, adaptive memory, network throughput, and update channels across 6 dedicated sections.
 
 ![Settings Screen](images/screenshots/settings.gif)
 
 ### Key Features Shown:
 - **6 Dedicated Navigation Tabs**: Organized into *All*, *General*, *Resources*, *Instance Defaults*, *Keybinds*, and *About*.
 - **About & Dual-Channel Release Control**: Dedicated **About Vermeil** tab featuring live switching between **Stable** and **Experimental** update channels with Fastly CDN manifest checks and safe version rollback.
-- **Google Drive Settings Sync**: Zero-telemetry cloud backup and restore of portable preferences (`drive.appdata` sandbox) protected by single-use loopback OAuth 2.0 PKCE and CSRF `state` verification.
-- **Client GC Presets & Rate Limiter**: Version-aware JVM Garbage Collection presets (*G1GC*, *Generational ZGC*, *Shenandoah*), live token-bucket download speed throttling, and shared Minecraft engine asset cleanup.
+- **Adaptive Memory & Client GC Presets**: Tiered system RAM calibration and version-aware JVM Garbage Collection presets (*G1GC*, *Generational ZGC*, *Shenandoah*).
+- **Network Rate Limiter & Storage Cleanup**: Live token-bucket download speed throttling, cache purging, and unreferenced shared Minecraft engine asset cleanup.
 
 ---
 
-## 7. Account Vault & Hardware-Backed Security
+## 7. Account Vault, Cloud Sync & Hardware-Backed Security
 
-Manage multiple Microsoft accounts and offline profiles with hardware-backed local credential encryption.
+Manage multiple Microsoft accounts, offline profiles, and cross-device Google Drive settings synchronization with hardware-backed local credential encryption.
 
 ![Account Management](images/screenshots/accounts.gif)
 
 ### Key Features Shown:
 - **Multi-Account Switcher**: Seamlessly add and switch between official **Microsoft** accounts and local **Offline** profiles.
+- **Google Drive Settings Sync**: Zero-telemetry cloud backup and restore of portable preferences (`drive.appdata` sandbox) right from the Accounts screen, protected by single-use loopback OAuth 2.0 PKCE, CSRF `state` verification, and separate **Sign Out** vs. **Disconnect (Revoke)** controls.
 - **Avatar & Session Status**: Live 2D skin head crops for Microsoft profiles and deterministic initial badges for offline accounts, with automatic token refresh indicators.
 - **Encrypted Local Vault**: Credentials and OAuth tokens are encrypted at rest via **Windows DPAPI** (`CryptProtectData`) and **Linux Secret Service** with **AES-256-GCM** protection.
 

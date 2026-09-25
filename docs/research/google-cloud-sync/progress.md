@@ -33,7 +33,6 @@
   - Typed wrappers with `CloudConnectSummary`, `CloudBackupSummary`, `CloudRestoreSummary`, `signOutGoogleCloud`.
 - **UI Surfaces:**
   - `src/screens/Account.tsx`: Google Cloud Settings Sync strip with `[ CLOUD ]` / `[ SYNCED ]` badges, last backup timestamp formatting, and dual `[ Sign Out ]` (neutral) / `[ Disconnect ]` (danger) actions when connected.
-  - `src/screens/Settings.tsx`: Settings row under General/Account category with synchronized status and dual `[ Sign Out ]` / `[ Disconnect ]` connection controls.
   - Auto-cancellation on screen switch via SolidJS `onCleanup`.
 
 ---

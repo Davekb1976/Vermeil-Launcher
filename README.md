@@ -66,7 +66,7 @@
   <img src="docs/images/screenshots/accounts.gif" alt="Vermeil Account Management" width="49%" />
 </p>
 <p align="center">
-  <em>Tactile Settings with Dual-Channel Release Control (Stable & Experimental), Google Drive Settings Sync, and DPAPI/AES-256-GCM encrypted account profiles</em>
+  <em>Tactile Settings (Dual-Channel Release Control & Client GC calibration) alongside Account Management (Google Drive Settings Sync & DPAPI/AES-256-GCM encrypted profiles)</em>
 </p>
 
 <p align="center">
