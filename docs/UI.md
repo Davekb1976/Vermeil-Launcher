@@ -52,7 +52,7 @@ Defined entirely as tokens in `base.css :root` — reference `var(--token)`, nev
 - **Chunky keycap buttons:** 3px physical block drop shadow at rest with zero border (`border: 0`). On hover/active, the button translates down by 3px (`transform: translateY(3px)`) and the drop shadow collapses to `0 0 0` with an inset shadow (`inset 0 2.5px 4px rgba(0,0,0,.45)`), giving tactile mechanical switch travel with zero visible gap.
 - **SloppyKeys Design Language:** Vermeil adopts the tactile design system from the creator's companion project, **SloppyKeys** (visual reference: `docs/images/sloppykeys_reference.png`; current UI gallery: [`docs/SCREENSHOTS.md`](SCREENSHOTS.md)). Features chunky bevel plates (`--bevel`, `--bevel-strong`), framed section panels (`.card-gamemode-section`) with distinct category tag tints (`.tag-settings-*`), sunken recessed wells (`.card-section-body`), interactive setting plates (`.setting-row` with 3px left border), and square checkboxes (`.check.check--lg`).
 - **No ornament.** `.panel--bracketed` is a no-op (`display:none`).
-- **Fonts:** `--font-display` (Oswald, uppercase headers), `--font` (DM Sans, body), `--font-mono` (DM Mono, versions/paths).
+- **Fonts:** Native system font stacks (`--font-display`, `--font`, `--font-mono`) for zero network dependency and zero layout shift.
 
 Token groups (see `base.css` for values): surfaces (`--surface-*`), borders (`--border*`), text (`--text*`), accent (`--accent*`), semantic state (`--danger/warn/success/info` + `*-soft`), type scale (`--fs-*`, `--fw-*`), spacing (`--space-0..8`, 4px scale), control heights (`--control-height-*`), card tracks (`--card-track`, `--card-track-compact`), shadows (`--key-shadow`, `--accent-shadow`, `--danger-shadow`), loader/source brand hues.
 
@@ -148,7 +148,7 @@ Before adding, restyling, or modifying any interactive element (button, badge, t
 
 ## Global state (`App.tsx`)
 
-Module-level signals, exported with their setters and imported where needed. Resources: `instances`, `account`. Signals: `activeScreen`, `activeInstanceId`, `initialInstanceTab`, `gameRunning`, `pinnedInstanceIds`, `pinSelectorOpen`, `activeSkinUrl`, `gameLogs`, `downloads`, `activeDownloadsCount`, `dockHidden`, `paginationState`, `scrollModeActive`, `offline`, `updateAvailable`.
+Module-level signals, exported with their setters and imported where needed. Resources: `instances`, `account`. Signals: `activeScreen`, `activeInstanceId`, `initialInstanceTab`, `gameRunning`, `pinnedInstanceIds`, `pinSelectorOpen`, `activeSkinUrl`, `activeOfflineSkin`, `offlineDummyVariant`, `gameLogs`, `downloads`, `activeDownloadsCount`, `dockHidden`, `paginationState`, `scrollModeActive`, `offline`, `updateAvailable`.
 
 Helpers: `appendGameLog`/`clearGameLogs`/`gameLogsFor`, `trackDownload`/`completeDownload`/`failDownload`, `startBulkBatch`/`endBulkBatch`, `refreshPinnedInstanceIds`, `refreshActiveSkin`, `ensureAccountOrPrompt`, `setPaginationState`, `clearPaginationState`.
 
@@ -159,11 +159,11 @@ Routing is `<Show when={activeScreen() === "name"}>` in `App.tsx`; switch via `s
 | Screen | File | Purpose |
 |--------|------|---------|
 | home | `Home.tsx` | Hero Hub: 3D character stage, local session stats plate, Continue world session station, Mojang Java news + reader |
-| library | `Library.tsx` | Instance grid, multi/drag-select, "+ New instance" card |
+| library | `Library.tsx` | Dual-shelf instance library (Pinned shelf + All Instances), category filters (`All`, `Modded`, `Vanilla`, `Pinned`), batch selection & parallel deletion |
 | mods | `InstanceMods.tsx` | One instance: Content / Browse / Files / Worlds / Logs tabs (large file) |
-| settings | `Settings.tsx` | General / Resources / Global Instance tabs, Java, GC presets, keybinds |
-| account | `Account.tsx` | Account list, Microsoft sign-in, offline account |
-| skins | `Skins.tsx` | 3D Character Studio: WebGL model, voxel ember stage, animated elytra, Wardrobe with Crafty.gg history sync, custom cape designer |
+| settings | `Settings.tsx` | 6 tabs: All / General / Resources / Instance Defaults / Keybinds / About (Stable & Experimental release channel switcher, Java, GC presets, storage cleanup) |
+| account | `Account.tsx` | Account vault (Microsoft sign-in & offline profiles) + Google Drive Settings Sync (`drive.appdata` backup/restore, Sign Out vs. Disconnect) |
+| skins | `Skins.tsx` | 3D Character Studio unlocked for Microsoft & offline/guest accounts: WebGL model, 2-tone CAD mannequin dummy skins (`Classic` & `Slim`), Wardrobe with Crafty.gg sync, custom cape designer |
 | downloads | `Downloads.tsx` | Persistent download history |
 | (logs window) | `LogsPopout.tsx` | Standalone log viewer rendered when window label is `logs` |
 

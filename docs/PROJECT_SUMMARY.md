@@ -8,8 +8,8 @@ Vermeil is a custom Minecraft: Java Edition launcher built with **Rust (Tauri 2)
 **Website:** https://vermeillauncher.app/
 **Author:** Vermeil-Launcher
 **License:** MIT
-**Current Version:** 1.1.1
-**Status:** General Availability Release (1.1.1 GA)
+**Current Version:** 1.3.0
+**Status:** General Availability Release (1.3.0 GA)
 
 ---
 
@@ -120,46 +120,43 @@ Vermeil-Launcher/               # Repo root
 - Rename on double-click
 - Sidebar pins (up to 3 quick-launch shortcuts)
 
-### Skin Management
-- 3D skin viewer (skinview3d / three.js)
-- Skin upload to Mojang
-- Variant switch (Classic/Slim)
-- Elytra toggle with animation
-- Cape equip/unequip
-- Local skin library (Wardrobe) with automatic capture and local caching
-- Historical skin synchronization from Crafty.gg archive (restores previous skins with chronological date tagging and deduplication)
-- Custom local capes — upload a static or animated image and edit it in the 3D viewer
+### Skin Management & 3D Character Studio
+- 3D skin viewer (`skinview3d` / `three.js`) unlocked for both Microsoft and Offline / Guest accounts
+- Pre-baked 2-tone CAD mannequin dummy skins (`Classic` 4px and `Slim` 3px) synced between the Character Studio and Home 3D stage for offline accounts
+- Skin upload to Mojang (Microsoft accounts) and local previewing (Offline & Microsoft accounts)
+- Variant switch (Classic/Slim) and animated Elytra toggle
+- Cape equip/unequip and custom local in-game cape designer (`CustomCapeEditor`) rendered via the Vermeil companion mod
+- Local skin library (Wardrobe) with automatic capture, local caching, and Crafty.gg historical skin synchronization
 
-### Settings
-- Google Cloud Settings Sync: cross-device synchronization of General, Display, Sound, and Keybind preferences via Google Drive's isolated `appDataFolder` with zero telemetry and separate Sign Out vs Disconnect actions
-- Global Instance tab with live video settings synchronization (FPS, VSync, FOV, GUI Scale, View Bobbing) into instance `options.txt`
-- Java runtime management (detect, install, browse per major version)
-- Concurrent download/write controls
-- Real-time uninstaller storage footprint synchronization (`EstimatedSize`) across all installs and purges
-- GC preset selection (G1GC, ZGC, Shenandoah)
-- Force delete toggle, show snapshots, Discord RPC toggle
-- Cache purge
+### Accounts & Cloud Sync
+- Multi-account management for Microsoft (Xbox SISU/XSTS OAuth 2.0 PKCE) and local Offline profiles
+- Google Cloud Settings Sync (on the Accounts screen): cross-device synchronization of General, Display, Sound, and Keybind preferences via Google Drive's isolated `appDataFolder` with single-use local loopback OAuth gate, CSRF `state` verification, zero telemetry, and separate Sign Out vs. Disconnect (Revoke) actions
+
+### Settings & Release Control
+- 6 dedicated tabs: *All*, *General*, *Resources*, *Instance Defaults*, *Keybinds*, and *About*
+- Dual-Channel Auto-Updater in *About Vermeil*: live switching between **Stable** and **Experimental** release channels with Fastly CDN manifest checks and safe version rollback
+- Adaptive Memory calibration and Client GC preset selection (G1GC, Generational ZGC, Shenandoah)
+- Global Instance tab with live video & audio settings synchronization into instance `options.txt`
+- Java runtime management (detect, auto-provision Adoptium JDK 8/17/21/25 with single-flight locking and atomic staging)
+- Storage management: download cache purge, unreferenced shared Minecraft engine asset cleanup, and $O(1)$ NSIS installer `EstimatedSize` preservation
 
 ### Security
-- DPAPI credential encryption on Windows (Microsoft OAuth tokens, Google Cloud tokens)
-- Transparent migration from plaintext on first launch
-- Linux: file permissions protection (`0600`)
+- DPAPI credential encryption on Windows and Secret Service / AES-256-GCM (`0600`) on Linux
+- Single-use local loopback OAuth gate (`/start?nonce=...` with `TCP RST` connection refusal on back-navigation) and cryptographic `state` CSRF validation (`RFC 8252 §8.9`)
 - Google Drive sandbox isolation (`drive.appdata` scope prevents access to personal Drive files)
 
 ### UI/UX
-- Tactile SloppyKeys design language: chunky keycap bevel buttons (`--bevel`, `--bevel-strong`), framed category sections, sunken tracks (`#0f0e13`)
+- Tactile SloppyKeys design language: chunky keycap bevel buttons (`--bevel`, `--bevel-strong`), framed category sections, sunken tracks (`#0f0e13`), native system font stacks
 - Custom tactile tooltips (`data-tip`) with zero border radius and purple left accent edge (no native OS tooltips)
 - Auto-hiding floating dock with bottom-centered trigger zone and animated keycap press physics
 - Multi-position pagination dock (bottom, left, right) with global mouse wheel scroll mode keybind (default: Z)
 - Dynamic real-time download speed limiter in Settings with live token-bucket throughput throttling
 - Custom dark theme with accent colors and sharp corners
 - Frameless window with custom titlebar
-- Custom styled dropdowns (cross-platform consistent)
-- Slider controls for FPS, FOV, memory
-- Toast notification system
-- Install progress popup with real-time streaming
+- Custom styled dropdowns with strict popover anchoring invariants
+- Single-point modal footer dismissal (no redundant top-right close buttons)
+- Toast notification system and install progress popup with real-time streaming
 - Onboarding wizard for first-run with dynamic version resolution and flexbox labeled divider styling
-- Escape key closes modals/tools
 - News feed from Mojang launcher content API
 
 ### Download History
@@ -168,7 +165,7 @@ Vermeil-Launcher/               # Repo root
 - Shows icon, loader, game version, category
 
 ### Cross-Platform
-- Windows: NSIS installer, auto-update
+- Windows: NSIS installer with $O(1)$ update `EstimatedSize` preservation and atomic bulk uninstaller, auto-update
 - Linux: .AppImage (auto-update)
 - Platform-aware: Java exe names, classpath separators, Adoptium URLs, natives, OS rules
 - Centralized platform helpers (util/platform.rs)
@@ -195,6 +192,8 @@ Vermeil-Launcher/               # Repo root
 | 0.2.3 – 0.5.9 | Ongoing fixes and features (custom capes, Discord RPC, video settings) |
 | 0.6.0 – 0.8.5 | CurseForge parity, modpack downloads, content browser overhaul |
 | 1.0.0 | Milestone release: SloppyKeys tactile UI, 3D Character Studio, Crafty.gg skin sync, auto-hide dock, pagination island, download rate limiter |
+| 1.1.0 – 1.2.1 | Google Cloud Settings Sync (`drive.appdata`), Client GC calibration, persistent lifetime telemetry, high-speed atomic NSIS uninstaller |
+| 1.3.0 | Dual-channel updater (Stable & Experimental), Library dual-shelf hierarchy & batch delete, unlocked Offline 3D Character Studio with 2-tone CAD mannequin dummy skins, single-use OAuth loopback gate, $O(1)$ NSIS update preservation & shared engine cleanup |
 
 ---
 
