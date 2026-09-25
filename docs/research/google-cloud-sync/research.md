@@ -53,8 +53,11 @@ flowchart TD
    * Authentication is initiated exclusively through the operating system's default browser, protecting users against credential-sniffing and preserving user browser session security.
 3. **Local Encryption (Windows DPAPI / Unix 0600):**
    * The refresh token is encrypted at rest using Windows DPAPI (`windows_dpapi::encrypt_data` with `Scope::User`), tying the stored token directly to the user's active Windows credentials.
-4. **Instant URL Cleansing:**
-   * Upon receiving the callback code, the loopback server serves an HTML landing page executing `window.history.replaceState({}, document.title, window.location.pathname)`. This instantly purges authorization query parameters from the browser history and address bar.
+4. **Single-Use Local Loopback Gate & Instant URL Cleansing (`RFC 8252 §8.9`):**
+   * Rather than opening `https://accounts.google.com/o/oauth2/v2/auth` directly in the browser (which records a reusable Google OAuth link in the browser's `Ctrl+H` history and Back/Forward stack), Vermeil opens a local single-use gate (`http://127.0.0.1:<port>/start?nonce=<start_nonce>`).
+   * On the first hit (`!start_served`), the loopback listener sets `start_served = true` and responds with `302 Found` (`Cache-Control: no-store, no-cache, must-revalidate, max-age=0`) redirecting to Google's consent screen with a cryptographic `state` token (`oauth_state`).
+   * Once `start_served` is `true` (or after login completes/cancels and the TCP listener drops), any attempt to rewind back to the OAuth entry URL or re-open `/start?nonce=...` from browser history is immediately refused (`TCP RST` / `ERR_CONNECTION_REFUSED`) before any page loads.
+   * Upon receiving the callback (`GET /?code=...&state=...`), the listener verifies `state == oauth_state`, serves strict security headers (`Content-Security-Policy`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`), and executes `window.history.replaceState({}, document.title, "/complete")` to scrub the address bar before auto-closing.
 
 ### The Desktop Client Secret & Public Client Model (RFC 8252 & Google Documentation)
 

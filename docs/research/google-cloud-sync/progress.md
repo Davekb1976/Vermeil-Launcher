@@ -16,7 +16,7 @@
 
 ### Backend (`src-tauri/`)
 - **Service Layer:** `src-tauri/src/services/google_cloud.rs`
-  - `start_google_oauth()`: Ephemeral port binding, PKCE verifier generation, loopback HTTP server with `window.history.replaceState` and auto-close script.
+  - `start_google_oauth()`: Ephemeral port binding, PKCE verifier generation, single-use `/start?nonce=...` loopback gate (`start_served` guard refusing browser rewinds/history clicks with `TCP RST`), cryptographic `oauth_state` CSRF validation (`RFC 8252 §8.9`), `window.history.replaceState` URL cleansing, and auto-close script.
   - `cancel_google_oauth()`: Aborts loopback listener instantly via `oneshot::Sender<()>`.
   - `connect_google_account()`: Connects account, encrypts refresh token with DPAPI, performs initial restore/backup.
   - `disconnect_google_account()`: Revokes token with Google (`/revoke`), deletes `google_cloud.enc`, resets `last_cloud_backup`.
