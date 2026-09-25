@@ -44,13 +44,13 @@
 
 ## Screenshots
 
-> Animated previews from the official **v1.0.0** release.
+> Animated previews from **Vermeil v1.3.0**.
 
 <p align="center">
   <img src="docs/images/screenshots/home.gif" alt="Vermeil Home Screen" width="100%" />
 </p>
 <p align="center">
-  <em>Interactive 3D character stage, telemetry stats, Minecraft news, and recent worlds continue station</em>
+  <em>Operator Hub with interactive 3D character stage (roam & look-around physics), lifetime player telemetry, Minecraft Java news reader, and Quick Play world resumption</em>
 </p>
 
 <p align="center">
@@ -58,7 +58,7 @@
   <img src="docs/images/screenshots/skin.gif" alt="Vermeil 3D Character Studio" width="49%" />
 </p>
 <p align="center">
-  <em>Tactile instance management with floating dock, and the 3D Character Studio with skin history sync</em>
+  <em>Dual-shelf Instance Library (Pinned shelf, category filters, batch delete) and the 3D Character Studio (unlocked for Microsoft & offline accounts with 2-tone CAD mannequin dummy skins, Crafty.gg sync, and custom cape editor)</em>
 </p>
 
 <p align="center">
@@ -66,32 +66,29 @@
   <img src="docs/images/screenshots/accounts.gif" alt="Vermeil Account Management" width="49%" />
 </p>
 <p align="center">
-  <em>Tactile launcher preferences, storage management, and encrypted local account profiles</em>
+  <em>Tactile Settings with Dual-Channel Release Control (Stable & Experimental), Google Drive Settings Sync, and DPAPI/AES-256-GCM encrypted account profiles</em>
 </p>
 
 <p align="center">
-  <a href="docs/SCREENSHOTS.md"><strong>Explore the full animated gallery and screen details &rarr;</strong></a>
+  <a href="docs/SCREENSHOTS.md"><strong>Explore the full 8-screen animated gallery and walkthrough &rarr;</strong></a>
 </p>
 
 ## Features
 
-- Microsoft account authentication (multiple accounts + offline)
-- Instance management with per-instance settings
-- Mod loader support: Fabric, Quilt, NeoForge, Forge
-- Mod browsing and installation from Modrinth and CurseForge — click any result card to open its details and pick a specific version, or hit Install to get the newest compatible one
-- Modpack import (.mrpack and CurseForge zip)
-- Automatic Java detection and download (Adoptium)
-- Adaptive RAM allocation per instance
-- Discord Rich Presence
-- 3D skin viewer with upload, cape, and elytra support
-- Skin Wardrobe with on-demand historical skin synchronization from Crafty.gg
-- Companion mod for in-game custom capes
-- Auto-updater (Windows and Linux AppImage)
-- Global video settings & live Minecraft options synchronization (FPS, VSync, FOV, GUI Scale, FOV Effects)
-- Google Cloud Settings Sync (cross-device preference backup and restore to Google Drive's sandboxed app storage with zero telemetry)
-- Real-time uninstaller storage footprint synchronization (Windows Installed Apps disk usage reporting)
-- Download history
-- Zero telemetry
+- **Microsoft & Offline Accounts**: Multi-account OAuth 2.0 PKCE authentication and local offline profiles encrypted on-device (Windows DPAPI / Linux Secret Service + AES-256-GCM)
+- **Dual-Shelf Instance Library**: Isolated instance sandboxes, Pinned quick-launch shelf, live category filters (`All`, `Modded`, `Vanilla`, `Pinned`), floating dock carousel, and parallel batch deletion
+- **All Major Mod Loaders**: Fabric, Quilt, NeoForge, and Forge with automatic version resolution and scratch-isolated installers
+- **Mod, Resource Pack, Shader & Datapack Browser**: Unified Modrinth and CurseForge search with inline version picker, bulk install mode, and automatic dependency resolution
+- **Modpack Browser & Archive Import**: 1-click Modrinth and CurseForge modpack installs plus local `.mrpack` and `.zip` archive imports
+- **Automatic Java Provisioning**: Detects local JDKs and automatically provisions required Adoptium runtimes (Java 8, 17, 21, 25) with atomic staging
+- **Adaptive Memory & Client GC Calibration**: Tiered system RAM ceilings and version-aware JVM Garbage Collection presets (G1GC, Generational ZGC, Shenandoah)
+- **3D Character Studio & Local Wardrobe**: Unlocked for both Microsoft and offline/guest accounts with pre-baked 2-tone CAD mannequin dummy skins (`Classic` & `Slim`), animated elytra preview, and on-demand Crafty.gg skin history sync
+- **In-Game Custom Cape Editor & Companion Mod**: Design static or animated custom capes in-app and render them in-game via Vermeil's Fabric/Forge companion mod
+- **Dual-Channel Auto-Updater**: Switch seamlessly between **Stable** and **Experimental** release channels with Fastly CDN manifest checks and safe version rollback
+- **Google Cloud Settings Sync**: Zero-telemetry cross-device backup and restore of portable preferences (`drive.appdata` sandbox) with single-use loopback OAuth and CSRF state verification
+- **Global Video & Audio Synchronization**: Apply FPS, VSync, FOV, GUI Scale, FOV Effects, and sound levels across instances before launch
+- **Storage & Shared Engine Cleanup**: Inspect and purge download caches or unreferenced shared Minecraft engine assets, with real-time Windows Installed Apps footprint reporting
+- **Zero Telemetry**: No analytics, no tracking, and no intermediate servers
 
 ## Download
 
