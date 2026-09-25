@@ -1,7 +1,7 @@
 import { Component, createSignal, Show, For, onMount } from "solid-js";
 import { instances, showToast, refreshPinnedInstanceIds } from "../App";
 import { getSettings, saveSettings } from "../ipc/commands";
-import { IconCheck, IconSearch, IconX } from "../components/Icons";
+import { IconCheck, IconSearch } from "../components/Icons";
 import { resolveAssetUrl } from "../lib/assets";
 
 /**
@@ -109,14 +109,6 @@ const PinInstancesModal: Component = () => {
               <span class="card-section-tag tag-settings-general">QUICK LAUNCH</span>
               <span class="modal-title">Manage Pinned Instances</span>
             </div>
-            <button
-              class="modal-close tip-left"
-              data-tip="Close"
-              onClick={close}
-              aria-label="Close modal"
-            >
-              <IconX />
-            </button>
           </div>
           <div class="modal-body">
             <div class="pin-instances-help">

@@ -21,7 +21,6 @@ import {
   IconWand,
   IconPuzzle,
   IconAlertTriangle,
-  IconX,
   IconChevronDown,
 } from "../components/Icons";
 
@@ -308,15 +307,6 @@ const ChangeLoaderModal: Component = () => {
                 </div>
               </div>
             </div>
-            <button
-              class="modal-close tip-left"
-              data-tip="Close"
-              onClick={closeChangeLoaderModal}
-              disabled={changing()}
-              aria-label="Close modal"
-            >
-              <IconX />
-            </button>
           </div>
 
           {/* Body */}

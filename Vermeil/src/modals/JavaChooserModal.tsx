@@ -1,6 +1,6 @@
 import { Component, For, Show, createSignal } from "solid-js";
 import { JavaInstall } from "../ipc/commands";
-import { IconX, IconCheck } from "../components/Icons";
+import { IconCheck } from "../components/Icons";
 
 /**
  * Shown by Settings → Resources → Java and the Onboarding wizard when the
@@ -53,9 +53,6 @@ const JavaChooserModal: Component<Props> = (props) => {
               <span class="card-section-tag tag-settings-java">JAVA RUNTIME</span>
               <span class="modal-title">Java {props.major} Installation</span>
             </div>
-            <button class="modal-close tip-left" data-tip="Close" onClick={props.onCancel} aria-label="Close modal">
-              <IconX />
-            </button>
           </div>
           <div class="modal-body">
             <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5;">
