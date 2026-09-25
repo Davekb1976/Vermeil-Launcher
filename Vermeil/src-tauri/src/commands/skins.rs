@@ -11,18 +11,34 @@ use crate::services::skins::{
 use crate::util::{paths, credentials};
 use std::fs;
 
+/// Look up the currently active account (Microsoft or offline). If no account
+/// exists, falls back to a default guest profile so local skin & cape tools
+/// remain accessible without forcing account setup.
+fn active_any_account() -> Result<MinecraftProfile, String> {
+    let accounts_path = paths::data_dir().join("accounts.json");
+    if let Ok(raw) = fs::read_to_string(&accounts_path) {
+        if let Ok(accounts) = serde_json::from_str::<Vec<MinecraftProfile>>(&raw) {
+            if let Some(active) = accounts.into_iter().find(|a| a.active) {
+                return Ok(active);
+            }
+        }
+    }
+    Ok(MinecraftProfile {
+        id: "offline-guest".to_string(),
+        name: "Guest".to_string(),
+        access_token: String::new(),
+        refresh_token: None,
+        expires_at: 0,
+        is_offline: true,
+        skin_path: None,
+        active: true,
+    })
+}
+
 /// Look up the currently active Microsoft account. Returns `Err` if there
 /// isn't one or the active account is offline.
 fn active_microsoft_account() -> Result<MinecraftProfile, String> {
-    let accounts_path = paths::data_dir().join("accounts.json");
-    let raw = fs::read_to_string(&accounts_path)
-        .map_err(|_| "No accounts file — sign in first".to_string())?;
-    let accounts: Vec<MinecraftProfile> =
-        serde_json::from_str(&raw).map_err(|e| format!("Accounts JSON parse: {}", e))?;
-    let mut active = accounts
-        .into_iter()
-        .find(|a| a.active)
-        .ok_or_else(|| "No active account".to_string())?;
+    let mut active = active_any_account()?;
     if active.is_offline {
         return Err("Skin features require a Microsoft account.".to_string());
     }
@@ -43,6 +59,15 @@ fn active_microsoft_account() -> Result<MinecraftProfile, String> {
 
 #[tauri::command]
 pub async fn get_skin_profile() -> Result<PlayerProfile, String> {
+    let account = active_any_account()?;
+    if account.is_offline {
+        return Ok(PlayerProfile {
+            id: account.id,
+            name: account.name,
+            skins: vec![],
+            capes: vec![],
+        });
+    }
     let account = active_microsoft_account()?;
     skins::fetch_profile(&account).await
 }
@@ -100,7 +125,7 @@ pub async fn unequip_cape() -> Result<PlayerProfile, String> {
 
 #[tauri::command]
 pub async fn list_local_skins() -> Result<Vec<LocalSkin>, String> {
-    let account = active_microsoft_account()?;
+    let account = active_any_account()?;
     Ok(skins::list_local_skins(&account.id))
 }
 
@@ -111,13 +136,13 @@ pub async fn add_local_skin(
     variant: SkinVariant,
 ) -> Result<LocalSkin, String> {
     let png_bytes = decode_base64(&png_base64)?;
-    let account = active_microsoft_account()?;
+    let account = active_any_account()?;
     skins::add_local_skin(&account.id, &name, &png_bytes, variant)
 }
 
 #[tauri::command]
 pub async fn remove_local_skin(hash: String) -> Result<(), String> {
-    let account = active_microsoft_account()?;
+    let account = active_any_account()?;
     skins::remove_local_skin(&account.id, &hash)
 }
 
@@ -126,7 +151,7 @@ pub async fn remove_local_skin(hash: String) -> Result<(), String> {
 /// List the account's local custom capes (display-only, never sent to Mojang).
 #[tauri::command]
 pub async fn list_custom_capes() -> Result<Vec<CustomCape>, String> {
-    let account = active_microsoft_account()?;
+    let account = active_any_account()?;
     Ok(skins::list_custom_capes(&account.id))
 }
 
@@ -144,7 +169,7 @@ pub async fn save_custom_cape(
 ) -> Result<CustomCape, String> {
     let texture_png = decode_base64(&texture_png_base64)?;
     let source_bytes = decode_base64(&source_bytes_base64)?;
-    let account = active_microsoft_account()?;
+    let account = active_any_account()?;
     skins::save_custom_cape(
         &account.id,
         id,
@@ -159,14 +184,14 @@ pub async fn save_custom_cape(
 /// Delete a custom cape and its backing files.
 #[tauri::command]
 pub async fn remove_custom_cape(id: String) -> Result<(), String> {
-    let account = active_microsoft_account()?;
+    let account = active_any_account()?;
     skins::remove_custom_cape(&account.id, &id)
 }
 
 /// Read a custom cape's original uploaded image (data URL) for re-editing.
 #[tauri::command]
 pub async fn read_custom_cape_source(id: String) -> Result<String, String> {
-    let account = active_microsoft_account()?;
+    let account = active_any_account()?;
     skins::read_custom_cape_source(&account.id, &id)
 }
 

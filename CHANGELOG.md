@@ -9,6 +9,8 @@
 - Library dual-shelf hierarchy separating Pinned quick-launch instances from the main library collection
 - High-concurrency instance management with live category filtering (All, Modded, Vanilla, Pinned) and batch deletion
 - Shared game data cleanup option in Storage Management for removing unreferenced Minecraft engine assets and loader libraries
+- Interactive 3D Character Studio unlocked for offline accounts and guests with local skin wardrobe, 3D model controls, and companion mod cape designer
+- Tactile offline preview banner with quick Microsoft authentication and account management shortcuts
 
 ### Changed
 
@@ -18,6 +20,8 @@
 - Replaced distorted cube icon with authentic Vermeil emblem in the Library empty state
 - Overhauled modal dialog architecture across all 11 overlay modals to enforce single-point footer dismissal and eliminate redundant top-right close buttons
 - Calibrated dropdown popover anchoring and flex row constraints across setting rows to eliminate floating panel displacement
+- Replaced full-page Microsoft account lockout on Skins screen with a graceful local-first studio experience
+- Enabled local variant switching (Classic ↔ Slim) and wardrobe previewing without requiring Mojang API uploads
 
 ### Fixed
 

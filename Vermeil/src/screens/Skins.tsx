@@ -1,5 +1,5 @@
 import { Component, createSignal, createResource, createEffect, onCleanup, onMount, Show, For } from "solid-js";
-import { account, showToast, refreshActiveSkin, setDockHidden } from "../App";
+import { account, refetchAccount, showToast, refreshActiveSkin, setDockHidden, setActiveScreen } from "../App";
 import {
   getSkinProfile,
   uploadSkin,
@@ -7,6 +7,7 @@ import {
   equipCape,
   unequipCape,
   listLocalSkins,
+  addLocalSkin,
   equipLocalSkin,
   removeLocalSkin,
   syncCraftySkins,
@@ -17,6 +18,7 @@ import {
   setIngameCapeEnabled,
   clearIngameCape,
   getIngameCape,
+  startMsLogin,
   PlayerProfile,
   LocalSkin,
   CustomCape,
@@ -36,6 +38,8 @@ import {
   IconRotateCcw,
   IconMaximize2,
   IconMinimize2,
+  IconMicrosoft,
+  IconUser,
 } from "../components/Icons";
 import CapeChipThumb from "../components/CapeChipThumb";
 import SkinAvatar from "../components/SkinAvatar";
@@ -369,18 +373,22 @@ function initStageParticles(canvas: HTMLCanvasElement, container: HTMLElement): 
 }
 
 const Skins: Component = () => {
+  const isOfflineAccount = () => !account() || account()!.is_offline;
+  const [loggingIn, setLoggingIn] = createSignal(false);
+  const [activeOfflineSkin, setActiveOfflineSkin] = createSignal<LocalSkin | null>(null);
+
   const [profile, { refetch: refetchProfile }] = createResource<PlayerProfile | null>(async () => {
-    if (!account() || account()!.is_offline) return null;
     try {
       return await getSkinProfile();
     } catch (e) {
-      showToast({ title: "Couldn't load profile", message: String(e), type: "error" });
+      if (account() && !account()!.is_offline) {
+        showToast({ title: "Couldn't load profile", message: String(e), type: "error" });
+      }
       return null;
     }
   });
 
   const [localSkins, { refetch: refetchLocal }] = createResource<LocalSkin[]>(async () => {
-    if (!account() || account()!.is_offline) return [];
     try {
       return await listLocalSkins();
     } catch {
@@ -404,7 +412,6 @@ const Skins: Component = () => {
   // is the cape currently shown on the model; when set it overrides the Mojang
   // cape in the display effect. Selecting a Mojang cape or "No cape" clears it.
   const [customCapes, { refetch: refetchCustomCapes }] = createResource<CustomCape[]>(async () => {
-    if (!account() || account()!.is_offline) return [];
     try {
       return await listCustomCapes();
     } catch {
@@ -422,7 +429,11 @@ const Skins: Component = () => {
   const activeSkinTexture = (): string | undefined => {
     const p = profile();
     const a = p?.skins.find((s) => s.state === "ACTIVE") ?? p?.skins[0];
-    return a?.texture;
+    if (a?.texture) return a.texture;
+    if (activeOfflineSkin()) return activeOfflineSkin()!.texture;
+    const local = localSkins();
+    if (local && local.length > 0) return local[0].texture;
+    return undefined;
   };
 
   // Zen mode: hides side panels for an unobstructed character showcase view.
@@ -585,8 +596,7 @@ const Skins: Component = () => {
   // Auto-hide the floating dock while on the Skins screen so the Character Studio
   // and pedestal remain unobstructed. Reveals when the cursor nears bottom.
   createEffect(() => {
-    const isAvailable = !!(account() && !account()!.is_offline);
-    setDockHidden(isAvailable);
+    setDockHidden(true);
   });
   onCleanup(() => setDockHidden(false));
 
@@ -596,12 +606,33 @@ const Skins: Component = () => {
     viewer = undefined;
   });
 
-  // Push the active skin into the 3D viewer whenever the profile changes.
+  // Push the active skin into the 3D viewer whenever the profile or offline skin changes.
   // Wraps the load in a brief opacity fade for the cinematic swap. The cape is
   // loaded by a separate effect so toggling cape/elytra never reloads the skin.
   createEffect(() => {
+    if (!viewer) return;
+    const isOffline = isOfflineAccount();
+    if (isOffline) {
+      const offSkin = activeOfflineSkin() ?? (localSkins() ?? [])[0];
+      if (offSkin) {
+        setVariant(offSkin.variant);
+        setCanvasFading(true);
+        try {
+          viewer.loadSkin(offSkin.texture, {
+            model: offSkin.variant === "SLIM" ? "slim" : "default",
+          });
+        } catch (e) {
+          console.error("Offline skin load failed:", e);
+        }
+        window.setTimeout(() => setCanvasFading(false), 250);
+      } else {
+        setVariant((prev) => prev ?? "CLASSIC");
+      }
+      return;
+    }
+
     const p = profile();
-    if (!viewer || !p) return;
+    if (!p) return;
 
     const active = p.skins.find((s) => s.state === "ACTIVE") ?? p.skins[0];
     if (active) {
@@ -681,7 +712,21 @@ const Skins: Component = () => {
   createEffect(() => {
     const v = variant();
     const p = profile();
-    if (!viewer || !p) return;
+    if (!viewer) return;
+    if (isOfflineAccount()) {
+      const texture = activeSkinTexture();
+      if (texture) {
+        try {
+          viewer.loadSkin(texture, {
+            model: v === "SLIM" ? "slim" : "default",
+          });
+        } catch (e) {
+          console.error("Variant switch failed:", e);
+        }
+      }
+      return;
+    }
+    if (!p) return;
     const active = p.skins.find((s) => s.state === "ACTIVE") ?? p.skins[0];
     if (active) {
       try {
@@ -695,6 +740,25 @@ const Skins: Component = () => {
   });
 
   // ─── Actions ───
+
+  const handleStartLogin = async () => {
+    if (loggingIn()) return;
+    setLoggingIn(true);
+    try {
+      await startMsLogin();
+      await refetchAccount();
+      await refetchProfile();
+      await refetchLocal();
+      showToast({ title: "Account connected", message: "Signed in with Microsoft", type: "success" });
+    } catch (e: any) {
+      const msg = typeof e === "string" ? e : e?.message || "Login failed";
+      if (msg !== "Login cancelled") {
+        showToast({ title: "Sign-in failed", message: msg, type: "error" });
+      }
+    } finally {
+      setLoggingIn(false);
+    }
+  };
 
   const handleUpload = () => fileInputRef?.click();
 
@@ -713,6 +777,30 @@ const Skins: Component = () => {
       // (variant() is null until then). In practice the profile is loaded by
       // the time the user can click Upload.
       const v = variant() ?? "CLASSIC";
+
+      if (isOfflineAccount()) {
+        const newLocal = await addLocalSkin(name, bytes, v);
+        await refetchLocal();
+        setActiveOfflineSkin(newLocal);
+        if (viewer) {
+          setCanvasFading(true);
+          try {
+            viewer.loadSkin(newLocal.texture, {
+              model: v === "SLIM" ? "slim" : "default",
+            });
+          } catch (e) {
+            console.error("Local skin preview failed:", e);
+          }
+          window.setTimeout(() => setCanvasFading(false), 250);
+        }
+        showToast({
+          title: "Skin imported",
+          message: `${name} (${v === "SLIM" ? "Slim" : "Classic"}) saved to wardrobe`,
+          type: "success",
+        });
+        return;
+      }
+
       await uploadSkin(bytes, v, true, name);
       await refetchLocal();
       await refetchProfile();
@@ -732,6 +820,13 @@ const Skins: Component = () => {
   const handleReset = async () => {
     setBusy("reset");
     try {
+      if (isOfflineAccount()) {
+        setActiveOfflineSkin(null);
+        viewer?.resetSkin();
+        setVariant("CLASSIC");
+        showToast({ title: "Skin reset to default", type: "success" });
+        return;
+      }
       await resetSkin();
       await refetchProfile();
       await refreshActiveSkin();
@@ -746,8 +841,12 @@ const Skins: Component = () => {
   const handleRefresh = async () => {
     setBusy("refresh");
     try {
-      await refetchProfile();
+      if (!isOfflineAccount()) {
+        await refetchProfile();
+      }
       await refetchLocal();
+      await refetchCustomCapes();
+      showToast({ title: "Character studio refreshed", type: "info", autoCloseMs: 1500 });
     } finally {
       setBusy(null);
     }
@@ -755,6 +854,14 @@ const Skins: Component = () => {
 
   const handleSyncHistory = async () => {
     if (busy() !== null) return;
+    if (isOfflineAccount()) {
+      showToast({
+        title: "Microsoft account required",
+        message: "Skin history sync from Crafty.gg requires an official Minecraft account.",
+        type: "info",
+      });
+      return;
+    }
     setBusy("sync");
     try {
       const res = await syncCraftySkins();
@@ -801,10 +908,17 @@ const Skins: Component = () => {
         viewer.loadSkin(skin.texture, {
           model: skin.variant === "SLIM" ? "slim" : "default",
         });
+        setVariant(skin.variant);
       } catch (e) {
         console.error("Optimistic skin preview failed:", e);
       }
       window.setTimeout(() => setCanvasFading(false), 250);
+    }
+
+    if (isOfflineAccount()) {
+      setActiveOfflineSkin(skin);
+      showToast({ title: `${skin.name} previewed`, type: "success" });
+      return;
     }
 
     setBusy(`equip-${skin.hash}`);
@@ -824,6 +938,9 @@ const Skins: Component = () => {
     setBusy(`remove-${skin.hash}`);
     try {
       await removeLocalSkin(skin.hash);
+      if (activeOfflineSkin()?.hash === skin.hash) {
+        setActiveOfflineSkin(null);
+      }
       await refetchLocal();
     } catch (e) {
       showToast({ title: "Remove failed", message: String(e), type: "error" });
@@ -834,6 +951,30 @@ const Skins: Component = () => {
 
   const handleVariantSwitch = async (newVariant: SkinVariant) => {
     if (newVariant === variant()) return;
+
+    if (isOfflineAccount()) {
+      setVariant(newVariant);
+      if (viewer) {
+        const currentTexture = activeSkinTexture();
+        if (currentTexture) {
+          try {
+            viewer.loadSkin(currentTexture, {
+              model: newVariant === "SLIM" ? "slim" : "default",
+            });
+          } catch (e) {
+            console.error("Variant switch failed:", e);
+          }
+        }
+      }
+      showToast({
+        title: "Variant changed",
+        message: newVariant === "SLIM" ? "Slim (3px arms)" : "Classic (4px arms)",
+        type: "success",
+        autoCloseMs: 2000,
+      });
+      return;
+    }
+
     const p = profile();
     if (!p) return;
     const active = p.skins.find((s) => s.state === "ACTIVE") ?? p.skins[0];
@@ -878,6 +1019,12 @@ const Skins: Component = () => {
         // best-effort
       }
     }
+
+    if (isOfflineAccount()) {
+      viewer?.resetCape();
+      return;
+    }
+
     if (isCapeOnCooldown()) {
       showToast({
         title: "Slow down",
@@ -1044,80 +1191,95 @@ const Skins: Component = () => {
 
   return (
     <div class="screen-enter skins-screen">
-      <Show
-        when={account() && !account()!.is_offline}
-        fallback={
-          <div class="skins-empty">
-            <div class="section-label">
-              Skins & capes <span class="beta-pill">Beta</span>
+      {/* Offline preview banner: informs user of local-only state and provides quick sign-in actions */}
+      <Show when={isOfflineAccount()}>
+        <div class="skins-offline-banner">
+          <div class="skins-offline-banner-content">
+            <span class="tag-offline">OFFLINE PREVIEW</span>
+            <span class="skins-offline-banner-text">
+              Skins & capes rendered locally on this device. Official multiplayer sync requires a Microsoft account.
+            </span>
+          </div>
+          <div class="skins-offline-actions">
+            <button
+              class="skins-banner-btn skins-banner-btn--primary tip-below"
+              onClick={handleStartLogin}
+              disabled={loggingIn()}
+              data-tip="Sign in to sync skins and capes with Mojang"
+            >
+              <IconMicrosoft />
+              <span>{loggingIn() ? "Signing in…" : "Sign in with Microsoft"}</span>
+            </button>
+            <button
+              class="skins-banner-btn tip-below tip-right"
+              onClick={() => setActiveScreen("account")}
+              data-tip="Open Account screen"
+            >
+              <IconUser />
+              <span>Manage Accounts</span>
+            </button>
+          </div>
+        </div>
+      </Show>
+
+      {/* Hidden file picker driven by the Upload button. */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png"
+        style="display:none"
+        onChange={handleFileSelected}
+      />
+
+      <div class="skins-studio" classList={{ "zen-mode": zenMode() }}>
+        {/* Left Panel: Wardrobe & Local Skins */}
+        <div class="skins-panel skins-panel-wardrobe">
+          <div class="skins-panel-header">
+            <div class="skins-panel-title-wrap">
+              <span class="card-section-tag tag-settings-skins">WARDROBE</span>
+              <span class="skins-count-badge">{(localSkins() ?? []).length}</span>
             </div>
-            <div class="skins-empty-card">
-              <div class="skins-empty-title">Microsoft account required</div>
-              <div class="skins-empty-body">
-                Mojang only allows skin and cape changes on Microsoft accounts.
-                Sign in with Microsoft from the Account screen to use this feature.
-              </div>
+            <div class="skins-panel-actions">
+              <button
+                class="skins-mini-btn tip-below"
+                data-tip="Sync previous skins from Crafty.gg"
+                onClick={handleSyncHistory}
+                disabled={busy() !== null}
+              >
+                <IconReload class={busy() === "sync" ? "icon-spin" : undefined} />
+                <span>{busy() === "sync" ? "Syncing…" : "Sync"}</span>
+              </button>
+              <button
+                class="skins-mini-btn tip-below tip-right"
+                data-tip="Import skin PNG"
+                onClick={handleUpload}
+                disabled={busy() !== null}
+              >
+                <IconUpload />
+                <span>{busy() === "upload" ? "Importing…" : "Import"}</span>
+              </button>
             </div>
           </div>
-        }
-      >
-        {/* Hidden file picker driven by the Upload button. */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/png"
-          style="display:none"
-          onChange={handleFileSelected}
-        />
 
-        <div class="skins-studio" classList={{ "zen-mode": zenMode() }}>
-          {/* Left Panel: Wardrobe & Local Skins */}
-          <div class="skins-panel skins-panel-wardrobe">
-            <div class="skins-panel-header">
-              <div class="skins-panel-title-wrap">
-                <span class="card-section-tag tag-settings-skins">WARDROBE</span>
-                <span class="skins-count-badge">{(localSkins() ?? []).length}</span>
-              </div>
-              <div class="skins-panel-actions">
-                <button
-                  class="skins-mini-btn tip-below"
-                  data-tip="Sync previous skins from Crafty.gg"
-                  onClick={handleSyncHistory}
-                  disabled={busy() !== null}
-                >
-                  <IconReload class={busy() === "sync" ? "icon-spin" : undefined} />
-                  <span>{busy() === "sync" ? "Syncing…" : "Sync"}</span>
-                </button>
-                <button
-                  class="skins-mini-btn tip-below tip-right"
-                  data-tip="Import skin PNG"
-                  onClick={handleUpload}
-                  disabled={busy() !== null}
-                >
-                  <IconUpload />
-                  <span>{busy() === "upload" ? "Importing…" : "Import"}</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="skins-panel-body">
-              <Show
-                when={(localSkins() ?? []).length > 0}
-                fallback={
-                  <div class="skins-empty-wardrobe">
-                    <div class="skins-empty-wardrobe-title">No skins saved</div>
-                    <div class="skins-empty-wardrobe-text">
-                      Import a .png skin or sync previous skins from your account history.
-                    </div>
-                    <div class="skins-empty-wardrobe-actions">
-                      <button
-                        class="skins-action-btn skins-action-btn--primary"
-                        onClick={handleUpload}
-                        disabled={busy() !== null}
-                      >
-                        <IconUpload />
-                        <span>Import Skin</span>
-                      </button>
+          <div class="skins-panel-body">
+            <Show
+              when={(localSkins() ?? []).length > 0}
+              fallback={
+                <div class="skins-empty-wardrobe">
+                  <div class="skins-empty-wardrobe-title">No skins saved</div>
+                  <div class="skins-empty-wardrobe-text">
+                    Import a .png skin or save skins to your local wardrobe.
+                  </div>
+                  <div class="skins-empty-wardrobe-actions">
+                    <button
+                      class="skins-action-btn skins-action-btn--primary"
+                      onClick={handleUpload}
+                      disabled={busy() !== null}
+                    >
+                      <IconUpload />
+                      <span>Import Skin</span>
+                    </button>
+                    <Show when={!isOfflineAccount()}>
                       <button
                         class="skins-action-btn skins-action-btn--secondary"
                         onClick={handleSyncHistory}
@@ -1126,14 +1288,21 @@ const Skins: Component = () => {
                         <IconReload class={busy() === "sync" ? "icon-spin" : undefined} />
                         <span>{busy() === "sync" ? "Syncing History…" : "Sync Previous Skins"}</span>
                       </button>
-                    </div>
+                    </Show>
                   </div>
-                }
-              >
+                </div>
+              }
+            >
                 <div class="skins-lib-list">
                   <For each={localSkins() ?? []}>
                     {(skin) => {
                       const isActive = () => {
+                        if (isOfflineAccount()) {
+                          if (activeOfflineSkin()) {
+                            return activeOfflineSkin()!.hash === skin.hash;
+                          }
+                          return (localSkins() ?? [])[0]?.hash === skin.hash;
+                        }
                         const p = profile();
                         const a = p?.skins.find((s) => s.state === "ACTIVE") ?? p?.skins[0];
                         return a?.texture === skin.texture;
@@ -1383,6 +1552,11 @@ const Skins: Component = () => {
                     }}
                   </For>
                 </div>
+                <Show when={isOfflineAccount()}>
+                  <div class="skins-cape-offline-hint">
+                    Official Mojang capes require signing in with Microsoft.
+                  </div>
+                </Show>
               </div>
 
               {/* Custom In-Game Capes */}
@@ -1488,7 +1662,6 @@ const Skins: Component = () => {
             onSaved={handleCapeSaved}
           />
         </Show>
-      </Show>
     </div>
   );
 };
