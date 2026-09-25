@@ -548,8 +548,8 @@ createEffect(() => {
   }
 });
 
-/** Re-load pin list from settings. Called on startup and after the pin
- *  manager modal saves changes. */
+/** Re-load pin list and global runtime settings from disk. Called on startup,
+ *  after the pin manager modal saves changes, and after Google Cloud restore. */
 export async function refreshPinnedInstanceIds() {
   try {
     const s = await getSettings();
@@ -563,6 +563,8 @@ export async function refreshPinnedInstanceIds() {
     if (s.pagination_position === "bottom" || s.pagination_position === "left" || s.pagination_position === "right") {
       setPaginationPosition(s.pagination_position);
     }
+    window.dispatchEvent(new CustomEvent("vermeil-keybinds-changed"));
+    window.dispatchEvent(new CustomEvent("vermeil-settings-changed"));
   } catch (e) {
     console.error("Failed to load sidebar pins:", e);
   }
@@ -570,6 +572,9 @@ export async function refreshPinnedInstanceIds() {
 
 // Seed pins on launcher boot so the sidebar comes up with the right icons.
 refreshPinnedInstanceIds().catch(() => {});
+listen("cloud-settings-synced", () => {
+  refreshPinnedInstanceIds().catch(() => {});
+}).catch(() => {});
 
 export { pinnedInstanceIds };
 

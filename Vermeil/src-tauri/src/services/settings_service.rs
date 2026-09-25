@@ -101,7 +101,37 @@ pub async fn save(settings: &LauncherSettings) -> Result<(), Box<dyn std::error:
     fs::create_dir_all(&data_dir)?;
 
     let config_path = data_dir.join("config.json");
-    let json = serde_json::to_string_pretty(settings)?;
+    let mut to_save = settings.clone();
+
+    // Monotonic guard: never allow an older in-memory frontend snapshot (e.g. from
+    // Settings.tsx or OnboardingWizard.tsx) to overwrite higher lifetime_play_seconds
+    // or a newer last_active_at already persisted on disk.
+    if let Ok(existing_raw) = fs::read_to_string(&config_path) {
+        if let Ok(existing) = serde_json::from_str::<LauncherSettings>(&existing_raw) {
+            if existing.lifetime_play_seconds > to_save.lifetime_play_seconds {
+                to_save.lifetime_play_seconds = existing.lifetime_play_seconds;
+            }
+            if let Some(ref existing_last) = existing.last_active_at {
+                let should_keep_existing = match to_save.last_active_at {
+                    Some(ref incoming_last) => existing_last > incoming_last,
+                    None => true,
+                };
+                if should_keep_existing {
+                    to_save.last_active_at = Some(existing_last.clone());
+                }
+            }
+            // Also preserve last_cloud_backup if the caller passed None while a backup timestamp exists
+            // (except when sign_out / disconnect explicitly clears google_cloud.enc first)
+            if to_save.last_cloud_backup.is_none()
+                && existing.last_cloud_backup.is_some()
+                && crate::services::google_cloud::is_cloud_connected()
+            {
+                to_save.last_cloud_backup = existing.last_cloud_backup;
+            }
+        }
+    }
+
+    let json = serde_json::to_string_pretty(&to_save)?;
     paths::atomic_write(&config_path, json.as_bytes())?;
     Ok(())
 }

@@ -188,6 +188,11 @@ const Home: Component = () => {
     instances();
     refetchSettings();
   });
+  createEffect(() => {
+    const onSettingsChanged = () => refetchSettings();
+    window.addEventListener("vermeil-settings-changed", onSettingsChanged);
+    onCleanup(() => window.removeEventListener("vermeil-settings-changed", onSettingsChanged));
+  });
 
   const [recentWorlds] = createResource(
     instances,

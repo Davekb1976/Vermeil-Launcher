@@ -1,5 +1,5 @@
 import { Component, createSignal, createResource, createEffect, onCleanup, Show, For } from "solid-js";
-import { account, activeSkinUrl, refetchAccount, showToast, cloudConnected, refetchCloudStatus } from "../App";
+import { account, activeSkinUrl, refetchAccount, showToast, cloudConnected, refetchCloudStatus, refreshPinnedInstanceIds } from "../App";
 import {
   startMsLogin,
   addOfflineAccount,
@@ -72,6 +72,7 @@ const Account: Component = () => {
       const summary = await connectGoogleCloud();
       await refetchCloudStatus();
       await refetchBackupTime();
+      await refreshPinnedInstanceIds();
       if (summary.restored) {
         await refetchAccount();
         await refetchAccounts();

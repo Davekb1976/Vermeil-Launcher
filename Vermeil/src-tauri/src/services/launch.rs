@@ -1524,7 +1524,9 @@ pub async fn launch(
 
     if let Ok(mut settings) = crate::services::settings_service::load().await {
         settings.last_active_at = Some(now_str);
-        let _ = crate::services::settings_service::save(&settings).await;
+        if crate::services::settings_service::save(&settings).await.is_ok() {
+            crate::services::google_cloud::spawn_background_sync();
+        }
     }
 
     let mut child = cmd.spawn().map_err(|e| format!("Failed to launch: {}", e))?;
@@ -1667,7 +1669,9 @@ pub async fn launch(
         if elapsed_secs > 0 {
             if let Ok(mut settings) = crate::services::settings_service::load().await {
                 settings.lifetime_play_seconds += elapsed_secs;
-                let _ = crate::services::settings_service::save(&settings).await;
+                if crate::services::settings_service::save(&settings).await.is_ok() {
+                    crate::services::google_cloud::spawn_background_sync();
+                }
             }
         }
 

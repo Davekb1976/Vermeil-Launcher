@@ -207,6 +207,9 @@ pub fn run() {
             // Keep Windows "Installed Apps" EstimatedSize in sync with true disk footprint (no-op on Linux)
             crate::util::platform::update_windows_estimated_size();
 
+            // Reconcile Google Cloud settings & lifetime play time in background if connected
+            crate::services::google_cloud::sync_on_startup(app.handle().clone());
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

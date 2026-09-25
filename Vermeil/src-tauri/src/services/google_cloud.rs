@@ -760,11 +760,58 @@ pub fn merge_restored_settings(
     merged
 }
 
+async fn fetch_backup_by_id(access_token: &str, file_id: &str) -> Result<VermeilCloudBackup, String> {
+    let download_url = format!("{}/{}?alt=media", GOOGLE_DRIVE_FILES_API, file_id);
+    let resp = HTTP
+        .get(&download_url)
+        .bearer_auth(access_token)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to download backup from Google Cloud: {}", e))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(format!("Drive download failed (status {}): {}", status, body));
+    }
+
+    let content = resp
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read backup response body: {}", e))?;
+
+    serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse cloud backup JSON payload: {}", e))
+}
+
 async fn perform_backup(access_token: &str) -> Result<CloudBackupSummary, String> {
-    // 1. Gather settings
+    // 1. Gather local settings
     let mut settings = settings_service::load()
         .await
         .map_err(|e| format!("Failed to load local settings: {}", e))?;
+
+    // 2. Check for existing backup in appDataFolder
+    let existing_file_id = find_existing_backup_file_id(access_token).await?;
+
+    // Monotonic cloud guard: if an existing backup in Drive has higher lifetime_play_seconds
+    // or a more recent last_active_at (e.g. when syncing from a fresh install before restore),
+    // merge those monotonic counters into `settings` first so we NEVER reset cloud playtime to 0.
+    if let Some(ref file_id) = existing_file_id {
+        if let Ok(existing_cloud) = fetch_backup_by_id(access_token, file_id).await {
+            if existing_cloud.settings.lifetime_play_seconds > settings.lifetime_play_seconds {
+                settings.lifetime_play_seconds = existing_cloud.settings.lifetime_play_seconds;
+            }
+            if let Some(ref cloud_last) = existing_cloud.settings.last_active_at {
+                if settings
+                    .last_active_at
+                    .as_ref()
+                    .map_or(true, |local_last| cloud_last > local_last)
+                {
+                    settings.last_active_at = Some(cloud_last.clone());
+                }
+            }
+        }
+    }
 
     let now_iso = Utc::now().to_rfc3339();
     settings.last_cloud_backup = Some(now_iso.clone());
@@ -783,9 +830,6 @@ async fn perform_backup(access_token: &str) -> Result<CloudBackupSummary, String
         .map_err(|e| format!("Failed to serialize cloud backup payload: {}", e))?
         .into_bytes();
     let file_size_bytes = json_bytes.len();
-
-    // 3. Check for existing backup in appDataFolder
-    let existing_file_id = find_existing_backup_file_id(access_token).await?;
 
     if let Some(file_id) = existing_file_id {
         // Update existing file via PATCH media upload
@@ -836,7 +880,7 @@ async fn perform_backup(access_token: &str) -> Result<CloudBackupSummary, String
         }
     }
 
-    // Persist updated last_cloud_backup timestamp locally
+    // Persist updated last_cloud_backup (and any merged monotonic playtime) locally
     let _ = settings_service::save(&settings).await;
 
     Ok(CloudBackupSummary {
@@ -865,35 +909,28 @@ async fn perform_restore(access_token: &str) -> Result<CloudRestoreSummary, Stri
         .ok_or_else(|| "No Vermeil cloud backup found in this Google account's app storage.".to_string())?;
 
     // 2. Download media
-    let download_url = format!("{}/{}?alt=media", GOOGLE_DRIVE_FILES_API, existing_file_id);
-    let resp = HTTP
-        .get(&download_url)
-        .bearer_auth(access_token)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to download backup from Google Cloud: {}", e))?;
-
-    if !resp.status().is_success() {
-        let status = resp.status();
-        let body = resp.text().await.unwrap_or_default();
-        return Err(format!("Drive download failed (status {}): {}", status, body));
-    }
-
-    let content = resp
-        .text()
-        .await
-        .map_err(|e| format!("Failed to read backup response body: {}", e))?;
-
-    let backup: VermeilCloudBackup = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse cloud backup JSON payload: {}", e))?;
+    let backup = fetch_backup_by_id(access_token, &existing_file_id).await?;
 
     // 3. Merge / apply settings locally while strictly preserving local machine-specific settings
     let current_settings = settings_service::load().await.unwrap_or_default();
     let restored_settings = merge_restored_settings(&backup.settings, &current_settings, &backup.created_at);
 
+    // Apply live backend settings immediately (Discord RPC, download speed limiter)
+    crate::services::discord::set_enabled(restored_settings.discord_rpc);
+    crate::services::download::set_speed_limit_mb(restored_settings.download_speed_limit_mb);
+
     settings_service::save(&restored_settings)
         .await
         .map_err(|e| format!("Failed to save restored settings to disk: {}", e))?;
+
+    // 4. Bidirectional sync: if local settings had higher lifetime_play_seconds or a newer
+    // last_active_at than what was in the cloud backup, push the merged counters back up to
+    // Google Drive immediately so the cloud backup never lags behind local play sessions.
+    let local_had_newer_stats = restored_settings.lifetime_play_seconds > backup.settings.lifetime_play_seconds
+        || restored_settings.last_active_at != backup.settings.last_active_at;
+    if local_had_newer_stats {
+        let _ = perform_backup(access_token).await;
+    }
 
     Ok(CloudRestoreSummary {
         timestamp: backup.created_at,
@@ -969,6 +1006,54 @@ pub async fn disconnect_google_account() -> Result<(), String> {
 
     tracing::info!("Google Cloud disconnected, access revoked, and local token removed");
     Ok(())
+}
+
+/// Spawns a non-blocking background task to synchronize launcher settings to Google Cloud
+/// if a Google Cloud account is currently connected.
+pub fn spawn_background_sync() {
+    if is_cloud_connected() {
+        tokio::spawn(async {
+            sync_settings_background().await;
+        });
+    }
+}
+
+/// Silently reconciles local settings and stats (`lifetime_play_seconds`, `last_active_at`)
+/// with Google Cloud on launcher startup when connected, then notifies the frontend to refresh
+/// live runtime signals (`cloud-settings-synced`).
+pub fn sync_on_startup(app: tauri::AppHandle) {
+    if !is_cloud_connected() {
+        return;
+    }
+    tauri::async_runtime::spawn(async move {
+        let refresh_token = match read_refresh_token() {
+            Ok(tok) => tok,
+            Err(_) => return,
+        };
+        let access_token = match refresh_access_token(&refresh_token).await {
+            Ok(tok) => tok,
+            Err(e) => {
+                tracing::warn!("Startup Google Cloud sync failed to obtain access token: {}", e);
+                return;
+            }
+        };
+        let existing_backup = match find_existing_backup_file_id(&access_token).await {
+            Ok(opt) => opt,
+            Err(e) => {
+                tracing::warn!("Startup Google Cloud sync failed to check backup: {}", e);
+                return;
+            }
+        };
+        if existing_backup.is_some() {
+            if let Ok(_) = perform_restore(&access_token).await {
+                use tauri::Emitter;
+                let _ = app.emit("cloud-settings-synced", ());
+                tracing::info!("Startup Google Cloud sync reconciled settings & play time");
+            }
+        } else {
+            let _ = perform_backup(&access_token).await;
+        }
+    });
 }
 
 /// Silently synchronizes launcher settings in the background whenever settings change.
