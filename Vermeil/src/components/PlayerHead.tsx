@@ -61,7 +61,7 @@ const PlayerHead: Component<Props> = (props) => {
   createEffect(() => {
     const url = props.skinUrl;
     setLoaded(false);
-    if (!canvasRef || !url) return;
+    if (!canvasRef || !url || url.startsWith("/dummy_skin")) return;
 
     const img = new Image();
 

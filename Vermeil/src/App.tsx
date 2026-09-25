@@ -27,7 +27,7 @@ import CrashReportModal, { showCrashReport } from "./components/CrashReportModal
 import OnboardingWizard, { openOnboarding } from "./modals/OnboardingWizard";
 import PinInstancesModal from "./modals/PinInstancesModal";
 import { pinInstancesModalOpen, closePinInstancesModal } from "./modals/PinInstancesModal";
-import { listInstances, getActiveAccount, getSettings, getSkinProfile, showWindow, loadDownloadHistory, saveDownloadHistory, isGoogleCloudConnected } from "./ipc/commands";
+import { listInstances, getActiveAccount, getSettings, getSkinProfile, showWindow, loadDownloadHistory, saveDownloadHistory, isGoogleCloudConnected, type LocalSkin, type SkinVariant } from "./ipc/commands";
 import { listen } from "@tauri-apps/api/event";
 import { checkForUpdates } from "./services/updater";
 import { matchesKeybind, resolveBinding } from "./lib/keybinds";
@@ -661,10 +661,20 @@ createEffect(() => {
   refreshActiveSkin().catch(() => {});
 });
 
+// Offline 3D dummy mannequin skin & preview state. Kept in App.tsx so both
+// CharacterStage (Home screen) and the lazy-loaded Skins screen share it
+// without breaking Vite chunk splitting.
+const [activeOfflineSkin, setActiveOfflineSkin] = createSignal<LocalSkin | null>(null);
+const [offlineDummyVariant, setOfflineDummyVariant] = createSignal<SkinVariant>("CLASSIC");
+
+export function getDummySkinDataUrl(variant: SkinVariant = "CLASSIC"): string {
+  return variant === "SLIM" ? "/dummy_skin_slim.png" : "/dummy_skin.png";
+}
+
 // Google Cloud connection state for settings backup and sync.
 const [cloudConnected, { refetch: refetchCloudStatus }] = createResource(isGoogleCloudConnected);
 
-export { activeScreen, setActiveScreen, activeInstanceId, setActiveInstanceId, initialInstanceTab, setInitialInstanceTab, gameLaunched, setGameLaunched, gameRunning, setGameRunning, logsPoppedOut, setLogsPoppedOut, downloads, activeDownloadCount, isBulkInstall, bulkBatchSize, bulkDone, bulkProgress, instances, refetchInstances, account, refetchAccount, activeSkinUrl, offline, showToast, updateToast, cloudConnected, refetchCloudStatus };
+export { activeScreen, setActiveScreen, activeInstanceId, setActiveInstanceId, initialInstanceTab, setInitialInstanceTab, gameLaunched, setGameLaunched, gameRunning, setGameRunning, logsPoppedOut, setLogsPoppedOut, downloads, activeDownloadCount, isBulkInstall, bulkBatchSize, bulkDone, bulkProgress, instances, refetchInstances, account, refetchAccount, activeSkinUrl, setActiveSkinUrl, activeOfflineSkin, setActiveOfflineSkin, offlineDummyVariant, setOfflineDummyVariant, offline, showToast, updateToast, cloudConnected, refetchCloudStatus };
 
 const screenTitles: Record<Screen, string> = {
   home: "Home",

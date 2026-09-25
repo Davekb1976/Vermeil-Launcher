@@ -118,8 +118,10 @@ Instead of replacing the whole page, an offline account displays a slim, non-int
 
 - **Scene Mounting**: The Three.js canvas, ambient particle engine, hexagonal Figurine pedestal, and camera controls mount unconditionally.
 - **Model Variant Switching**: The Classic (4px) vs. Slim (3px) segmented toggle switches `viewer.loadSkin(texture, { model })` instantly client-side without attempting a network upload.
+- **Static 2-Tone CAD Mannequin Dummy Skins (`public/dummy_skin.png` & `public/dummy_skin_slim.png`)**: Instead of falling back to vanilla Steve or generating textures dynamically at runtime on a `<canvas>`, offline accounts without a selected preview skin display pre-baked 64×64 2-tone CAD mannequin PNG assets (`#6d628d` 1px outer border and `#110f17` dark void fill) with exact Classic (4px) and Slim (3px) arm UV coordinates.
+- **Home Screen `CharacterStage` Sync & 2D `PlayerHead` Isolation**: Shared signals (`activeOfflineSkin` and `offlineDummyVariant` in `src/App.tsx`) synchronize the 3D player model across both the **Skins** screen (`Skins.tsx`) and the **Home** screen (`CharacterStage.tsx`), while keeping `activeSkinUrl` as `null` for offline accounts so 2D avatar badges (`PlayerHead.tsx` in the window titlebar and account list) always display the user's colored initial letter badge.
 - **Local Wardrobe Equipping**: Clicking a local wardrobe card triggers `viewer.loadSkin` with a smooth 250ms crossfade (`setCanvasFading(true)`), updates `activeOfflineSkin`, and displays a toast confirming local preview.
-- **Reset to Default**: Calling `handleReset` for offline users resets the viewer with `viewer.resetSkin()` and defaults the variant back to Classic Steve without remote API calls.
+- **Reset to Default Dummy**: Calling `handleReset` or deleting the active preview skin (`handleRemoveLocal`) for offline users resets the 3D viewer and Home stage back to the 2-tone dummy mannequin without modifying the 2D titlebar avatar badge.
 
 ### 3.3 Custom Cape Integration
 
@@ -142,12 +144,10 @@ Instead of replacing the whole page, an offline account displays a slim, non-int
 
 | Test Case | Scenario | Expected Result | Status |
 | :--- | :--- | :--- | :--- |
-| **Guest State** | No accounts in `accounts.json` | 3D Studio opens, offline banner shows, default Steve rendered | Pass |
-| **Offline Account** | Account with `is_offline: true` | Studio opens, wardrobe loads local skins, offline banner shows | Pass |
-| **Variant Toggle** | Click Slim on offline account | Model arm width updates to 3px instantly, variant signal updates | Pass |
-| **Local Import** | Import PNG file when offline | Skin added to wardrobe, previewed on 3D model, success toast | Pass |
-| **Local Equip** | Click wardrobe card when offline | 250ms crossfade, model texture updates, active card state updates | Pass |
-| **Reset Model** | Click Reset when offline | Viewer resets to default Steve, variant resets to Classic | Pass |
+| **Guest / Offline Default** | Offline account with no preview skin | 3D Studio & Home stage render 2-tone CAD dummy mannequin; titlebar keeps initial badge | Pass |
+| **Variant Toggle** | Toggle Classic (4px) ↔ Slim (3px) | `dummy_skin.png` ↔ `dummy_skin_slim.png` switches with aligned shoulder/hand UVs | Pass |
+| **Local Import / Equip** | Import or select PNG skin when offline | Previewed on both Skins studio and Home 3D stage; titlebar keeps initial badge | Pass |
+| **Delete / Reset Preview** | Delete active preview skin or click Reset | Reverts 3D models to 2-tone dummy mannequin; titlebar remains initial letter badge | Pass |
 | **Custom Cape** | Create and equip custom cape | 3D model displays cape/elytra, companion mod receives cape strip | Pass |
 | **Microsoft Login** | Click "Sign in with Microsoft" | Launches SISU auth window, refetches account on success | Pass |
 | **Online Account** | Microsoft account active | Banner is hidden, full cloud sync enabled, Mojang capes active | Pass |

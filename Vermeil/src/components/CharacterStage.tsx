@@ -1,7 +1,7 @@
 import { Component, createEffect, onCleanup, onMount } from "solid-js";
 import { SkinViewer, PlayerAnimation } from "skinview3d";
 import type { PlayerObject } from "skinview3d";
-import { gameRunning } from "../App";
+import { gameRunning, activeOfflineSkin, getDummySkinDataUrl, offlineDummyVariant } from "../App";
 
 interface Props {
   skinUrl?: string | null;
@@ -181,7 +181,7 @@ const CharacterStage: Component<Props> = (props) => {
       canvas: canvasRef,
       width,
       height,
-      skin: props.skinUrl ?? undefined,
+      skin: props.skinUrl || activeOfflineSkin()?.texture || getDummySkinDataUrl(offlineDummyVariant()),
     });
 
     viewer.controls.enableZoom = false;
@@ -216,15 +216,11 @@ const CharacterStage: Component<Props> = (props) => {
 
   // React to skin updates
   createEffect(() => {
-    const url = props.skinUrl;
+    const url = props.skinUrl || activeOfflineSkin()?.texture || getDummySkinDataUrl(offlineDummyVariant());
     if (!viewer) return;
-    if (url) {
-      viewer.loadSkin(url, { model: "auto-detect" }).catch((e) => {
-        console.error("Failed to load skin in CharacterStage:", e);
-      });
-    } else {
-      viewer.resetSkin();
-    }
+    viewer.loadSkin(url, { model: "auto-detect" }).catch((e) => {
+      console.error("Failed to load skin in CharacterStage:", e);
+    });
   });
 
   // Pause render loop when game is running

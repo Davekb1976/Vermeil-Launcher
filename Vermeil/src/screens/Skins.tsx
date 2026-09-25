@@ -1,5 +1,5 @@
 import { Component, createSignal, createResource, createEffect, onCleanup, onMount, Show, For } from "solid-js";
-import { account, refetchAccount, showToast, refreshActiveSkin, setDockHidden, setActiveScreen } from "../App";
+import { account, refetchAccount, showToast, refreshActiveSkin, setActiveSkinUrl, getDummySkinDataUrl, activeOfflineSkin, setActiveOfflineSkin, offlineDummyVariant, setOfflineDummyVariant, setDockHidden, setActiveScreen } from "../App";
 import {
   getSkinProfile,
   uploadSkin,
@@ -25,7 +25,12 @@ import {
   SkinVariant,
 } from "../ipc/commands";
 import { SkinViewer, IdleAnimation, PlayerObject } from "skinview3d";
-import { CylinderGeometry, MeshBasicMaterial, Mesh, Group } from "three";
+import {
+  CylinderGeometry,
+  MeshBasicMaterial,
+  Mesh,
+  Group,
+} from "three";
 import {
   IconUpload,
   IconReload,
@@ -375,7 +380,6 @@ function initStageParticles(canvas: HTMLCanvasElement, container: HTMLElement): 
 const Skins: Component = () => {
   const isOfflineAccount = () => !account() || account()!.is_offline;
   const [loggingIn, setLoggingIn] = createSignal(false);
-  const [activeOfflineSkin, setActiveOfflineSkin] = createSignal<LocalSkin | null>(null);
 
   const [profile, { refetch: refetchProfile }] = createResource<PlayerProfile | null>(async () => {
     try {
@@ -431,6 +435,7 @@ const Skins: Component = () => {
     const a = p?.skins.find((s) => s.state === "ACTIVE") ?? p?.skins[0];
     if (a?.texture) return a.texture;
     if (activeOfflineSkin()) return activeOfflineSkin()!.texture;
+    if (isOfflineAccount()) return getDummySkinDataUrl(variant() ?? "CLASSIC");
     const local = localSkins();
     if (local && local.length > 0) return local[0].texture;
     return undefined;
@@ -613,7 +618,7 @@ const Skins: Component = () => {
     if (!viewer) return;
     const isOffline = isOfflineAccount();
     if (isOffline) {
-      const offSkin = activeOfflineSkin() ?? (localSkins() ?? [])[0];
+      const offSkin = activeOfflineSkin();
       if (offSkin) {
         setVariant(offSkin.variant);
         setCanvasFading(true);
@@ -626,7 +631,17 @@ const Skins: Component = () => {
         }
         window.setTimeout(() => setCanvasFading(false), 250);
       } else {
-        setVariant((prev) => prev ?? "CLASSIC");
+        const v = variant() ?? offlineDummyVariant();
+        setVariant(v);
+        setCanvasFading(true);
+        try {
+          viewer.loadSkin(getDummySkinDataUrl(v), {
+            model: v === "SLIM" ? "slim" : "default",
+          });
+        } catch (e) {
+          console.error("Dummy skin load failed:", e);
+        }
+        window.setTimeout(() => setCanvasFading(false), 250);
       }
       return;
     }
@@ -714,14 +729,23 @@ const Skins: Component = () => {
     const p = profile();
     if (!viewer) return;
     if (isOfflineAccount()) {
-      const texture = activeSkinTexture();
-      if (texture) {
+      const offSkin = activeOfflineSkin();
+      if (offSkin) {
         try {
-          viewer.loadSkin(texture, {
+          viewer.loadSkin(offSkin.texture, {
             model: v === "SLIM" ? "slim" : "default",
           });
         } catch (e) {
           console.error("Variant switch failed:", e);
+        }
+      } else {
+        const targetV = v ?? "CLASSIC";
+        try {
+          viewer.loadSkin(getDummySkinDataUrl(targetV), {
+            model: targetV === "SLIM" ? "slim" : "default",
+          });
+        } catch (e) {
+          console.error("Dummy variant switch failed:", e);
         }
       }
       return;
@@ -822,9 +846,15 @@ const Skins: Component = () => {
     try {
       if (isOfflineAccount()) {
         setActiveOfflineSkin(null);
-        viewer?.resetSkin();
+        setOfflineDummyVariant("CLASSIC");
         setVariant("CLASSIC");
-        showToast({ title: "Skin reset to default", type: "success" });
+        setActiveSkinUrl(null);
+        if (viewer) {
+          viewer.loadSkin(getDummySkinDataUrl("CLASSIC"), {
+            model: "default",
+          });
+        }
+        showToast({ title: "Skin reset to default dummy", type: "success" });
         return;
       }
       await resetSkin();
@@ -940,6 +970,13 @@ const Skins: Component = () => {
       await removeLocalSkin(skin.hash);
       if (activeOfflineSkin()?.hash === skin.hash) {
         setActiveOfflineSkin(null);
+        setActiveSkinUrl(null);
+        const v = variant() ?? offlineDummyVariant();
+        if (viewer) {
+          viewer.loadSkin(getDummySkinDataUrl(v), {
+            model: v === "SLIM" ? "slim" : "default",
+          });
+        }
       }
       await refetchLocal();
     } catch (e) {
@@ -954,15 +991,27 @@ const Skins: Component = () => {
 
     if (isOfflineAccount()) {
       setVariant(newVariant);
+      setOfflineDummyVariant(newVariant);
+      if (!activeOfflineSkin()) {
+        setActiveSkinUrl(null);
+      }
       if (viewer) {
-        const currentTexture = activeSkinTexture();
-        if (currentTexture) {
+        const offSkin = activeOfflineSkin();
+        if (offSkin) {
           try {
-            viewer.loadSkin(currentTexture, {
+            viewer.loadSkin(offSkin.texture, {
               model: newVariant === "SLIM" ? "slim" : "default",
             });
           } catch (e) {
             console.error("Variant switch failed:", e);
+          }
+        } else {
+          try {
+            viewer.loadSkin(getDummySkinDataUrl(newVariant), {
+              model: newVariant === "SLIM" ? "slim" : "default",
+            });
+          } catch (e) {
+            console.error("Dummy variant switch failed:", e);
           }
         }
       }
@@ -1301,7 +1350,7 @@ const Skins: Component = () => {
                           if (activeOfflineSkin()) {
                             return activeOfflineSkin()!.hash === skin.hash;
                           }
-                          return (localSkins() ?? [])[0]?.hash === skin.hash;
+                          return false;
                         }
                         const p = profile();
                         const a = p?.skins.find((s) => s.state === "ACTIVE") ?? p?.skins[0];
@@ -1405,7 +1454,7 @@ const Skins: Component = () => {
                   class="skins-studio-btn tip-below"
                   onClick={handleRefresh}
                   disabled={busy() !== null}
-                  data-tip="Refresh from Mojang"
+                  data-tip={isOfflineAccount() ? "Refresh character studio" : "Refresh from Mojang"}
                 >
                   <IconReload />
                   <span>Refresh</span>
