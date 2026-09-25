@@ -16,6 +16,8 @@
 - Refactored updater service to execute strictly through typed IPC boundaries without direct plugin calls
 - Standardized Library instance cards with tactile 3D hover lift and minimalist icon-only pin keycaps
 - Replaced distorted cube icon with authentic Vermeil emblem in the Library empty state
+- Overhauled modal dialog architecture across all 11 overlay modals to enforce single-point footer dismissal and eliminate redundant top-right close buttons
+- Calibrated dropdown popover anchoring and flex row constraints across setting rows to eliminate floating panel displacement
 
 ### Fixed
 
@@ -30,3 +32,4 @@
 - [Dual-Channel Release & Update Architecture](docs/research/dual-channel-updater/research.md): Dynamic endpoint routing, Fastly CDN manifest synchronization, and cryptographic rollback mechanics
 - [Library Architecture & Parallel Deletion](docs/research/library-architecture/research.md): High-concurrency instance unlinking, single-pass settings consolidation, and dual-shelf hierarchy
 - [Concurrent Runtime Provisioning Architecture](docs/research/concurrent-runtime-provisioning/research.md): Single-flight Java synchronization, atomic extraction staging, structural JRE validation, and loader installer scratch isolation
+- [UI Modal Restraint & Popover Anchoring](docs/research/ui-modal-restraint/research.md): Single-point footer dismissal, prohibition of redundant top-right close buttons, and dropdown anchoring invariants

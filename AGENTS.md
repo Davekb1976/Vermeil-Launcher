@@ -267,3 +267,4 @@ Specialized skill instructions live in `.agents/skills/` (for Antigravity 2.0) a
 - `refactoring`: Restructuring code across IPC and modules safely.
 - `release-process`: Version bumping, changelogs, and release tags.
 - `stonecraft`: Working on multi-loader modern companion mod via Stonecraft/Stonecutter in `companion-mod/stonecutter/`.
+- `ui-restraint`: Master rules and patterns for Vermeil UI development, SloppyKeys tactile design, modal dialog restraint, dropdown anchoring, button bevels, and component layout invariants.
