@@ -27,5 +27,6 @@ pub mod neoforge;
 pub mod prepare;
 pub mod quilt;
 pub mod settings_service;
+pub mod share_code;
 pub mod skins;
 pub mod video_options;

@@ -9,8 +9,8 @@ import Dropdown from "../components/Dropdown";
 import ModDetailModal from "../modals/ModDetailModal";
 import ChangeLoaderModal, { openChangeLoaderModal } from "../modals/ChangeLoaderModal";
 import { formatDownloads, formatSize, formatVersionRange } from "../lib/format";
-import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled, getInstance } from "../ipc/commands";
-import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconAlertTriangle, IconFolderOpen, IconChevronDown, IconImage, IconDownload, IconHeart } from "../components/Icons";
+import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled, getInstance, exportShareCode } from "../ipc/commands";
+import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconAlertTriangle, IconFolderOpen, IconChevronDown, IconImage, IconDownload, IconHeart, IconShare2 } from "../components/Icons";
 import { enqueueInstallTask, isTaskQueuedOrActive, isTaskActive, isTaskQueued } from "../services/modpackQueue";
 
 import { resolveAssetUrl } from "../lib/assets";
@@ -1393,6 +1393,35 @@ const InstanceMods: Component = () => {
             <button class={`inst-view-tab ${mainTab() === "worlds" ? "active" : ""}`} onClick={() => setMainTab("worlds")}>Worlds</button>
             <button class={`inst-view-tab ${mainTab() === "logs" ? "active" : ""}`} onClick={() => setMainTab("logs")}>Logs</button>
           </div>
+          <button
+            class="inst-gear-btn tip-below tip-right"
+            onClick={async () => {
+              const inst = instance();
+              if (!inst) return;
+              try {
+                const code = await exportShareCode(inst.id);
+                await navigator.clipboard.writeText(code);
+                const isShort = code.startsWith("VML-") || code.startsWith("VLM-");
+                showToast({
+                  title: "Share Code Copied",
+                  message: isShort
+                    ? `Copied 3-minute share code (${code}) for "${inst.name}" to clipboard.`
+                    : `Copied offline share code for "${inst.name}" (${code.length} chars) to clipboard.`,
+                  type: "success",
+                });
+              } catch (e: any) {
+                showToast({
+                  title: "Failed to Copy Share Code",
+                  message: typeof e === "string" ? e : e?.message || "Could not generate share code",
+                  type: "error",
+                });
+              }
+            }}
+            data-tip="Copy instance share code"
+            aria-label="Copy instance share code"
+          >
+            <IconShare2 />
+          </button>
           <button
             class={`inst-gear-btn tip-below tip-right ${mainTab() === "settings" ? "active" : ""}`}
             onClick={() => setMainTab(mainTab() === "settings" ? "content" : "settings")}

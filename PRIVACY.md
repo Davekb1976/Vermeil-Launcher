@@ -1,13 +1,14 @@
 # Privacy Policy
 
-Vermeil is a local-first Minecraft launcher. It runs entirely on your computer and has no servers operated by Vermeil itself.
+Vermeil is a local-first Minecraft launcher designed with privacy as a foundational principle. It runs primarily on your computer, requires no user registration, and collects zero telemetry.
 
 ## What Vermeil does NOT do
 
-- Vermeil does not collect telemetry, analytics, crash reports, or any other usage data.
-- Vermeil does not have an account system. There is no Vermeil account to sign up for.
-- Vermeil does not phone home for any reason.
-- Vermeil does not sell, share, or transmit your data to anyone.
+- Vermeil does not collect telemetry, analytics, crash reports, or any usage metrics.
+- Vermeil does not have an account system. There is no Vermeil account to register or sign into.
+- Vermeil does not phone home in the background.
+- Vermeil does not sell, profile, or monetize your data.
+- Vermeil operates an ephemeral, zero-login edge worker strictly for optional 3-minute temporary instance share codes (`VML-XXXX-XXXX`). No personal identifiers, IP logs, or user accounts are retained.
 
 ## Data stored on your device
 
@@ -36,8 +37,39 @@ Using Vermeil means making HTTPS requests to the following providers. Vermeil se
 | Adoptium (`api.adoptium.net`) | Download Java runtimes when needed | None |
 | Fabric / Quilt / NeoForge / Forge metadata servers | Download mod loader files | None |
 | Crafty.gg (`api.crafty.gg`) | On-demand historical skin synchronization (only when you click "Sync" in the Wardrobe) | Your Minecraft account UUID (no credentials or personal data) |
+| Vermeil Share Code Relay (`share.vermeillauncher.workers.dev`) | Optional 1-click sharing and importing of instance blueprints (only when you export or import a share code) | Anonymized modpack blueprint payload (Minecraft version, mod loader, and public mod/version IDs from Modrinth and CurseForge). **Zero accounts, player UUIDs, gamertags, tokens, world saves, server IPs, or local paths**. Self-expires and is permanently deleted after 3 minutes. |
 | GitHub (`github.com`, `objects.githubusercontent.com`) | Check for and download Vermeil updates | None |
 | Google OAuth & Google Drive (`accounts.google.com`, `oauth2.googleapis.com`, `www.googleapis.com`) | Optional cross-device settings backup and restore (only when you click "Sign in with Google") | Non-hardware settings payload (General, Display, Sound, Keybinds) stored in isolated `appDataFolder`; your OAuth token |
+
+## Ephemeral Instance Share Codes (`share.vermeillauncher.workers.dev`)
+
+Vermeil provides an optional feature to share instance configurations and mod lists with friends using 8-character cloud share codes (`VML-XXXX-XXXX`) or serverless offline codes (`VML...`).
+
+### What the Vermeil Share API Receives:
+When you export an instance via Cloud Share Code, Vermeil transmits a compressed JSON blueprint to the edge relay. The payload strictly contains:
+- **Instance Title**: The user-defined display name of the instance (e.g. "Create & Explore").
+- **Target Minecraft Version**: The Minecraft release (e.g. "1.21.1").
+- **Mod Loader & Version**: Loader type and build (e.g. Fabric "0.16.9").
+- **Mod Manifest**: An array of public mod references consisting of:
+  - Platform source (`0` = Modrinth, `1` = CurseForge)
+  - Project ID (public Modrinth slug or CurseForge project ID)
+  - Version ID / File ID (public release identifier)
+  - Content category (Mod, Shader, Resourcepack)
+  - Enabled status (boolean)
+- **Base Modpack Reference** (if built from a published modpack): Upstream project and version ID.
+
+### What the Vermeil Share API NEVER Receives:
+- **NO Account or Auth Credentials**: No Microsoft tokens, passwords, Xbox Live credentials, or offline account names.
+- **NO Player Identity**: No Minecraft player UUIDs, gamertags, custom skin textures, or cape textures.
+- **NO Personal Game Saves**: No Minecraft world saves, inventory data, chat history, or screenshots.
+- **NO Server Info**: No saved server IP addresses, multiplayer server lists (`servers.dat`), or connection logs.
+- **NO System or Hardware Info**: No Windows/Linux file paths, user directories, MAC addresses, or hardware specifications.
+
+### Expiration, Deduplication & Storage Guarantees:
+- **Strict 3-Minute TTL**: Cloud codes are ephemeral by design. Records in the Cloudflare D1 database have an `expires_at` timestamp set exactly 180 seconds (3 minutes) from generation. Expired records are automatically pruned and deleted.
+- **Payload Deduplication**: To conserve database writes and avoid redundant rows, identical manifests are hashed with SHA-256; duplicate uploads reuse the existing active code with no additional data storage.
+- **Serverless & Zero-Log**: The edge worker does not track IP addresses, user agents, or generate access profiles.
+- **Serverless Offline Alternative**: If you prefer not to use any cloud services, Vermeil provides fully offline share codes (`VML...`) that encode the compressed blueprint directly into a self-contained text string with zero network requests.
 
 ## Google Cloud Settings Sync (Google Drive App Data Sandbox)
 

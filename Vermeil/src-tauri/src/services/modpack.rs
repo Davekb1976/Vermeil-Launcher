@@ -595,6 +595,43 @@ pub async fn enrich_mod_metadata(
     let content = std::fs::read_to_string(&meta_path).map_err(|e| e.to_string())?;
     let mut instance: Instance = serde_json::from_str(&content).map_err(|e| e.to_string())?;
 
+    // Sync any unindexed .jar files from .minecraft/mods/ (e.g. .mrpack overrides/mods/*.jar)
+    let mods_dir = paths::instances_dir().join(instance_id).join(".minecraft").join("mods");
+    if let Ok(rd) = std::fs::read_dir(&mods_dir) {
+        let known_files: std::collections::HashSet<String> = instance
+            .mods
+            .iter()
+            .map(|m| m.filename.trim_end_matches(".disabled").to_lowercase())
+            .collect();
+        let default_source = if instance.source_project_id.is_some() {
+            "modpack"
+        } else {
+            "local"
+        };
+        for entry in rd.flatten() {
+            let fname = entry.file_name().to_string_lossy().to_string();
+            let clean = fname.trim_end_matches(".disabled");
+            if clean.to_lowercase().ends_with(".jar") && !known_files.contains(&clean.to_lowercase()) {
+                instance.mods.push(crate::models::instance::ModEntry {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    source: default_source.to_string(),
+                    project_id: String::new(),
+                    version_id: String::new(),
+                    filename: clean.to_string(),
+                    version_number: None,
+                    enabled: !fname.ends_with(".disabled"),
+                    pinned: false,
+                    title: None,
+                    icon_url: None,
+                    local_icon_path: None,
+                    description: None,
+                    category: "mod".to_string(),
+                    author: None,
+                });
+            }
+        }
+    }
+
     let settings = crate::services::settings_service::load()
         .await
         .map_err(|e| format!("Load settings: {}", e))?;
@@ -655,8 +692,10 @@ pub async fn enrich_mod_metadata(
         let mut project_ids: Vec<String> = Vec::new();
 
         for (idx, filename, category, sha1_from_manifest, existing_pid) in &modrinth_entries {
-            // If project_id was already resolved in a prior pass, reuse it directly
-            if !existing_pid.is_empty() {
+            // If both project_id and a non-SHA1 version_id were already resolved, reuse project_id directly
+            let is_sha1_vid = sha1_from_manifest.len() == 40
+                && sha1_from_manifest.chars().all(|c| c.is_ascii_hexdigit());
+            if !existing_pid.is_empty() && !is_sha1_vid {
                 project_ids.push(existing_pid.clone());
                 continue;
             }
@@ -703,6 +742,9 @@ pub async fn enrich_mod_metadata(
                                     // Update the project_id on the entry without changing source to "modrinth"
                                     if let Some(&idx) = hash_to_idx.get(hash) {
                                         instance.mods[idx].project_id = pid.to_string();
+                                        if let Some(vid) = version.get("id").and_then(|v| v.as_str()) {
+                                            instance.mods[idx].version_id = vid.to_string();
+                                        }
                                         if instance.source_project_id.is_some() {
                                             instance.mods[idx].source = "modpack".to_string();
                                         }
@@ -719,6 +761,83 @@ pub async fn enrich_mod_metadata(
                 }
                 Err(e) => {
                     tracing::warn!("Modrinth /v2/version_files request failed: {}", e);
+                }
+            }
+        }
+
+        // Stage 2: For any mods still unresolved after Modrinth SHA-1 lookup (e.g. CurseForge jars
+        // bundled in .mrpack overrides/mods/ or dropped in manually), resolve via CurseForge Murmur2 fingerprints.
+        {
+            let mut fp_to_indices: std::collections::HashMap<u32, Vec<usize>> =
+                std::collections::HashMap::new();
+            for (idx, entry) in instance.mods.iter().enumerate() {
+                let is_sha1_vid = entry.version_id.len() == 40
+                    && entry.version_id.chars().all(|c| c.is_ascii_hexdigit());
+                if !entry.project_id.is_empty()
+                    && !entry.version_id.is_empty()
+                    && !is_sha1_vid
+                {
+                    continue;
+                }
+                let subdir = match entry.category.as_str() {
+                    "resourcepack" => "resourcepacks",
+                    "shader" => "shaderpacks",
+                    "datapack" => "datapacks",
+                    _ => "mods",
+                };
+                let file_path = minecraft_dir.join(subdir).join(&entry.filename);
+                if let Ok(bytes) = std::fs::read(&file_path) {
+                    let fp = crate::services::curseforge::compute_cf_fingerprint(&bytes);
+                    fp_to_indices.entry(fp).or_default().push(idx);
+                }
+            }
+
+            if !fp_to_indices.is_empty() {
+                let fps: Vec<u32> = fp_to_indices.keys().copied().collect();
+                let matches =
+                    crate::services::curseforge::match_fingerprints(&api_key, &fps).await;
+
+                let mut cf_mod_ids: Vec<String> = Vec::new();
+                for (fp, matched) in matches {
+                    if let Some(indices) = fp_to_indices.get(&fp) {
+                        cf_mod_ids.push(matched.mod_id.clone());
+                        for &idx in indices {
+                            instance.mods[idx].project_id = matched.mod_id.clone();
+                            instance.mods[idx].version_id = matched.file_id.clone();
+                            if instance.source_project_id.is_none() {
+                                instance.mods[idx].source = "curseforge".to_string();
+                            }
+                            if instance.mods[idx].version_number.is_none() {
+                                instance.mods[idx].version_number = matched.display_name.clone();
+                            }
+                        }
+                    }
+                }
+
+                cf_mod_ids.sort();
+                cf_mod_ids.dedup();
+                if !cf_mod_ids.is_empty() {
+                    let metas =
+                        crate::services::curseforge::fetch_projects_meta(&api_key, &cf_mod_ids)
+                            .await;
+                    for (mid, meta) in metas {
+                        for entry in instance.mods.iter_mut() {
+                            if entry.project_id == mid {
+                                if entry.title.is_none() {
+                                    entry.title = meta.name.clone();
+                                }
+                                if entry.description.is_none() {
+                                    entry.description = meta.summary.clone();
+                                }
+                                if entry.author.is_none() {
+                                    entry.author = meta.author.clone();
+                                }
+                                if entry.icon_url.is_none() {
+                                    entry.icon_url = meta.icon_url.clone();
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

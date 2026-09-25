@@ -283,11 +283,38 @@ export const cloneInstance = (id: string, newName?: string) =>
  * promise is the expected outcome — not an error to report as a failure.
  */
 export const cancelInstall = () => invoke<void>("cancel_install");
+export interface SharePreviewItem {
+  name: string;
+  version?: string | null;
+  icon_url?: string | null;
+  category: string;
+  source: string;
+  enabled: boolean;
+}
+
+export interface ShareCodePreview {
+  name: string;
+  game_version: string;
+  loader_type: string;
+  loader_version: string | null;
+  icon_url: string | null;
+  mod_count: number;
+  shader_count: number;
+  resourcepack_count: number;
+  total_count: number;
+  is_modpack: boolean;
+  base_pack_platform: string | null;
+  base_pack_id: string | null;
+  items: SharePreviewItem[];
+}
+
 export const installModpack = (projectId: string, versionId?: string) => invoke<Instance>("install_modpack", { projectId, versionId });
 export const installCfModpack = (projectId: string, fileId?: string) => invoke<Instance>("install_cf_modpack", { projectId, fileId });
 export const importCfZip = (zipPath: string) => invoke<Instance>("import_cf_zip", { zipPath });
 export const importMrpack = (path: string) => invoke<Instance>("import_mrpack", { path });
-export const importCfCode = (code: string) => invoke<Instance>("import_cf_code", { code });
+export const exportShareCode = (instanceId: string) => invoke<string>("export_share_code", { instanceId });
+export const previewShareCode = (code: string) => invoke<ShareCodePreview>("preview_share_code", { code });
+export const importShareCode = (code: string) => invoke<Instance>("import_share_code", { code });
 
 // Meta commands
 export const getGameVersions = (includeSnapshots: boolean) =>

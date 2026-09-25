@@ -26,6 +26,11 @@ The project author directed all architectural decisions and reviewed the output,
 - Mod installation modifies your Minecraft game directories
 - This software is not affiliated with or endorsed by Mojang, Microsoft, Modrinth, or CurseForge
 
+## Third-Party Content & Community Share Codes
+
+- **Community Mod Lists**: Share codes (`VML-...`) allow players to share mod and modpack combinations. While Vermeil enforces strict security checks (URL host allowlists, zip slip prevention, and path sanitization), the individual mods, shaders, and resource packs fetched from Modrinth or CurseForge are authored by third-party creators. Vermeil does not audit or guarantee the security, stability, or compatibility of community-shared mod selections.
+- **Ephemeral Edge Relay**: 3-minute ephemeral cloud share codes (`VML-XXXX-XXXX`) are hosted on best-effort serverless edge infrastructure. There is no Service Level Agreement (SLA), guarantee of availability, or permanent storage for shared codes.
+
 ## Use at Your Own Risk
 
 By using Vermeil, you accept that:

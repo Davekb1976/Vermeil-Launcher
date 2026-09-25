@@ -20,6 +20,7 @@ target/
 # =============================================================================
 .vscode/
 .idea/
+.cursor/
 
 # =============================================================================
 # OS junk
@@ -49,3 +50,7 @@ tauri-signing.key
 
 # Local MCP server config — environment-specific, not committed.
 .kiro/settings/mcp.json
+
+# Cloudflare Worker & Wrangler
+.wrangler/
+**/.wrangler/

@@ -45,6 +45,7 @@ Vermeil acts as a client connecting to various third-party services on your beha
 - **Adoptium (Eclipse Foundation):** For downloading official open-source Java runtimes (Temurin JDK).
 - **Crafty.gg:** For on-demand historical skin synchronization in the Wardrobe.
 - **Google Drive API:** For optional launcher settings cloud synchronization.
+- **Vermeil Share Code Relay (`share.vermeillauncher.workers.dev`):** For optional 3-minute ephemeral sharing and resolving of instance blueprint manifests.
 
 ---
 

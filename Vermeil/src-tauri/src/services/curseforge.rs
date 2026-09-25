@@ -758,6 +758,123 @@ pub async fn fetch_projects_brief(
     metas.into_iter().map(|(id, m)| (id, (m.name, m.website_url))).collect()
 }
 
+/// Resolved CurseForge mod and file metadata from a Murmur2 fingerprint match.
+#[derive(Debug, Clone)]
+pub struct CfFingerprintMatch {
+    pub mod_id: String,
+    pub file_id: String,
+    pub display_name: Option<String>,
+}
+
+/// Computes CurseForge's whitespace-stripped 32-bit MurmurHash2 (seed = 1) for a file buffer.
+pub fn compute_cf_fingerprint(bytes: &[u8]) -> u32 {
+    const M: u32 = 0x5bd1e995;
+    let len = bytes
+        .iter()
+        .filter(|&&b| b != 9 && b != 10 && b != 13 && b != 32)
+        .count() as u32;
+
+    let mut h: u32 = 1 ^ len;
+    let mut k: u32 = 0;
+    let mut shift: u32 = 0;
+
+    for &b in bytes {
+        if b == 9 || b == 10 || b == 13 || b == 32 {
+            continue;
+        }
+        k |= (b as u32) << shift;
+        shift += 8;
+        if shift == 32 {
+            k = k.wrapping_mul(M);
+            k ^= k >> 24;
+            k = k.wrapping_mul(M);
+            h = h.wrapping_mul(M) ^ k;
+            k = 0;
+            shift = 0;
+        }
+    }
+
+    if shift > 0 {
+        h ^= k;
+        h = h.wrapping_mul(M);
+    }
+
+    h ^= h >> 13;
+    h = h.wrapping_mul(M);
+    h ^= h >> 15;
+    h
+}
+
+/// Batch-resolves Murmur2 file fingerprints against `POST /v1/fingerprints/432`.
+/// Returns a map from `fingerprint (u32)` -> `CfFingerprintMatch`.
+pub async fn match_fingerprints(
+    api_key: &str,
+    fingerprints: &[u32],
+) -> std::collections::HashMap<u32, CfFingerprintMatch> {
+    let mut out = std::collections::HashMap::new();
+    if api_key.is_empty() || fingerprints.is_empty() {
+        return out;
+    }
+
+    let url = format!("{}/fingerprints/{}", CF_BASE, MINECRAFT_GAME_ID);
+    let payload = serde_json::json!({ "fingerprints": fingerprints });
+
+    let resp = match HTTP
+        .post(&url)
+        .header("x-api-key", api_key)
+        .json(&payload)
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => r,
+        _ => return out,
+    };
+
+    let body: serde_json::Value = match resp.json().await {
+        Ok(v) => v,
+        Err(_) => return out,
+    };
+
+    if let Some(matches) = body
+        .get("data")
+        .and_then(|d| d.get("exactMatches"))
+        .and_then(|m| m.as_array())
+    {
+        for item in matches {
+            let mod_id = item
+                .get("id")
+                .and_then(|v| v.as_u64())
+                .map(|n| n.to_string());
+            let file_obj = item.get("file");
+            let file_id = file_obj
+                .and_then(|f| f.get("id"))
+                .and_then(|v| v.as_u64())
+                .map(|n| n.to_string());
+            let fp = file_obj
+                .and_then(|f| f.get("fileFingerprint"))
+                .and_then(|v| v.as_u64())
+                .map(|n| n as u32);
+            let display_name = file_obj
+                .and_then(|f| f.get("displayName"))
+                .and_then(|v| v.as_str())
+                .map(str::to_string);
+
+            if let (Some(fp_val), Some(mid), Some(fid)) = (fp, mod_id, file_id) {
+                out.insert(
+                    fp_val,
+                    CfFingerprintMatch {
+                        mod_id: mid,
+                        file_id: fid,
+                        display_name,
+                    },
+                );
+            }
+        }
+    }
+
+    out
+}
+
 /// Fetch the download URL for the latest (or specified) file of a CurseForge
 /// modpack project. Returns `(download_url, file_name)`.
 ///
@@ -773,11 +890,15 @@ pub async fn get_modpack_file_url(
         return Err("CurseForge API key not configured. Add it in Settings.".to_string());
     }
 
-    let url = if let Some(fid) = file_id {
+    let is_numeric_file_id = file_id
+        .map(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()))
+        .unwrap_or(false);
+
+    let url = if let (true, Some(fid)) = (is_numeric_file_id, file_id) {
         format!("{}/mods/{}/files/{}", CF_BASE, project_id, fid)
     } else {
-        // Get the main file for the modpack (latest)
-        format!("{}/mods/{}/files?pageSize=1", CF_BASE, project_id)
+        // Fetch recent files so we can match a version string (e.g. "8.2") or fall back to latest
+        format!("{}/mods/{}/files?pageSize=50", CF_BASE, project_id)
     };
 
     let resp = HTTP
@@ -804,13 +925,31 @@ pub async fn get_modpack_file_url(
 
     // Single file endpoint returns { data: { ... } }
     // List endpoint returns { data: [ ... ] }
-    let file_data = if file_id.is_some() {
+    let file_data = if is_numeric_file_id {
         body.get("data").cloned()
     } else {
-        body.get("data")
-            .and_then(|d| d.as_array())
-            .and_then(|arr| arr.first())
-            .cloned()
+        let arr_opt = body.get("data").and_then(|d| d.as_array());
+        if let (Some(arr), Some(ver_str)) = (arr_opt, file_id) {
+            let needle = ver_str.trim().to_lowercase();
+            arr.iter()
+                .find(|item| {
+                    let disp = item
+                        .get("displayName")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("")
+                        .to_lowercase();
+                    let fname = item
+                        .get("fileName")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("")
+                        .to_lowercase();
+                    disp.contains(&needle) || fname.contains(&needle)
+                })
+                .or_else(|| arr.first())
+                .cloned()
+        } else {
+            arr_opt.and_then(|arr| arr.first()).cloned()
+        }
     };
 
     let file_data = file_data.ok_or("No file data returned from CurseForge")?;

@@ -137,3 +137,60 @@ Do NOT assume a component in `src/modals/` is an overlay dialog:
   - `OnboardingWizard`
   - `CustomCapeEditor`
   - `ModDetailModal` / `ModpackDetailModal`
+
+---
+
+## 8. State-Morphing Single-Slot Controls (No Duplicate Action Buttons)
+
+Never stack duplicate, redundant, or opposing action buttons side-by-side (e.g. separate `[Paste]` and `[Clear]` buttons next to an input field, or duplicate `[Scan Code]` and `[Import Instance]` buttons).
+
+### Core Invariants:
+1. **Input Trailing Slot (Paste ↔ Clear)**:
+   - When the input field is empty: render a single `<IconClipboard />` icon button (`data-tip="Paste from clipboard"`).
+   - When text is present: that exact same button slot morphs into `<IconX />` (`data-tip="Clear code"`).
+   - Never render two adjacent buttons where one clears and one pastes.
+2. **Sequential Pipeline Slot (Scan ↔ Import / Analyze ↔ Execute)**:
+   - Only one primary call-to-action button should exist for sequential multi-step operations.
+   - Stage 1 (unverified / unscanned): Button label is `[Scan Code]` with `<IconSearch />`.
+   - Stage 2 (verified / preview loaded): That exact same button morphs into `[Import Instance]` with `<IconCheck />`.
+   - Modifying or clearing the input resets the state back to Stage 1 automatically.
+   - Do NOT place a duplicate "Scan" button in the input field when the primary action button already performs that transition.
+
+---
+
+## 9. Companion Sizing & Control Height Symmetry (No Ragged Edges)
+
+When creating controls that sit beside each other in a group, input bar, or toolbar:
+
+### 1. The Canonical Height Tokens
+- `--control-height-sm: 26px;` — Dense tables, compact dropdowns, small pill tags.
+- `--control-height-md: 32px;` — **Default standard** for `.field-control`, regular buttons `.btn` / `.btn--md`, search inputs, and standard dropdowns.
+- `--control-height-lg: 40px;` — Large modal action buttons, primary wizard CTAs.
+
+### 2. Sibling Height Parity Rule
+- Sibling controls in the same row MUST share the same height token.
+- **NEVER** place a `.btn--sm` (26px) next to a `.field-control` (32px).
+- **NEVER** mix `.btn--sm`, `.btn--md`, and `.btn--lg` in the same horizontal flex row or action group.
+
+### 3. Overriding `.btn` `align-self: start`
+- The base `.btn` CSS rule contains `align-self: start;` to prevent accidental vertical ballooning in flex containers.
+- When an adjacent button is meant to stretch or align flush with a `.field-control`, you MUST explicitly override this:
+  ```css
+  height: var(--control-height-md);
+  align-self: stretch;
+  ```
+
+### 4. Square Companion Buttons Pattern
+For icon-only buttons placed beside an input field (e.g. Paste, Clear, Browse, Reveal):
+```tsx
+<button
+  type="button"
+  class="btn btn--neutral tip-left"
+  data-tip="Action"
+  style="display: flex; align-items: center; justify-content: center; width: var(--control-height-md); height: var(--control-height-md); min-width: var(--control-height-md); padding: 0; align-self: stretch;"
+>
+  <IconComponent />
+</button>
+```
+This guarantees an exact 32×32 square keycap that aligns flush with the text box with zero vertical offset or height mismatch.
+

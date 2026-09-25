@@ -120,6 +120,13 @@ Vermeil-Launcher/               # Repo root
 - Rename on double-click
 - Sidebar pins (up to 3 quick-launch shortcuts)
 
+### Instance Sharing & Cloud Blueprints
+- **Ephemeral 3-Minute Cloud Share Codes (`VML-XXXX-XXXX`)**: 1-click instance export generating an 8-character human-friendly alphanumeric code. Stored with a strict 3-minute self-expiring TTL on Cloudflare Workers and D1 edge storage.
+- **Serverless Offline Blueprints (`VML...`)**: Self-contained Zlib-compressed Base62 share codes that encode the entire instance manifest without requiring any cloud storage or database.
+- **Privacy & Anonymization Boundary**: Share codes exclusively serialize public mod identifiers (`(platform, project_id, version_id)` pairs, loader, and Minecraft version). Never transmits personal accounts, Microsoft tokens, UUIDs, gamertags, server IPs, world saves, or local file system paths.
+- **Edge Architecture & Deduplication**: Backed by a serverless Cloudflare Worker with D1 SQL persistence, SHA-256 payload deduplication (identical exports yield the existing code with zero extra DB writes), Edge Cache API (`caches.default`) for instantaneous lookups, and decompressed payload size caps (64 KB ceiling) with built-in Adler32 verification.
+- **Single-Slot State-Morphing UI**: Streamlined import interface featuring a morphing trailing action button (Paste clipboard ↔ Clear input) and single progressive scan/import CTA button.
+
 ### Skin Management & 3D Character Studio
 - 3D skin viewer (`skinview3d` / `three.js`) unlocked for both Microsoft and Offline / Guest accounts
 - Pre-baked 2-tone CAD mannequin dummy skins (`Classic` 4px and `Slim` 3px) synced between the Character Studio and Home 3D stage for offline accounts
@@ -206,6 +213,7 @@ Vermeil-Launcher/               # Repo root
 5. **Credential encryption** — DPAPI on Windows, plaintext with file permissions on Linux.
 6. **options.txt patching** — Global video settings written to each instance's options.txt before launch.
 7. **Zero-warning builds** — Never suppress warnings. Fix or remove unused code.
+8. **Ephemeral zero-login sharing** — Instances are shared via lightweight metadata blueprints using 3-minute ephemeral D1 records or self-contained Base62 zlib strings, eliminating user registration, telemetry, or server-side persistent profiles.
 
 ---
 
@@ -222,6 +230,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for full prerequisites and build instructio
 | `Vermeil/src/App.tsx` | Global state, screen routing, download tracking |
 | `Vermeil/src/ipc/commands.ts` | ALL backend communication |
 | `Vermeil/src-tauri/src/lib.rs` | Command registration, plugin setup |
+| `Vermeil/src-tauri/src/services/share_code.rs` | Instance blueprint compression, resolution, and edge relay |
 | `Vermeil/src-tauri/src/services/launch.rs` | Game launching (biggest file) |
 | `Vermeil/src-tauri/src/services/auth.rs` | Microsoft/Xbox/Minecraft auth |
 | `Vermeil/src-tauri/src/util/platform.rs` | Cross-platform helpers |

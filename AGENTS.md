@@ -127,6 +127,18 @@ Vermeil/
   - **Screen vs. Modal Architectural Taxonomy:**
     - Do NOT assume a component in `src/modals/` is an overlay dialog. In Vermeil, full-page screen views (`CreateCustom.tsx` as `create-custom`, `ImportInstance.tsx` as `create-import`) reside in `src/modals/` for legacy reasons, but are routed as full screens in `App.tsx` with back navigation (`← Back to Setup`), not popup backdrops.
     - True **Overlay Modals** are mounted at the App root level or wrapped in `.modal-overlay`, controlled by independent signals or events (`ChangeLoaderModal`, `NoAccountModal`, `CrashReportModal`, `DependencyIssuesModal`, `ManualDownloadModal`, `PinInstancesModal`, `JavaChooserModal`, `OnboardingWizard`, `CustomCapeEditor`).
+  - **State-Morphing Single-Slot Controls (No Duplicate Action Buttons):**
+    - **Core Rule**: Never stack duplicate, redundant, or opposing action buttons side-by-side (e.g. separate `[Paste]` and `[Clear]` buttons next to an input field, or duplicate `[Scan Code]` and `[Import Instance]` buttons).
+    - **The Pattern**: Use a **single button slot** whose icon, label, and action handler **morphs** based on context and state:
+      - *Input Trailing Slot (Paste ↔ Clear)*: When the input field is empty, show a single `<IconClipboard />` button (`data-tip="Paste from clipboard"`). As soon as text is present, morph that same button into `<IconX />` (`data-tip="Clear"`). Never render both buttons simultaneously.
+      - *Sequential Pipeline Slot (Scan ↔ Import / Analyze ↔ Execute)*: Only one primary call-to-action button should exist. It starts as `[Scan Code]`. Once scanned and valid preview data is loaded, that exact same button transitions into `[Import Instance]`. Modifying or clearing input text naturally resets it back to `[Scan Code]`.
+      - *Search / Filter Bars*: Search magnifier icon morphs into a clickable clear (`X`) when query length > 0.
+      - *Action Confirmation (Copy ↔ Copied)*: A copy button briefly morphs to a checkmark without spawning redundant status text elements.
+  - **Companion Sizing & Control Height Symmetry (No Ragged Edges or Mismatched Heights):**
+    - **Height Token Parity**: All form inputs, dropdowns, and buttons share canonical height tokens: `--control-height-sm` (26px), `--control-height-md` (32px, default for `.field-control` and `.btn`), `--control-height-lg` (40px). Sibling elements placed in the same flex row or input bar MUST share the identical height token. Never place a `.btn--sm` (26px) beside a `.field-control` (32px).
+    - **Override `.btn` `align-self: start`**: The `.btn` class specifies `align-self: start` to hug content, which overrides parent `align-items: stretch`. When pairing a button beside a text field, explicitly set `height: var(--control-height-md); align-self: stretch;` to prevent vertical gaps.
+    - **Square Companion Buttons**: Single-icon buttons paired with inputs (e.g. Paste, Clear, Browse, Reveal) MUST be exact squares: `width: var(--control-height-md); height: var(--control-height-md); min-width: var(--control-height-md); padding: 0; align-self: stretch;`.
+    - **No Ragged Sibling Controls**: Sibling controls in the same row, action bar, or segmented group must share identical heights and aligned baselines. Never mix `.btn--sm`, `.btn--md`, and `.btn--lg` in the same horizontal bar.
   - **Stay within the theme without overdoing it:** Adhere to SloppyKeys tactile tokens (`--bevel`, `--surface-panel`, `--surface-raised`, `#0f0e13` wells, hairline borders). Do not invent novel decorative doodads, corner stickers, or unneeded containers. Boring, clean, and restrained beats busy and cluttered every time.
 
 ---

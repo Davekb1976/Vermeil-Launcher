@@ -80,6 +80,7 @@
 - **All Major Mod Loaders**: Fabric, Quilt, NeoForge, and Forge with automatic version resolution and scratch-isolated installers
 - **Mod, Resource Pack, Shader & Datapack Browser**: Unified Modrinth and CurseForge search with inline version picker, bulk install mode, and automatic dependency resolution
 - **Modpack Browser & Archive Import**: 1-click Modrinth and CurseForge modpack installs plus local `.mrpack` and `.zip` archive imports
+- **Instant Instance Sharing (Cloud & Offline)**: Share modpack setups and customized instances in 1 click using 8-character 3-minute ephemeral cloud codes (`VML-XXXX-XXXX`) or serverless offline codes (`VML...`). 100% anonymized metadata—no personal accounts, credentials, or save files
 - **Automatic Java Provisioning**: Detects local JDKs and automatically provisions required Adoptium runtimes (Java 8, 17, 21, 25) with atomic staging
 - **Adaptive Memory & Client GC Calibration**: Tiered system RAM ceilings and version-aware JVM Garbage Collection presets (G1GC, Generational ZGC, Shenandoah)
 - **3D Character Studio & Local Wardrobe**: Unlocked for both Microsoft and offline/guest accounts with pre-baked 2-tone CAD mannequin dummy skins (`Classic` & `Slim`), animated elytra preview, and on-demand Crafty.gg skin history sync

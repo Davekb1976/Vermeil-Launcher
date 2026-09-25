@@ -248,9 +248,11 @@ pub fn run() {
             instances::clear_ingame_cape,
             instances::get_ingame_cape,
             instances::companion_supported_versions,
-            // CurseForge import
+            // CurseForge & Share Code import
             cf_import::import_cf_zip,
-            cf_import::import_cf_code,
+            cf_import::export_share_code,
+            cf_import::preview_share_code,
+            cf_import::import_share_code,
             // Launch
             launch::launch_instance,
             launch::install_mod_to_instance,
