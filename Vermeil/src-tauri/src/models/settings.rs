@@ -116,6 +116,10 @@ pub struct LauncherSettings {
     /// Preserved even when instances are deleted.
     #[serde(default)]
     pub last_active_at: Option<String>,
+    /// Last seen application version. Used to detect transitions between builds
+    /// (e.g. automatically ensuring experimental builds track the experimental channel).
+    #[serde(default)]
+    pub last_app_version: Option<String>,
 }
 
 /// Video settings that get written into each instance's options.txt before launch.
@@ -191,7 +195,13 @@ fn default_splash_screen() -> bool { true }
 fn default_download_toasts() -> bool { true }
 fn default_auto_hide_dock() -> bool { true }
 fn default_pagination_position() -> String { "bottom".to_string() }
-fn default_update_channel() -> String { "stable".to_string() }
+fn default_update_channel() -> String {
+    if env!("CARGO_PKG_VERSION").contains('-') {
+        "experimental".to_string()
+    } else {
+        "stable".to_string()
+    }
+}
 
 /// In-game custom cape state (companion mod). The baked cape image lives at
 /// `<data>/ingame-cape.png`; this is just the toggle + which library cape.
@@ -242,6 +252,7 @@ impl Default for LauncherSettings {
             last_cloud_backup: None,
             lifetime_play_seconds: 0,
             last_active_at: None,
+            last_app_version: Some(env!("CARGO_PKG_VERSION").to_string()),
         }
     }
 }

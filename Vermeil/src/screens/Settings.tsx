@@ -454,9 +454,11 @@ const Settings: Component = () => {
     const v = appVersion();
     return Boolean(v && (v.includes("-") || v.toLowerCase().includes("exp")));
   };
+  const activeChannel = () =>
+    settings()?.update_channel || (isCurrentExperimental() ? "experimental" : "stable");
 
   const handleChannelSwitch = async (target: "stable" | "experimental") => {
-    const current = settings()?.update_channel || "stable";
+    const current = activeChannel();
     if (current === target) return;
 
     if (target === "stable" && isCurrentExperimental()) {
@@ -803,7 +805,7 @@ const Settings: Component = () => {
                           <div class="setting-info">
                             <span class="setting-name">Release Channel</span>
                             <span class="setting-desc">
-                              {settings()?.update_channel === "experimental"
+                              {activeChannel() === "experimental"
                                 ? "Opted in to bleeding-edge test builds"
                                 : "Standard verified production releases"}
                             </span>
@@ -812,14 +814,14 @@ const Settings: Component = () => {
                             <div class="update-channel-pills">
                               <button
                                 type="button"
-                                class={`update-channel-pill ${settings()?.update_channel !== "experimental" ? "active" : ""}`}
+                                class={`update-channel-pill ${activeChannel() === "stable" ? "active" : ""}`}
                                 onClick={() => handleChannelSwitch("stable")}
                               >
                                 Stable
                               </button>
                               <button
                                 type="button"
-                                class={`update-channel-pill ${settings()?.update_channel === "experimental" ? "active" : ""}`}
+                                class={`update-channel-pill ${activeChannel() === "experimental" ? "active" : ""}`}
                                 onClick={() => handleChannelSwitch("experimental")}
                               >
                                 Experimental
@@ -834,13 +836,13 @@ const Settings: Component = () => {
                           <div class="setting-info">
                             <span class="setting-name">Check for updates</span>
                             <span class="setting-desc">
-                              Check for new releases on the {settings()?.update_channel === "experimental" ? "Experimental" : "Stable"} channel
+                              Check for new releases on the {activeChannel() === "experimental" ? "Experimental" : "Stable"} channel
                             </span>
                           </div>
                           <div class="setting-control">
                             <button
                               class="btn btn--sm"
-                              onClick={() => checkForUpdates(false, settings()?.update_channel === "stable" && isCurrentExperimental())}
+                              onClick={() => checkForUpdates(false, activeChannel() === "stable" && isCurrentExperimental())}
                             >
                               Check now
                             </button>

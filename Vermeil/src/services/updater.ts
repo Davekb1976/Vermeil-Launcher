@@ -7,6 +7,7 @@ import {
   type UpdateMetadata,
 } from "../ipc/commands";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { getVersion } from "@tauri-apps/api/app";
 
 import {
   setUpdateAvailable,
@@ -85,10 +86,19 @@ export async function checkForUpdates(
 ): Promise<boolean> {
   try {
     const settings = await getSettings().catch(() => null);
+    let fallbackChannel: "stable" | "experimental" = "stable";
+    try {
+      const v = await getVersion();
+      if (v && (v.includes("-") || v.toLowerCase().includes("exp"))) {
+        fallbackChannel = "experimental";
+      }
+    } catch {
+      // ignore
+    }
     const channel =
       channelOverride ||
       (settings?.update_channel as "stable" | "experimental") ||
-      "stable";
+      fallbackChannel;
 
     const update = await checkForAppUpdates(channel, allowDowngrades);
     if (!update) {

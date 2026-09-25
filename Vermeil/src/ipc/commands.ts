@@ -251,6 +251,8 @@ export interface LauncherSettings {
   lifetime_play_seconds?: number;
   /** ISO-8601 timestamp of the most recent session launched across any instance. */
   last_active_at?: string | null;
+  /** Last seen application version. */
+  last_app_version?: string | null;
 }
 
 // Instance commands

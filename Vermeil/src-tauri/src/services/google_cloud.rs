@@ -625,6 +625,7 @@ pub fn sanitize_settings_for_cloud(source: &LauncherSettings) -> LauncherSetting
         last_cloud_backup: source.last_cloud_backup.clone(),
         lifetime_play_seconds: source.lifetime_play_seconds,
         last_active_at: source.last_active_at.clone(),
+        last_app_version: defaults.last_app_version,
     }
 }
 

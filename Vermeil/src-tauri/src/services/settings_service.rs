@@ -32,6 +32,29 @@ pub async fn load() -> Result<LauncherSettings, Box<dyn std::error::Error + Send
         let _ = save(&settings).await;
     }
 
+    // Detect version transition: if running an experimental build and
+    // either last_app_version is unset or differs from current, ensure
+    // the user defaults to the experimental update channel.
+    let cur_version = env!("CARGO_PKG_VERSION");
+    let is_experimental = cur_version.contains('-');
+    let mut version_changed = false;
+
+    if settings.last_app_version.as_deref() != Some(cur_version) {
+        if is_experimental && settings.update_channel != "experimental" {
+            settings.update_channel = "experimental".to_string();
+        }
+        settings.last_app_version = Some(cur_version.to_string());
+        version_changed = true;
+    }
+
+    if !content.contains("\"update_channel\"") {
+        version_changed = true;
+    }
+
+    if version_changed {
+        let _ = save(&settings).await;
+    }
+
     // Synchronize lifetime_play_seconds and last_active_at monotonically:
     // If instances currently on disk have a higher combined playtime (e.g. from existing
     // instances or newly imported instances), ensure lifetime_play_seconds never lags behind.
