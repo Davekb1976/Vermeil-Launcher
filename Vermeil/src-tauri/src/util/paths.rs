@@ -201,6 +201,9 @@ pub fn dir_size(path: &std::path::Path) -> u64 {
     if let Ok(entries) = std::fs::read_dir(path) {
         for entry in entries.flatten() {
             if let Ok(meta) = entry.metadata() {
+                if meta.is_symlink() {
+                    continue;
+                }
                 if meta.is_dir() {
                     size += dir_size(&entry.path());
                 } else {

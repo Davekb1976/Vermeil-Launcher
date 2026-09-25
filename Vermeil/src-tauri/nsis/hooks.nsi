@@ -43,12 +43,13 @@ Var PrevEstimatedSize
 !macroend
 
 !macro NSIS_HOOK_POSTINSTALL
-    ; Restore the previous EstimatedSize in O(1) time instead of running a blocking
-    ; single-threaded ${GetSize} walk across 100,000+ Minecraft asset/library/mod files.
-    ; Vermeil's Rust backend (platform::update_windows_estimated_size) automatically
-    ; refreshes EstimatedSize on a background thread when the launcher starts and exits.
+    ; Restore the previous EstimatedSize in O(1) time when it exceeds the base binary size,
+    ; instead of running a blocking single-threaded ${GetSize} walk across 100,000+
+    ; Minecraft asset/library/mod files. Vermeil's Rust backend
+    ; (platform::update_windows_estimated_size) automatically refreshes EstimatedSize
+    ; on a background thread when the launcher starts and exits.
     ${If} $PrevEstimatedSize != ""
-    ${AndIf} $PrevEstimatedSize <> 0
+    ${AndIf} $PrevEstimatedSize U> ${ESTIMATEDSIZE}
         WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Vermeil" "EstimatedSize" $PrevEstimatedSize
     ${EndIf}
 !macroend
