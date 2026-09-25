@@ -10,7 +10,74 @@ Sharing Minecraft modpacks and customized instances traditionally requires expor
 
 ---
 
-## 1. End-to-End Pipeline Architecture
+## 1. Architectural Comparison: Legacy vs. Modern Cloudflare Edge Pipeline
+
+```mermaid
+flowchart TD
+    subgraph LEGACY["LEGACY PIPELINE: Heavy Archives and Massive Strings"]
+        direction TB
+        l_export["User wants to share instance"] --> l_choice{"Sharing Method"}
+        l_choice -->|Archive Export| l_zip["Bundle full .zip or .mrpack<br/>Includes 50MB to 500MB of JARs"]
+        l_zip --> l_upload["Upload to external file host<br/>Google Drive, MediaFire, Discord limits"]
+        l_upload --> l_share["Send file link to friend"]
+        l_share --> l_friend["Friend downloads large file<br/>Extracts ZIP, resolves conflicts"]
+
+        l_choice -->|Raw Text Code| l_huge["Serialize giant uncompressed JSON<br/>1000 to 4000+ character string"]
+        l_huge --> l_discord["Hits Discord 2000-char message limit<br/>Formatting breaks on word wrap"]
+        l_discord --> l_ui_clutter["Cluttered UI with duplicate buttons<br/>Separate Paste, Clear, Scan, Import"]
+    end
+
+    subgraph MODERN["CALIBRATED EDGE PIPELINE: Cloudflare Workers and D1"]
+        direction TB
+        m_export["User clicks Share Instance"] --> m_serialize["Extract Public Metadata Only<br/>Zlib Best Compression + Base62"]
+        m_serialize --> m_choice{"Sharing Choice"}
+
+        m_choice -->|Cloud Relay| m_worker["POST to Cloudflare Edge Worker<br/>X-Vermeil-Client attestation"]
+        m_worker --> m_dedup{"SHA-256 Hash Exists?"}
+        m_dedup -->|Existing match| m_cached_code["Return active 8-character code<br/>Zero new D1 writes"]
+        m_dedup -->|New manifest| m_d1["Insert into Cloudflare D1<br/>Auto-expires in 180 seconds"]
+        m_cached_code --> m_copy["Instant 8-character code: VML-XXXX-XXXX<br/>Single click copy to clipboard"]
+        m_d1 --> m_copy
+
+        m_choice -->|Offline Blueprint| m_offline["Prepend VML prefix<br/>Self-contained compressed string"]
+        m_offline --> m_copy_offline["Fits easily in Discord chat<br/>Zero network or database calls"]
+
+        m_copy --> m_friend_import["Friend enters code in Import dialog"]
+        m_copy_offline --> m_friend_import
+
+        m_friend_import --> m_morph["State-Morphing Single Control<br/>Paste morphs to Clear automatically"]
+        m_morph --> m_cta["Progressive CTA Button<br/>Scan Code morphs to Import Instance"]
+        m_cta --> m_fetch["Fetch directly from Modrinth and CurseForge<br/>Fast parallel downloads, zero host upload"]
+    end
+
+    style LEGACY fill:#1c1417,stroke:#ef4444,stroke-width:2px,color:#f4f3f6
+    style MODERN fill:#121816,stroke:#10b981,stroke-width:2px,color:#f4f3f6
+    style l_zip fill:#2a1b1f,stroke:#f87171,color:#f4f3f6
+    style l_discord fill:#2a1b1f,stroke:#f87171,color:#f4f3f6
+    style l_ui_clutter fill:#2a1b1f,stroke:#f87171,color:#f4f3f6
+    style m_worker fill:#162420,stroke:#34d399,color:#f4f3f6
+    style m_d1 fill:#162420,stroke:#34d399,color:#f4f3f6
+    style m_morph fill:#162420,stroke:#34d399,color:#f4f3f6
+    style m_cta fill:#162420,stroke:#34d399,color:#f4f3f6
+    style m_fetch fill:#162420,stroke:#34d399,color:#f4f3f6
+```
+
+### Analysis of the Legacy Bottlenecks
+
+1. **Bandwidth & Storage Bloat**:
+   - Sharing a modest 100-mod instance as a `.zip` archive required packaging 150MB+ of binary jar files that already exist on public CDNs (Modrinth, CurseForge).
+   - Users had to find third-party hosts or pay for file-sharing subscriptions, only to hit upload bandwidth ceilings or link expirations.
+2. **Text Code Discord Limits & Formatting Corruption**:
+   - Early string-based blueprint representations used uncompressed or flat JSON serialized into Base64.
+   - For instances with 40+ mods, the string easily exceeded Discord's 2,000-character single-message ceiling, forcing users into multi-message pastes or `.txt` file attachments.
+   - Base64 symbols (`+`, `/`, `=`) triggered markdown italics or required double-clicks that fractured across punctuation boundaries.
+3. **UI Friction & Sizing Asymmetry**:
+   - The legacy import screen presented separate `[Paste]` and `[Clear]` buttons with mismatched heights (26px small buttons beside a 32px text input), creating visual clutter and ragged layout baselines.
+   - Separate `[Scan Code]` and `[Import Instance]` buttons competed for prominence, introducing ambiguity about the next user action.
+
+---
+
+## 2. End-to-End Pipeline Architecture
 
 ```mermaid
 flowchart TD
@@ -54,7 +121,7 @@ flowchart TD
 
 ---
 
-## 2. Blueprint Codec & Serialization
+## 3. Blueprint Codec & Serialization
 
 ### Data Model (`ShareCodePayload`)
 The blueprint data model represents the exact composition of an instance using minimal primitives:
@@ -92,7 +159,7 @@ pub struct ShareItemTuple(
 
 ---
 
-## 3. Serverless Edge Relay (Cloudflare Workers + D1)
+## 4. Serverless Edge Relay (Cloudflare Workers + D1)
 
 ### Cloudflare Worker Responsibilities
 The relay lives at `https://share.vermeillauncher.workers.dev` and performs 4 essential functions:
@@ -128,7 +195,7 @@ CREATE INDEX IF NOT EXISTS idx_share_codes_expires ON share_codes (expires_at);
 
 ---
 
-## 4. Security & Privacy Boundary
+## 5. Security & Privacy Boundary
 
 ### Strict Data Isolation
 The blueprint generation process in `src-tauri/src/services/share_code.rs` explicitly serializes only public project identifiers.
@@ -152,7 +219,7 @@ To prevent denial-of-service via maliciously crafted compression payloads:
 
 ---
 
-## 5. UI/UX Tactile Integration
+## 6. UI/UX Tactile Integration
 
 The import interface adheres to Vermeil's **SloppyKeys** design system and UI restraint guidelines:
 
