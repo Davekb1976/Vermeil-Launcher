@@ -14,38 +14,38 @@ Sharing Minecraft modpacks and customized instances traditionally requires expor
 
 ```mermaid
 flowchart TD
-    subgraph Export["Instance Export Pipeline (InstanceMods.tsx / share_code.rs)"]
-        A["User clicks<br/>'Share Instance'"] --> B["Serialize Instance Manifest<br/>(MC version, loader, mods/shaders/packs)"]
-        B --> C["Filter to Public Metadata<br/>(Exclude worlds, tokens, credentials, IPs)"]
-        C --> D["Compress Payload<br/>(Zlib Best Compression + Base62)"]
+    subgraph Export["Instance Export Pipeline"]
+        A["User clicks Share Instance"] --> B["Serialize Instance Manifest<br/>MC version, loader, mods"]
+        B --> C["Filter to Public Metadata<br/>Exclude worlds, tokens, credentials, IPs"]
+        C --> D["Compress Payload<br/>Zlib Best Compression + Base62"]
         D --> E{"Export Mode"}
-        E -->|Offline Code| F["Prepend 'VML' Prefix<br/>(Copy direct to clipboard)"]
-        E -->|Cloud Code| G["POST /api/share<br/>to Cloudflare Edge Worker<br/>(X-Vermeil-Client attestation)"]
+        E -->|Offline Blueprint| F["Prepend VML Prefix<br/>Copy direct to clipboard"]
+        E -->|Cloud Code| G["POST /api/share<br/>to Cloudflare Edge Worker<br/>X-Vermeil-Client attestation"]
     end
 
-    subgraph Edge["Serverless Edge Layer (Cloudflare Workers + D1)"]
-        G --> H["Worker: Validate Client Header<br/>& Payload Schema"]
+    subgraph Edge["Serverless Edge Layer"]
+        G --> H["Worker: Validate Client Header<br/>and Payload Schema"]
         H --> I["Compute SHA-256 Hash<br/>of Payload"]
         I --> J{"Deduplication Check:<br/>Active Hash in D1?"}
-        J -->|Yes (Existing)| K["Return existing 8-char code<br/>(0 new D1 writes)"]
-        J -->|No (New)| L["Generate 8-char Code<br/>(Base62, e.g. 'A7K9-2P4M')"]
-        L --> M["Insert D1 Record<br/>(expires_at = now + 180s)"]
-        M --> N["Prune Expired Codes<br/>(DELETE WHERE expires_at < now)"]
+        J -->|Existing match| K["Return existing 8-character code<br/>Zero new D1 writes"]
+        J -->|New payload| L["Generate 8-character Code<br/>Base62: A7K9-2P4M"]
+        L --> M["Insert D1 Record<br/>expires_at = now + 180s"]
+        M --> N["Prune Expired Codes<br/>DELETE WHERE expires_at is past"]
         N --> O["Respond 201 Created<br/>with JSON code"]
     end
 
-    subgraph Import["Instance Import Pipeline (ImportInstance.tsx / share_code.rs)"]
-        P["User inputs code in Import dialog<br/>(Paste ↔ Clear morphing button)"] --> Q{"Code Format?"}
-        Q -->|8-Char Cloud Code<br/>'VML-XXXX-XXXX'| R["GET /api/share/:code<br/>(Worker checks Edge Cache / D1)"]
-        R --> S["Fetch Cloudflare Worker<br/>(Edge Cache hits: 0 D1 reads)"]
-        Q -->|Offline Code<br/>'VML...'| T["Decode Base62 & Decompress Zlib<br/>(64 KB ceiling + Adler32 check)"]
+    subgraph Import["Instance Import Pipeline"]
+        P["User inputs code in Import dialog<br/>Paste and Clear morphing button"] --> Q{"Code Format?"}
+        Q -->|Cloud Code| R["GET /api/share/:code<br/>Worker checks Edge Cache / D1"]
+        R --> S["Fetch Cloudflare Worker<br/>Edge Cache hits: 0 D1 reads"]
+        Q -->|Offline Code| T["Decode Base62 and Decompress Zlib<br/>64 KB ceiling + Adler32 check"]
         S --> T
-        T --> U["Resolve Mod Metadata<br/>(Batch Modrinth / CurseForge APIs)"]
-        U --> V["Render Preview Stage<br/>(CTA morphs to 'Import Instance')"]
-        V --> W["Download & Stage Instance<br/>(Parallel downloads, icon caching, auto-pin)"]
+        T --> U["Resolve Mod Metadata<br/>Batch Modrinth / CurseForge APIs"]
+        U --> V["Render Preview Stage<br/>CTA morphs to Import Instance"]
+        V --> W["Download and Stage Instance<br/>Parallel downloads, icon caching, auto-pin"]
     end
 
-    O -->|Copy 8-char code| P
+    O -->|Copy 8-character code| P
 
     style Export fill:#1d1b24,stroke:#8b5cf6,stroke-width:2px,color:#f4f3f6
     style Edge fill:#181620,stroke:#f59e0b,stroke-width:2px,color:#f4f3f6
