@@ -5,7 +5,7 @@ import { checkForUpdates } from "../services/updater";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
-import { IconDownload, IconSearch, IconFolderOpen, IconTrash, IconModrinth, IconCurseForge, IconChevronRight, IconGlobe, IconSettings as IconSettingsIcon, IconLayers, IconCube, IconMonitor, IconBolt, IconX } from "../components/Icons";
+import { IconDownload, IconSearch, IconFolderOpen, IconTrash, IconModrinth, IconCurseForge, IconChevronRight, IconGlobe, IconSettings as IconSettingsIcon, IconLayers, IconCube, IconMonitor, IconBolt, IconX, IconInfo } from "../components/Icons";
 import JavaPathInput from "../components/JavaPathInput";
 import JavaChooserModal from "../modals/JavaChooserModal";
 import Dropdown from "../components/Dropdown";
@@ -15,7 +15,7 @@ import { KEYBINDS, resolveBinding } from "../lib/keybinds";
 import { listen } from "@tauri-apps/api/event";
 import { resolveAssetUrl } from "../lib/assets";
 
-type SettingsTab = "all" | "general" | "resources" | "instances" | "keybinds";
+type SettingsTab = "all" | "general" | "resources" | "instances" | "keybinds" | "about";
 
 /// Clamp a concurrency setting to a per-field range. The download semaphore is
 /// capped at 10 because most CDNs throttle individual clients past that point;
@@ -52,7 +52,8 @@ const Settings: Component = () => {
   };
 
   // Section-level matching: when query matches a section name or primary concept, show that whole section
-  const isGeneralSection = () => matches("general", "launcher", "core preferences", "startup", "about", "vermeil");
+  const isGeneralSection = () => matches("general", "launcher", "core preferences", "startup");
+  const isAboutSection = () => matches("about", "version", "release", "channel", "updates", "update");
   const isResourcesSection = () => matches("resources", "resource", "storage", "performance", "java", "memory", "cache", "concurrency", "download", "write");
   const isInstancesSection = () => matches("instance", "instances", "global instance", "defaults", "video", "graphics", "sound", "audio", "window", "display", "ram");
   const isKeybindsSection = () => matches("keybind", "keybinds", "keyboard", "shortcuts", "shortcut", "hotkey", "hotkeys", "bindings", "controls");
@@ -64,16 +65,15 @@ const Settings: Component = () => {
     "Auto-hide dock", "Hide floating dock across all screens until hovered", "dock", "autohide", "floating dock",
     "Pagination dock position", "Position and orientation of the pagination dock", "pagination", "page dock",
     "Auto-update launcher", "Automatically checks for updates", "update", "updates", "updater",
-    "Release Channel", "Update channel", "channel", "stable", "experimental",
     "Boot splash", "Show the animated logo splash on startup", "splash", "startup", "boot",
     "Discord Rich Presence", "Display playing status", "discord", "rpc", "rich presence",
     "Show snapshots", "Include experimental versions", "snapshots", "snapshot", "experimental",
     "Force delete", "Skip confirmation when deleting instances", "delete", "remove", "confirmation",
-    "Download notifications", "Show toast notifications when downloads start and complete", "toasts", "download toast", "notifications",
-    "Check for updates", "Manually check for a new version"
+    "Download notifications", "Show toast notifications when downloads start and complete", "toasts", "download toast", "notifications"
   );
-  const matchesAbout = () => isGeneralSection() || matches(
-    "About", "Vermeil", "Version", "Website", "vermeillauncher.app",
+  const matchesAbout = () => isAboutSection() || matches(
+    "About", "Vermeil", "Version", "Release Channel", "Update channel", "channel", "stable", "experimental",
+    "Check for updates", "Manually check for a new version", "Website", "vermeillauncher.app",
     "Privacy", "No data is collected", "telemetry", "Disclaimer", "unofficial Minecraft launcher"
   );
 
@@ -110,13 +110,13 @@ const Settings: Component = () => {
     "Memory", "RAM", "Maximum RAM", "Maximum memory", "allocation", "adaptive", "heap", "mb", "gb"
   );
 
-  const matchesGeneral = () => matchesLauncher() || matchesAbout();
+  const matchesGeneral = () => matchesLauncher();
   const matchesResources = () => matchesStorage() || matchesPerformance() || matchesJava();
   const matchesInstances = () => matchesVideo() || matchesAccessibility() || matchesControls() || matchesAudio() || matchesWindow() || matchesMemory() ||
     (instances() || []).some(i => matches(i.name, i.game_version, i.loader.type));
   const matchesKeybinds = () => isKeybindsSection() || KEYBINDS.some(a => matches(a.label, a.description, a.default));
 
-  const hasAnyMatches = () => !isSearching() || matchesGeneral() || matchesResources() || matchesInstances() || matchesKeybinds();
+  const hasAnyMatches = () => !isSearching() || matchesGeneral() || matchesAbout() || matchesResources() || matchesInstances() || matchesKeybinds();
   const [settings, { refetch, mutate }] = createResource(getSettings);
   const [appVersion] = createResource(getVersion);
   const [appDirectory] = createResource(getAppDirectory);
@@ -577,6 +577,14 @@ const Settings: Component = () => {
               <IconBolt />
               <span>Keybinds</span>
             </button>
+            <button
+              type="button"
+              class={`settings-nav-btn ${tab() === "about" && !isSearching() ? "active" : ""}`}
+              onClick={() => { setTab("about"); setSearch(""); }}
+            >
+              <IconInfo />
+              <span>About</span>
+            </button>
           </div>
         </aside>
 
@@ -589,7 +597,7 @@ const Settings: Component = () => {
             <div class="page-header">
               <div class="page-title-group">
                 <div class="page-title">General</div>
-                <div class="page-subtitle">Core launcher preferences, startup options, and updates</div>
+                <div class="page-subtitle">Core launcher preferences and client lifecycle options</div>
               </div>
             </div>
 
@@ -799,133 +807,6 @@ const Settings: Component = () => {
                         </div>
                       </Show>
 
-                      {/* Update Release Channel Selector */}
-                      <Show when={isGeneralSection() || matches("Release Channel", "Update channel", "channel", "stable", "experimental")}>
-                        <div class="setting-row">
-                          <div class="setting-info">
-                            <span class="setting-name">Release Channel</span>
-                            <span class="setting-desc">
-                              {activeChannel() === "experimental"
-                                ? "Opted in to bleeding-edge test builds"
-                                : "Standard verified production releases"}
-                            </span>
-                          </div>
-                          <div class="setting-control">
-                            <div class="update-channel-pills">
-                              <button
-                                type="button"
-                                class={`update-channel-pill ${activeChannel() === "stable" ? "active" : ""}`}
-                                onClick={() => handleChannelSwitch("stable")}
-                              >
-                                Stable
-                              </button>
-                              <button
-                                type="button"
-                                class={`update-channel-pill ${activeChannel() === "experimental" ? "active" : ""}`}
-                                onClick={() => handleChannelSwitch("experimental")}
-                              >
-                                Experimental
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </Show>
-
-                      <Show when={isGeneralSection() || matches("Check for updates", "Manually check for a new version", "update")}>
-                        <div class="setting-row">
-                          <div class="setting-info">
-                            <span class="setting-name">Check for updates</span>
-                            <span class="setting-desc">
-                              Check for new releases on the {activeChannel() === "experimental" ? "Experimental" : "Stable"} channel
-                            </span>
-                          </div>
-                          <div class="setting-control">
-                            <button
-                              class="btn btn--sm"
-                              onClick={() => checkForUpdates(false, activeChannel() === "stable" && isCurrentExperimental())}
-                            >
-                              Check now
-                            </button>
-                          </div>
-                        </div>
-                      </Show>
-                    </div>
-                  </div>
-                </div>
-              </Show>
-
-              <Show when={!isSearching() || matchesAbout()}>
-                <div class="card-gamemode-section">
-                  <div class="card-section-header">
-                    <span class="card-section-tag tag-settings-about">ABOUT</span>
-                    <span class="card-section-label">About Vermeil</span>
-                    <span class="card-section-desc">Version info, privacy, and community links</span>
-                  </div>
-
-                  <div class="card-section-body">
-                    <div class="setting-card-grid">
-                      <Show when={isGeneralSection() || matches("Vermeil", "Version", appVersion())}>
-                        <div class="setting-row">
-                          <div class="setting-info">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                              <span class="setting-name">Vermeil</span>
-                              <span
-                                class="card-section-tag"
-                                style={`font-size: 10px; font-weight: 700; padding: 2px 6px; letter-spacing: 0.5px; background: ${isCurrentExperimental() ? "rgba(234, 179, 8, 0.15)" : "rgba(16, 185, 129, 0.15)"}; color: ${isCurrentExperimental() ? "#eab308" : "#10b981"}; border: 1px solid ${isCurrentExperimental() ? "rgba(234, 179, 8, 0.3)" : "rgba(16, 185, 129, 0.3)"};`}
-                              >
-                                {isCurrentExperimental() ? "EXPERIMENTAL" : "STABLE"}
-                              </span>
-                            </div>
-                            <span class="setting-desc">Version {appVersion() || "..."}</span>
-                          </div>
-                          <div class="setting-control">
-                            <button class="btn btn--sm tip-left" onClick={() => openUrl("https://github.com/Davekb1976/Vermeil-Launcher")} data-tip="GitHub Repository" aria-label="GitHub Repository">
-                              <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-                            </button>
-                          </div>
-                        </div>
-                      </Show>
-
-                      <Show when={isGeneralSection() || matches("Website", "vermeillauncher.app")}>
-                        <div class="setting-row">
-                          <div class="setting-info">
-                            <span class="setting-name">Website</span>
-                            <span class="setting-desc">vermeillauncher.app</span>
-                          </div>
-                          <div class="setting-control">
-                            <button class="btn btn--sm" onClick={() => openUrl("https://vermeillauncher.app/")}>
-                              <IconGlobe />
-                              Visit
-                            </button>
-                          </div>
-                        </div>
-                      </Show>
-
-                      <Show when={isGeneralSection() || matches("Privacy", "No data is collected")}>
-                        <div class="setting-row">
-                          <div class="setting-info">
-                            <span class="setting-name">Privacy</span>
-                            <span class="setting-desc">Zero telemetry, all data on device</span>
-                          </div>
-                          <div class="setting-control">
-                            <button class="btn btn--sm" onClick={() => openUrl("https://github.com/Davekb1976/Vermeil-Launcher/blob/main/PRIVACY.md")}>
-                              Read policy
-                            </button>
-                          </div>
-                        </div>
-                      </Show>
-
-                      <Show when={isGeneralSection() || matches("Disclaimer", "unofficial Minecraft launcher")}>
-                        <div class="setting-row full">
-                          <div class="setting-info">
-                            <span class="setting-name">Disclaimer</span>
-                            <span class="setting-desc" style="line-height:1.5">
-                              Vermeil is an unofficial Minecraft launcher. Not affiliated with, endorsed by, or sponsored by Mojang Studios or Microsoft.
-                              Minecraft is a trademark of Mojang Synergies AB.
-                            </span>
-                          </div>
-                        </div>
-                      </Show>
                     </div>
                   </div>
                 </div>
@@ -2044,6 +1925,150 @@ const Settings: Component = () => {
 
                   <div class="card-section-hint" style="margin-top:4px">
                     Click a binding and press the new key combination. Escape cancels capture. The reset arrow restores default.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Show>
+
+        {/* ═══ ABOUT ═══ */}
+        <Show when={isSearching() ? matchesAbout() : (tab() === "all" || tab() === "about")}>
+          <div class="settings-category">
+            <div class="page-header">
+              <div class="page-title-group">
+                <div class="page-title">About</div>
+                <div class="page-subtitle">Version info, release channels, and community links</div>
+              </div>
+            </div>
+
+            <div class="cards-container">
+              <div class="card-gamemode-section">
+                <div class="card-section-header">
+                  <span class="card-section-tag tag-settings-about">ABOUT</span>
+                  <span class="card-section-label">About Vermeil</span>
+                  <span class="card-section-desc">Version info, release channels, and community links</span>
+                </div>
+
+                <div class="card-section-body">
+                  <div class="setting-card-grid">
+                    <Show when={isAboutSection() || matches("Vermeil", "Version", appVersion())}>
+                      <div class="setting-row">
+                        <div class="setting-info">
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="setting-name">Vermeil</span>
+                            <span
+                              class="card-section-tag"
+                              style={`font-size: 10px; font-weight: 700; padding: 2px 6px; letter-spacing: 0.5px; background: ${isCurrentExperimental() ? "rgba(234, 179, 8, 0.15)" : "rgba(16, 185, 129, 0.15)"}; color: ${isCurrentExperimental() ? "#eab308" : "#10b981"}; border: 1px solid ${isCurrentExperimental() ? "rgba(234, 179, 8, 0.3)" : "rgba(16, 185, 129, 0.3)"};`}
+                            >
+                              {isCurrentExperimental() ? "EXPERIMENTAL" : "STABLE"}
+                            </span>
+                          </div>
+                          <span class="setting-desc">Version {appVersion() || "..."}</span>
+                        </div>
+                        <div class="setting-control">
+                          <button class="btn btn--sm tip-left" onClick={() => openUrl("https://github.com/Davekb1976/Vermeil-Launcher")} data-tip="GitHub Repository" aria-label="GitHub Repository">
+                            <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                          </button>
+                        </div>
+                      </div>
+                    </Show>
+
+                    {/* Release Channel Selector */}
+                    <Show when={isAboutSection() || matches("Release Channel", "Update channel", "channel", "stable", "experimental")}>
+                      <div class="setting-row">
+                        <div class="setting-info">
+                          <span class="setting-name">Release Channel</span>
+                          <span class="setting-desc">
+                            {activeChannel() === "experimental"
+                              ? "Opted in to bleeding-edge test builds"
+                              : "Standard verified production releases"}
+                          </span>
+                        </div>
+                        <div class="setting-control">
+                          <div class="update-channel-pills">
+                            <button
+                              type="button"
+                              class={`update-channel-pill ${activeChannel() === "stable" ? "active" : ""}`}
+                              onClick={() => handleChannelSwitch("stable")}
+                            >
+                              Stable
+                            </button>
+                            <button
+                              type="button"
+                              class={`update-channel-pill ${activeChannel() === "experimental" ? "active" : ""}`}
+                              onClick={() => handleChannelSwitch("experimental")}
+                            >
+                              Experimental
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </Show>
+
+                    {/* Check for updates */}
+                    <Show when={isAboutSection() || matches("Check for updates", "Manually check for a new version", "update")}>
+                      <div class="setting-row">
+                        <div class="setting-info">
+                          <span class="setting-name">Check for updates</span>
+                          <span class="setting-desc">
+                            Check for new releases on the {activeChannel() === "experimental" ? "Experimental" : "Stable"} channel
+                          </span>
+                        </div>
+                        <div class="setting-control">
+                          <button
+                            class="btn btn--sm"
+                            onClick={() => checkForUpdates(false, activeChannel() === "stable" && isCurrentExperimental())}
+                          >
+                            Check now
+                          </button>
+                        </div>
+                      </div>
+                    </Show>
+
+                    {/* Website */}
+                    <Show when={isAboutSection() || matches("Website", "vermeillauncher.app")}>
+                      <div class="setting-row">
+                        <div class="setting-info">
+                          <span class="setting-name">Website</span>
+                          <span class="setting-desc">vermeillauncher.app</span>
+                        </div>
+                        <div class="setting-control">
+                          <button class="btn btn--sm" onClick={() => openUrl("https://vermeillauncher.app/")}>
+                            <IconGlobe />
+                            Visit
+                          </button>
+                        </div>
+                      </div>
+                    </Show>
+
+                    {/* Privacy */}
+                    <Show when={isAboutSection() || matches("Privacy", "No data is collected")}>
+                      <div class="setting-row">
+                        <div class="setting-info">
+                          <span class="setting-name">Privacy</span>
+                          <span class="setting-desc">Zero telemetry, all data on device</span>
+                        </div>
+                        <div class="setting-control">
+                          <button class="btn btn--sm" onClick={() => openUrl("https://github.com/Davekb1976/Vermeil-Launcher/blob/main/PRIVACY.md")}>
+                            Read policy
+                          </button>
+                        </div>
+                      </div>
+                    </Show>
+
+                    {/* Disclaimer */}
+                    <Show when={isAboutSection() || matches("Disclaimer", "unofficial Minecraft launcher")}>
+                      <div class="setting-row full">
+                        <div class="setting-info">
+                          <span class="setting-name">Disclaimer</span>
+                          <span class="setting-desc" style="line-height:1.5">
+                            Vermeil is an unofficial Minecraft launcher. Not affiliated with, endorsed by, or sponsored by Mojang Studios or Microsoft.
+                            Minecraft is a trademark of Mojang Synergies AB.
+                          </span>
+                        </div>
+                      </div>
+                    </Show>
                   </div>
                 </div>
               </div>
