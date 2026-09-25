@@ -181,16 +181,16 @@ The relay lives at `https://share.vermeillauncher.workers.dev` and performs 4 es
 
 ### D1 Database Schema
 ```sql
-CREATE TABLE IF NOT EXISTS share_codes (
-    id TEXT PRIMARY KEY,             -- 8-char Base62 code (e.g. 'A7K92P4M')
-    payload_hash TEXT NOT NULL,      -- SHA-256 hex string of the blueprint payload
+CREATE TABLE IF NOT EXISTS shares (
+    code TEXT PRIMARY KEY,           -- 13-char code (e.g. 'VML-A7K9-2P4M')
     payload TEXT NOT NULL,           -- Compressed or compact JSON payload (<= 64 KB)
+    content_hash TEXT NOT NULL,      -- SHA-256 hex string of the blueprint payload
     created_at INTEGER NOT NULL,     -- Unix epoch in seconds
     expires_at INTEGER NOT NULL      -- Unix epoch in seconds (created_at + 180)
 );
 
-CREATE INDEX IF NOT EXISTS idx_share_codes_hash ON share_codes (payload_hash);
-CREATE INDEX IF NOT EXISTS idx_share_codes_expires ON share_codes (expires_at);
+CREATE INDEX IF NOT EXISTS idx_shares_expires ON shares (expires_at);
+CREATE INDEX IF NOT EXISTS idx_shares_hash ON shares (content_hash);
 ```
 
 ---
