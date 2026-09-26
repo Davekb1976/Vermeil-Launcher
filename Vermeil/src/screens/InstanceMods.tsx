@@ -10,8 +10,8 @@ import ModDetailModal from "../modals/ModDetailModal";
 import ChangeLoaderModal, { openChangeLoaderModal } from "../modals/ChangeLoaderModal";
 import { openPinInstancesModal } from "../modals/PinInstancesModal";
 import { formatDownloads, formatSize, formatVersionRange } from "../lib/format";
-import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, saveSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled, getInstance, exportShareCode } from "../ipc/commands";
-import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconAlertTriangle, IconFolderOpen, IconChevronDown, IconImage, IconDownload, IconHeart, IconShare2, IconPin } from "../components/Icons";
+import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, saveSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled, getInstance, exportShareCode, getModVersions, getCfModFiles } from "../ipc/commands";
+import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconAlertTriangle, IconFolderOpen, IconChevronDown, IconImage, IconDownload, IconHeart, IconShare2, IconPin, IconPackage } from "../components/Icons";
 import { enqueueInstallTask, isTaskQueuedOrActive, isTaskActive, isTaskQueued } from "../services/modpackQueue";
 
 import { resolveAssetUrl } from "../lib/assets";
@@ -55,6 +55,49 @@ function detectCategory(mod: ModHit): "mod" | "resourcepack" | "shader" | "datap
   if (cats.some(c => c.toLowerCase().includes("resource") || c.toLowerCase().includes("texture"))) return "resourcepack";
   if (cats.some(c => c.toLowerCase().includes("data") || c.toLowerCase().includes("datapack"))) return "datapack";
   return "mod";
+}
+
+/**
+ * Test whether a mod search hit claims compatibility with the target instance.
+ *
+ * For resource packs and shaders, only Minecraft version compatibility applies.
+ * For mods, loader compatibility is also validated.
+ */
+function checkModCompatibility(
+  mod: ModHit,
+  gameVersion: string,
+  loader: string,
+  category: string
+): boolean {
+  if (!mod.versions || mod.versions.length === 0) {
+    // No version metadata available; let backend decide
+    return true;
+  }
+
+  const stripPre = (s: string) => s.split(/-pre|-rc|-experimental|-snapshot|-beta|-alpha/)[0];
+  const targetBase = stripPre(gameVersion);
+
+  const matchesGameVersion = mod.versions.some(v => v === gameVersion || stripPre(v) === targetBase);
+  if (!matchesGameVersion) {
+    return false;
+  }
+
+  // Loader check for mods/datapacks
+  if (category === "mod" && loader && loader !== "vanilla") {
+    const knownLoaders = ["fabric", "forge", "neoforge", "quilt"];
+    const modLoaders = (mod.categories || []).map(c => c.toLowerCase()).filter(c => knownLoaders.includes(c));
+    if (modLoaders.length > 0) {
+      const targetLoader = loader.toLowerCase();
+      if (targetLoader === "quilt" && (modLoaders.includes("quilt") || modLoaders.includes("fabric"))) {
+        return true;
+      }
+      if (!modLoaders.includes(targetLoader)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 function formatPlaytime(seconds: number): string {
@@ -322,6 +365,19 @@ const InstanceMods: Component = () => {
   const [modSource, setModSource] = createSignal<"modrinth" | "curseforge">("modrinth");
   /** Browse result shown in the detail overlay, if any. */
   const [detailMod, setDetailMod] = createSignal<ModHit | null>(null);
+
+  interface IncompatiblePrompt {
+    mod: ModHit;
+    category: string;
+    gameVersion: string;
+    loader: string;
+    latestVersionId?: string;
+    latestVersionName?: string;
+    supportedVersions: string[];
+    resolvingVersion: boolean;
+  }
+  const [incompatiblePrompt, setIncompatiblePrompt] = createSignal<IncompatiblePrompt | null>(null);
+
   const [localInstalled, setLocalInstalled] = createSignal<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = createSignal(false);
   const [deleteCountdown, setDeleteCountdown] = createSignal(5);
@@ -348,12 +404,19 @@ const InstanceMods: Component = () => {
     onCleanup(() => document.removeEventListener("mousedown", handleClickOutside));
   }
 
-  // Escape exits multi-select mode in the Browse tab
+  // Escape exits multi-select mode in the Browse tab or dismisses compatibility prompt
   {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && selectMode()) {
-        setSelectMode(false);
-        setSelectedItems(new Map());
+      if (e.key === "Escape") {
+        if (incompatiblePrompt()) {
+          setIncompatiblePrompt(null);
+          return;
+        }
+        if (selectMode()) {
+          setSelectMode(false);
+          setSelectedItems(new Map());
+          return;
+        }
       }
     };
     onMount(() => document.addEventListener("keydown", handleKey));
@@ -1007,38 +1070,124 @@ const InstanceMods: Component = () => {
         author: mod.author,
       },
       execute: async (dlId: string) => {
-        const resultJson = modSource() === "curseforge"
-          ? await installCfModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId)
-          : await installModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId);
-        setLocalInstalled(prev => { const s = new Set(prev); s.add(mod.project_id); return s; });
         try {
-          const result = JSON.parse(resultJson);
-          const depsInstalled: number = result.deps_installed ?? 0;
-          const depTitles: string[] = result.dep_titles ?? [];
-          const depIssues: DependencyIssue[] = result.issues ?? [];
-          const vnum: string | undefined = result.mod_entry?.version_number ?? undefined;
-          if (depsInstalled > 0) {
-            // Show up to 3 dep titles inline; fall back to count for the rest.
-            const preview = depTitles.slice(0, 3).join(", ");
-            const more = depTitles.length > 3 ? ` +${depTitles.length - 3} more` : "";
-            const message = depTitles.length > 0
-              ? `${mod.title} with ${preview}${more}`
-              : `${mod.title} (+${depsInstalled} dep${depsInstalled === 1 ? "" : "s"})`;
-            completeDownload(dlId, message, vnum);
-          } else {
-            completeDownload(dlId, undefined, vnum);
+          const resultJson = modSource() === "curseforge"
+            ? await installCfModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId)
+            : await installModToInstance(inst.id, mod.project_id, inst.loader.type, inst.game_version, cat, versionId);
+          setLocalInstalled(prev => { const s = new Set(prev); s.add(mod.project_id); return s; });
+          try {
+            const result = JSON.parse(resultJson);
+            const depsInstalled: number = result.deps_installed ?? 0;
+            const depTitles: string[] = result.dep_titles ?? [];
+            const depIssues: DependencyIssue[] = result.issues ?? [];
+            const vnum: string | undefined = result.mod_entry?.version_number ?? undefined;
+            if (depsInstalled > 0) {
+              // Show up to 3 dep titles inline; fall back to count for the rest.
+              const preview = depTitles.slice(0, 3).join(", ");
+              const more = depTitles.length > 3 ? ` +${depTitles.length - 3} more` : "";
+              const message = depTitles.length > 0
+                ? `${mod.title} with ${preview}${more}`
+                : `${mod.title} (+${depsInstalled} dep${depsInstalled === 1 ? "" : "s"})`;
+              completeDownload(dlId, message, vnum);
+            } else {
+              completeDownload(dlId, undefined, vnum);
+            }
+            // Show structured per-dep modal for missing/incompatible/failed deps.
+            if (depIssues.length > 0) {
+              reportDependencyIssues(mod.title, depIssues);
+            }
+          } catch {
+            completeDownload(dlId);
           }
-          // Show structured per-dep modal for missing/incompatible/failed deps.
-          if (depIssues.length > 0) {
-            reportDependencyIssues(mod.title, depIssues);
+          await refetchInstances();
+          await refetchDetail();
+        } catch (err: any) {
+          const errStr = typeof err === "string" ? err : (err?.message || String(err));
+          // If automatic resolution failed because no strictly compatible release was found,
+          // prompt the user so they can force-install the latest available release.
+          const isCompatIssue = !versionId && (
+            errStr.toLowerCase().includes("supports mc") ||
+            errStr.toLowerCase().includes("no compatible version") ||
+            errStr.toLowerCase().includes("no version satisfies") ||
+            errStr.toLowerCase().includes("supports fabric") ||
+            errStr.toLowerCase().includes("supports forge") ||
+            errStr.toLowerCase().includes("supports neoforge")
+          );
+
+          if (isCompatIssue) {
+            failDownload(dlId, "Compatibility issue — confirmation required");
+            handleCardInstall(mod, true);
+            return;
           }
-        } catch {
-          completeDownload(dlId);
+          throw err;
         }
-        await refetchInstances();
-        await refetchDetail();
       },
     });
+  };
+
+  /**
+   * Card "+ Install" handler.
+   * Checks compatibility upfront:
+   * - If compatible: installs immediately (1-click install).
+   * - If not strictly compatible: prompts user via Compatibility Notice modal,
+   *   allowing them to force-install the latest version anyway, browse all versions,
+   *   or cancel.
+   */
+  const handleCardInstall = async (mod: ModHit, forcePrompt: boolean = false) => {
+    const inst = instance();
+    if (!inst) return;
+    const cat = browseFilter() === "all" ? detectCategory(mod) : browseFilter();
+    if (!forcePrompt && checkModCompatibility(mod, inst.game_version, inst.loader.type, cat)) {
+      handleInstallMod(mod);
+      return;
+    }
+
+    const initialLatestId = mod.latest_version || undefined;
+    const initialLatestName = mod.version_name || undefined;
+
+    setIncompatiblePrompt({
+      mod,
+      category: cat,
+      gameVersion: inst.game_version,
+      loader: inst.loader.type,
+      latestVersionId: initialLatestId,
+      latestVersionName: initialLatestName,
+      supportedVersions: mod.versions || [],
+      resolvingVersion: !initialLatestId,
+    });
+
+    if (!initialLatestId) {
+      try {
+        if (modSource() === "curseforge") {
+          const files = await getCfModFiles(mod.project_id, inst.loader.type, inst.game_version);
+          if (files && files.length > 0) {
+            setIncompatiblePrompt(prev => prev && prev.mod.project_id === mod.project_id ? {
+              ...prev,
+              latestVersionId: files[0].id,
+              latestVersionName: files[0].name || prev.latestVersionName,
+              resolvingVersion: false,
+            } : prev);
+          } else {
+            setIncompatiblePrompt(prev => prev ? { ...prev, resolvingVersion: false } : null);
+          }
+        } else {
+          const versions = await getModVersions(mod.project_id, inst.loader.type, inst.game_version, cat);
+          if (versions && versions.length > 0) {
+            setIncompatiblePrompt(prev => prev && prev.mod.project_id === mod.project_id ? {
+              ...prev,
+              latestVersionId: versions[0].id,
+              latestVersionName: versions[0].name || prev.latestVersionName,
+              resolvingVersion: false,
+            } : prev);
+          } else {
+            setIncompatiblePrompt(prev => prev ? { ...prev, resolvingVersion: false } : null);
+          }
+        }
+      } catch (e) {
+        console.warn("Could not resolve latest version for prompt:", e);
+        setIncompatiblePrompt(prev => prev ? { ...prev, resolvingVersion: false } : null);
+      }
+    }
   };
 
   const toggleSelectItem = (mod: ModHit) => {
@@ -2466,7 +2615,7 @@ const InstanceMods: Component = () => {
                           /* stopPropagation so installing doesn't also toggle
                              the card's detail view. */
                           <button class="btn btn--sm btn--primary" disabled={isTaskQueuedOrActive(mod.project_id, instance()?.id)}
-                            onClick={(e) => { e.stopPropagation(); handleInstallMod(mod); }}>
+                            onClick={(e) => { e.stopPropagation(); handleCardInstall(mod); }}>
                             {isTaskActive(mod.project_id, instance()?.id) ? "..." : isTaskQueued(mod.project_id, instance()?.id) ? "Queued" : "+ Install"}
                           </button>
                         }>
@@ -2512,6 +2661,146 @@ const InstanceMods: Component = () => {
                 handleInstallMod(m, v.id);
               }}
             />
+            {/* Compatibility Confirmation Modal */}
+            <Show when={incompatiblePrompt()}>
+              {(prompt) => (
+                <div class="modal-overlay" onClick={() => setIncompatiblePrompt(null)}>
+                  <div
+                    class="modal panel panel--bracketed"
+                    style="max-width: 500px; width: 100%;"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div class="modal-header">
+                      <div class="modal-header-left">
+                        <span class="card-section-tag tag-settings-accent">
+                          COMPATIBILITY NOTICE
+                        </span>
+                        <span class="modal-title">
+                          No Matching Version Found
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px;">
+                      {/* Target Content Banner */}
+                      <div style="display: flex; align-items: center; gap: 14px; padding: 12px; background: #0f0e13; border: 1px solid var(--border); border-radius: var(--radius-sm, 4px);">
+                        <div style="width: 44px; height: 44px; border-radius: var(--radius-sm, 4px); overflow: hidden; background: var(--surface-panel); display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border);">
+                          <Show
+                            when={prompt().mod.icon_url}
+                            fallback={<span style="color: var(--accent);"><IconPackage /></span>}
+                          >
+                            <img
+                              src={prompt().mod.icon_url!}
+                              alt=""
+                              style="width: 100%; height: 100%; object-fit: cover;"
+                            />
+                          </Show>
+                        </div>
+                        <div style="display: flex; flex-direction: column; min-width: 0; flex: 1;">
+                          <span style="font-weight: 600; font-size: var(--fs-md, 14px); color: var(--text-bright, #fff); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            {prompt().mod.title}
+                          </span>
+                          <span style="font-size: var(--fs-xs, 12px); color: var(--text-subtle, #888); text-transform: capitalize;">
+                            {prompt().category === "resourcepack" ? "Resource Pack" : prompt().category === "shader" ? "Shader Pack" : prompt().category}
+                            {prompt().mod.author ? ` · by ${prompt().mod.author}` : ""}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Explanation Text */}
+                      <div style="font-size: var(--fs-sm, 13px); line-height: 1.5; color: var(--text);">
+                        <p style="margin: 0 0 10px 0;">
+                          No release strictly targeting <strong>Minecraft {prompt().gameVersion}</strong>
+                          <Show when={prompt().category === "mod" && prompt().loader && prompt().loader !== "vanilla"}>
+                            {" "}(<strong>{prompt().loader}</strong>)
+                          </Show>{" "}
+                          was found for this {prompt().category === "resourcepack" ? "resource pack" : prompt().category === "shader" ? "shader" : "content"}.
+                        </p>
+                        <Show
+                          when={prompt().category === "resourcepack" || prompt().category === "shader"}
+                          fallback={
+                            <p style="margin: 0; color: var(--warning, #eab308);">
+                              Installing an incompatible mod may cause Minecraft to crash during startup or corrupt instance state.
+                            </p>
+                          }
+                        >
+                          <p style="margin: 0; color: var(--text-subtle);">
+                            Resource packs and shaders frequently continue to work across Minecraft releases. You can force-install the latest available build or browse all files.
+                          </p>
+                        </Show>
+                      </div>
+
+                      {/* Version details box */}
+                      <div style="display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); font-size: var(--fs-xs, 12px);">
+                        <div style="display: flex; justify-content: space-between; gap: 12px;">
+                          <span style="color: var(--text-subtle);">Instance target:</span>
+                          <span style="font-weight: 500; color: var(--text-bright);">
+                            Minecraft {prompt().gameVersion}
+                            <Show when={prompt().loader && prompt().loader !== "vanilla"}>
+                              {" "}· {prompt().loader}
+                            </Show>
+                          </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; gap: 12px;">
+                          <span style="color: var(--text-subtle);">Latest available build:</span>
+                          <span style="font-weight: 500; color: var(--accent);">
+                            <Show when={!prompt().resolvingVersion} fallback={"Resolving..."}>
+                              {prompt().latestVersionName || prompt().latestVersionId || "Latest release"}
+                            </Show>
+                          </span>
+                        </div>
+                        <Show when={prompt().supportedVersions.length > 0}>
+                          <div style="display: flex; justify-content: space-between; gap: 12px;">
+                            <span style="color: var(--text-subtle);">Known versions:</span>
+                            <span style="color: var(--text); text-align: right; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" data-tip={prompt().supportedVersions.join(", ")}>
+                              {prompt().supportedVersions.slice(0, 5).join(", ")}
+                              {prompt().supportedVersions.length > 5 ? ` +${prompt().supportedVersions.length - 5} more` : ""}
+                            </span>
+                          </div>
+                        </Show>
+                      </div>
+                    </div>
+
+                    {/* Modal Footer with Actions */}
+                    <div class="modal-footer" style="display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                      <button
+                        type="button"
+                        class="btn btn--subtle"
+                        onClick={() => setIncompatiblePrompt(null)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn--secondary"
+                        onClick={() => {
+                          const p = prompt();
+                          setIncompatiblePrompt(null);
+                          setDetailMod(p.mod);
+                        }}
+                      >
+                        Browse All Versions
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn--primary"
+                        disabled={prompt().resolvingVersion || !prompt().latestVersionId}
+                        onClick={() => {
+                          const p = prompt();
+                          setIncompatiblePrompt(null);
+                          if (p.latestVersionId) {
+                            handleInstallMod(p.mod, p.latestVersionId);
+                          }
+                        }}
+                      >
+                        <IconDownload />
+                        <span>Install Latest Anyway</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Show>
             {/* Bulk install floating bar */}
             <Show when={selectMode() && selectedItems().size > 0 && !bulkInstalling()}>
               <div class="bulk-install-bar">

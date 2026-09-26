@@ -339,8 +339,11 @@ pub async fn get_cf_mod_files(
     // does filter, installs fine. The loader is deliberately left unfiltered so
     // other loaders' files still appear and get marked incompatible, which is
     // what makes "show all" worth having here.
-    let files =
+    let mut files =
         crate::services::curseforge::get_project_files(&api_key, &mod_id, &game_version, "").await?;
+    if files.is_empty() && !game_version.is_empty() {
+        files = crate::services::curseforge::get_project_files(&api_key, &mod_id, "", "").await?;
+    }
     let recommended_id = find_preferred_file(&files, &game_version, &loader).map(|f| f.file_id);
 
     let mut out: Vec<ContentVersion> = files
