@@ -357,13 +357,13 @@ const ImportInstance: Component = () => {
                     setError(null);
                   }}
                 >
-                  <div class="import-tab-icon" style="color: var(--accent); background: rgba(139, 92, 246, 0.14); border: 1px solid rgba(139, 92, 246, 0.35);">
+                  <div class="import-tab-icon" style="color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);">
                     <IconShare2 />
                   </div>
                   <div class="import-tab-info">
                     <div class="import-tab-top">
                       <span class="import-tab-name">Share Code</span>
-                      <span class="import-tab-tag" style="background: rgba(139, 92, 246, 0.16); color: var(--accent); border: 1px solid rgba(139, 92, 246, 0.4);">VML</span>
+                      <span class="import-tab-tag" style="background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);">VML</span>
                     </div>
                     <div class="import-tab-desc">
                       Paste a serverless VML instance blueprint code
@@ -535,7 +535,7 @@ const ImportInstance: Component = () => {
                                 Custom Instance · {loaderLabel(p().loader_type)} {p().loader_version || ""} · Minecraft {p().game_version} · {p().total_count} total items
                               </span>
                             </div>
-                            <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4);">
+                            <span class="badge" style="background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);">
                               Custom Collection
                             </span>
                           </div>
@@ -873,7 +873,7 @@ const ImportInstance: Component = () => {
                             ? "background:rgba(27,217,106,0.15);color:#4ade80;border:1px solid rgba(27,217,106,0.4);"
                             : activePlatform() === "curseforge"
                               ? "background:rgba(241,100,54,0.15);color:#fb923c;border:1px solid rgba(241,100,54,0.4);"
-                              : "background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.4);"
+                              : "background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent);border:1px solid color-mix(in srgb, var(--accent) 40%, transparent);"
                         }
                       >
                         {activePlatform() === "sharecode"

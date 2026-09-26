@@ -128,7 +128,7 @@
 
 /* Latest line highlight — matches tactile reference with 2.5px purple accent bar & soft background glow */
 .log-line:last-child {
-  background: rgba(139, 92, 246, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   border-left-color: var(--accent);
 }
 .log-line:last-child .log-prompt {
@@ -229,7 +229,7 @@
 }
 .toggle:hover {
   border-color: var(--accent);
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.25);
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 .toggle.on {
   background: var(--surface-sunken);
@@ -237,7 +237,7 @@
 }
 .toggle.on:hover {
   border-color: var(--accent-strong);
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 .toggle::after {
   content: '';
@@ -251,7 +251,7 @@
 .toggle.on::after {
   background: var(--accent);
   transform: scale(1);
-  box-shadow: 0 0 6px rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 6px var(--accent-glow);
 }
 
 /* Instance settings panel */

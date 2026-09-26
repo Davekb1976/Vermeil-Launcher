@@ -575,7 +575,7 @@
   justify-content: center;
   position: relative;
   overflow: hidden;
-  background: radial-gradient(circle at center 60%, rgba(139, 92, 246, 0.06) 0%, transparent 70%), var(--surface-sunken);
+  background: radial-gradient(circle at center 60%, color-mix(in srgb, var(--accent) 6%, transparent) 0%, transparent 70%), var(--surface-sunken);
 }
 
 .skins-particle-canvas {
@@ -712,9 +712,9 @@
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 1px 5px;
-  background: rgba(139, 92, 246, 0.15);
-  color: #c4b5fd;
-  border: 1px solid rgba(139, 92, 246, 0.35);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .skins-mini-btn {
@@ -1076,14 +1076,14 @@
 
 .skins-banner-btn--primary {
   background: var(--accent);
-  border-color: var(--accent-border, #a855f7);
-  color: #fff;
+  border-color: var(--accent-strong);
+  color: var(--accent-contrast, #fff);
   box-shadow: var(--bevel-strong);
 }
 
 .skins-banner-btn--primary:hover:not(:disabled) {
-  background: var(--accent-hover, #9333ea);
-  border-color: var(--accent-hover, #9333ea);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
 }
 
 .skins-banner-btn svg {
@@ -1330,7 +1330,7 @@
   0%, 100% {
     opacity: 1;
     transform: scale(1);
-    filter: drop-shadow(0 0 3px rgba(167, 139, 250, 0.7));
+    filter: drop-shadow(0 0 3px var(--accent-glow));
   }
   50% {
     opacity: 0.65;
@@ -1372,14 +1372,14 @@
 
 /* Microsoft Account badge */
 .home-status-badge--ms {
-  background: rgba(139, 92, 246, 0.18);
-  border: 1px solid rgba(139, 92, 246, 0.4);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
 
 .home-status-badge--ms:hover {
-  background: rgba(139, 92, 246, 0.28);
-  border-color: rgba(139, 92, 246, 0.65);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 65%, transparent);
 }
 
 .home-status-ms-icon {
@@ -1724,7 +1724,7 @@
 
 .continue-empty-hero:hover {
   border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
-  background: rgba(139, 92, 246, 0.03);
+  background: color-mix(in srgb, var(--accent) 3%, transparent);
 }
 
 .continue-empty-icon {
@@ -1881,7 +1881,7 @@
   background: var(--accent-tint);
   border-color: var(--accent);
   color: var(--accent);
-  box-shadow: 0 0 10px rgba(139, 92, 246, 0.35);
+  box-shadow: 0 0 10px var(--accent-glow);
 }
 .log-toolbar-jump svg { width: 13px; height: 13px; }
 .log-toolbar-count {
@@ -1945,12 +1945,12 @@
   box-shadow: none;
 }
 
-/* Active account card — highlighted plate with purple accent frame (Image 2) */
+/* Active account card — highlighted plate with theme accent frame */
 .account-card.active {
   border: 1px solid var(--accent);
   border-left: 3px solid var(--accent);
-  background: rgba(139, 92, 246, 0.08);
-  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.12), var(--bevel);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-panel));
+  box-shadow: 0 4px 16px var(--accent-glow), var(--bevel);
   cursor: default;
 }
 
@@ -1994,7 +1994,7 @@
 }
 
 .account-card.active .account-card-type {
-  color: #a78bfa;
+  color: var(--accent);
 }
 
 /* Expired / re-authentication required badge */
@@ -2021,16 +2021,16 @@
   stroke: currentColor;
 }
 
-/* Active status badge with blinking square dot (Image 2) */
+/* Active status badge with blinking square dot */
 .account-badge-active {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 11px;
   font-weight: 700;
-  background: rgba(139, 92, 246, 0.2);
-  border: 1px solid rgba(139, 92, 246, 0.45);
-  color: #c4b5fd;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent);
   padding: 4px 9px 4px 7px;
   border-radius: 0;
   letter-spacing: 0.02em;
@@ -2043,8 +2043,8 @@
   width: 6px;
   height: 6px;
   border-radius: 0;
-  background: #a78bfa;
-  box-shadow: 0 0 6px rgba(167, 139, 250, 0.85);
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
   animation: accountSquareDotBlink 1.4s ease-in-out infinite;
   flex-shrink: 0;
 }
@@ -2053,12 +2053,12 @@
   0%, 100% {
     opacity: 1;
     transform: scale(1);
-    box-shadow: 0 0 6px rgba(167, 139, 250, 0.9);
+    box-shadow: 0 0 6px var(--accent-glow);
   }
   50% {
     opacity: 0.25;
     transform: scale(0.85);
-    box-shadow: 0 0 1px rgba(167, 139, 250, 0.2);
+    box-shadow: 0 0 1px transparent;
   }
 }
 
@@ -2087,11 +2087,11 @@
               box-shadow 0.08s cubic-bezier(0.2, 0, 0, 1);
 }
 
-/* In active card: purple border outline (Image 2) */
+/* In active card: theme border outline */
 .account-card.active .account-card-remove {
-  border-color: #a78bfa;
-  background: rgba(139, 92, 246, 0.12);
-  color: #c4b5fd;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
@@ -2101,10 +2101,10 @@
   transition: transform 0.08s;
 }
 
-/* Hover: physically PRESSED DOWN, turns salmon/red with lavender/purple border (Image 1 & 3) */
+/* Hover: physically PRESSED DOWN, turns red with theme border */
 .account-card-remove:hover {
   background: #d65d5d !important;
-  border-color: #a78bfa !important;
+  border-color: var(--accent) !important;
   color: #ffffff !important;
   transform: translateY(3px) !important;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35) !important;
@@ -2367,14 +2367,14 @@
   padding: 12px 14px;
   background: var(--surface-panel);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
   box-sizing: border-box;
 }
 
 .account-security-icon {
   width: 18px;
   height: 18px;
-  color: #a78bfa;
+  color: var(--accent);
   flex-shrink: 0;
   margin-top: 1px;
 }
@@ -2864,7 +2864,7 @@
   flex-shrink: 0;
   background: var(--accent-soft);
   color: var(--accent);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   box-shadow: var(--bevel);
 }
 .dl-active-card.dl-active-done .dl-active-icon-badge {
@@ -2988,7 +2988,7 @@
 .dl-queue-card {
   background: var(--surface-panel);
   border: 1px solid var(--border-strong);
-  border-left: 3px solid rgba(139, 92, 246, 0.45);
+  border-left: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
   box-shadow: var(--bevel);
   padding: var(--space-2) var(--space-3);
   display: flex;
@@ -3563,7 +3563,7 @@
 .continue-placeholder:hover {
   opacity: 1;
   border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
-  background: rgba(139, 92, 246, 0.03);
+  background: color-mix(in srgb, var(--accent) 3%, transparent);
 }
 
 .continue-placeholder-thumb {
@@ -3814,7 +3814,7 @@
 }
 
 .cape-preview-well {
-  background: radial-gradient(circle at center 60%, rgba(139, 92, 246, 0.08) 0%, transparent 70%), var(--surface-sunken);
+  background: radial-gradient(circle at center 60%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 70%), var(--surface-sunken);
 }
 
 .cape-preview-canvas {
@@ -3841,13 +3841,13 @@
   border: 1px dashed var(--accent);
   color: var(--text-muted);
   cursor: pointer;
-  box-shadow: inset 0 0 24px rgba(139, 92, 246, 0.08);
+  box-shadow: inset 0 0 24px var(--accent-soft);
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 .cape-workspace-dropzone:hover {
   background: rgba(24, 20, 36, 0.95);
   border-color: var(--accent-strong);
-  box-shadow: inset 0 0 32px rgba(139, 92, 246, 0.15), var(--bevel);
+  box-shadow: inset 0 0 32px var(--accent-glow), var(--bevel);
 }
 
 .cape-dropzone-icon {
@@ -3868,7 +3868,7 @@
   background: var(--accent);
   color: var(--accent-contrast);
   border-color: var(--accent-strong);
-  box-shadow: var(--bevel-strong), 0 6px 16px rgba(139, 92, 246, 0.4);
+  box-shadow: var(--bevel-strong), 0 6px 16px var(--accent-glow);
 }
 .cape-workspace-dropzone:active .cape-dropzone-icon {
   transform: translateY(1px);
@@ -4508,7 +4508,7 @@
 .loader-card.selected {
   border: 1px solid var(--accent);
   border-left: 3px solid var(--accent);
-  background: rgba(139, 92, 246, 0.08);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-panel));
   box-shadow: var(--bevel);
 }
 
@@ -4571,7 +4571,7 @@
 
 .loader-card.selected .loader-card-tag {
   background: var(--accent-tint);
-  color: #c4b5fd;
+  color: var(--accent);
   border-color: color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
@@ -4643,7 +4643,7 @@
 }
 
 .create-companion-banner--info {
-  background: rgba(139, 92, 246, 0.05);
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface-panel));
   border-color: var(--border);
   border-left-color: var(--accent);
 }
@@ -4974,7 +4974,7 @@
 }
 
 .news-card-tag.tag-article {
-  background: rgba(139, 92, 246, 0.85);
+  background: color-mix(in srgb, var(--accent) 85%, transparent);
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.35);
 }
@@ -5334,9 +5334,9 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   padding: 2px 7px;
-  background: rgba(168, 85, 247, 0.15);
-  border: 1px solid rgba(168, 85, 247, 0.35);
-  color: #c084fc;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--accent);
   text-transform: uppercase;
 }
 
@@ -5557,14 +5557,10 @@
   border: 1px solid #2d2a3b;
   color: #a1a1aa;
 }
-.modpack-card-tags .badge--loader,
-.modpack-card-tags .badge--fabric,
-.modpack-card-tags .badge--quilt,
-.modpack-card-tags .badge--neoforge,
-.modpack-card-tags .badge--forge {
-  background: rgba(168, 85, 247, 0.12);
-  border-color: rgba(168, 85, 247, 0.3);
-  color: #c084fc;
+.modpack-card-tags .badge--loader {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
 }
 .modpack-card-tags .badge--version {
   background: #1c1b26;
@@ -5968,7 +5964,7 @@
 }
 .modpack-version-row.selected {
   border-color: var(--accent);
-  background: rgba(168, 85, 247, 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
@@ -5993,9 +5989,9 @@
   font-weight: 600;
   padding: 1px 7px;
   border-radius: 0;
-  background: rgba(168, 85, 247, 0.15);
-  border: 1px solid rgba(168, 85, 247, 0.4);
-  color: #c084fc;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent);
 }
 
 .modpack-vrow-meta {
@@ -6140,7 +6136,7 @@
 .import-tab-card.selected {
   border: 1px solid var(--accent);
   border-left: 3px solid var(--accent);
-  background: rgba(139, 92, 246, 0.08);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-panel));
   box-shadow: var(--bevel);
 }
 
@@ -6256,8 +6252,8 @@
 
 .import-dropzone.dragging {
   border-color: var(--accent);
-  background: rgba(139, 92, 246, 0.08);
-  box-shadow: 0 0 24px rgba(139, 92, 246, 0.2), inset 0 0 16px rgba(139, 92, 246, 0.08);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-panel));
+  box-shadow: 0 0 24px var(--accent-glow), inset 0 0 16px color-mix(in srgb, var(--accent) 8%, transparent);
   transform: scale(1.005);
 }
 
@@ -6267,8 +6263,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(139, 92, 246, 0.12);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
   color: var(--accent);
   border-radius: 0;
   box-shadow: var(--bevel);

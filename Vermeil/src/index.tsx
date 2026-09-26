@@ -15,6 +15,14 @@ import "./styles/splash.css";
 import "./styles/themes.css";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
+// Early theme hydration: Read saved theme synchronously before DOM mount to prevent theme flash
+try {
+  const savedTheme = localStorage.getItem("vermeil-theme");
+  if (savedTheme) {
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  }
+} catch {}
+
 // Native app behavior: suppress browser shortcuts and context menu in production
 if (!import.meta.env.DEV) {
   document.addEventListener("contextmenu", (e) => e.preventDefault());

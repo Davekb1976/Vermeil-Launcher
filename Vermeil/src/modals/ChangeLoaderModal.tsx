@@ -349,7 +349,7 @@ const ChangeLoaderModal: Component = () => {
                                 </Show>
                               }
                             >
-                              <span class="loader-card-tag" style="background: rgba(139,92,246,0.2); color: var(--accent); font-size: 9px; padding: 2px 4px;">Current</span>
+                              <span class="loader-card-tag" style="background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); font-size: 9px; padding: 2px 4px;">Current</span>
                             </Show>
                           </div>
                           <div class="loader-card-desc" style="font-size: 10px; line-height: 1.3; margin-top: 2px; color: var(--muted);">
@@ -397,7 +397,7 @@ const ChangeLoaderModal: Component = () => {
                         {(v) => (
                           <div
                             class="custom-select-option"
-                            style={`padding: 6px 12px; font-size: 12px; font-family: var(--font-mono); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; ${selectedVersion() === v.version ? "background: rgba(139,92,246,0.15); color: var(--accent);" : "color: var(--text);"}`}
+                            style={`padding: 6px 12px; font-size: 12px; font-family: var(--font-mono); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; ${selectedVersion() === v.version ? "background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent);" : "color: var(--text);"}`}
                             onClick={() => {
                               setSelectedVersion(v.version);
                               setVersionDropOpen(false);
@@ -427,7 +427,7 @@ const ChangeLoaderModal: Component = () => {
 
               {/* Scenario 2: Same loader, changing version (Upgrade/Downgrade) */}
               <Show when={isSameLoader() && !isSameVersion()}>
-                <div style="padding: 10px 12px; background: rgba(139,92,246,0.06); border: 1px solid var(--border); border-left: 3px solid var(--accent); font-size: 12px; color: var(--text);">
+                <div style="padding: 10px 12px; background: color-mix(in srgb, var(--accent) 6%, var(--surface-panel)); border: 1px solid var(--border); border-left: 3px solid var(--accent); font-size: 12px; color: var(--text);">
                   <div style="font-weight: 600; color: var(--accent); margin-bottom: 2px;">Loader Runtime Update</div>
                   <div>
                     Updating {loaderLabel(selectedLoader())} from <strong style="font-family:var(--font-mono)">{inst()!.loader.version || "default"}</strong> to <strong style="font-family:var(--font-mono)">{selectedVersion()}</strong>. Installed mods will remain intact and will run on the updated loader.

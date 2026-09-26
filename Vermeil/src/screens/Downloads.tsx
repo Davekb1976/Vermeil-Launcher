@@ -278,7 +278,7 @@ const Downloads: Component = () => {
                     {bulkDone()} / {bulkBatchSize()}
                   </span>
                 </Show>
-                <span class="badge" style="color: var(--accent); border-color: rgba(139, 92, 246, 0.3);">
+                <span class="badge" style="color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent);">
                   Installing
                 </span>
               </div>

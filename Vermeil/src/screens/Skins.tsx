@@ -145,13 +145,29 @@ function initStageParticles(canvas: HTMLCanvasElement, container: HTMLElement): 
   const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
   const COUNT = 85;
-  const PURPLE_COLS = [
-    "139, 92, 246", // Vermeil violet
-    "168, 85, 247", // Accent purple
-    "192, 132, 252", // Lilac glow
-    "124, 77, 222",  // Deep purple
-    "167, 139, 250", // Soft violet
-  ];
+  const getThemeParticleColors = (): string[] => {
+    try {
+      const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+      if (accent.startsWith("#")) {
+        const hex = accent.replace("#", "");
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+          return [
+            `${r}, ${g}, ${b}`,
+            `${Math.min(255, Math.round(r * 1.15))}, ${Math.min(255, Math.round(g * 1.15))}, ${Math.min(255, Math.round(b * 1.15))}`,
+            `${Math.max(0, Math.round(r * 0.85))}, ${Math.max(0, Math.round(g * 0.85))}, ${Math.max(0, Math.round(b * 0.85))}`,
+          ];
+        }
+      }
+    } catch {}
+    return [
+      "139, 92, 246",
+      "168, 85, 247",
+      "192, 132, 252",
+    ];
+  };
   const GOLD_COLS = [
     "250, 204, 21",  // Warm bright gold
     "251, 191, 36",  // Radiant amber
@@ -177,11 +193,11 @@ function initStageParticles(canvas: HTMLCanvasElement, container: HTMLElement): 
   }
 
   const pickColor = (): { col: string; isGold: boolean } => {
-    // 32% warm gold/amber embers, 68% purple/violet embers for a balanced, vibrant mix
     const isGold = Math.random() < 0.32;
+    const themeCols = getThemeParticleColors();
     const col = isGold
       ? GOLD_COLS[Math.floor(Math.random() * GOLD_COLS.length)]
-      : PURPLE_COLS[Math.floor(Math.random() * PURPLE_COLS.length)];
+      : themeCols[Math.floor(Math.random() * themeCols.length)];
     return { col, isGold };
   };
 

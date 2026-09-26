@@ -550,13 +550,19 @@ createEffect(() => {
 });
 
 // Global theme state & dynamic 3D logo resolution. Zero-reload GPU paint cascade.
-const [currentTheme, setCurrentTheme] = createSignal<string>("neon-aurora");
+const savedInitialTheme = (typeof localStorage !== "undefined" && localStorage.getItem("vermeil-theme")) || "neon-aurora";
+const [currentTheme, setCurrentTheme] = createSignal<string>(savedInitialTheme);
 export { currentTheme, setCurrentTheme };
 export const currentThemeLogo = () => getThemeLogo(currentTheme());
 
 export function applyTheme(name: string) {
   const t = name || "neon-aurora";
   setCurrentTheme(t);
+  if (typeof localStorage !== "undefined") {
+    try {
+      localStorage.setItem("vermeil-theme", t);
+    } catch {}
+  }
   if (typeof document !== "undefined") {
     document.documentElement.setAttribute("data-theme", t);
   }
