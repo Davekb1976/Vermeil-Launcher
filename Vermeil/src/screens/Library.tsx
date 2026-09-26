@@ -440,15 +440,6 @@ const Library: Component = () => {
 
               <button
                 class="btn tip-below tip-right"
-                data-tip="Manage pinned instances"
-                onClick={openPinInstancesModal}
-                aria-label="Manage pinned instances"
-              >
-                <IconPin />
-              </button>
-
-              <button
-                class="btn tip-below tip-right"
                 data-tip={selectMode() ? "Exit select mode" : "Batch delete"}
                 onClick={() => {
                   setSelectMode(!selectMode());
