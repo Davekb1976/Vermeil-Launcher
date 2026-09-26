@@ -31,6 +31,7 @@ import { listInstances, getActiveAccount, getSettings, getSkinProfile, showWindo
 import { listen } from "@tauri-apps/api/event";
 import { checkForUpdates } from "./services/updater";
 import { matchesKeybind, resolveBinding } from "./lib/keybinds";
+import { getThemeLogo } from "./lib/theme";
 
 export type Screen =
   | "home"
@@ -548,6 +549,19 @@ createEffect(() => {
   }
 });
 
+// Global theme state & dynamic 3D logo resolution. Zero-reload GPU paint cascade.
+const [currentTheme, setCurrentTheme] = createSignal<string>("neon-aurora");
+export { currentTheme, setCurrentTheme };
+export const currentThemeLogo = () => getThemeLogo(currentTheme());
+
+export function applyTheme(name: string) {
+  const t = name || "neon-aurora";
+  setCurrentTheme(t);
+  if (typeof document !== "undefined") {
+    document.documentElement.setAttribute("data-theme", t);
+  }
+}
+
 /** Re-load pin list and global runtime settings from disk. Called on startup,
  *  after the pin manager modal saves changes, and after Google Cloud restore. */
 export async function refreshPinnedInstanceIds() {
@@ -562,6 +576,9 @@ export async function refreshPinnedInstanceIds() {
     }
     if (s.pagination_position === "bottom" || s.pagination_position === "left" || s.pagination_position === "right") {
       setPaginationPosition(s.pagination_position);
+    }
+    if (s.theme) {
+      applyTheme(s.theme);
     }
     window.dispatchEvent(new CustomEvent("vermeil-keybinds-changed"));
     window.dispatchEvent(new CustomEvent("vermeil-settings-changed"));

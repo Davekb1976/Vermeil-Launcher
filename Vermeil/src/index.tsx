@@ -12,6 +12,7 @@ import "./styles/modals.css";
 import "./styles/screens.css";
 import "./styles/dock.css";
 import "./styles/splash.css";
+import "./styles/themes.css";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
 // Native app behavior: suppress browser shortcuts and context menu in production

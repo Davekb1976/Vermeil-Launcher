@@ -9,6 +9,7 @@ import {
   refreshPinnedInstanceIds,
   pinnedInstanceIds,
   downloads,
+  currentThemeLogo,
 } from "../App";
 import { InstanceSummary, deleteInstances, getSettings } from "../ipc/commands";
 import {
@@ -369,7 +370,7 @@ const Library: Component = () => {
         <div class="page-title" style="margin-bottom:var(--space-4);">Library</div>
         <div class="library-empty-panel">
           <div class="library-empty-icon">
-            <img src="/logo.png" alt="Vermeil" draggable={false} />
+            <img src={currentThemeLogo()} alt="Vermeil" draggable={false} />
           </div>
           <div class="library-empty-title">No Instances Created Yet</div>
           <div class="library-empty-subtitle">

@@ -641,6 +641,7 @@ pub fn sanitize_settings_for_cloud(source: &LauncherSettings) -> LauncherSetting
         show_snapshots: source.show_snapshots,
         splash_screen: source.splash_screen,
         download_toasts: source.download_toasts,
+        theme: source.theme.clone(),
         auto_hide_dock: source.auto_hide_dock,
         pagination_position: source.pagination_position.clone(),
 

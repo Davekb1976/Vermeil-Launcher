@@ -1,6 +1,7 @@
 import { Component, createSignal, createResource, Show, For, onMount, onCleanup, createEffect } from "solid-js";
 import { getSettings, saveSettings, getCacheSize, purgeCache, getSharedGameDataSize, purgeSharedGameData, getAppDirectory, openAppDirectory, LauncherSettings, detectJavaInstallations, validateJavaPath, setJavaPath, installRecommendedJava, deleteJavaInstall, pruneInvalidJavaPaths, getSystemMemory, JavaInstall } from "../ipc/commands";
-import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, instances, showToast, setDownloadToastsEnabled, setAutoHideDockSetting, setPaginationPosition } from "../App";
+import { setActiveScreen, setActiveInstanceId, setInitialInstanceTab, instances, showToast, setDownloadToastsEnabled, setAutoHideDockSetting, setPaginationPosition, applyTheme } from "../App";
+import { THEMES } from "../lib/theme";
 import { checkForUpdates } from "../services/updater";
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -110,7 +111,11 @@ const Settings: Component = () => {
     "Memory", "RAM", "Maximum RAM", "Maximum memory", "allocation", "adaptive", "heap", "mb", "gb"
   );
 
-  const matchesGeneral = () => matchesLauncher();
+  const matchesThemes = () => isGeneralSection() || matches(
+    "Theme", "Themes", "Color Themes", "Appearance", "Neon Aurora", "Inferno", "Stealth", "Deep Ocean", "Void", "palette", "aesthetic"
+  );
+
+  const matchesGeneral = () => matchesLauncher() || matchesThemes();
   const matchesResources = () => matchesStorage() || matchesPerformance() || matchesJava();
   const matchesInstances = () => matchesVideo() || matchesAccessibility() || matchesControls() || matchesAudio() || matchesWindow() || matchesMemory() ||
     (instances() || []).some(i => matches(i.name, i.game_version, i.loader.type));
@@ -419,6 +424,9 @@ const Settings: Component = () => {
     // dropdowns) reflects the change immediately and the next read-modify-write
     // sees the latest state — no save→refetch round-trip to lag behind or clobber.
     mutate(updated);
+    if (key === "theme") {
+      applyTheme(value as string);
+    }
     try {
       await saveSettings(updated);
       if (key === "download_toasts") {
@@ -807,6 +815,57 @@ const Settings: Component = () => {
                         </div>
                       </Show>
 
+                    </div>
+                  </div>
+                </div>
+              </Show>
+
+              {/* ═══ COLOR THEMES ═══ */}
+              <Show when={!isSearching() || matchesThemes()}>
+                <div class="card-gamemode-section">
+                  <div class="card-section-header">
+                    <span class="card-section-tag tag-settings-accent">APPEARANCE</span>
+                    <span class="card-section-label">Color Themes</span>
+                    <span class="card-section-desc">Choose your launcher aesthetic and signature palette</span>
+                  </div>
+
+                  <div class="card-section-body">
+                    <div class="theme-card-grid">
+                      <For each={THEMES}>
+                        {(t) => {
+                          const isActive = () => (settings()?.theme || "neon-aurora") === t.id;
+                          return (
+                            <div
+                              class={`theme-card ${isActive() ? "active" : ""}`}
+                              onClick={() => {
+                                updateSetting("theme", t.id);
+                              }}
+                            >
+                              <div class="theme-card-emblem-wrap">
+                                <img
+                                  class="theme-card-emblem"
+                                  src={t.logo}
+                                  alt={t.name}
+                                  draggable={false}
+                                />
+                              </div>
+                              <div class="theme-card-title">{t.name}</div>
+                              <div class="theme-card-desc">{t.tagline}</div>
+                              <div class="theme-card-swatches">
+                                <For each={t.swatches}>
+                                  {(hex) => (
+                                    <span
+                                      class="theme-swatch tip-below"
+                                      data-tip={hex}
+                                      style={{ "background-color": hex }}
+                                    />
+                                  )}
+                                </For>
+                              </div>
+                            </div>
+                          );
+                        }}
+                      </For>
                     </div>
                   </div>
                 </div>

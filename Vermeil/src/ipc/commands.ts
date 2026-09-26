@@ -148,6 +148,8 @@ export interface LauncherSettings {
    * downloads button displays an active download count badge instead.
    */
   download_toasts: boolean;
+  /** Active theme ID ("neon-aurora", "inferno", "stealth", "deep-ocean", "void"). */
+  theme: string;
   /**
    * Auto-hide the floating navigation dock across all screens by default.
    * Reveals when hovering the bottom-center glowing trigger tab.

@@ -1,4 +1,5 @@
 import { Component, createSignal, createEffect, onCleanup } from "solid-js";
+import { currentThemeLogo } from "../App";
 
 /**
  * Boot splash — the turning logo cube + shimmering "Vermeil" wordmark shown
@@ -58,7 +59,7 @@ const Splash: Component<SplashProps> = (props) => {
             <span class="splash-cube-face left" />
             <span class="splash-cube-face top cap" />
             <span class="splash-cube-face bottom cap" />
-            <span class="splash-cube-logo"><img src="/logo.png" alt="" /></span>
+            <span class="splash-cube-logo"><img src={currentThemeLogo()} alt="" /></span>
           </div>
         </div>
         <div class="splash-word">Vermeil</div>

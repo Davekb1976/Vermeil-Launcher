@@ -28,6 +28,10 @@ pub struct LauncherSettings {
     /// displays an active download count badge instead.
     #[serde(default = "default_download_toasts")]
     pub download_toasts: bool,
+    /// Active color theme ID ("neon-aurora", "inferno", "stealth", "deep-ocean", "void").
+    /// Defaults to "neon-aurora".
+    #[serde(default = "default_theme")]
+    pub theme: String,
     /// Auto-hide the floating navigation dock across all screens by default.
     /// The dock reveals itself when hovering the bottom-center glowing trigger tab.
     /// Defaults to `true`.
@@ -193,6 +197,7 @@ fn default_concurrent_writes() -> u8 { 10 }
 fn default_download_speed_limit_mb() -> u32 { 0 }
 fn default_splash_screen() -> bool { true }
 fn default_download_toasts() -> bool { true }
+fn default_theme() -> String { "neon-aurora".to_string() }
 fn default_auto_hide_dock() -> bool { true }
 fn default_pagination_position() -> String { "bottom".to_string() }
 fn default_update_channel() -> String {
@@ -232,6 +237,7 @@ impl Default for LauncherSettings {
             show_snapshots: false,
             splash_screen: true,
             download_toasts: true,
+            theme: default_theme(),
             auto_hide_dock: true,
             pagination_position: default_pagination_position(),
             concurrent_downloads: default_concurrent_downloads(),
