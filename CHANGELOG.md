@@ -1,21 +1,23 @@
-## 1.3.1
+## 1.4.0 (Experimental Build 1)
 
 ### Added
 
-- Bidirectional Google Cloud synchronization for cumulative `Playtime` and `Last Active` with monotonic high-water mark protection so fresh installations never reset cloud play history
-- Automatic background cloud synchronization on game launch, game exit, and launcher startup
-- Coalesced background cloud sync queue that merges rapid setting toggles into a single non-overlapping Drive upload reusing the active OAuth access token
+- 5-Theme Engine (Neon Aurora, Inferno, Stealth, Deep Ocean, Void) featuring tactical theme cards, signature color palettes, and theme-adaptive 3D master emblems
+- Ephemeral instance share codes (`VML-XXXX-XXXX`) powered by Cloudflare Workers and D1 edge storage for serverless blueprint sharing
+- Compatibility confirmation modal allowing manual override and force-installation of unverified or cross-version mods, resource packs, and shaders
+- Dedicated manual pin controls in the Library toolbar and Pin Manager modal, replacing automatic pinning of newly created or imported instances
 
 ### Changed
 
-- Formatted the Home screen `Last Active` telemetry readout as a fixed-width ISO calendar date (`YYYY-MM-DD`) instead of relative minutes so the readout remains accurate and visually aligned across sessions
-- Reduced redundant Google Drive API lookups during cloud connect, restore, and startup reconciliation by passing resolved file IDs and preloaded backup payloads through the sync pipeline
+- Replaced mod update buttons on instance cards with compact, aligned footer actions
+- Regenerated high-resolution Windows (`.ico`) and Linux (`.png`) application icons across all desktop surfaces from the official 3D master emblem
 
 ### Fixed
 
-- Activated restored Google Cloud preferences (`Auto-hide Dock`, pagination dock position, download toasts, custom keybinds, Discord Rich Presence, and download speed limits) immediately in live runtime signals without requiring a launcher restart
-- Prevented stale frontend settings snapshots from overwriting newer `lifetime_play_seconds` and `last_active_at` counters on disk
+- Eliminated hardcoded violet/purple accents across settings tags, account cards, security badges, and modpack version indicators to honor active theme colors
+- Replaced harsh 8-bit oval background gradients on the loading screen with smooth multi-stop spherical atmospheric lighting, corner vignettes, and micro-dither noise
+- Synchronized hidden dock trigger tab glow and center button glint shimmer with the active theme's accent palette
 
 ### Documentation
 
-- [Google Cloud Settings Sync](docs/research/google-cloud-sync/research.md): Bidirectional playtime high-water mark reconciliation, coalesced background upload queue, and live runtime signal activation
+- [Ephemeral Instance Share Codes](docs/research/ephemeral-share-codes/research.md): Serverless blueprint compression, D1 edge relay architecture, and privacy models
