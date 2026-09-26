@@ -1,6 +1,6 @@
 import { Component, createSignal, createEffect, createMemo, createResource, untrack, For, Show, onMount, onCleanup } from "solid-js";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
-import { setActiveScreen, instances, activeInstanceId, setActiveInstanceId, refetchInstances, refreshPinnedInstanceIds, initialInstanceTab, gameRunning, completeDownload, failDownload, startBulkBatch, endBulkBatch, showToast, gameLogsFor, setDockHidden, setDockPagination, logsPoppedOut } from "../App";
+import { setActiveScreen, instances, activeInstanceId, setActiveInstanceId, refetchInstances, refreshPinnedInstanceIds, pinnedInstanceIds, initialInstanceTab, gameRunning, completeDownload, failDownload, startBulkBatch, endBulkBatch, showToast, gameLogsFor, setDockHidden, setDockPagination, logsPoppedOut } from "../App";
 import { reportDependencyIssues, DependencyIssue } from "../components/DependencyIssuesModal";
 import { contentVersion } from "../lib/contentVersion";
 import { loaderLabel, loaderBadgeClass } from "../lib/loader";
@@ -8,9 +8,10 @@ import { createGridPageSize } from "../lib/gridPageSize";
 import Dropdown from "../components/Dropdown";
 import ModDetailModal from "../modals/ModDetailModal";
 import ChangeLoaderModal, { openChangeLoaderModal } from "../modals/ChangeLoaderModal";
+import { openPinInstancesModal } from "../modals/PinInstancesModal";
 import { formatDownloads, formatSize, formatVersionRange } from "../lib/format";
-import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled, getInstance, exportShareCode } from "../ipc/commands";
-import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconAlertTriangle, IconFolderOpen, IconChevronDown, IconImage, IconDownload, IconHeart, IconShare2 } from "../components/Icons";
+import { searchMods, installModToInstance, installCfModToInstance, listInstanceFiles, listInstanceWorlds, openInstanceFolder, deleteInstance, renameInstance, updateInstanceOptions, toggleModInInstance, removeModFromInstance, removeAllContent, checkModUpdates, applyModUpdate, ModUpdate, cloneInstance, getSettings, saveSettings, setInstanceIcon, clearInstanceIcon, searchCurseforge, getPresetJvmArgs, getKnownPresetArgs, getSystemMemory, getEffectiveMemory, EffectiveMemory, ModHit, FileEntry, WorldEntry, closeLogsWindow, syncInstanceMods, setInstanceCompanionEnabled, getInstance, exportShareCode } from "../ipc/commands";
+import { IconArrowLeft, IconBolt, IconMonitor, IconGlobe, IconTrash, IconArrowUp, IconArrowDown, IconSearch, IconModrinth, IconCurseForge, IconSettings, IconCube, IconWand, IconShirt, IconX, IconCheck, IconAlertTriangle, IconFolderOpen, IconChevronDown, IconImage, IconDownload, IconHeart, IconShare2, IconPin } from "../components/Icons";
 import { enqueueInstallTask, isTaskQueuedOrActive, isTaskActive, isTaskQueued } from "../services/modpackQueue";
 
 import { resolveAssetUrl } from "../lib/assets";
@@ -1421,6 +1422,43 @@ const InstanceMods: Component = () => {
             aria-label="Copy instance share code"
           >
             <IconShare2 />
+          </button>
+          <button
+            class={`inst-gear-btn tip-below tip-right ${pinnedInstanceIds().includes(instance()?.id ?? "") ? "active" : ""}`}
+            onClick={async () => {
+              const inst = instance();
+              if (!inst) return;
+              try {
+                const s = await getSettings();
+                const currentPins = s.sidebar_pinned_instances ?? [];
+                if (currentPins.includes(inst.id)) {
+                  s.sidebar_pinned_instances = currentPins.filter((id) => id !== inst.id);
+                  await saveSettings(s);
+                  await refreshPinnedInstanceIds();
+                  showToast({ title: "Unpinned", message: `Removed "${inst.name}" from quick-launch dock`, type: "info" });
+                } else {
+                  if (currentPins.length >= 6) {
+                    showToast({
+                      title: "6-pin limit reached",
+                      message: "Open pin manager to choose which instances to keep pinned.",
+                      type: "info",
+                    });
+                    openPinInstancesModal();
+                    return;
+                  }
+                  s.sidebar_pinned_instances = [...currentPins, inst.id];
+                  await saveSettings(s);
+                  await refreshPinnedInstanceIds();
+                  showToast({ title: "Pinned", message: `Added "${inst.name}" to quick-launch dock`, type: "success" });
+                }
+              } catch (e: any) {
+                showToast({ title: "Failed to update pin", message: String(e), type: "error" });
+              }
+            }}
+            data-tip={pinnedInstanceIds().includes(instance()?.id ?? "") ? "Unpin from quick-launch" : "Pin to quick-launch"}
+            aria-label="Toggle pin"
+          >
+            <IconPin />
           </button>
           <button
             class={`inst-gear-btn tip-below tip-right ${mainTab() === "settings" ? "active" : ""}`}

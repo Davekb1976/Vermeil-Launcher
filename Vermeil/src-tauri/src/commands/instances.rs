@@ -40,9 +40,6 @@ pub async fn create_instance(config: CreateInstanceConfig) -> Result<Instance, S
     let instance = instance_service::create(config)
         .await
         .map_err(|e| e.to_string())?;
-    // Auto-pin the first few instances a user creates so the dock is useful
-    // out of the box (no-op once the pin cap is reached).
-    crate::services::settings_service::auto_pin_instance(&instance.id).await;
     crate::util::platform::update_windows_estimated_size();
     Ok(instance)
 }
@@ -174,7 +171,6 @@ pub async fn install_modpack(
         Some(window),
     )
     .await?;
-    crate::services::settings_service::auto_pin_instance(&instance.id).await;
     crate::util::platform::update_windows_estimated_size();
     Ok(instance)
 }
@@ -205,7 +201,6 @@ pub async fn import_mrpack(
         Some(window),
     )
     .await?;
-    crate::services::settings_service::auto_pin_instance(&instance.id).await;
     crate::util::platform::update_windows_estimated_size();
     Ok(instance)
 }
@@ -223,7 +218,6 @@ pub async fn install_cf_modpack(
         Some(window),
     )
     .await?;
-    crate::services::settings_service::auto_pin_instance(&instance.id).await;
     crate::util::platform::update_windows_estimated_size();
     Ok(instance)
 }

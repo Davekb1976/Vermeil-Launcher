@@ -316,7 +316,15 @@ const Library: Component = () => {
               </span>
             </Show>
             <Show when={pinnedSet().has(inst.id)}>
-              <span class="badge badge--pinned tip-below" data-tip="Pinned to floating dock">
+              <span
+                class="badge badge--pinned tip-below"
+                data-tip="Pinned to floating dock (click to manage)"
+                style="cursor: pointer;"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openPinInstancesModal();
+                }}
+              >
                 <IconPin />
               </span>
             </Show>
@@ -394,7 +402,13 @@ const Library: Component = () => {
               <div class="library-header-meta">
                 <span>{allList().length} {allList().length === 1 ? "instance" : "instances"}</span>
                 <span>·</span>
-                <span>{pinnedList().length} pinned</span>
+                <span
+                  class="library-meta-link tip-below"
+                  data-tip="Manage quick-launch pins"
+                  onClick={openPinInstancesModal}
+                >
+                  {pinnedList().length} pinned
+                </span>
                 <span>·</span>
                 <span>{formatPlaytime(totalPlaySeconds())} played</span>
               </div>
@@ -423,6 +437,15 @@ const Library: Component = () => {
                 onChange={changeSort}
                 width="150px"
               />
+
+              <button
+                class="btn tip-below tip-right"
+                data-tip="Manage pinned instances"
+                onClick={openPinInstancesModal}
+                aria-label="Manage pinned instances"
+              >
+                <IconPin />
+              </button>
 
               <button
                 class="btn tip-below tip-right"

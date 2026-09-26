@@ -372,6 +372,14 @@
   color: var(--text-muted);
   margin-top: 3px;
 }
+.library-meta-link {
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.12s ease;
+}
+.library-meta-link:hover {
+  color: var(--accent);
+}
 
 .library-toolbar {
   display: flex;

@@ -58,7 +58,7 @@ Every content addition or modification ripples through 5 connected stages. When 
   - `loader`: `LoaderConfig` with actual `LoaderType`.
   - `game_version`: Target Minecraft version.
   - `source_project_id` & `source_platforms` & `source_version`.
-- **Auto-Pinning**: Newly created instances call `settings_service::auto_pin_instance(&instance.id)`.
+- **Manual Pinning**: Pinning is strictly user-directed via manual pin controls in the Library and instance header; newly created instances are not auto-pinned.
 - **Storage Footprint Synchronization**: Content additions must invoke `crate::util::platform::update_windows_estimated_size()` so Windows Settings ("Installed Apps") accurately updates its uninstaller `EstimatedSize` registry DWORD.
 - **Blast Radius Check**: Does `instance.json` on disk contain the actual modpack logo (not `"cube"`), valid loader type, and proper source version?
 
