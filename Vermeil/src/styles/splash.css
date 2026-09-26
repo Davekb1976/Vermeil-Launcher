@@ -26,11 +26,24 @@
   justify-content: center;
   gap: 44px;
   background:
-    radial-gradient(ellipse 70% 55% at 50% 42%, var(--accent-glow, rgba(139, 92, 246, 0.18)), transparent 72%),
-    radial-gradient(circle at 50% 122%, var(--accent-soft, rgba(124, 77, 222, 0.12)), transparent 60%),
+    /* 1. Cinematic edge vignette to deepen corners */
+    radial-gradient(circle at 50% 48%, transparent 40%, rgba(0, 0, 0, 0.65) 100%),
+    /* 2. Seamless multi-stop spherical atmospheric glow with smooth inverse-square falloff */
+    radial-gradient(
+      circle at 50% 44%,
+      color-mix(in srgb, var(--accent) 12%, transparent) 0%,
+      color-mix(in srgb, var(--accent) 9.5%, transparent) 18%,
+      color-mix(in srgb, var(--accent) 6.8%, transparent) 34%,
+      color-mix(in srgb, var(--accent) 4.2%, transparent) 50%,
+      color-mix(in srgb, var(--accent) 2.2%, transparent) 68%,
+      color-mix(in srgb, var(--accent) 0.8%, transparent) 84%,
+      transparent 100%
+    ),
+    /* 3. Pure sunken floor */
     var(--surface-sunken);
   opacity: 1;
   visibility: visible;
+  overflow: hidden;
   transition: opacity 0.6s ease, transform 0.6s ease, visibility 0s linear 0.6s;
 }
 .splash.is-done {
@@ -39,7 +52,22 @@
   transform: scale(1.08);
 }
 
+/* Micro-dither film grain — breaks up 8-bit Mach bands so dark gradients render completely smooth */
+.splash::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.032;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+  z-index: 1;
+}
+
 .splash-inner {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -53,11 +81,28 @@
 
 /* 3D boot cube — the app logo floating inside a glass cube turning on a glow. */
 .splash-stage { position: relative; width: 140px; height: 140px; perspective: 900px; }
+
+/* Ambient radial illumination directly centered on the 3D cube */
+.splash-stage::before {
+  content: "";
+  position: absolute;
+  inset: -20px;
+  margin: auto;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 70%);
+  filter: blur(14px);
+  pointer-events: none;
+  z-index: 0;
+}
+
 .splash-cube {
   position: absolute; inset: 0; margin: auto;
   width: 120px; height: 120px;
   transform-style: preserve-3d;
   animation: splashCubeSpin 9s linear infinite;
+  z-index: 1;
 }
 @keyframes splashCubeSpin {
   from { transform: rotateX(-24deg) rotateY(0deg); }
@@ -100,10 +145,11 @@
 /* Glow pool beneath the cube. */
 .splash-stage::after {
   content: ""; position: absolute; left: 50%; bottom: -24px;
-  width: 150px; height: 28px; transform: translateX(-50%);
-  background: radial-gradient(ellipse, var(--accent-glow), transparent 70%);
-  filter: blur(8px);
+  width: 140px; height: 24px; transform: translateX(-50%);
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%);
+  filter: blur(10px);
   animation: splashGlowPulse 9s ease-in-out infinite;
+  pointer-events: none;
 }
 @keyframes splashGlowPulse {
   0%, 100% { opacity: 0.45; transform: translateX(-50%) scaleX(1); }
@@ -137,6 +183,7 @@
 .splash-bar {
   position: absolute; left: 0; right: 0; bottom: 0;
   height: 8px; background: color-mix(in srgb, var(--accent) 14%, transparent); overflow: hidden;
+  z-index: 3;
 }
 .splash-bar-fill {
   height: 100%; width: 0;
