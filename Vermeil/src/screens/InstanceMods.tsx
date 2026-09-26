@@ -2173,9 +2173,14 @@ const InstanceMods: Component = () => {
                           held
                         </span>
                       </Show>
+                    </div>
+                  </Show>
+                  <div class="mod-card-footer">
+                    <div class="mod-card-meta">{(mod as any).category || "mod"} · {mod.enabled ? "Enabled" : "Disabled"}</div>
+                    <div class="mod-card-actions">
                       <Show when={modUpdates().has(mod.project_id)}>
                         <button
-                          class="mod-tag mod-tag-update"
+                          class="btn btn--sm btn--success btn--mod-update tip-right"
                           disabled={isTaskQueuedOrActive(mod.project_id, instance()?.id)}
                           data-tip={`Update to ${modUpdates().get(mod.project_id)?.latest_version_number}`}
                           onClick={(e) => {
@@ -2183,23 +2188,16 @@ const InstanceMods: Component = () => {
                             handleUpdateMod(mod.project_id, mod.title || mod.filename);
                           }}
                         >
-                          {isTaskActive(mod.project_id, instance()?.id)
-                            ? "Updating..."
-                            : isTaskQueued(mod.project_id, instance()?.id)
-                            ? "Queued"
-                            : (
-                              <>
-                                <IconArrowUp />
-                                <span>{modUpdates().get(mod.project_id)?.latest_version_number ?? "Update"}</span>
-                              </>
-                            )}
+                          <IconArrowUp />
+                          <span>
+                            {isTaskActive(mod.project_id, instance()?.id)
+                              ? "Updating..."
+                              : isTaskQueued(mod.project_id, instance()?.id)
+                              ? "Queued"
+                              : "Update"}
+                          </span>
                         </button>
                       </Show>
-                    </div>
-                  </Show>
-                  <div class="mod-card-footer">
-                    <div class="mod-card-meta">{(mod as any).category || "mod"} · {mod.enabled ? "Enabled" : "Disabled"}</div>
-                    <div class="mod-card-actions">
                       <div class={`toggle ${mod.enabled ? "on" : ""}`} style="transform:scale(0.8)" onClick={async () => {
                         const inst = instance();
                         if (!inst) return;
@@ -2207,7 +2205,7 @@ const InstanceMods: Component = () => {
                         await refetchInstances();
                         await refetchDetail();
                       }} />
-                      <button class="btn btn--danger btn--sm" onClick={async () => {
+                      <button class="btn btn--danger btn--sm tip-right" data-tip="Remove" aria-label="Remove" onClick={async () => {
                         const inst = instance();
                         if (!inst) return;
                         await removeModFromInstance(inst.id, mod.id);

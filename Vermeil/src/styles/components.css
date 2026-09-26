@@ -689,6 +689,23 @@
   box-shadow: none;
 }
 
+.btn--success {
+  background: rgba(74, 222, 128, 0.14);
+  color: var(--success);
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  box-shadow: var(--bevel);
+}
+.btn--success:hover:not(:disabled) {
+  background: rgba(74, 222, 128, 0.24);
+  border-color: rgba(74, 222, 128, 0.5);
+  color: #86efac;
+  box-shadow: none;
+}
+.btn--success:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: none;
+}
+
 .btn--ghost {
   background: transparent;
   color: var(--text-muted);
@@ -810,6 +827,20 @@
 .side-icon { display: inline-flex; width: 13px; height: 13px; opacity: 0.75; }
 .side-icon svg { width: 100%; height: 100%; }
 .mod-card-actions { display: flex; gap: var(--space-1); align-items: center; }
+.mod-card-actions .btn { align-self: center; }
+.btn--mod-update {
+  gap: 4px;
+  padding: 0 8px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.btn--mod-update svg {
+  width: 12px;
+  height: 12px;
+}
+.btn--mod-update:disabled {
+  cursor: wait;
+}
 .mod-item {
   background: var(--surface-panel); border: 1px solid var(--border); border-radius: 0;
   padding: var(--space-3) var(--space-3); display: flex; align-items: center; gap: var(--space-3); transition: border-color .12s;

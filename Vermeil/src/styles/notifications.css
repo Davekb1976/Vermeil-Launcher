@@ -580,27 +580,7 @@
 .mod-tag-loader.loader-optifine { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); }
 
 
-/* Update pill — appears on Installed cards when a newer compatible version
-   is available. Click to apply. Uses the success-green palette
-   so it reads as a positive call-to-action rather than a warning. */
-.mod-tag-update {
-  background: rgba(74, 222, 128, 0.14);
-  color: var(--success);
-  border-color: rgba(74, 222, 128, 0.35);
-  cursor: pointer;
-  font-family: inherit;
-  text-transform: none;
-  letter-spacing: 0;
-  transition: background .12s, transform .08s;
-}
-.mod-tag-update:hover:not(:disabled) {
-  background: rgba(74, 222, 128, 0.22);
-  transform: translateY(-1px);
-}
-.mod-tag-update:disabled {
-  cursor: wait;
-  opacity: 0.6;
-}
+
 
 /* Held pill — this entry is kept at an exact version another installed mod
    requires, so the update checker skips it and no update pill can appear.
